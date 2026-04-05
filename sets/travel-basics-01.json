@@ -40,7 +40,7 @@
         {
           "id": "ex1",
           "target": "She buys a ticket for the train.",
-          "source": "Sie kauft eine Fahrkarte fuer den Zug."
+          "source": "Sie kauft eine Fahrkarte für den Zug."
         }
       ],
       "hintData": {
@@ -124,13 +124,13 @@
     },
     {
       "id": "t006",
-      "source": { "text": "verspaetet" },
+      "source": { "text": "verspätet" },
       "target": { "text": "delayed" },
       "examples": [
         {
           "id": "ex1",
           "target": "The train is delayed again.",
-          "source": "Der Zug ist schon wieder verspaetet."
+          "source": "Der Zug ist schon wieder verspätet."
         }
       ],
       "hintData": {

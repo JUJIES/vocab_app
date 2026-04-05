@@ -20,8 +20,9 @@
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./styles.css?v=2026-04-05-1508-subscribe-home" />
-    <script src="./app.js?v=2026-04-05-1508-subscribe-home" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=2026-04-05-2012-classroom-access" />
+    <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+    <script src="./app.js?v=2026-04-05-2012-classroom-access" defer></script>
   </head>
   <body>
     <main class="app-shell">
@@ -51,6 +52,18 @@
               hidden
             ></button>
           </div>
+          <section id="student-share-block" class="student-share" hidden>
+            <p class="student-share__kicker">Anderes Gerät</p>
+            <div class="student-share__qr-shell">
+              <canvas id="student-share-qr" class="student-share__qr" width="180" height="180"></canvas>
+            </div>
+            <label class="student-share__label" for="student-share-link">Link</label>
+            <div class="student-share__link-row">
+              <input id="student-share-link" class="student-share__link" type="text" readonly />
+              <button id="student-share-copy" class="student-share__copy" type="button">Kopieren</button>
+            </div>
+            <p id="student-share-feedback" class="student-share__feedback" aria-live="polite"></p>
+          </section>
         </div>
       </section>
 
@@ -62,7 +75,7 @@
             type="button"
           >
             <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
-            <span>Zum Set-Menue</span>
+            <span>Zur Übersicht</span>
           </button>
         </div>
 
@@ -109,7 +122,7 @@
                     <button
                       class="card-audio card-control"
                       type="button"
-                      aria-label="Audio nicht verfuegbar."
+                      aria-label="Audio nicht verfügbar."
                       data-audio-face="front"
                       data-audio-button
                     >
@@ -190,7 +203,7 @@
                     <button
                       class="card-audio card-control"
                       type="button"
-                      aria-label="Audio nicht verfuegbar."
+                      aria-label="Audio nicht verfügbar."
                       data-audio-face="back"
                       data-audio-button
                     >
@@ -254,35 +267,15 @@
             id="launch-mode-close"
             class="launch-mode-modal__close"
             type="button"
-            aria-label="Schliessen"
+            aria-label="Schließen"
           >
             <span class="material-symbols-outlined" aria-hidden="true">close</span>
           </button>
 
           <div class="launch-mode-modal__header">
-            <p class="launch-mode-modal__kicker">Lernset ausgewaehlt</p>
+            <p class="launch-mode-modal__kicker">Lernset</p>
             <h2 id="launch-mode-title" class="launch-mode-modal__title">Set</h2>
           </div>
-
-          <div class="launch-mode-modal__modes" aria-hidden="true">
-            <div class="launch-mode-modal__mode launch-mode-modal__mode--inactive">
-              <span class="launch-mode-modal__mode-icon material-symbols-outlined" aria-hidden="true">bolt</span>
-              <span class="launch-mode-modal__mode-label">Schnellrunde</span>
-            </div>
-            <div class="launch-mode-modal__mode launch-mode-modal__mode--active">
-              <span class="launch-mode-modal__mode-icon material-symbols-outlined" aria-hidden="true">menu_book</span>
-              <span class="launch-mode-modal__mode-label">Karteikarten</span>
-              <span class="launch-mode-modal__mode-dot" aria-hidden="true"></span>
-            </div>
-            <div class="launch-mode-modal__mode launch-mode-modal__mode--inactive">
-              <span class="launch-mode-modal__mode-icon material-symbols-outlined" aria-hidden="true">history</span>
-              <span class="launch-mode-modal__mode-label">Wiederholung</span>
-            </div>
-          </div>
-
-          <p class="launch-mode-modal__description">
-            Starte dieses Lernset im Karteikarten-Modus.
-          </p>
 
           <div class="launch-mode-modal__actions">
             <button

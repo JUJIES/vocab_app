@@ -52,13 +52,13 @@
     },
     {
       "id": "d002",
-      "source": { "text": "fruehstuecken" },
+      "source": { "text": "frühstücken" },
       "target": { "text": "to have breakfast" },
       "examples": [
         {
           "id": "ex1",
           "target": "They have breakfast before school.",
-          "source": "Sie fruehstuecken vor der Schule."
+          "source": "Sie frühstücken vor der Schule."
         }
       ],
       "hintData": {
@@ -88,13 +88,13 @@
     },
     {
       "id": "d004",
-      "source": { "text": "Muede" },
+      "source": { "text": "Müde" },
       "target": { "text": "tired" },
       "examples": [
         {
           "id": "ex1",
           "target": "She is tired after the long day.",
-          "source": "Sie ist nach dem langen Tag muede."
+          "source": "Sie ist nach dem langen Tag müde."
         }
       ],
       "hintData": {
@@ -112,7 +112,7 @@
         {
           "id": "ex1",
           "target": "He wants to shower before breakfast.",
-          "source": "Er will vor dem Fruehstueck duschen."
+          "source": "Er will vor dem Frühstück duschen."
         }
       ],
       "hintData": {
@@ -130,7 +130,7 @@
         {
           "id": "ex1",
           "target": "The baby falls asleep quickly.",
-          "source": "Das Baby schlaeft schnell ein."
+          "source": "Das Baby schläft schnell ein."
         }
       ],
       "hintData": {

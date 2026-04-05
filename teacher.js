@@ -58,7 +58,7 @@ async function initializeTeacherApp() {
     renderSetList();
   } catch (error) {
     console.error("Unable to initialize teacher page:", error);
-    renderErrorState("Die statische Set-Liste konnte nicht geladen werden.");
+    renderErrorState("Sets konnten nicht geladen werden.");
   }
 }
 
@@ -118,7 +118,7 @@ function normalizeSetEntry(entry) {
   return {
     id: id || path,
     path,
-    title: title || id || path,
+    title: title || id || "Set",
     description,
     tablets,
   };
@@ -188,20 +188,16 @@ function createSetRow(setEntry) {
   const meta = document.createElement("p");
   meta.className = "teacher-set-row__meta";
   meta.textContent = [
-    setEntry.description || setEntry.id,
+    setEntry.description || (setEntry.id === setEntry.path ? "Set" : setEntry.id),
     `${setEntry.tablets.length} iPad${setEntry.tablets.length === 1 ? "" : "s"}`,
   ].filter(Boolean).join(" · ");
 
-  const path = document.createElement("span");
-  path.className = "teacher-set-row__path";
-  path.textContent = setEntry.path;
-
-  copy.append(title, meta, path, createTabletAssignmentBlock(setEntry));
+  copy.append(title, meta, createTabletAssignmentBlock(setEntry));
 
   const action = document.createElement("button");
   action.className = "teacher-button";
   action.type = "button";
-  action.textContent = "Share";
+  action.textContent = "Teilen";
   action.addEventListener("click", () => {
     openShareOverlay(setEntry);
   });
@@ -217,7 +213,7 @@ function createTabletAssignmentBlock(setEntry) {
   if (setEntry.tablets.length === 0) {
     const empty = document.createElement("p");
     empty.className = "teacher-set-row__tablet-empty";
-    empty.textContent = "Noch kein iPad zugeordnet.";
+    empty.textContent = "Kein iPad";
     wrapper.append(empty);
     return wrapper;
   }
@@ -233,7 +229,7 @@ function createTabletAssignmentBlock(setEntry) {
     const removeButton = document.createElement("button");
     removeButton.type = "button";
     removeButton.className = "teacher-tablet-remove";
-    removeButton.textContent = "Abo loeschen";
+    removeButton.textContent = "Entfernen";
     removeButton.addEventListener("click", () => {
       void handleRemoveTabletSubscription(tablet.id, setEntry.path);
     });
@@ -257,7 +253,8 @@ async function openShareOverlay(setEntry) {
   state.activeSet = setEntry;
   state.activeShareUrl = buildStudentShareUrl(setEntry.path);
   elements.shareTitle.textContent = setEntry.title;
-  elements.sharePath.textContent = setEntry.path;
+  elements.sharePath.textContent = "";
+  elements.sharePath.hidden = true;
   elements.shareLink.value = state.activeShareUrl;
   elements.shareFeedback.textContent = "";
   elements.shareOverlay.hidden = false;
@@ -267,13 +264,14 @@ async function openShareOverlay(setEntry) {
   } catch (error) {
     console.error("Unable to render QR code:", error);
     state.activeQrDataUrl = "";
-    elements.shareFeedback.textContent = "QR-Code konnte nicht erstellt werden.";
+    elements.shareFeedback.textContent = "QR-Code fehlt.";
     clearQrCanvas();
   }
 }
 
 function closeShareOverlay() {
   elements.shareOverlay.hidden = true;
+  elements.sharePath.hidden = true;
   elements.shareFeedback.textContent = "";
 }
 
@@ -355,7 +353,7 @@ async function handleRemoveTabletSubscription(tabletId, setPath) {
     );
 
     if (!response.ok) {
-      throw new Error(response.data?.error || "Abo konnte nicht entfernt werden.");
+      throw new Error(response.data?.error || "Set konnte nicht entfernt werden.");
     }
 
     const sets = await loadSetIndex();
@@ -363,7 +361,7 @@ async function handleRemoveTabletSubscription(tabletId, setPath) {
     renderSetList();
   } catch (error) {
     console.error("Unable to remove set assignment:", error);
-    renderErrorState(typeof error?.message === "string" ? error.message : "Abo konnte nicht entfernt werden.");
+    renderErrorState(typeof error?.message === "string" ? error.message : "Set konnte nicht entfernt werden.");
   }
 }
 
@@ -380,10 +378,10 @@ async function handleCopyLink() {
       document.execCommand("copy");
     }
 
-    setFeedback("Link kopiert.");
+    setFeedback("Kopiert.");
   } catch (error) {
     console.error("Unable to copy link:", error);
-    setFeedback("Link konnte nicht kopiert werden.");
+    setFeedback("Kopieren fehlgeschlagen.");
   }
 }
 
@@ -414,13 +412,13 @@ function handlePrintShare() {
   const printWindow = window.open("", "_blank", "width=900,height=980");
 
   if (!printWindow) {
-    setFeedback("Druckfenster konnte nicht geoeffnet werden.");
+    setFeedback("Drucken fehlgeschlagen.");
     return;
   }
 
   const qrMarkup = state.activeQrDataUrl
-    ? `<img src="${escapeHtml(state.activeQrDataUrl)}" alt="QR-Code fuer ${escapeHtml(state.activeSet.title)}" style="width: 360px; height: 360px;" />`
-    : `<p>QR-Code nicht verfuegbar</p>`;
+    ? `<img src="${escapeHtml(state.activeQrDataUrl)}" alt="QR-Code für ${escapeHtml(state.activeSet.title)}" style="width: 360px; height: 360px;" />`
+    : `<p>QR-Code nicht verfügbar</p>`;
 
   printWindow.document.open();
   printWindow.document.write(`
@@ -463,7 +461,6 @@ function handlePrintShare() {
       </head>
       <body>
         <main class="sheet">
-          <p class="path">${escapeHtml(state.activeSet.path)}</p>
           <h1>${escapeHtml(state.activeSet.title)}</h1>
           <div class="qr">${qrMarkup}</div>
           <p>${escapeHtml(state.activeShareUrl)}</p>

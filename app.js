@@ -1,5 +1,7 @@
 const state = {
   appMode: "home",
+  accessRegistrationOpen: false,
+  accessKnownDeviceFeedback: "",
   requestedSetPath: "",
   requestedSetUrl: "",
   currentSetPath: "",
@@ -56,9 +58,11 @@ const state = {
   screenSecondaryAction: "",
   pendingLaunchSetPath: "",
   pendingLaunchSetTitle: "",
+  publicOrigin: "",
 };
 
 const APP_MODES = Object.freeze({
+  ACCESS: "access",
   HOME: "home",
   SCANNER: "scanner",
   REGISTRATION: "registration",
@@ -85,6 +89,11 @@ const elements = {
   studentScreenForm: document.getElementById("student-screen-form"),
   studentScreenPrimaryAction: document.getElementById("student-screen-primary-action"),
   studentScreenSecondaryAction: document.getElementById("student-screen-secondary-action"),
+  studentShareBlock: document.getElementById("student-share-block"),
+  studentShareQr: document.getElementById("student-share-qr"),
+  studentShareLink: document.getElementById("student-share-link"),
+  studentShareCopy: document.getElementById("student-share-copy"),
+  studentShareFeedback: document.getElementById("student-share-feedback"),
   launchModeModal: document.getElementById("launch-mode-modal"),
   launchModeTitle: document.getElementById("launch-mode-title"),
   launchModeStart: document.getElementById("launch-mode-start"),
@@ -116,6 +125,7 @@ const elements = {
 document.addEventListener("DOMContentLoaded", () => {
   bindEvents();
   registerServiceWorker();
+  void initializeStudentShareOrigin();
   initializeStudentApp();
 });
 
@@ -159,6 +169,7 @@ function bindEvents() {
   window.addEventListener("keydown", handleWindowKeydown);
   elements.studentScreenPrimaryAction.addEventListener("click", handleStudentScreenPrimaryAction);
   elements.studentScreenSecondaryAction.addEventListener("click", handleStudentScreenSecondaryAction);
+  elements.studentShareCopy.addEventListener("click", handleStudentShareCopy);
   elements.studentHomeLink.addEventListener("click", handleReturnToStudentHome);
   elements.launchModeStart.addEventListener("click", handleLaunchModeStart);
   elements.launchModeCancel.addEventListener("click", closeLaunchModeModal);
@@ -178,13 +189,13 @@ async function initializeStudentApp() {
 
   if (!setRequest.isValid) {
     renderStudentLoadErrorState({
-      title: "Set-Link ungueltig",
-      message: "Nur relative JSON-Pfade unter /sets/ sind erlaubt.",
-      detail: setRequest.detail,
+      title: "Link ungültig",
+      message: "Bitte Link prüfen.",
+      detail: "",
       primaryAction: "",
       primaryLabel: "",
       secondaryAction: "clear-set",
-      secondaryLabel: "Zur Startansicht",
+      secondaryLabel: "Start",
     });
     return;
   }
@@ -213,13 +224,13 @@ async function startFlashcardSet(setPath, setUrl = new URL(setPath, getAppBaseUr
   } catch (error) {
     console.error("Unable to start flashcard set:", error);
     renderStudentLoadErrorState({
-      title: "Set konnte nicht geladen werden",
-      message: "Der Link wurde erkannt, aber das Set liess sich nicht starten.",
-      detail: `${setPath} konnte nicht geladen oder verarbeitet werden.`,
+      title: "Set nicht verfügbar",
+      message: "Set konnte nicht geöffnet werden.",
+      detail: "",
       primaryAction: "retry-set",
-      primaryLabel: "Erneut laden",
+      primaryLabel: "Erneut",
       secondaryAction: "clear-set",
-      secondaryLabel: "Zur Startansicht",
+      secondaryLabel: "Start",
     });
   }
 }
@@ -227,41 +238,15 @@ async function startFlashcardSet(setPath, setUrl = new URL(setPath, getAppBaseUr
 async function continueStudentAccessFlow() {
   const localTabletId = loadLocalTabletId();
 
-  if (!localTabletId) {
-    renderRegistrationState({
-      detail: state.requestedSetPath
-        ? "Waehle das Tablet und setze einen PIN, bevor das Set startet."
-        : "Waehle das Tablet und setze einen PIN, bevor du dein Set-Menue oeffnest.",
-    });
-    return;
-  }
-
-  if (hasUnlockedStudentSession()) {
+  if (localTabletId && hasUnlockedStudentSession()) {
     await continueAfterDeviceAccess(localTabletId);
     return;
   }
 
-  if (state.requestedSetPath) {
-    const setIntent = await getRequestedSetIntent(localTabletId, state.requestedSetPath);
-
-    renderPinState(localTabletId, {
-      title: setIntent.isSubscribed ? "Set im Menue oeffnen" : "Neues Set hinzufuegen",
-      message: setIntent.isSubscribed
-        ? "Dieses Set ist bereits in deinem Menue."
-        : "Dieses Set wird deinem Menue hinzugefuegt.",
-      detail: setIntent.isSubscribed
-        ? "Gib den PIN fuer dieses Tablet ein, um das Set in deinem Menue aufzurufen."
-        : "Gib den PIN fuer dieses Tablet ein, um das Set deinem Menue hinzuzufuegen.",
-      submitLabel: setIntent.isSubscribed ? "Zum Menue" : "Hinzufuegen",
-    });
-    return;
-  }
-
-  renderPinState(localTabletId, {
-    title: "Set-Menue entsperren",
-    message: `Tablet: ${getTabletLabel(localTabletId)}`,
-    detail: "Gib den PIN fuer dieses Tablet ein, um dein Set-Menue zu oeffnen.",
-    submitLabel: "Menue oeffnen",
+  renderAccessState({
+    loginTabletId: localTabletId,
+    registrationTabletId: localTabletId || DEFAULT_TABLET_ID,
+    showRegistration: false,
   });
 }
 
@@ -276,13 +261,13 @@ async function continueAfterDeviceAccess(tabletId) {
 
     if (!subscriptionResult.ok) {
       renderStudentLoadErrorState({
-        title: "Set konnte nicht hinzugefuegt werden",
-        message: "Das Set wurde erkannt, konnte diesem Tablet aber nicht zugeordnet werden.",
+        title: "Set nicht hinzugefügt",
+        message: "Bitte erneut versuchen.",
         detail: subscriptionResult.error,
         primaryAction: "retry-set",
-        primaryLabel: "Erneut versuchen",
+        primaryLabel: "Erneut",
         secondaryAction: "go-home",
-        secondaryLabel: "Zum Set-Menue",
+        secondaryLabel: "Zur Übersicht",
       });
       return;
     }
@@ -295,10 +280,10 @@ async function continueAfterDeviceAccess(tabletId) {
 
     await renderStudentHome(tabletId, {
       feedback: setIntent.isSubscribed
-        ? "Set ist bereits in deinem Menue."
-        : "Set wurde deinem Menue hinzugefuegt.",
+        ? "Schon im Menü."
+        : "Zum Menü hinzugefügt.",
       highlightedSetPath: requestedSetPath,
-      highlightedSetLabel: setIntent.isSubscribed ? "Bereits im Menue" : "Neu hinzugefuegt",
+      highlightedSetLabel: setIntent.isSubscribed ? "Schon da" : "Neu",
     });
     return;
   }
@@ -338,7 +323,7 @@ function resolveRequestedSetRequest() {
     isValid: false,
     path: "",
     url: "",
-    detail: `Erwartet wird ein Pfad wie ${EXAMPLE_SET_QUERY_PATH}.`,
+    detail: "",
   };
 
   if (!normalizedSetPath) {
@@ -366,6 +351,7 @@ function setStudentAppMode(mode) {
   elements.appShell.dataset.appMode = mode;
   elements.studentScreen.hidden = mode === APP_MODES.FLASHCARD;
   elements.cardStage.hidden = mode !== APP_MODES.FLASHCARD;
+  updateStudentShareBlock();
 }
 
 function renderStudentScreen({
@@ -406,6 +392,79 @@ function renderStudentScreen({
     secondaryLabel,
   );
   elements.statusMessage.textContent = `${title}. ${message}${detail ? ` ${detail}` : ""}`;
+  updateStudentShareBlock();
+}
+
+async function initializeStudentShareOrigin() {
+  try {
+    const response = await apiRequest("/api/runtime-info");
+    state.publicOrigin = typeof response?.data?.publicOrigin === "string"
+      ? response.data.publicOrigin.trim()
+      : "";
+  } catch (_error) {
+    state.publicOrigin = "";
+  }
+
+  updateStudentShareBlock();
+}
+
+function shouldShowStudentShareBlock() {
+  return state.appMode === APP_MODES.ACCESS
+    || state.appMode === APP_MODES.SCANNER
+    || state.appMode === APP_MODES.LOAD_ERROR;
+}
+
+function updateStudentShareBlock() {
+  if (!elements.studentShareBlock) {
+    return;
+  }
+
+  const isVisible = shouldShowStudentShareBlock();
+  elements.studentShareBlock.hidden = !isVisible;
+
+  if (!isVisible) {
+    return;
+  }
+
+  const shareUrl = buildStudentShareUrlForCurrentLocation();
+  elements.studentShareLink.value = shareUrl;
+  elements.studentShareFeedback.textContent = "";
+
+  if (window.QRious && elements.studentShareQr) {
+    new window.QRious({
+      element: elements.studentShareQr,
+      value: shareUrl,
+      size: 180,
+      level: "M",
+      padding: 12,
+      foreground: "#1f1f1f",
+      background: "#ffffff",
+    });
+  }
+}
+
+function buildStudentShareUrlForCurrentLocation() {
+  const origin = state.publicOrigin || window.location.origin;
+  const currentUrl = new URL(window.location.href);
+  const shareUrl = new URL(currentUrl.pathname || "/index.html", `${origin}/`);
+  shareUrl.search = currentUrl.search;
+  shareUrl.hash = currentUrl.hash;
+  return shareUrl.href;
+}
+
+async function handleStudentShareCopy() {
+  const shareUrl = elements.studentShareLink.value.trim();
+
+  if (!shareUrl) {
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(shareUrl);
+    elements.studentShareFeedback.textContent = "Kopiert.";
+  } catch (error) {
+    elements.studentShareFeedback.textContent = "Kopieren fehlgeschlagen.";
+  }
 }
 
 function clearStudentScreenForm() {
@@ -423,13 +482,11 @@ function configureStudentScreenAction(button, action, label) {
 function renderScannerPlaceholderState({ allowHomeReturn = false } = {}) {
   renderStudentScreen({
     mode: APP_MODES.SCANNER,
-    title: allowHomeReturn ? "Neues Set hinzufuegen" : "Set laden",
-    message: allowHomeReturn
-      ? "Scanne den QR-Code mit der Kamera-App oder gib den Set-Link ein, um ein neues Set zu abonnieren."
-      : "Scanne den QR-Code mit der Kamera-App oder gib den Set-Link manuell ein.",
-    detail: `Akzeptiert werden nur gueltige Set-Ziele unter /sets/, z. B. ?set=${EXAMPLE_SET_QUERY_PATH}.`,
+    title: allowHomeReturn ? "Set hinzufügen" : "Set öffnen",
+    message: "",
+    detail: "",
     secondaryAction: allowHomeReturn ? "go-home" : "",
-    secondaryLabel: allowHomeReturn ? "Zum Set-Menue" : "",
+    secondaryLabel: allowHomeReturn ? "Zur Übersicht" : "",
   });
 
   const form = document.createElement("div");
@@ -443,11 +500,7 @@ function renderScannerPlaceholderState({ allowHomeReturn = false } = {}) {
 
   const scannerLead = document.createElement("p");
   scannerLead.className = "student-screen__scanner-note student-screen__scanner-note--lead";
-  scannerLead.textContent = "Oeffne auf dem iPad die Kamera-App oder den Code Scanner, scanne den QR-Code und tippe auf den erkannten Link.";
-
-  const scannerNote = document.createElement("p");
-  scannerNote.className = "student-screen__scanner-note";
-  scannerNote.textContent = "Falls das nicht moeglich ist, kannst du unten auch direkt den Set-Link oder Pfad einfuegen.";
+  scannerLead.textContent = "QR-Code scannen oder Link eingeben.";
 
   const manualForm = document.createElement("form");
   manualForm.className = "student-screen__manual-form";
@@ -459,105 +512,239 @@ function renderScannerPlaceholderState({ allowHomeReturn = false } = {}) {
 
   const manualLabel = document.createElement("span");
   manualLabel.className = "student-screen__label";
-  manualLabel.textContent = "Direktlink oder Set-Pfad";
+  manualLabel.textContent = "Link oder Pfad";
 
   const manualInput = document.createElement("input");
   manualInput.name = "manual-set-target";
   manualInput.type = "text";
   manualInput.className = "student-screen__input";
-  manualInput.placeholder = `z. B. ${EXAMPLE_SET_QUERY_PATH}`;
+  manualInput.placeholder = "";
   manualInput.autocapitalize = "off";
   manualInput.autocomplete = "off";
   manualInput.spellcheck = false;
 
   manualField.append(manualLabel, manualInput);
-  manualForm.append(manualField, createStudentSubmitButton(allowHomeReturn ? "Set hinzufuegen" : "Set oeffnen"));
+  manualForm.append(manualField, createStudentSubmitButton(allowHomeReturn ? "Set hinzufügen" : "Set öffnen"));
 
   const feedback = createStudentFeedback("");
   feedback.id = "student-scanner-feedback";
 
   scannerRegion.append(scannerLead);
-  scannerShell.append(scannerRegion, scannerNote);
+  scannerShell.append(scannerRegion);
   form.append(scannerShell, manualForm, feedback);
   elements.studentScreenForm.replaceChildren(form);
+  elements.studentScreenForm.hidden = false;
+}
+
+function renderAccessState({
+  loginTabletId = "",
+  loginFeedback = "",
+  knownDeviceFeedback = "",
+  registrationTabletId = DEFAULT_TABLET_ID,
+  registrationFeedback = "",
+  showRegistration = false,
+} = {}) {
+  const localTabletId = loadLocalTabletId();
+  const hasKnownDevice = Boolean(localTabletId);
+  const detail = state.requestedSetPath
+    ? "Erst Zugang bestätigen, dann wird das Set geöffnet oder zu deinem Menü hinzugefügt."
+    : "Dieses Gerät merkt sich nur lokal, welche Kennung hier zuletzt verwendet wurde.";
+
+  state.accessRegistrationOpen = showRegistration;
+  state.accessKnownDeviceFeedback = knownDeviceFeedback;
+
+  renderStudentScreen({
+    mode: APP_MODES.ACCESS,
+    title: state.requestedSetPath ? "Set hinzufügen" : "Weiterlernen",
+    message: hasKnownDevice
+      ? "Auf deinem üblichen Gerät kannst du direkt weitermachen."
+      : "Melde dich mit deiner Kennung an oder richte sie auf diesem Gerät ein.",
+    detail,
+    kicker: "Student",
+    secondaryAction: localTabletId ? "clear-local-tablet" : (state.requestedSetPath ? "clear-set" : ""),
+    secondaryLabel: localTabletId ? "Andere Kennung verwenden" : (state.requestedSetPath ? "Start" : ""),
+  });
+
+  const container = document.createElement("div");
+  container.className = "student-screen__access";
+
+  if (hasKnownDevice) {
+    const quickSection = document.createElement("section");
+    quickSection.className = "student-screen__access-section student-screen__access-section--primary";
+
+    const quickHeader = document.createElement("div");
+    quickHeader.className = "student-screen__access-section-header";
+
+    const quickTitle = document.createElement("h2");
+    quickTitle.className = "student-screen__access-section-title";
+    quickTitle.textContent = `Weiter mit ${getTabletLabel(localTabletId)}`;
+
+    const quickText = document.createElement("p");
+    quickText.className = "student-screen__access-section-text";
+    quickText.textContent = "Zuletzt auf diesem Gerät verwendet.";
+
+    quickHeader.append(quickTitle, quickText);
+
+    const quickForm = document.createElement("form");
+    quickForm.className = "student-screen__access-form";
+    quickForm.noValidate = true;
+    quickForm.dataset.accessVariant = "quick";
+    quickForm.addEventListener("submit", handlePinSubmit);
+    quickForm.append(
+      createHiddenInput("tabletId", localTabletId),
+      createStudentField({
+        label: "PIN",
+        control: createPinInput("pin-entry", "PIN eingeben"),
+      }),
+      createStudentSubmitButton(`Weiter mit ${getTabletLabel(localTabletId)}`),
+      createStudentFeedback(knownDeviceFeedback),
+    );
+
+    quickSection.append(quickHeader, quickForm);
+    container.append(quickSection);
+  }
+
+  const loginSection = document.createElement("section");
+  loginSection.className = "student-screen__access-section";
+
+  const loginHeader = document.createElement("div");
+  loginHeader.className = "student-screen__access-section-header";
+
+  const loginTitle = document.createElement("h2");
+  loginTitle.className = "student-screen__access-section-title";
+  loginTitle.textContent = "Ich habe schon eine Kennung";
+
+  const loginText = document.createElement("p");
+  loginText.className = "student-screen__access-section-text";
+  loginText.textContent = "Kennung und PIN eingeben. Das funktioniert auf jedem Gerät.";
+
+  loginHeader.append(loginTitle, loginText);
+
+  const loginForm = document.createElement("form");
+  loginForm.className = "student-screen__access-form";
+  loginForm.noValidate = true;
+  loginForm.dataset.accessVariant = "login";
+  loginForm.addEventListener("submit", handlePinSubmit);
+
+  loginForm.append(
+    createStudentField({
+      label: "Kennung",
+      control: createTabletIdInput("tabletId", loginTabletId || ""),
+    }),
+    createStudentField({
+      label: "PIN",
+      control: createPinInput("pin-entry", "PIN eingeben"),
+    }),
+    createStudentSubmitButton(state.requestedSetPath ? "Mit Kennung weiter" : "Mit Kennung öffnen"),
+    createStudentFeedback(loginFeedback),
+  );
+
+  loginSection.append(loginHeader, loginForm);
+  container.append(loginSection);
+
+  const registrationSection = document.createElement("section");
+  registrationSection.className = "student-screen__access-section student-screen__access-section--secondary";
+
+  const registrationHeader = document.createElement("div");
+  registrationHeader.className = "student-screen__access-section-header";
+
+  const registrationTitle = document.createElement("h2");
+  registrationTitle.className = "student-screen__access-section-title";
+  registrationTitle.textContent = "Neu auf diesem Gerät";
+
+  const registrationText = document.createElement("p");
+  registrationText.className = "student-screen__access-section-text";
+  registrationText.textContent = "Richte deine Kennung hier einmalig ein, wenn du auf diesem Gerät neu bist.";
+
+  registrationHeader.append(registrationTitle, registrationText);
+  registrationSection.append(registrationHeader);
+
+  if (showRegistration) {
+    const registrationForm = document.createElement("form");
+    registrationForm.className = "student-screen__access-form";
+    registrationForm.noValidate = true;
+    registrationForm.addEventListener("submit", handleRegistrationSubmit);
+
+    registrationForm.append(
+      createStudentField({
+        label: "Kennung",
+        control: createTabletSelect(registrationTabletId),
+      }),
+      createStudentField({
+        label: "PIN",
+        control: createPinInput("registration-pin", "Neuen PIN eingeben"),
+      }),
+      createStudentField({
+        label: "PIN bestätigen",
+        control: createPinInput("registration-pin-confirm", "PIN wiederholen"),
+      }),
+      createStudentSubmitButton("Hier einrichten"),
+      createStudentFeedback(registrationFeedback),
+    );
+
+    const collapseButton = document.createElement("button");
+    collapseButton.type = "button";
+    collapseButton.className = "student-screen__inline-action";
+    collapseButton.textContent = "Nicht jetzt";
+    collapseButton.addEventListener("click", () => {
+      renderAccessState({
+        loginTabletId: loginTabletId || "",
+        knownDeviceFeedback,
+        showRegistration: false,
+      });
+    });
+
+    registrationSection.append(registrationForm, collapseButton);
+  } else {
+    const openButton = document.createElement("button");
+    openButton.type = "button";
+    openButton.className = "student-screen__inline-action";
+    openButton.textContent = "Zugang hier einrichten";
+    openButton.addEventListener("click", () => {
+      renderAccessState({
+        loginTabletId: loginTabletId || "",
+        knownDeviceFeedback,
+        registrationTabletId,
+        showRegistration: true,
+      });
+    });
+    registrationSection.append(openButton);
+  }
+
+  container.append(registrationSection);
+  elements.studentScreenForm.replaceChildren(container);
   elements.studentScreenForm.hidden = false;
 }
 
 function renderRegistrationState({
   selectedTabletId = DEFAULT_TABLET_ID,
   feedback = "",
-  detail = "Waehle das Tablet und setze einen PIN, bevor das Set startet.",
+  detail = "Wähle die Kennung und setze einen PIN.",
 } = {}) {
-  renderStudentScreen({
-    mode: APP_MODES.REGISTRATION,
-    title: "Tablet verbinden",
-    message: "Verbinde dieses Geraet einmalig mit deinem Lernbereich.",
-    detail,
-    kicker: "Start",
-    secondaryAction: "clear-set",
-    secondaryLabel: "Zur Startansicht",
+  void detail;
+  renderAccessState({
+    registrationTabletId: selectedTabletId,
+    registrationFeedback: feedback,
+    showRegistration: true,
   });
-
-  const form = document.createElement("form");
-  form.className = "student-screen__form";
-  form.noValidate = true;
-  form.addEventListener("submit", handleRegistrationSubmit);
-
-  form.append(
-    createStudentField({
-      label: "Tablet",
-      control: createTabletSelect(selectedTabletId),
-    }),
-    createStudentField({
-      label: "PIN",
-      control: createPinInput("registration-pin", "Neuen PIN eingeben"),
-    }),
-    createStudentField({
-      label: "PIN bestaetigen",
-      control: createPinInput("registration-pin-confirm", "PIN wiederholen"),
-    }),
-    createStudentSubmitButton("Registrieren und starten"),
-    createStudentFeedback(feedback),
-  );
-
-  elements.studentScreenForm.replaceChildren(form);
-  elements.studentScreenForm.hidden = false;
 }
 
 function renderPinState(tabletId, {
   feedback = "",
   title = "PIN eingeben",
-  message = `Tablet: ${getTabletLabel(tabletId)}`,
-  detail = "Gib den PIN fuer dieses Tablet ein, um das Set zu starten.",
+  message = `Kennung: ${getTabletLabel(tabletId)}`,
+  detail = "Gib den PIN für diese Kennung ein.",
   submitLabel = "Entsperren und starten",
 } = {}) {
-  renderStudentScreen({
-    mode: APP_MODES.PIN,
-    title,
-    message,
-    detail,
-    kicker: "Tablet",
-    secondaryAction: "clear-local-tablet",
-    secondaryLabel: "Tablet-Auswahl loeschen",
+  void title;
+  void message;
+  void detail;
+  void submitLabel;
+  renderAccessState({
+    loginTabletId: tabletId,
+    loginFeedback: feedback,
+    showRegistration: false,
   });
-
-  const form = document.createElement("form");
-  form.className = "student-screen__form";
-  form.noValidate = true;
-  form.dataset.tabletId = tabletId;
-  form.addEventListener("submit", handlePinSubmit);
-
-  form.append(
-    createStudentField({
-      label: "PIN",
-      control: createPinInput("pin-entry", "PIN eingeben"),
-    }),
-    createStudentSubmitButton(submitLabel),
-    createStudentFeedback(feedback),
-  );
-
-  elements.studentScreenForm.replaceChildren(form);
-  elements.studentScreenForm.hidden = false;
 }
 
 async function renderStudentHome(tabletId, {
@@ -568,25 +755,25 @@ async function renderStudentHome(tabletId, {
 } = {}) {
   renderStudentScreen({
     mode: APP_MODES.HOME,
-    title: "Waehle dein Lernset",
-    message: `Tablet: ${getTabletLabel(tabletId)}`,
-    detail: "Starte ein vorhandenes Set oder fuege per Link ein neues hinzu.",
-    kicker: "Lernset Library",
+    title: "Lernsets",
+    message: `Kennung: ${getTabletLabel(tabletId)}`,
+    detail: "",
+    kicker: "Menü",
     secondaryAction: "clear-local-tablet",
-    secondaryLabel: "Tablet-Auswahl loeschen",
+    secondaryLabel: "Andere Kennung",
   });
 
   const result = await loadTabletSubscriptions(tabletId);
 
   if (!result.ok) {
     renderStudentLoadErrorState({
-      title: "Set-Menue nicht verfuegbar",
-      message: "Die Set-Liste fuer dieses Tablet konnte nicht geladen werden.",
+      title: "Set-Menü nicht verfügbar",
+      message: "Sets konnten nicht geladen werden.",
       detail: result.error,
       primaryAction: "go-home",
-      primaryLabel: "Erneut laden",
+      primaryLabel: "Erneut",
       secondaryAction: "clear-local-tablet",
-      secondaryLabel: "Tablet-Auswahl loeschen",
+      secondaryLabel: "Andere Kennung",
     });
     return;
   }
@@ -613,11 +800,11 @@ async function renderStudentHome(tabletId, {
 
     const emptyTitle = document.createElement("p");
     emptyTitle.className = "student-screen__empty-title";
-    emptyTitle.textContent = "Noch keine Sets hinzugefuegt";
+    emptyTitle.textContent = "Keine Sets";
 
     const emptyMessage = document.createElement("p");
     emptyMessage.className = "student-screen__empty-message";
-    emptyMessage.textContent = "Fuege per Link oder QR-Code ein Set hinzu. Danach erscheint es hier.";
+    emptyMessage.textContent = "";
 
     emptyState.append(emptyTitle, emptyMessage);
     container.append(emptyState);
@@ -750,7 +937,7 @@ async function handleManualSetSubmit(event) {
     return;
   }
 
-  setScannerFeedback("Set wird geoeffnet.", false);
+  setScannerFeedback("Öffne Set.", false);
   window.location.assign(target.url);
 }
 
@@ -762,7 +949,7 @@ function normalizeScannedSetTarget(rawValue) {
       isValid: false,
       url: "",
       setPath: "",
-      error: "Bitte einen Set-Link oder Set-Pfad eingeben.",
+      error: "Link oder Pfad eingeben.",
     };
   }
 
@@ -786,7 +973,7 @@ function normalizeScannedSetTarget(rawValue) {
       isValid: false,
       url: "",
       setPath: "",
-      error: "Der eingegebene Link enthaelt kein gueltiges Set-Ziel.",
+      error: "Ungültiger Link.",
     };
   }
 
@@ -795,7 +982,7 @@ function normalizeScannedSetTarget(rawValue) {
       isValid: false,
       url: "",
       setPath: "",
-      error: "Nur Set-Links von derselben App-Quelle sind erlaubt.",
+      error: "Nur Links dieser App sind erlaubt.",
     };
   }
 
@@ -806,7 +993,7 @@ function normalizeScannedSetTarget(rawValue) {
       isValid: false,
       url: "",
       setPath: "",
-      error: "Im Link wurde kein gueltiger Set-Pfad unter /sets/ gefunden.",
+      error: "Kein gültiges Set gefunden.",
     };
   }
 
@@ -878,6 +1065,28 @@ function createTabletSelect(selectedTabletId) {
   return select;
 }
 
+function createHiddenInput(name, value) {
+  const input = document.createElement("input");
+  input.type = "hidden";
+  input.name = name;
+  input.value = value;
+  return input;
+}
+
+function createTabletIdInput(name, value = "") {
+  const input = document.createElement("input");
+  input.name = name;
+  input.type = "text";
+  input.className = "student-screen__input";
+  input.placeholder = `z. B. ${DEFAULT_TABLET_ID}`;
+  input.autocapitalize = "off";
+  input.autocomplete = "off";
+  input.spellcheck = false;
+  input.required = true;
+  input.value = value;
+  return input;
+}
+
 function createPinInput(name, placeholder) {
   const input = document.createElement("input");
   input.name = name;
@@ -942,21 +1151,19 @@ function createStudentSetRow(subscription, {
 
   const title = document.createElement("h3");
   title.className = "student-screen__library-title";
-  title.textContent = subscription.title;
+  title.textContent = subscription.title === subscription.setPath
+    ? (subscription.id || "Set")
+    : subscription.title;
 
   const meta = document.createElement("p");
   meta.className = "student-screen__library-meta";
   meta.textContent = Number.isFinite(subscription.cardCount)
     ? `${subscription.cardCount} Karten`
-    : (subscription.id || subscription.setPath);
+    : (subscription.id || "Lernset");
 
   const description = document.createElement("p");
   description.className = "student-screen__library-description";
-  description.textContent = subscription.description || "Abonniertes Lernset";
-
-  const path = document.createElement("p");
-  path.className = "student-screen__library-path";
-  path.textContent = subscription.setPath;
+  description.textContent = subscription.description || "Lernset";
 
   const actions = document.createElement("div");
   actions.className = "student-screen__library-actions";
@@ -978,7 +1185,7 @@ function createStudentSetRow(subscription, {
   });
 
   actions.append(startButton, removeButton);
-  copy.append(title, meta, description, path);
+  copy.append(title, meta, description);
   row.append(cover, copy, actions);
   return row;
 }
@@ -1003,11 +1210,11 @@ function createStudentAddSetCard() {
 
   const title = document.createElement("span");
   title.className = "student-screen__library-add-title";
-  title.textContent = "Neues Set hinzufuegen";
+  title.textContent = "Set hinzufügen";
 
   const text = document.createElement("span");
   text.className = "student-screen__library-add-text";
-  text.textContent = "Neues Set per QR-Link oder Direktlink abonnieren.";
+  text.textContent = "Per QR oder Link";
 
   card.append(iconWrap, title, text);
   return card;
@@ -1173,7 +1380,7 @@ async function subscribeTabletToSet(tabletId, setPath) {
     if (!response.ok) {
       return {
         ok: false,
-        error: getApiErrorMessage(response, "Set konnte nicht hinzugefuegt werden."),
+        error: getApiErrorMessage(response, "Set konnte nicht hinzugefügt werden."),
       };
     }
 
@@ -1237,7 +1444,7 @@ async function handleRegistrationSubmit(event) {
   if (!tabletId) {
     renderRegistrationState({
       selectedTabletId: DEFAULT_TABLET_ID,
-      feedback: "Bitte waehle ein Tablet aus.",
+      feedback: "Bitte wähle eine Kennung aus.",
     });
     return;
   }
@@ -1253,7 +1460,7 @@ async function handleRegistrationSubmit(event) {
   if (pin !== pinConfirm) {
     renderRegistrationState({
       selectedTabletId: tabletId,
-      feedback: "Die PIN-Eingaben stimmen nicht ueberein.",
+      feedback: "Die PIN-Eingaben stimmen nicht überein.",
     });
     return;
   }
@@ -1278,21 +1485,26 @@ async function handleRegistrationSubmit(event) {
     }
 
     if (response.status === 409) {
-      renderPinState(tabletId, {
-        feedback: "Dieses Tablet ist bereits registriert. Bitte PIN eingeben.",
+      renderAccessState({
+        loginTabletId: tabletId,
+        loginFeedback: "Diese Kennung ist schon eingerichtet. Bitte mit PIN weiter.",
       });
       return;
     }
 
-    renderRegistrationState({
-      selectedTabletId: tabletId,
-      feedback: getApiErrorMessage(response, "Registrierung fehlgeschlagen."),
+    renderAccessState({
+      loginTabletId: loadLocalTabletId() || "",
+      registrationTabletId: tabletId,
+      registrationFeedback: getApiErrorMessage(response, "Registrierung fehlgeschlagen."),
+      showRegistration: true,
     });
   } catch (error) {
     console.error("Unable to register tablet:", error);
-    renderRegistrationState({
-      selectedTabletId: tabletId,
-      feedback: "Server nicht erreichbar. Bitte erneut versuchen.",
+    renderAccessState({
+      loginTabletId: loadLocalTabletId() || "",
+      registrationTabletId: tabletId,
+      registrationFeedback: "Server nicht erreichbar. Bitte erneut versuchen.",
+      showRegistration: true,
     });
   }
 }
@@ -1301,15 +1513,30 @@ async function handlePinSubmit(event) {
   event.preventDefault();
 
   const form = event.currentTarget;
-  const tabletId = form.dataset.tabletId || loadLocalTabletId() || DEFAULT_TABLET_ID;
+  const accessVariant = form.dataset.accessVariant || "login";
   const formData = new FormData(form);
+  const tabletId = typeof formData.get("tabletId") === "string"
+    ? formData.get("tabletId").trim().toLowerCase()
+    : (form.dataset.tabletId || loadLocalTabletId() || DEFAULT_TABLET_ID);
   const pin = typeof formData.get("pin-entry") === "string"
     ? formData.get("pin-entry").trim()
     : "";
 
+  if (!tabletId) {
+    renderAccessState({
+      loginFeedback: "Bitte gib deine Kennung ein.",
+      knownDeviceFeedback: state.accessKnownDeviceFeedback,
+      showRegistration: state.accessRegistrationOpen,
+    });
+    return;
+  }
+
   if (!pin) {
-    renderPinState(tabletId, {
-      feedback: "Bitte gib den PIN ein.",
+    renderAccessState({
+      loginTabletId: tabletId,
+      loginFeedback: accessVariant === "login" ? "Bitte gib den PIN ein." : "",
+      knownDeviceFeedback: accessVariant === "quick" ? "Bitte gib den PIN ein." : "",
+      showRegistration: state.accessRegistrationOpen,
     });
     return;
   }
@@ -1335,20 +1562,32 @@ async function handlePinSubmit(event) {
 
     if (response.status === 409) {
       clearLocalTabletId();
-      renderRegistrationState({
-        selectedTabletId: tabletId,
-        feedback: "Dieses Tablet ist noch nicht registriert.",
+      renderAccessState({
+        loginTabletId: tabletId,
+        registrationTabletId: tabletId,
+        registrationFeedback: "Diese Kennung ist auf diesem Gerät noch nicht eingerichtet.",
+        showRegistration: true,
       });
       return;
     }
 
-    renderPinState(tabletId, {
-      feedback: getApiErrorMessage(response, "PIN konnte nicht geprueft werden."),
+    renderAccessState({
+      loginTabletId: tabletId,
+      loginFeedback: accessVariant === "login"
+        ? getApiErrorMessage(response, "PIN konnte nicht geprüft werden.")
+        : "",
+      knownDeviceFeedback: accessVariant === "quick"
+        ? getApiErrorMessage(response, "PIN konnte nicht geprüft werden.")
+        : "",
+      showRegistration: state.accessRegistrationOpen,
     });
   } catch (error) {
     console.error("Unable to verify tablet pin:", error);
-    renderPinState(tabletId, {
-      feedback: "Server nicht erreichbar. Bitte erneut versuchen.",
+    renderAccessState({
+      loginTabletId: tabletId,
+      loginFeedback: accessVariant === "login" ? "Server nicht erreichbar. Bitte erneut versuchen." : "",
+      knownDeviceFeedback: accessVariant === "quick" ? "Server nicht erreichbar. Bitte erneut versuchen." : "",
+      showRegistration: state.accessRegistrationOpen,
     });
   }
 }
@@ -2351,7 +2590,7 @@ function renderLoadingState() {
   elements.backHint.textContent = "";
   elements.frontHint.classList.remove("is-summary");
   elements.frontHint.classList.remove("is-visible");
-  elements.statusMessage.textContent = "Loading set.";
+  elements.statusMessage.textContent = "Lade Set.";
   updateStarButtons();
   updateAudioButtons();
   updateEvalButtons();
@@ -2403,7 +2642,7 @@ function renderRoundSummaryState() {
   elements.frontHint.classList.add("is-summary", "is-visible");
   elements.statusMessage.textContent = getRoundSummaryStatusMessage();
   elements.flashcard.setAttribute("aria-label", getRoundSummaryCardLabel());
-  elements.cardAction.setAttribute("aria-label", "Mit den offenen Karten weitermachen.");
+  elements.cardAction.setAttribute("aria-label", "Weiter.");
   updateStarButtons();
   updateAudioButtons();
   updateEvalButtons();
@@ -2457,7 +2696,7 @@ function renderStarReviewIntroState(cards) {
   elements.frontHint.classList.add("is-summary", "is-visible");
   elements.statusMessage.textContent = getStarReviewIntroStatusMessage(cards.length);
   elements.flashcard.setAttribute("aria-label", getStarReviewIntroCardLabel(cards.length));
-  elements.cardAction.setAttribute("aria-label", "Sternchen-Runde starten.");
+  elements.cardAction.setAttribute("aria-label", "Starten.");
   updateStarButtons();
   updateAudioButtons();
   updateEvalButtons();
@@ -2524,7 +2763,7 @@ function renderCompletionState() {
   elements.frontHint.classList.add("is-visible");
   elements.statusMessage.textContent = getCompletionStatusMessage();
   elements.flashcard.setAttribute("aria-label", getCompletionCardLabel());
-  elements.cardAction.setAttribute("aria-label", "Runde neu starten.");
+  elements.cardAction.setAttribute("aria-label", "Neu starten.");
   updateStarButtons();
   updateAudioButtons();
   updateEvalButtons();
@@ -2636,8 +2875,8 @@ function renderErrorState(message) {
     "progress-cycle-even",
     "progress-cycle-odd",
   );
-  elements.frontWord.textContent = "Error";
-  elements.backWord.textContent = "Error";
+  elements.frontWord.textContent = "Fehler";
+  elements.backWord.textContent = "Fehler";
   elements.frontHint.textContent = message;
   elements.backHint.textContent = "";
   elements.frontHint.classList.remove("is-summary");
@@ -2697,13 +2936,13 @@ function getAudioStateForFace(card, face) {
 
 function getAudioButtonLabel(face, isAvailable, audioState = null) {
   if (!state.currentCard) {
-    return "Audio nicht verfuegbar.";
+    return "Audio nicht verfügbar.";
   }
 
   const sideLabel = audioState?.text || (face === "back" ? state.currentCard.targetText : state.currentCard.sourceText);
 
   if (!isAvailable) {
-    return `${sideLabel}. Audio nicht verfuegbar.`;
+    return `${sideLabel}. Audio nicht verfügbar.`;
   }
 
   return `${sideLabel} abspielen.`;
@@ -2769,22 +3008,22 @@ function updateEvalButtons() {
 
 function getStarActionLabel(starState) {
   if (!state.currentCard) {
-    return "Schwierigkeit nicht verfuegbar.";
+    return "Schwierigkeit nicht verfügbar.";
   }
 
   if (starState === "none") {
-    return "Schwierigkeit markieren. Naechster Zustand: gruen.";
+    return "Schwierigkeit markieren. Nächster Zustand: grün.";
   }
 
   if (starState === "green") {
-    return "Gruen markiert. Naechster Zustand: gelb.";
+    return "Grün markiert. Nächster Zustand: gelb.";
   }
 
   if (starState === "yellow") {
-    return "Gelb markiert. Naechster Zustand: orange.";
+    return "Gelb markiert. Nächster Zustand: orange.";
   }
 
-  return "Orange markiert. Naechster Zustand: keine Markierung.";
+  return "Orange markiert. Nächster Zustand: keine Markierung.";
 }
 
 function updateOutcomeCounters() {
@@ -2802,7 +3041,7 @@ function renderCompletionSummary() {
 
   const titleLine = document.createElement("span");
   titleLine.className = "flashcard__summary-line flashcard__summary-line--title";
-  titleLine.textContent = "Durchgang abgeschlossen.";
+  titleLine.textContent = "Fertig.";
 
   const metricsLine = document.createElement("span");
   metricsLine.className = "flashcard__summary-line flashcard__summary-line--metrics";
@@ -2813,16 +3052,12 @@ function renderCompletionSummary() {
 
   const roundLine = document.createElement("span");
   roundLine.className = "flashcard__summary-line";
-  roundLine.textContent = `${state.roundNumber} Runde${state.roundNumber === 1 ? "" : "n"} insgesamt.`;
+  roundLine.textContent = `${state.roundNumber} Runde${state.roundNumber === 1 ? "" : "n"}.`;
 
-  const restartLine = document.createElement("span");
-  restartLine.className = "flashcard__summary-line flashcard__summary-line--restart";
-  restartLine.textContent = "Tippe auf den Button für eine neue Runde.";
-
-  elements.frontHint.append(titleLine, metricsLine, roundLine, restartLine);
+  elements.frontHint.append(titleLine, metricsLine, roundLine);
   elements.frontHint.setAttribute(
     "aria-label",
-    `Durchgang abgeschlossen. ${state.knownCount} richtig, ${state.unknownCount} falsch. ${state.roundNumber} Runde${state.roundNumber === 1 ? "" : "n"} insgesamt. Tippe auf den Button für eine neue Runde.`,
+    `Fertig. ${state.knownCount} richtig, ${state.unknownCount} falsch. ${state.roundNumber} Runde${state.roundNumber === 1 ? "" : "n"}.`,
   );
 }
 
@@ -2831,7 +3066,7 @@ function renderRoundSummary() {
 
   const titleLine = state.roundMode === "star"
     ? createStarRoundTitle("fertig.")
-    : createSummaryTextLine("flashcard__summary-line flashcard__summary-line--title", "Runde abgeschlossen.");
+    : createSummaryTextLine("flashcard__summary-line flashcard__summary-line--title", "Runde fertig.");
 
   const metricsLine = document.createElement("span");
   metricsLine.className = "flashcard__summary-line flashcard__summary-line--metrics";
@@ -2840,14 +3075,10 @@ function renderRoundSummary() {
     createSummaryStat("unknown", `${state.summaryRoundUnknownCount} offen`),
   );
 
-  const continueLine = document.createElement("span");
-  continueLine.className = "flashcard__summary-line flashcard__summary-line--restart";
-  continueLine.textContent = "Button tippen, um mit den offenen Karten weiterzulernen.";
-
-  elements.frontHint.append(titleLine, metricsLine, continueLine);
+  elements.frontHint.append(titleLine, metricsLine);
   elements.frontHint.setAttribute(
     "aria-label",
-    `Runde abgeschlossen. ${state.summaryRoundKnownCount} richtig. ${state.summaryRoundUnknownCount} offen. Button tippen, um mit den offenen Karten weiterzulernen.`,
+    `Runde fertig. ${state.summaryRoundKnownCount} richtig. ${state.summaryRoundUnknownCount} offen.`,
   );
 }
 
@@ -2858,18 +3089,10 @@ function renderStarReviewIntroSummary(cardCount) {
   metricsLine.className = "flashcard__summary-line flashcard__summary-line--metrics";
   metricsLine.append(createStarCardCountLine(cardCount));
 
-  const continueLine = document.createElement("span");
-  continueLine.className = "flashcard__summary-line flashcard__summary-line--restart";
-  continueLine.append(
-    document.createTextNode("Button tippen, um die "),
-    createStarRoundWord("Runde"),
-    document.createTextNode(" zu starten."),
-  );
-
-  elements.frontHint.append(metricsLine, continueLine);
+  elements.frontHint.append(metricsLine);
   elements.frontHint.setAttribute(
     "aria-label",
-    `${cardCount} Stern-Karten. Button tippen, um die Stern-Runde zu starten.`,
+    `${cardCount} Stern-Karten.`,
   );
 }
 
@@ -3023,22 +3246,22 @@ function createHintMask(replacement, matchLength) {
 
 function getActionLabel() {
   if (!state.currentCard) {
-    return "Action unavailable.";
+    return "Nicht verfügbar.";
   }
 
   if (state.hasRevealedAnswer) {
-    return "Hint unavailable after reveal.";
+    return "Kein Hinweis.";
   }
 
   if (isHintSequenceComplete()) {
-    return state.isFlipped ? "Flip back to the source word." : "Flip to the translation.";
+    return state.isFlipped ? "Zurückdrehen." : "Aufdecken.";
   }
 
   if (!state.hintReady) {
-    return "Hint becomes available shortly.";
+    return "Hinweis folgt.";
   }
 
-  return state.hintLevel === 0 ? "Show the first hint." : "Show the second hint.";
+  return state.hintLevel === 0 ? "Ersten Hinweis zeigen." : "Zweiten Hinweis zeigen.";
 }
 
 function getStatusMessage() {
@@ -3055,11 +3278,11 @@ function getStatusMessage() {
   }
 
   if (!state.currentCard) {
-    return "Loading set.";
+    return "Lade Set.";
   }
 
   if (state.isFlipped) {
-    return "Back.";
+    return "Rückseite.";
   }
 
   if (state.hasRevealedAnswer) {
@@ -3067,11 +3290,11 @@ function getStatusMessage() {
   }
 
   if (state.hintLevel === 1) {
-    return "First hint.";
+    return "Erster Hinweis.";
   }
 
   if (isHintSequenceComplete()) {
-    return "Second hint.";
+    return "Zweiter Hinweis.";
   }
 
   return state.hintReady
@@ -3086,7 +3309,7 @@ function getRoundSummaryStatusMessage() {
 }
 
 function getStarReviewIntroStatusMessage(cardCount) {
-  return `Stern-Runde bereit. ${cardCount} schwere Karten.`;
+  return `Stern-Runde. ${cardCount} Karten.`;
 }
 
 function getCompletionStatusMessage() {
@@ -3095,16 +3318,16 @@ function getCompletionStatusMessage() {
 
 function getRoundSummaryCardLabel() {
   return state.roundMode === "star"
-    ? `Stern-Runde abgeschlossen. ${state.summaryRoundKnownCount} richtig. ${state.summaryRoundUnknownCount} offen. Mit den offenen Karten weitermachen.`
-    : `Runde abgeschlossen. ${state.summaryRoundKnownCount} richtig. ${state.summaryRoundUnknownCount} offen. Mit den offenen Karten weitermachen.`;
+    ? `Stern-Runde fertig. ${state.summaryRoundKnownCount} richtig. ${state.summaryRoundUnknownCount} offen.`
+    : `Runde fertig. ${state.summaryRoundKnownCount} richtig. ${state.summaryRoundUnknownCount} offen.`;
 }
 
 function getStarReviewIntroCardLabel(cardCount) {
-  return `Stern-Runde bereit. ${cardCount} schwere Karten. Stern-Runde starten.`;
+  return `Stern-Runde. ${cardCount} Karten.`;
 }
 
 function getCompletionCardLabel() {
-  return `Fertig. ${state.knownCount} richtig. ${state.unknownCount} falsch. Runde neu starten.`;
+  return `Fertig. ${state.knownCount} richtig. ${state.unknownCount} falsch.`;
 }
 
 function getCurrentRoundCardStatus() {
@@ -3115,12 +3338,12 @@ function getCurrentRoundCardStatus() {
 
 function getCardLabel() {
   if (!state.currentCard) {
-    return "Flashcard unavailable.";
+    return "Karte nicht verfügbar.";
   }
 
   if (state.isFlipped) {
     return `${state.currentCard.targetText}.`;
   }
 
-  return `${state.currentCard.sourceText}. Tap to flip the card.`;
+  return `${state.currentCard.sourceText}. Tippen zum Aufdecken.`;
 }

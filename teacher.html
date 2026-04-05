@@ -10,30 +10,30 @@
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./teacher.css?v=2026-04-05-1235-subscriptions" />
+    <link rel="stylesheet" href="./teacher.css?v=2026-04-05-1946-umlauts" />
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
-    <script src="./teacher.js?v=2026-04-05-1235-subscriptions" defer></script>
+    <script src="./teacher.js?v=2026-04-05-1946-umlauts" defer></script>
   </head>
   <body>
     <main class="teacher-app">
       <header class="teacher-header">
-        <p class="teacher-header__kicker">Teacher</p>
-        <h1 class="teacher-header__title">Sets teilen</h1>
+        <p class="teacher-header__kicker">Lehrkraft</p>
+        <h1 class="teacher-header__title">Sets</h1>
         <p class="teacher-header__message">
-          Waehle ein Set aus und oeffne die Freigabeansicht mit QR-Code und Direktlink.
+          Set wählen und teilen.
         </p>
       </header>
 
       <section class="teacher-section" aria-labelledby="sets-title">
         <div class="teacher-section__header">
-          <h2 id="sets-title" class="teacher-section__title">Verfuegbare Sets</h2>
+          <h2 id="sets-title" class="teacher-section__title">Verfügbare Sets</h2>
           <p id="sets-meta" class="teacher-section__meta"></p>
         </div>
 
         <div id="teacher-empty-state" class="teacher-empty-state" hidden>
           <p class="teacher-empty-state__title">Keine Sets gefunden</p>
           <p class="teacher-empty-state__message">
-            Lege im Index mindestens einen gueltigen Set-Pfad unter <code>sets/</code> an.
+            Noch keine Sets verfügbar.
           </p>
         </div>
 
@@ -58,12 +58,12 @@
           id="share-close-button"
           class="share-panel__close"
           type="button"
-          aria-label="Freigabe schliessen"
+            aria-label="Schließen"
         >
-          Schliessen
+          Schließen
         </button>
 
-        <p class="share-panel__kicker">Freigabe</p>
+        <p class="share-panel__kicker">Teilen</p>
         <h2 id="share-title" class="share-panel__title"></h2>
         <p id="share-path" class="share-panel__path"></p>
 
@@ -72,12 +72,12 @@
         </div>
 
         <div class="share-panel__link-block">
-          <label class="share-panel__label" for="share-link">Direktlink</label>
+          <label class="share-panel__label" for="share-link">Link</label>
           <input id="share-link" class="share-panel__link" type="text" readonly />
         </div>
 
         <div class="share-panel__actions">
-          <button id="copy-link-button" class="share-panel__action" type="button">Link kopieren</button>
+          <button id="copy-link-button" class="share-panel__action" type="button">Kopieren</button>
           <button id="print-share-button" class="share-panel__action share-panel__action--secondary" type="button">
             Drucken
           </button>

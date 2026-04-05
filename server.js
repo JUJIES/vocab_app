@@ -173,7 +173,7 @@ app.post("/api/tablets/:tabletId/subscriptions", async (request, response) => {
 
   if (!setPath) {
     response.status(400).json({
-      error: "Gueltiger Set-Pfad fehlt.",
+      error: "Gültiger Set-Pfad fehlt.",
     });
     return;
   }
@@ -229,7 +229,7 @@ app.post("/api/tablets/:tabletId/subscriptions", async (request, response) => {
   } catch (error) {
     console.error("Unable to save tablet subscription:", error);
     response.status(500).json({
-      error: "Set konnte nicht hinzugefuegt werden.",
+      error: "Set konnte nicht hinzugefügt werden.",
     });
   }
 });
@@ -239,7 +239,7 @@ app.delete("/api/tablets/:tabletId/subscriptions", async (request, response) => 
 
   if (!setPath) {
     response.status(400).json({
-      error: "Gueltiger Set-Pfad fehlt.",
+      error: "Gültiger Set-Pfad fehlt.",
     });
     return;
   }
@@ -320,7 +320,7 @@ app.post("/api/tablets/:tabletId/verify-pin", async (request, response) => {
   } catch (error) {
     console.error("Unable to verify tablet pin:", error);
     response.status(500).json({
-      error: "PIN konnte nicht geprueft werden.",
+      error: "PIN konnte nicht geprüft werden.",
     });
   }
 });

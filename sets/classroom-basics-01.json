@@ -88,13 +88,13 @@
     },
     {
       "id": "s004",
-      "source": { "text": "erklaeren" },
+      "source": { "text": "erklären" },
       "target": { "text": "to explain" },
       "examples": [
         {
           "id": "ex1",
           "target": "Can you explain this rule again?",
-          "source": "Kannst du diese Regel noch einmal erklaeren?"
+          "source": "Kannst du diese Regel noch einmal erklären?"
         }
       ],
       "hintData": {

@@ -336,7 +336,7 @@
     {
       "id": "c007",
       "source": {
-        "text": "Loeffel"
+        "text": "Löffel"
       },
       "target": {
         "text": "spoon"
@@ -345,7 +345,7 @@
         {
           "id": "ex1",
           "target": "Add one spoon of sugar to the tea.",
-          "source": "Gib einen Loeffel Zucker in den Tee."
+          "source": "Gib einen Löffel Zucker in den Tee."
         }
       ],
       "hintData": {
