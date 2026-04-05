@@ -1,0 +1,144 @@
+{
+  "schemaVersion": "1.1",
+  "set": {
+    "id": "daily-routines-01",
+    "slug": "daily-routines-01",
+    "title": "Daily Routines",
+    "subject": "English",
+    "description": "Alltag, Tagesablauf und Gewohnheiten",
+    "languages": {
+      "source": "de",
+      "target": "en"
+    },
+    "defaultDirections": {
+      "flashcard": "source_to_target",
+      "test": "source_to_target"
+    },
+    "tags": ["english", "daily-life", "unit4"],
+    "createdAt": "2026-04-05T11:42:00Z",
+    "updatedAt": "2026-04-05T11:42:00Z"
+  },
+  "settings": {
+    "enabledModes": ["flashcard", "test"],
+    "starLevels": [
+      { "value": 0, "label": "none", "color": "none" },
+      { "value": 1, "label": "easy", "color": "green" },
+      { "value": 2, "label": "medium", "color": "yellow" },
+      { "value": 3, "label": "hard", "color": "orange" }
+    ],
+    "hintStrategies": {
+      "flashcard": ["context", "context_plus_first_letter"],
+      "test": ["first_letter", "context", "partial_reveal"]
+    }
+  },
+  "cards": [
+    {
+      "id": "d001",
+      "source": { "text": "aufwachen" },
+      "target": { "text": "to wake up" },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "I wake up at six every morning.",
+          "source": "Ich wache jeden Morgen um sechs auf."
+        }
+      ],
+      "hintData": {
+        "flashcard": { "exampleId": "ex1", "maskedWord": "____", "firstLetterHint": "w___" },
+        "test": { "firstLetter": "w", "partialReveal": "w _ _ e", "exampleId": "ex1" }
+      },
+      "acceptedAnswers": ["wake", "wake up", "to wake up"],
+      "meta": { "tags": ["daily-life", "verb"], "difficulty": "easy", "active": true }
+    },
+    {
+      "id": "d002",
+      "source": { "text": "fruehstuecken" },
+      "target": { "text": "to have breakfast" },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "They have breakfast before school.",
+          "source": "Sie fruehstuecken vor der Schule."
+        }
+      ],
+      "hintData": {
+        "flashcard": { "exampleId": "ex1", "maskedWord": "____", "firstLetterHint": "h___" },
+        "test": { "firstLetter": "h", "partialReveal": "h _ _ e", "exampleId": "ex1" }
+      },
+      "acceptedAnswers": ["have breakfast", "to have breakfast"],
+      "meta": { "tags": ["daily-life", "verb"], "difficulty": "medium", "active": true }
+    },
+    {
+      "id": "d003",
+      "source": { "text": "spazieren gehen" },
+      "target": { "text": "to go for a walk" },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "We go for a walk after dinner.",
+          "source": "Wir gehen nach dem Abendessen spazieren."
+        }
+      ],
+      "hintData": {
+        "flashcard": { "exampleId": "ex1", "maskedWord": "__", "firstLetterHint": "g_" },
+        "test": { "firstLetter": "g", "partialReveal": "g _", "exampleId": "ex1" }
+      },
+      "acceptedAnswers": ["go", "go for a walk", "to go for a walk"],
+      "meta": { "tags": ["daily-life", "verb"], "difficulty": "medium", "active": true }
+    },
+    {
+      "id": "d004",
+      "source": { "text": "Muede" },
+      "target": { "text": "tired" },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "She is tired after the long day.",
+          "source": "Sie ist nach dem langen Tag muede."
+        }
+      ],
+      "hintData": {
+        "flashcard": { "exampleId": "ex1", "maskedWord": "_____", "firstLetterHint": "t____" },
+        "test": { "firstLetter": "t", "partialReveal": "t _ r _ d", "exampleId": "ex1" }
+      },
+      "acceptedAnswers": ["tired"],
+      "meta": { "tags": ["daily-life", "adjective"], "difficulty": "easy", "active": true }
+    },
+    {
+      "id": "d005",
+      "source": { "text": "duschen" },
+      "target": { "text": "to shower" },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "He wants to shower before breakfast.",
+          "source": "Er will vor dem Fruehstueck duschen."
+        }
+      ],
+      "hintData": {
+        "flashcard": { "exampleId": "ex1", "maskedWord": "______", "firstLetterHint": "s_____" },
+        "test": { "firstLetter": "s", "partialReveal": "s _ o _ _ r", "exampleId": "ex1" }
+      },
+      "acceptedAnswers": ["shower", "to shower"],
+      "meta": { "tags": ["daily-life", "verb"], "difficulty": "easy", "active": true }
+    },
+    {
+      "id": "d006",
+      "source": { "text": "einschlafen" },
+      "target": { "text": "to fall asleep" },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "The baby falls asleep quickly.",
+          "source": "Das Baby schlaeft schnell ein."
+        }
+      ],
+      "hintData": {
+        "flashcard": { "exampleId": "ex1", "maskedWord": "____", "firstLetterHint": "f___" },
+        "test": { "firstLetter": "f", "partialReveal": "f _ _ _", "exampleId": "ex1" }
+      },
+      "acceptedAnswers": ["fall", "fall asleep", "to fall asleep"],
+      "meta": { "tags": ["daily-life", "verb"], "difficulty": "medium", "active": true }
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dino Vocab Teacher</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./teacher.css?v=2026-04-05-1235-subscriptions" />
+    <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
+    <script src="./teacher.js?v=2026-04-05-1235-subscriptions" defer></script>
+  </head>
+  <body>
+    <main class="teacher-app">
+      <header class="teacher-header">
+        <p class="teacher-header__kicker">Teacher</p>
+        <h1 class="teacher-header__title">Sets teilen</h1>
+        <p class="teacher-header__message">
+          Waehle ein Set aus und oeffne die Freigabeansicht mit QR-Code und Direktlink.
+        </p>
+      </header>
+
+      <section class="teacher-section" aria-labelledby="sets-title">
+        <div class="teacher-section__header">
+          <h2 id="sets-title" class="teacher-section__title">Verfuegbare Sets</h2>
+          <p id="sets-meta" class="teacher-section__meta"></p>
+        </div>
+
+        <div id="teacher-empty-state" class="teacher-empty-state" hidden>
+          <p class="teacher-empty-state__title">Keine Sets gefunden</p>
+          <p class="teacher-empty-state__message">
+            Lege im Index mindestens einen gueltigen Set-Pfad unter <code>sets/</code> an.
+          </p>
+        </div>
+
+        <div id="teacher-error-state" class="teacher-empty-state teacher-empty-state--error" hidden>
+          <p class="teacher-empty-state__title">Set-Liste konnte nicht geladen werden</p>
+          <p id="teacher-error-message" class="teacher-empty-state__message"></p>
+        </div>
+
+        <div id="teacher-set-list" class="teacher-set-list" role="list"></div>
+      </section>
+    </main>
+
+    <div id="share-overlay" class="share-overlay" hidden>
+      <div class="share-overlay__backdrop" data-close-share></div>
+      <section
+        class="share-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="share-title"
+      >
+        <button
+          id="share-close-button"
+          class="share-panel__close"
+          type="button"
+          aria-label="Freigabe schliessen"
+        >
+          Schliessen
+        </button>
+
+        <p class="share-panel__kicker">Freigabe</p>
+        <h2 id="share-title" class="share-panel__title"></h2>
+        <p id="share-path" class="share-panel__path"></p>
+
+        <div class="share-panel__qr-shell">
+          <canvas id="share-qr-canvas" class="share-panel__qr" width="280" height="280"></canvas>
+        </div>
+
+        <div class="share-panel__link-block">
+          <label class="share-panel__label" for="share-link">Direktlink</label>
+          <input id="share-link" class="share-panel__link" type="text" readonly />
+        </div>
+
+        <div class="share-panel__actions">
+          <button id="copy-link-button" class="share-panel__action" type="button">Link kopieren</button>
+          <button id="print-share-button" class="share-panel__action share-panel__action--secondary" type="button">
+            Drucken
+          </button>
+        </div>
+
+        <p id="share-feedback" class="share-panel__feedback" aria-live="polite"></p>
+      </section>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#1a1918" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Dino Vocab" />
+    <title>Dino Vocab App</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css?v=2026-04-05-1508-subscribe-home" />
+    <script src="./app.js?v=2026-04-05-1508-subscribe-home" defer></script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <section
+        id="student-screen"
+        class="student-screen"
+        aria-labelledby="student-screen-title"
+        hidden
+      >
+        <div class="student-screen__panel">
+          <p id="student-screen-kicker" class="student-screen__kicker">Student</p>
+          <h1 id="student-screen-title" class="student-screen__title">Set laden</h1>
+          <p id="student-screen-message" class="student-screen__message"></p>
+          <p id="student-screen-detail" class="student-screen__detail"></p>
+          <div id="student-screen-form" class="student-screen__form" hidden></div>
+          <div class="student-screen__actions">
+            <button
+              id="student-screen-primary-action"
+              class="student-screen__action"
+              type="button"
+              hidden
+            ></button>
+            <button
+              id="student-screen-secondary-action"
+              class="student-screen__action student-screen__action--secondary"
+              type="button"
+              hidden
+            ></button>
+          </div>
+        </div>
+      </section>
+
+      <section id="card-stage" class="card-stage" aria-label="Flashcard stage">
+        <div class="card-stage__topbar">
+          <button
+            id="student-home-link"
+            class="student-home-link"
+            type="button"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+            <span>Zum Set-Menue</span>
+          </button>
+        </div>
+
+        <div id="progress-shell" class="progress-shell" aria-hidden="true">
+          <p id="progress-label" class="progress-label"></p>
+          <div class="progress-row">
+            <span class="progress-metric progress-metric--unknown" aria-hidden="true">
+              <span class="progress-metric__icon progress-metric__icon--unknown"></span>
+              <span data-unknown-count>0</span>
+            </span>
+            <div class="progress-bar" aria-hidden="true">
+              <div id="progress-fill" class="progress-bar__fill"></div>
+            </div>
+            <span class="progress-metric progress-metric--known" aria-hidden="true">
+              <span data-known-count>0</span>
+              <span class="progress-metric__icon progress-metric__icon--known"></span>
+            </span>
+          </div>
+        </div>
+
+        <div class="flashcard-shell">
+          <div
+            id="flashcard"
+            class="flashcard is-loading"
+            role="button"
+            tabindex="-1"
+            aria-live="polite"
+            aria-describedby="status-message"
+            aria-disabled="true"
+          >
+            <span id="flashcard-motion" class="flashcard__motion">
+              <span class="flashcard__inner">
+                <span
+                  id="front-face"
+                  class="flashcard__face flashcard__face--front"
+                  aria-hidden="false"
+                >
+                  <span class="flashcard__gesture-hint" aria-hidden="true">
+                    <span class="material-symbols-outlined flashcard__gesture-icon">touch_app</span>
+                    <span class="flashcard__gesture-label">Aufdecken</span>
+                  </span>
+
+                  <span class="flashcard__corner-actions">
+                    <button
+                      class="card-audio card-control"
+                      type="button"
+                      aria-label="Audio nicht verfuegbar."
+                      data-audio-face="front"
+                      data-audio-button
+                    >
+                      <span class="material-symbols-outlined card-audio__icon" aria-hidden="true">volume_up</span>
+                    </button>
+
+                    <button
+                      class="card-star card-control"
+                      type="button"
+                      aria-label="Schwierigkeit markieren"
+                      data-star-button
+                    >
+                      <span class="material-symbols-outlined card-star__icon" aria-hidden="true">star</span>
+                    </button>
+                  </span>
+
+                  <span
+                    id="front-content"
+                    class="flashcard__content"
+                  >
+                    <span id="front-word" class="flashcard__word">&nbsp;</span>
+                    <span class="flashcard__hint-shell" aria-live="polite">
+                      <span id="front-hint" class="flashcard__hint"></span>
+                    </span>
+                  </span>
+
+                  <div class="flashcard__dock flashcard__dock--front">
+                    <button
+                      id="card-action"
+                      class="card-action card-control"
+                      type="button"
+                      aria-describedby="status-message"
+                      disabled
+                    >
+                      <svg class="card-action__progress" viewBox="0 0 100 100" aria-hidden="true">
+                        <circle class="card-action__progress-track" cx="50" cy="50" r="46"></circle>
+                        <circle class="card-action__progress-fill" cx="50" cy="50" r="46"></circle>
+                      </svg>
+                      <span
+                        class="material-symbols-outlined card-action__icon card-action__icon--hint"
+                        aria-hidden="true"
+                      >
+                        lightbulb
+                      </span>
+                      <span
+                        class="material-symbols-outlined card-action__icon card-action__icon--flip"
+                        aria-hidden="true"
+                      >
+                        cached
+                      </span>
+                      <span
+                        class="material-symbols-outlined card-action__icon card-action__icon--restart"
+                        aria-hidden="true"
+                      >
+                        replay
+                      </span>
+                      <span
+                        class="material-symbols-outlined card-action__icon card-action__icon--continue"
+                        aria-hidden="true"
+                      >
+                        arrow_forward
+                      </span>
+                    </button>
+                  </div>
+                </span>
+
+                <span
+                  id="back-face"
+                  class="flashcard__face flashcard__face--back"
+                  aria-hidden="true"
+                >
+                  <span class="flashcard__gesture-hint flashcard__gesture-hint--back" aria-hidden="true">
+                    <span class="material-symbols-outlined flashcard__gesture-icon">swipe</span>
+                    <span class="flashcard__gesture-label">Swipe</span>
+                  </span>
+
+                  <span class="flashcard__corner-actions">
+                    <button
+                      class="card-audio card-control"
+                      type="button"
+                      aria-label="Audio nicht verfuegbar."
+                      data-audio-face="back"
+                      data-audio-button
+                    >
+                      <span class="material-symbols-outlined card-audio__icon" aria-hidden="true">volume_up</span>
+                    </button>
+
+                    <button
+                      class="card-star card-control"
+                      type="button"
+                      aria-label="Schwierigkeit markieren"
+                      data-star-button
+                    >
+                      <span class="material-symbols-outlined card-star__icon" aria-hidden="true">star</span>
+                    </button>
+                  </span>
+
+                  <span class="flashcard__content">
+                    <span id="back-word" class="flashcard__word">&nbsp;</span>
+                    <span class="flashcard__hint-shell flashcard__hint-shell--back" aria-live="polite">
+                      <span id="back-hint" class="flashcard__hint flashcard__hint--back"></span>
+                    </span>
+                  </span>
+
+                  <div class="flashcard__dock flashcard__dock--back">
+                    <button
+                      class="back-action back-action--unknown card-control"
+                      type="button"
+                      aria-label="Nicht gewusst"
+                      data-eval-button="unknown"
+                    >
+                      <span class="back-action__icon back-action__icon--unknown" aria-hidden="true"></span>
+                    </button>
+                    <button
+                      class="back-action back-action--known card-control"
+                      type="button"
+                      aria-label="Gewusst"
+                      data-eval-button="known"
+                    >
+                      <span class="back-action__icon back-action__icon--known" aria-hidden="true"></span>
+                    </button>
+                  </div>
+                </span>
+              </span>
+            </span>
+          </div>
+        </div>
+
+        <p id="status-message" class="status-message visually-hidden" role="status"></p>
+      </section>
+
+      <div
+        id="launch-mode-modal"
+        class="launch-mode-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="launch-mode-title"
+        hidden
+      >
+        <div class="launch-mode-modal__panel">
+          <button
+            id="launch-mode-close"
+            class="launch-mode-modal__close"
+            type="button"
+            aria-label="Schliessen"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">close</span>
+          </button>
+
+          <div class="launch-mode-modal__header">
+            <p class="launch-mode-modal__kicker">Lernset ausgewaehlt</p>
+            <h2 id="launch-mode-title" class="launch-mode-modal__title">Set</h2>
+          </div>
+
+          <div class="launch-mode-modal__modes" aria-hidden="true">
+            <div class="launch-mode-modal__mode launch-mode-modal__mode--inactive">
+              <span class="launch-mode-modal__mode-icon material-symbols-outlined" aria-hidden="true">bolt</span>
+              <span class="launch-mode-modal__mode-label">Schnellrunde</span>
+            </div>
+            <div class="launch-mode-modal__mode launch-mode-modal__mode--active">
+              <span class="launch-mode-modal__mode-icon material-symbols-outlined" aria-hidden="true">menu_book</span>
+              <span class="launch-mode-modal__mode-label">Karteikarten</span>
+              <span class="launch-mode-modal__mode-dot" aria-hidden="true"></span>
+            </div>
+            <div class="launch-mode-modal__mode launch-mode-modal__mode--inactive">
+              <span class="launch-mode-modal__mode-icon material-symbols-outlined" aria-hidden="true">history</span>
+              <span class="launch-mode-modal__mode-label">Wiederholung</span>
+            </div>
+          </div>
+
+          <p class="launch-mode-modal__description">
+            Starte dieses Lernset im Karteikarten-Modus.
+          </p>
+
+          <div class="launch-mode-modal__actions">
+            <button
+              id="launch-mode-start"
+              class="launch-mode-modal__action launch-mode-modal__action--primary"
+              type="button"
+            >
+              Starten
+            </button>
+            <button
+              id="launch-mode-cancel"
+              class="launch-mode-modal__action launch-mode-modal__action--secondary"
+              type="button"
+            >
+              Abbrechen
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

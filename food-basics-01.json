@@ -1,0 +1,513 @@
+{
+  "schemaVersion": "1.1",
+  "set": {
+    "id": "food-basics-01",
+    "slug": "food-basics-01",
+    "title": "Food Basics",
+    "subject": "English",
+    "description": "Grundwortschatz Essen",
+    "languages": {
+      "source": "de",
+      "target": "en"
+    },
+    "defaultDirections": {
+      "flashcard": "source_to_target",
+      "test": "source_to_target"
+    },
+    "tags": [
+      "english",
+      "food",
+      "unit1"
+    ],
+    "createdAt": "2026-04-02T10:00:00Z",
+    "updatedAt": "2026-04-02T10:00:00Z"
+  },
+  "settings": {
+    "enabledModes": [
+      "flashcard",
+      "test"
+    ],
+    "starLevels": [
+      {
+        "value": 0,
+        "label": "none",
+        "color": "none"
+      },
+      {
+        "value": 1,
+        "label": "easy",
+        "color": "green"
+      },
+      {
+        "value": 2,
+        "label": "medium",
+        "color": "yellow"
+      },
+      {
+        "value": 3,
+        "label": "hard",
+        "color": "orange"
+      }
+    ],
+    "hintStrategies": {
+      "flashcard": [
+        "context",
+        "context_plus_first_letter"
+      ],
+      "test": [
+        "first_letter",
+        "context",
+        "partial_reveal"
+      ]
+    },
+    "print": {
+      "showExamples": true,
+      "showQrCode": true
+    }
+  },
+  "cards": [
+    {
+      "id": "c001",
+      "source": {
+        "text": "Zutat"
+      },
+      "target": {
+        "text": "ingredient"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "Milk is an important ingredient in many recipes.",
+          "source": "Milch ist in vielen Rezepten eine wichtige Zutat."
+        },
+        {
+          "id": "ex2",
+          "target": "Sugar is a common ingredient in desserts.",
+          "source": "Zucker ist eine häufige Zutat in Nachspeisen."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "________",
+          "firstLetterHint": "i________"
+        },
+        "test": {
+          "firstLetter": "i",
+          "partialReveal": "i _ _ r _ d _ _ t",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "ingredient"
+      ],
+      "meta": {
+        "tags": [
+          "food",
+          "noun"
+        ],
+        "difficulty": "medium",
+        "active": true
+      },
+      "audio": {
+        "source": "audio/food-basics-01/c001-source.mp3",
+        "target": "audio/food-basics-01/c001-target.mp3"
+      }
+    },
+    {
+      "id": "c002",
+      "source": {
+        "text": "kochen"
+      },
+      "target": {
+        "text": "to cook"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "I like to cook dinner for my family.",
+          "source": "Ich koche gern Abendessen für meine Familie."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "______",
+          "firstLetterHint": "c______"
+        },
+        "test": {
+          "firstLetter": "c",
+          "partialReveal": "c _ _ k",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "cook",
+        "to cook"
+      ],
+      "meta": {
+        "tags": [
+          "food",
+          "verb"
+        ],
+        "difficulty": "easy",
+        "active": true
+      },
+      "audio": {
+        "source": "audio/food-basics-01/c002-source.mp3",
+        "target": "audio/food-basics-01/c002-target.mp3"
+      }
+    },
+    {
+      "id": "c003",
+      "source": {
+        "text": "Rezept"
+      },
+      "target": {
+        "text": "recipe"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "This recipe is easy to follow.",
+          "source": "Dieses Rezept ist leicht nachzukochen."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "______",
+          "firstLetterHint": "r______"
+        },
+        "test": {
+          "firstLetter": "r",
+          "partialReveal": "r _ c _ p _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "recipe"
+      ],
+      "meta": {
+        "tags": [
+          "food",
+          "noun"
+        ],
+        "difficulty": "easy",
+        "active": true
+      },
+      "audio": {
+        "source": "audio/food-basics-01/c003-source.mp3",
+        "target": "audio/food-basics-01/c003-target.mp3"
+      }
+    },
+    {
+      "id": "c004",
+      "source": {
+        "text": "Backofen"
+      },
+      "target": {
+        "text": "oven"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "The bread is warm from the oven.",
+          "source": "Das Brot ist warm aus dem Backofen."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "____",
+          "firstLetterHint": "o___"
+        },
+        "test": {
+          "firstLetter": "o",
+          "partialReveal": "o _ _ _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "oven"
+      ],
+      "meta": {
+        "tags": [
+          "food",
+          "kitchen",
+          "noun"
+        ],
+        "difficulty": "easy",
+        "active": true
+      },
+      "audio": {
+        "source": "audio/food-basics-01/c004-source.mp3",
+        "target": "audio/food-basics-01/c004-target.mp3"
+      }
+    },
+    {
+      "id": "c005",
+      "source": {
+        "text": "Messer"
+      },
+      "target": {
+        "text": "knife"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "Use a sharp knife for the tomatoes.",
+          "source": "Benutze ein scharfes Messer für die Tomaten."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "_____",
+          "firstLetterHint": "k____"
+        },
+        "test": {
+          "firstLetter": "k",
+          "partialReveal": "k _ _ _ _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "knife"
+      ],
+      "meta": {
+        "tags": [
+          "food",
+          "kitchen",
+          "noun"
+        ],
+        "difficulty": "easy",
+        "active": true
+      },
+      "audio": {
+        "source": "audio/food-basics-01/c005-source.mp3",
+        "target": "audio/food-basics-01/c005-target.mp3"
+      }
+    },
+    {
+      "id": "c006",
+      "source": {
+        "text": "Pfanne"
+      },
+      "target": {
+        "text": "pan"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "Heat the oil in the pan.",
+          "source": "Erhitze das Oel in der Pfanne."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "___",
+          "firstLetterHint": "p__"
+        },
+        "test": {
+          "firstLetter": "p",
+          "partialReveal": "p _ _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "pan"
+      ],
+      "meta": {
+        "tags": [
+          "food",
+          "kitchen",
+          "noun"
+        ],
+        "difficulty": "easy",
+        "active": true
+      },
+      "audio": {
+        "source": "audio/food-basics-01/c006-source.mp3",
+        "target": "audio/food-basics-01/c006-target.mp3"
+      }
+    },
+    {
+      "id": "c007",
+      "source": {
+        "text": "Loeffel"
+      },
+      "target": {
+        "text": "spoon"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "Add one spoon of sugar to the tea.",
+          "source": "Gib einen Loeffel Zucker in den Tee."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "_____",
+          "firstLetterHint": "s____"
+        },
+        "test": {
+          "firstLetter": "s",
+          "partialReveal": "s _ _ _ _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "spoon"
+      ],
+      "meta": {
+        "tags": [
+          "food",
+          "kitchen",
+          "noun"
+        ],
+        "difficulty": "easy",
+        "active": true
+      },
+      "audio": {
+        "source": "audio/food-basics-01/c007-source.mp3",
+        "target": "audio/food-basics-01/c007-target.mp3"
+      }
+    },
+    {
+      "id": "c008",
+      "source": {
+        "text": "Gabel"
+      },
+      "target": {
+        "text": "fork"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "He eats pasta with a fork.",
+          "source": "Er isst Nudeln mit einer Gabel."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "____",
+          "firstLetterHint": "f___"
+        },
+        "test": {
+          "firstLetter": "f",
+          "partialReveal": "f _ _ _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "fork"
+      ],
+      "meta": {
+        "tags": [
+          "food",
+          "kitchen",
+          "noun"
+        ],
+        "difficulty": "easy",
+        "active": true
+      },
+      "audio": {
+        "source": "audio/food-basics-01/c008-source.mp3",
+        "target": "audio/food-basics-01/c008-target.mp3"
+      }
+    },
+    {
+      "id": "c009",
+      "source": {
+        "text": "Teller"
+      },
+      "target": {
+        "text": "plate"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "Put the salad on the plate.",
+          "source": "Lege den Salat auf den Teller."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "_____",
+          "firstLetterHint": "p____"
+        },
+        "test": {
+          "firstLetter": "p",
+          "partialReveal": "p _ _ _ _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "plate"
+      ],
+      "meta": {
+        "tags": [
+          "food",
+          "kitchen",
+          "noun"
+        ],
+        "difficulty": "easy",
+        "active": true
+      },
+      "audio": {
+        "source": "audio/food-basics-01/c009-source.mp3",
+        "target": "audio/food-basics-01/c009-target.mp3"
+      }
+    },
+    {
+      "id": "c010",
+      "source": {
+        "text": "Tasse"
+      },
+      "target": {
+        "text": "cup"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "She drinks tea from a blue cup.",
+          "source": "Sie trinkt Tee aus einer blauen Tasse."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "___",
+          "firstLetterHint": "c__"
+        },
+        "test": {
+          "firstLetter": "c",
+          "partialReveal": "c _ _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "cup"
+      ],
+      "meta": {
+        "tags": [
+          "food",
+          "kitchen",
+          "noun"
+        ],
+        "difficulty": "easy",
+        "active": true
+      },
+      "audio": {
+        "source": "audio/food-basics-01/c010-source.mp3",
+        "target": "audio/food-basics-01/c010-target.mp3"
+      }
+    }
+  ]
+}

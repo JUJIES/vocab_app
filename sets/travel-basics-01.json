@@ -1,0 +1,144 @@
+{
+  "schemaVersion": "1.1",
+  "set": {
+    "id": "travel-basics-01",
+    "slug": "travel-basics-01",
+    "title": "Travel Basics",
+    "subject": "English",
+    "description": "Reisen, Bahnhof und Unterwegssein",
+    "languages": {
+      "source": "de",
+      "target": "en"
+    },
+    "defaultDirections": {
+      "flashcard": "source_to_target",
+      "test": "source_to_target"
+    },
+    "tags": ["english", "travel", "unit2"],
+    "createdAt": "2026-04-05T11:40:00Z",
+    "updatedAt": "2026-04-05T11:40:00Z"
+  },
+  "settings": {
+    "enabledModes": ["flashcard", "test"],
+    "starLevels": [
+      { "value": 0, "label": "none", "color": "none" },
+      { "value": 1, "label": "easy", "color": "green" },
+      { "value": 2, "label": "medium", "color": "yellow" },
+      { "value": 3, "label": "hard", "color": "orange" }
+    ],
+    "hintStrategies": {
+      "flashcard": ["context", "context_plus_first_letter"],
+      "test": ["first_letter", "context", "partial_reveal"]
+    }
+  },
+  "cards": [
+    {
+      "id": "t001",
+      "source": { "text": "Fahrkarte" },
+      "target": { "text": "ticket" },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "She buys a ticket for the train.",
+          "source": "Sie kauft eine Fahrkarte fuer den Zug."
+        }
+      ],
+      "hintData": {
+        "flashcard": { "exampleId": "ex1", "maskedWord": "______", "firstLetterHint": "t_____" },
+        "test": { "firstLetter": "t", "partialReveal": "t _ _ _ _ _", "exampleId": "ex1" }
+      },
+      "acceptedAnswers": ["ticket"],
+      "meta": { "tags": ["travel", "noun"], "difficulty": "easy", "active": true }
+    },
+    {
+      "id": "t002",
+      "source": { "text": "Bahnhof" },
+      "target": { "text": "station" },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "We meet at the station at nine.",
+          "source": "Wir treffen uns um neun am Bahnhof."
+        }
+      ],
+      "hintData": {
+        "flashcard": { "exampleId": "ex1", "maskedWord": "_______", "firstLetterHint": "s______" },
+        "test": { "firstLetter": "s", "partialReveal": "s _ _ _ i _ _", "exampleId": "ex1" }
+      },
+      "acceptedAnswers": ["station"],
+      "meta": { "tags": ["travel", "noun"], "difficulty": "easy", "active": true }
+    },
+    {
+      "id": "t003",
+      "source": { "text": "Koffer" },
+      "target": { "text": "suitcase" },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "His suitcase is very heavy.",
+          "source": "Sein Koffer ist sehr schwer."
+        }
+      ],
+      "hintData": {
+        "flashcard": { "exampleId": "ex1", "maskedWord": "________", "firstLetterHint": "s_______" },
+        "test": { "firstLetter": "s", "partialReveal": "s _ _ t _ _ s _", "exampleId": "ex1" }
+      },
+      "acceptedAnswers": ["suitcase"],
+      "meta": { "tags": ["travel", "noun"], "difficulty": "medium", "active": true }
+    },
+    {
+      "id": "t004",
+      "source": { "text": "abfahren" },
+      "target": { "text": "to leave" },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "The bus is going to leave soon.",
+          "source": "Der Bus wird bald abfahren."
+        }
+      ],
+      "hintData": {
+        "flashcard": { "exampleId": "ex1", "maskedWord": "_____", "firstLetterHint": "l____" },
+        "test": { "firstLetter": "l", "partialReveal": "l _ _ _ _", "exampleId": "ex1" }
+      },
+      "acceptedAnswers": ["leave", "to leave"],
+      "meta": { "tags": ["travel", "verb"], "difficulty": "medium", "active": true }
+    },
+    {
+      "id": "t005",
+      "source": { "text": "ankommen" },
+      "target": { "text": "to arrive" },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "We arrive in Berlin at noon.",
+          "source": "Wir kommen mittags in Berlin an."
+        }
+      ],
+      "hintData": {
+        "flashcard": { "exampleId": "ex1", "maskedWord": "______", "firstLetterHint": "a______" },
+        "test": { "firstLetter": "a", "partialReveal": "a _ _ i _ _", "exampleId": "ex1" }
+      },
+      "acceptedAnswers": ["arrive", "to arrive"],
+      "meta": { "tags": ["travel", "verb"], "difficulty": "medium", "active": true }
+    },
+    {
+      "id": "t006",
+      "source": { "text": "verspaetet" },
+      "target": { "text": "delayed" },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "The train is delayed again.",
+          "source": "Der Zug ist schon wieder verspaetet."
+        }
+      ],
+      "hintData": {
+        "flashcard": { "exampleId": "ex1", "maskedWord": "_______", "firstLetterHint": "d______" },
+        "test": { "firstLetter": "d", "partialReveal": "d _ l _ _ e _", "exampleId": "ex1" }
+      },
+      "acceptedAnswers": ["delayed"],
+      "meta": { "tags": ["travel", "adjective"], "difficulty": "easy", "active": true }
+    }
+  ]
+}

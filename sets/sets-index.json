@@ -1,0 +1,36 @@
+{
+  "sets": [
+    {
+      "id": "food-basics-01",
+      "path": "sets/food-basics-01.json",
+      "title": "Food Basics",
+      "description": "Grundwortschatz Essen",
+      "category": "Klassiker",
+      "cardCount": 10
+    },
+    {
+      "id": "travel-basics-01",
+      "path": "sets/travel-basics-01.json",
+      "title": "Travel Basics",
+      "description": "Reisen, Bahnhof und Unterwegssein",
+      "category": "Unterwegs",
+      "cardCount": 6
+    },
+    {
+      "id": "classroom-basics-01",
+      "path": "sets/classroom-basics-01.json",
+      "title": "Classroom Basics",
+      "description": "Schule, Unterricht und Materialien",
+      "category": "Schule",
+      "cardCount": 6
+    },
+    {
+      "id": "daily-routines-01",
+      "path": "sets/daily-routines-01.json",
+      "title": "Daily Routines",
+      "description": "Alltag, Tagesablauf und Gewohnheiten",
+      "category": "Alltag",
+      "cardCount": 6
+    }
+  ]
+}

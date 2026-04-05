@@ -1,0 +1,144 @@
+{
+  "schemaVersion": "1.1",
+  "set": {
+    "id": "classroom-basics-01",
+    "slug": "classroom-basics-01",
+    "title": "Classroom Basics",
+    "subject": "English",
+    "description": "Schule, Unterricht und Materialien",
+    "languages": {
+      "source": "de",
+      "target": "en"
+    },
+    "defaultDirections": {
+      "flashcard": "source_to_target",
+      "test": "source_to_target"
+    },
+    "tags": ["english", "school", "unit3"],
+    "createdAt": "2026-04-05T11:41:00Z",
+    "updatedAt": "2026-04-05T11:41:00Z"
+  },
+  "settings": {
+    "enabledModes": ["flashcard", "test"],
+    "starLevels": [
+      { "value": 0, "label": "none", "color": "none" },
+      { "value": 1, "label": "easy", "color": "green" },
+      { "value": 2, "label": "medium", "color": "yellow" },
+      { "value": 3, "label": "hard", "color": "orange" }
+    ],
+    "hintStrategies": {
+      "flashcard": ["context", "context_plus_first_letter"],
+      "test": ["first_letter", "context", "partial_reveal"]
+    }
+  },
+  "cards": [
+    {
+      "id": "s001",
+      "source": { "text": "Heft" },
+      "target": { "text": "notebook" },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "Write the homework in your notebook.",
+          "source": "Schreibe die Hausaufgaben in dein Heft."
+        }
+      ],
+      "hintData": {
+        "flashcard": { "exampleId": "ex1", "maskedWord": "________", "firstLetterHint": "n_______" },
+        "test": { "firstLetter": "n", "partialReveal": "n _ t _ _ o _ _", "exampleId": "ex1" }
+      },
+      "acceptedAnswers": ["notebook"],
+      "meta": { "tags": ["school", "noun"], "difficulty": "easy", "active": true }
+    },
+    {
+      "id": "s002",
+      "source": { "text": "Tafel" },
+      "target": { "text": "board" },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "The teacher writes on the board.",
+          "source": "Die Lehrerin schreibt an die Tafel."
+        }
+      ],
+      "hintData": {
+        "flashcard": { "exampleId": "ex1", "maskedWord": "_____", "firstLetterHint": "b____" },
+        "test": { "firstLetter": "b", "partialReveal": "b _ _ _ _", "exampleId": "ex1" }
+      },
+      "acceptedAnswers": ["board"],
+      "meta": { "tags": ["school", "noun"], "difficulty": "easy", "active": true }
+    },
+    {
+      "id": "s003",
+      "source": { "text": "Hausaufgabe" },
+      "target": { "text": "homework" },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "We have a lot of homework today.",
+          "source": "Wir haben heute viele Hausaufgaben."
+        }
+      ],
+      "hintData": {
+        "flashcard": { "exampleId": "ex1", "maskedWord": "________", "firstLetterHint": "h_______" },
+        "test": { "firstLetter": "h", "partialReveal": "h _ m _ w _ _ k", "exampleId": "ex1" }
+      },
+      "acceptedAnswers": ["homework"],
+      "meta": { "tags": ["school", "noun"], "difficulty": "easy", "active": true }
+    },
+    {
+      "id": "s004",
+      "source": { "text": "erklaeren" },
+      "target": { "text": "to explain" },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "Can you explain this rule again?",
+          "source": "Kannst du diese Regel noch einmal erklaeren?"
+        }
+      ],
+      "hintData": {
+        "flashcard": { "exampleId": "ex1", "maskedWord": "_______", "firstLetterHint": "e______" },
+        "test": { "firstLetter": "e", "partialReveal": "e _ p _ a _ _", "exampleId": "ex1" }
+      },
+      "acceptedAnswers": ["explain", "to explain"],
+      "meta": { "tags": ["school", "verb"], "difficulty": "medium", "active": true }
+    },
+    {
+      "id": "s005",
+      "source": { "text": "antworten" },
+      "target": { "text": "to answer" },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "Please answer the first question.",
+          "source": "Bitte beantworte die erste Frage."
+        }
+      ],
+      "hintData": {
+        "flashcard": { "exampleId": "ex1", "maskedWord": "______", "firstLetterHint": "a______" },
+        "test": { "firstLetter": "a", "partialReveal": "a _ s _ _ r", "exampleId": "ex1" }
+      },
+      "acceptedAnswers": ["answer", "to answer"],
+      "meta": { "tags": ["school", "verb"], "difficulty": "medium", "active": true }
+    },
+    {
+      "id": "s006",
+      "source": { "text": "Bleistift" },
+      "target": { "text": "pencil" },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "She draws with a pencil.",
+          "source": "Sie zeichnet mit einem Bleistift."
+        }
+      ],
+      "hintData": {
+        "flashcard": { "exampleId": "ex1", "maskedWord": "______", "firstLetterHint": "p_____" },
+        "test": { "firstLetter": "p", "partialReveal": "p _ n _ i _", "exampleId": "ex1" }
+      },
+      "acceptedAnswers": ["pencil"],
+      "meta": { "tags": ["school", "noun"], "difficulty": "easy", "active": true }
+    }
+  ]
+}

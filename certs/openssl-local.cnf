@@ -1,0 +1,23 @@
+[ req ]
+default_bits = 2048
+prompt = no
+default_md = sha256
+distinguished_name = dn
+req_extensions = req_ext
+
+[ dn ]
+C = DE
+ST = Berlin
+L = Berlin
+O = Dino Vocab App
+OU = Local Dev
+CN = Dino Vocab Local Dev CA
+
+[ req_ext ]
+subjectAltName = @alt_names
+
+[ alt_names ]
+DNS.1 = localhost
+DNS.2 = Julius.local
+IP.1 = 127.0.0.1
+IP.2 = 192.168.178.21
