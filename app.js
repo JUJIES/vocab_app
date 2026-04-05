@@ -1,6 +1,7 @@
 const state = {
   appMode: "home",
   accessRegistrationOpen: false,
+  accessShareExpanded: false,
   accessUseAlternate: false,
   accessKnownDeviceFeedback: "",
   requestedSetPath: "",
@@ -238,6 +239,7 @@ async function startFlashcardSet(setPath, setUrl = new URL(setPath, getAppBaseUr
 
 async function continueStudentAccessFlow() {
   const localTabletId = loadLocalTabletId();
+  state.accessShareExpanded = false;
   state.accessUseAlternate = false;
 
   if (localTabletId && hasUnlockedStudentSession()) {
@@ -347,6 +349,9 @@ function getAppBaseUrl() {
 
 function setStudentAppMode(mode) {
   state.appMode = mode;
+  if (mode !== APP_MODES.ACCESS) {
+    delete elements.appShell.dataset.accessState;
+  }
   if (mode !== APP_MODES.HOME) {
     closeLaunchModeModal();
   }
@@ -393,7 +398,7 @@ function renderStudentScreen({
     secondaryAction,
     secondaryLabel,
   );
-  elements.statusMessage.textContent = `${title}. ${message}${detail ? ` ${detail}` : ""}`;
+  elements.statusMessage.textContent = [title, message, detail].filter(Boolean).join(". ");
   updateStudentShareBlock();
 }
 
@@ -411,7 +416,7 @@ async function initializeStudentShareOrigin() {
 }
 
 function shouldShowStudentShareBlock() {
-  return state.appMode === APP_MODES.ACCESS
+  return (state.appMode === APP_MODES.ACCESS && state.accessShareExpanded)
     || state.appMode === APP_MODES.SCANNER
     || state.appMode === APP_MODES.LOAD_ERROR;
 }
@@ -472,6 +477,34 @@ async function handleStudentShareCopy() {
 function clearStudentScreenForm() {
   elements.studentScreenForm.replaceChildren();
   elements.studentScreenForm.hidden = true;
+}
+
+function createStudentShareUtilityButton() {
+  const utility = document.createElement("button");
+  utility.type = "button";
+  utility.className = "student-screen__access-utility";
+  utility.setAttribute("aria-expanded", state.accessShareExpanded ? "true" : "false");
+
+  const iconShell = document.createElement("span");
+  iconShell.className = "student-screen__access-utility-icon";
+
+  const icon = document.createElement("span");
+  icon.className = "material-symbols-outlined";
+  icon.setAttribute("aria-hidden", "true");
+  icon.textContent = "qr_code_2";
+  iconShell.append(icon);
+
+  const label = document.createElement("span");
+  label.className = "student-screen__access-utility-label";
+  label.textContent = "Auf anderem Gerät";
+
+  utility.append(iconShell, label);
+  utility.addEventListener("click", () => {
+    state.accessShareExpanded = !state.accessShareExpanded;
+    updateStudentShareBlock();
+  });
+
+  return utility;
 }
 
 function configureStudentScreenAction(button, action, label) {
@@ -558,15 +591,14 @@ function renderAccessState({
 
   renderStudentScreen({
     mode: APP_MODES.ACCESS,
-    title: "Weiterlernen",
-    message: showContinueState
-      ? "Auf deinem üblichen Gerät kannst du direkt weitermachen."
-      : "Mit deiner ID und PIN kannst du auf jedem Gerät weitermachen.",
-    detail,
-    kicker: "Student",
+    title: showContinueState ? "Weiterlernen" : "",
+    message: "",
+    detail: showContinueState ? "" : "",
+    kicker: showContinueState ? "Vokabel App" : "",
     secondaryAction: !localTabletId && state.requestedSetPath ? "clear-set" : "",
     secondaryLabel: !localTabletId && state.requestedSetPath ? "Start" : "",
   });
+  elements.appShell.dataset.accessState = showContinueState ? "continue" : "entry";
 
   const container = document.createElement("div");
   container.className = "student-screen__access";
@@ -617,7 +649,7 @@ function renderAccessState({
         label: "PIN",
         control: createPinInput("pin-entry", "PIN eingeben"),
       }),
-      createStudentSubmitButton(state.requestedSetPath ? "Weiter" : "Jetzt weiterlernen"),
+      createStudentSubmitButton("Weiter"),
       createStudentFeedback(knownDeviceFeedback),
     );
 
@@ -639,9 +671,10 @@ function renderAccessState({
     quickActions.append(otherButton);
     quickSection.append(quickBadge, quickHeader, quickDots, quickForm);
     quickSection.append(quickActions);
-    container.append(quickSection);
+    container.append(quickSection, createStudentShareUtilityButton());
     elements.studentScreenForm.replaceChildren(container);
     elements.studentScreenForm.hidden = false;
+    updateStudentShareBlock();
     return;
   }
 
@@ -655,8 +688,8 @@ function renderAccessState({
   const introText = document.createElement("p");
   introText.className = "student-screen__access-intro-text";
   introText.textContent = state.requestedSetPath
-    ? "Melde dich an oder richte deine ID hier ein. Danach wird das Set in deinem Menü verfügbar."
-    : "Melde dich mit deiner ID an oder richte sie auf diesem Gerät ein.";
+    ? "Mit ID anmelden. Danach erscheint das Set im Menü."
+    : "Mit ID anmelden oder hier einrichten.";
 
   const introVisual = document.createElement("div");
   introVisual.className = "student-screen__access-visual";
@@ -679,7 +712,7 @@ function renderAccessState({
 
   const loginText = document.createElement("p");
   loginText.className = "student-screen__access-section-text";
-  loginText.textContent = "ID und PIN eingeben. Das funktioniert auf jedem Gerät.";
+  loginText.textContent = "ID und PIN eingeben.";
 
   loginHeader.append(loginTitle, loginText);
 
@@ -734,7 +767,7 @@ function renderAccessState({
 
   const registrationText = document.createElement("p");
   registrationText.className = "student-screen__access-section-text";
-  registrationText.textContent = "Richte deine ID hier einmalig ein, um direkt zu starten.";
+  registrationText.textContent = "Speichert die ID auf diesem Gerät.";
 
   registrationHeader.append(registrationTitle, registrationText);
   registrationSection.append(registrationHeader);
@@ -758,7 +791,7 @@ function renderAccessState({
         label: "PIN bestätigen",
         control: createPinInput("registration-pin-confirm", "PIN wiederholen"),
       }),
-      createStudentSubmitButton("Hier einrichten"),
+      createStudentSubmitButton("Speichern"),
       createStudentFeedback(registrationFeedback),
     );
 
@@ -779,7 +812,7 @@ function renderAccessState({
     const openButton = document.createElement("button");
     openButton.type = "button";
     openButton.className = "student-screen__inline-action student-screen__inline-action--solid";
-    openButton.textContent = "Zugang einrichten";
+    openButton.textContent = "Einrichten";
     openButton.addEventListener("click", () => {
       renderAccessState({
         loginTabletId: loginTabletId || "",
@@ -792,9 +825,10 @@ function renderAccessState({
   }
 
   authColumn.append(registrationSection);
-  container.append(introSection, authColumn);
+  container.append(introSection, authColumn, createStudentShareUtilityButton());
   elements.studentScreenForm.replaceChildren(container);
   elements.studentScreenForm.hidden = false;
+  updateStudentShareBlock();
 }
 
 function renderRegistrationState({
@@ -842,7 +876,7 @@ async function renderStudentHome(tabletId, {
     detail: "",
     kicker: "Menü",
     secondaryAction: "clear-local-tablet",
-    secondaryLabel: "Andere ID",
+    secondaryLabel: "Andere ID verwenden",
   });
 
   const result = await loadTabletSubscriptions(tabletId);
@@ -855,7 +889,7 @@ async function renderStudentHome(tabletId, {
       primaryAction: "go-home",
       primaryLabel: "Erneut",
       secondaryAction: "clear-local-tablet",
-      secondaryLabel: "Andere ID",
+      secondaryLabel: "Andere ID verwenden",
     });
     return;
   }
@@ -1239,13 +1273,10 @@ function createStudentSetRow(subscription, {
 
   const meta = document.createElement("p");
   meta.className = "student-screen__library-meta";
-  meta.textContent = Number.isFinite(subscription.cardCount)
-    ? `${subscription.cardCount} Karten`
-    : (subscription.id || "Lernset");
-
-  const description = document.createElement("p");
-  description.className = "student-screen__library-description";
-  description.textContent = subscription.description || "Lernset";
+  meta.textContent = [
+    Number.isFinite(subscription.cardCount) ? `${subscription.cardCount} Karten` : "",
+    subscription.description || "",
+  ].filter(Boolean).join(" · ");
 
   const actions = document.createElement("div");
   actions.className = "student-screen__library-actions";
@@ -1267,7 +1298,7 @@ function createStudentSetRow(subscription, {
   });
 
   actions.append(startButton, removeButton);
-  copy.append(title, meta, description);
+  copy.append(title, meta);
   row.append(cover, copy, actions);
   return row;
 }
@@ -1296,7 +1327,7 @@ function createStudentAddSetCard() {
 
   const text = document.createElement("span");
   text.className = "student-screen__library-add-text";
-  text.textContent = "Per QR oder Link";
+  text.textContent = "QR oder Link";
 
   card.append(iconWrap, title, text);
   return card;

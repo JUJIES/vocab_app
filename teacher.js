@@ -187,10 +187,7 @@ function createSetRow(setEntry) {
 
   const meta = document.createElement("p");
   meta.className = "teacher-set-row__meta";
-  meta.textContent = [
-    setEntry.description || (setEntry.id === setEntry.path ? "Set" : setEntry.id),
-    `${setEntry.tablets.length} iPad${setEntry.tablets.length === 1 ? "" : "s"}`,
-  ].filter(Boolean).join(" · ");
+  meta.textContent = setEntry.description || (setEntry.id === setEntry.path ? "Set" : setEntry.id);
 
   copy.append(title, meta, createTabletAssignmentBlock(setEntry));
 
@@ -213,7 +210,7 @@ function createTabletAssignmentBlock(setEntry) {
   if (setEntry.tablets.length === 0) {
     const empty = document.createElement("p");
     empty.className = "teacher-set-row__tablet-empty";
-    empty.textContent = "Kein iPad";
+    empty.textContent = "Nicht zugeordnet";
     wrapper.append(empty);
     return wrapper;
   }
