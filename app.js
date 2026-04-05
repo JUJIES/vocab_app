@@ -1,6 +1,7 @@
 const state = {
   appMode: "home",
   accessRegistrationOpen: false,
+  accessUseAlternate: false,
   accessKnownDeviceFeedback: "",
   requestedSetPath: "",
   requestedSetUrl: "",
@@ -237,6 +238,7 @@ async function startFlashcardSet(setPath, setUrl = new URL(setPath, getAppBaseUr
 
 async function continueStudentAccessFlow() {
   const localTabletId = loadLocalTabletId();
+  state.accessUseAlternate = false;
 
   if (localTabletId && hasUnlockedStudentSession()) {
     await continueAfterDeviceAccess(localTabletId);
@@ -546,31 +548,42 @@ function renderAccessState({
 } = {}) {
   const localTabletId = loadLocalTabletId();
   const hasKnownDevice = Boolean(localTabletId);
+  const showContinueState = hasKnownDevice && !state.accessUseAlternate;
   const detail = state.requestedSetPath
-    ? "Erst Zugang bestätigen, dann wird das Set geöffnet oder zu deinem Menü hinzugefügt."
-    : "Dieses Gerät merkt sich nur lokal, welche Kennung hier zuletzt verwendet wurde.";
+    ? "Nach dem Zugang wird das Set geöffnet oder zu deinem Menü hinzugefügt."
+    : "Dieses Gerät merkt sich nur lokal, welche ID hier zuletzt verwendet wurde.";
 
   state.accessRegistrationOpen = showRegistration;
   state.accessKnownDeviceFeedback = knownDeviceFeedback;
 
   renderStudentScreen({
     mode: APP_MODES.ACCESS,
-    title: state.requestedSetPath ? "Set hinzufügen" : "Weiterlernen",
-    message: hasKnownDevice
+    title: "Weiterlernen",
+    message: showContinueState
       ? "Auf deinem üblichen Gerät kannst du direkt weitermachen."
-      : "Melde dich mit deiner Kennung an oder richte sie auf diesem Gerät ein.",
+      : "Mit deiner ID und PIN kannst du auf jedem Gerät weitermachen.",
     detail,
     kicker: "Student",
-    secondaryAction: localTabletId ? "clear-local-tablet" : (state.requestedSetPath ? "clear-set" : ""),
-    secondaryLabel: localTabletId ? "Andere Kennung verwenden" : (state.requestedSetPath ? "Start" : ""),
+    secondaryAction: !localTabletId && state.requestedSetPath ? "clear-set" : "",
+    secondaryLabel: !localTabletId && state.requestedSetPath ? "Start" : "",
   });
 
   const container = document.createElement("div");
   container.className = "student-screen__access";
+  container.classList.add(showContinueState ? "student-screen__access--continue" : "student-screen__access--entry");
 
-  if (hasKnownDevice) {
+  if (showContinueState) {
     const quickSection = document.createElement("section");
-    quickSection.className = "student-screen__access-section student-screen__access-section--primary";
+    quickSection.className = "student-screen__access-card student-screen__access-card--continue";
+
+    const quickBadge = document.createElement("div");
+    quickBadge.className = "student-screen__access-badge";
+
+    const quickBadgeIcon = document.createElement("span");
+    quickBadgeIcon.className = "material-symbols-outlined student-screen__access-badge-icon";
+    quickBadgeIcon.setAttribute("aria-hidden", "true");
+    quickBadgeIcon.textContent = "school";
+    quickBadge.append(quickBadgeIcon);
 
     const quickHeader = document.createElement("div");
     quickHeader.className = "student-screen__access-section-header";
@@ -582,6 +595,14 @@ function renderAccessState({
     const quickText = document.createElement("p");
     quickText.className = "student-screen__access-section-text";
     quickText.textContent = "Zuletzt auf diesem Gerät verwendet.";
+
+    const quickDots = document.createElement("div");
+    quickDots.className = "student-screen__access-dots";
+    for (let index = 0; index < 4; index += 1) {
+      const dot = document.createElement("span");
+      dot.className = "student-screen__access-dot";
+      quickDots.append(dot);
+    }
 
     quickHeader.append(quickTitle, quickText);
 
@@ -596,27 +617,69 @@ function renderAccessState({
         label: "PIN",
         control: createPinInput("pin-entry", "PIN eingeben"),
       }),
-      createStudentSubmitButton(`Weiter mit ${getTabletLabel(localTabletId)}`),
+      createStudentSubmitButton(state.requestedSetPath ? "Weiter" : "Jetzt weiterlernen"),
       createStudentFeedback(knownDeviceFeedback),
     );
 
-    quickSection.append(quickHeader, quickForm);
+    const quickActions = document.createElement("div");
+    quickActions.className = "student-screen__access-inline-actions";
+
+    const otherButton = document.createElement("button");
+    otherButton.type = "button";
+    otherButton.className = "student-screen__inline-action";
+    otherButton.textContent = "Andere ID verwenden";
+    otherButton.addEventListener("click", () => {
+      state.accessUseAlternate = true;
+      renderAccessState({
+        loginTabletId: "",
+        showRegistration: false,
+      });
+    });
+
+    quickActions.append(otherButton);
+    quickSection.append(quickBadge, quickHeader, quickDots, quickForm);
+    quickSection.append(quickActions);
     container.append(quickSection);
+    elements.studentScreenForm.replaceChildren(container);
+    elements.studentScreenForm.hidden = false;
+    return;
   }
 
+  const introSection = document.createElement("section");
+  introSection.className = "student-screen__access-intro";
+
+  const introTitle = document.createElement("h2");
+  introTitle.className = "student-screen__access-intro-title";
+  introTitle.textContent = "Vokabel App";
+
+  const introText = document.createElement("p");
+  introText.className = "student-screen__access-intro-text";
+  introText.textContent = state.requestedSetPath
+    ? "Melde dich an oder richte deine ID hier ein. Danach wird das Set in deinem Menü verfügbar."
+    : "Melde dich mit deiner ID an oder richte sie auf diesem Gerät ein.";
+
+  const introVisual = document.createElement("div");
+  introVisual.className = "student-screen__access-visual";
+  introVisual.setAttribute("aria-hidden", "true");
+
+  introSection.append(introTitle, introText, introVisual);
+
+  const authColumn = document.createElement("div");
+  authColumn.className = "student-screen__access-column";
+
   const loginSection = document.createElement("section");
-  loginSection.className = "student-screen__access-section";
+  loginSection.className = "student-screen__access-card student-screen__access-card--login";
 
   const loginHeader = document.createElement("div");
   loginHeader.className = "student-screen__access-section-header";
 
   const loginTitle = document.createElement("h2");
   loginTitle.className = "student-screen__access-section-title";
-  loginTitle.textContent = "Schon registriert?";
+  loginTitle.textContent = "Ich habe schon eine ID";
 
   const loginText = document.createElement("p");
   loginText.className = "student-screen__access-section-text";
-  loginText.textContent = "Kennung und PIN eingeben. Das funktioniert auf jedem Gerät.";
+  loginText.textContent = "ID und PIN eingeben. Das funktioniert auf jedem Gerät.";
 
   loginHeader.append(loginTitle, loginText);
 
@@ -628,33 +691,50 @@ function renderAccessState({
 
   loginForm.append(
     createStudentField({
-      label: "Kennung",
+      label: "ID",
       control: createTabletIdInput("tabletId", loginTabletId || ""),
     }),
     createStudentField({
       label: "PIN",
       control: createPinInput("pin-entry", "PIN eingeben"),
     }),
-    createStudentSubmitButton(state.requestedSetPath ? "Mit Kennung weiter" : "Mit Kennung öffnen"),
+    createStudentSubmitButton("Anmelden"),
     createStudentFeedback(loginFeedback),
   );
 
   loginSection.append(loginHeader, loginForm);
-  container.append(loginSection);
+  authColumn.append(loginSection);
+
+  if (hasKnownDevice) {
+    const backButton = document.createElement("button");
+    backButton.type = "button";
+    backButton.className = "student-screen__inline-action";
+    backButton.textContent = `Weiter mit ${getTabletLabel(localTabletId)}`;
+    backButton.addEventListener("click", () => {
+      state.accessUseAlternate = false;
+      renderAccessState({
+        loginTabletId: localTabletId,
+        knownDeviceFeedback,
+        showRegistration: false,
+      });
+    });
+    loginSection.append(backButton);
+  }
 
   const registrationSection = document.createElement("section");
-  registrationSection.className = "student-screen__access-section student-screen__access-section--secondary";
+  registrationSection.className = "student-screen__access-card student-screen__access-card--setup";
+  registrationSection.classList.toggle("is-expanded", showRegistration);
 
   const registrationHeader = document.createElement("div");
   registrationHeader.className = "student-screen__access-section-header";
 
   const registrationTitle = document.createElement("h2");
   registrationTitle.className = "student-screen__access-section-title";
-  registrationTitle.textContent = "Registrierung";
+  registrationTitle.textContent = "Neu auf diesem Gerät";
 
   const registrationText = document.createElement("p");
   registrationText.className = "student-screen__access-section-text";
-  registrationText.textContent = "Richte deine Kennung hier einmalig ein, wenn du auf diesem Gerät neu bist.";
+  registrationText.textContent = "Richte deine ID hier einmalig ein, um direkt zu starten.";
 
   registrationHeader.append(registrationTitle, registrationText);
   registrationSection.append(registrationHeader);
@@ -667,7 +747,7 @@ function renderAccessState({
 
     registrationForm.append(
       createStudentField({
-        label: "Kennung",
+        label: "ID",
         control: createTabletSelect(registrationTabletId),
       }),
       createStudentField({
@@ -685,7 +765,7 @@ function renderAccessState({
     const collapseButton = document.createElement("button");
     collapseButton.type = "button";
     collapseButton.className = "student-screen__inline-action";
-    collapseButton.textContent = "Nicht jetzt";
+    collapseButton.textContent = "Abbrechen";
     collapseButton.addEventListener("click", () => {
       renderAccessState({
         loginTabletId: loginTabletId || "",
@@ -698,8 +778,8 @@ function renderAccessState({
   } else {
     const openButton = document.createElement("button");
     openButton.type = "button";
-    openButton.className = "student-screen__inline-action";
-    openButton.textContent = "Zugang hier einrichten";
+    openButton.className = "student-screen__inline-action student-screen__inline-action--solid";
+    openButton.textContent = "Zugang einrichten";
     openButton.addEventListener("click", () => {
       renderAccessState({
         loginTabletId: loginTabletId || "",
@@ -711,7 +791,8 @@ function renderAccessState({
     registrationSection.append(openButton);
   }
 
-  container.append(registrationSection);
+  authColumn.append(registrationSection);
+  container.append(introSection, authColumn);
   elements.studentScreenForm.replaceChildren(container);
   elements.studentScreenForm.hidden = false;
 }
@@ -719,9 +800,10 @@ function renderAccessState({
 function renderRegistrationState({
   selectedTabletId = DEFAULT_TABLET_ID,
   feedback = "",
-  detail = "Wähle die Kennung und setze einen PIN.",
+  detail = "Wähle die ID und setze einen PIN.",
 } = {}) {
   void detail;
+  state.accessUseAlternate = true;
   renderAccessState({
     registrationTabletId: selectedTabletId,
     registrationFeedback: feedback,
@@ -732,8 +814,8 @@ function renderRegistrationState({
 function renderPinState(tabletId, {
   feedback = "",
   title = "PIN eingeben",
-  message = `Kennung: ${getTabletLabel(tabletId)}`,
-  detail = "Gib den PIN für diese Kennung ein.",
+  message = `ID: ${getTabletLabel(tabletId)}`,
+  detail = "Gib den PIN für diese ID ein.",
   submitLabel = "Entsperren und starten",
 } = {}) {
   void title;
@@ -756,11 +838,11 @@ async function renderStudentHome(tabletId, {
   renderStudentScreen({
     mode: APP_MODES.HOME,
     title: "Lernsets",
-    message: `Kennung: ${getTabletLabel(tabletId)}`,
+    message: `ID: ${getTabletLabel(tabletId)}`,
     detail: "",
     kicker: "Menü",
     secondaryAction: "clear-local-tablet",
-    secondaryLabel: "Andere Kennung",
+    secondaryLabel: "Andere ID",
   });
 
   const result = await loadTabletSubscriptions(tabletId);
@@ -773,7 +855,7 @@ async function renderStudentHome(tabletId, {
       primaryAction: "go-home",
       primaryLabel: "Erneut",
       secondaryAction: "clear-local-tablet",
-      secondaryLabel: "Andere Kennung",
+      secondaryLabel: "Andere ID",
     });
     return;
   }
@@ -1444,7 +1526,7 @@ async function handleRegistrationSubmit(event) {
   if (!tabletId) {
     renderRegistrationState({
       selectedTabletId: DEFAULT_TABLET_ID,
-      feedback: "Bitte wähle eine Kennung aus.",
+      feedback: "Bitte wähle eine ID aus.",
     });
     return;
   }
@@ -1487,7 +1569,7 @@ async function handleRegistrationSubmit(event) {
     if (response.status === 409) {
       renderAccessState({
         loginTabletId: tabletId,
-        loginFeedback: "Diese Kennung ist schon eingerichtet. Bitte mit PIN weiter.",
+        loginFeedback: "Diese ID ist schon eingerichtet. Bitte mit PIN weiter.",
       });
       return;
     }
@@ -1524,7 +1606,7 @@ async function handlePinSubmit(event) {
 
   if (!tabletId) {
     renderAccessState({
-      loginFeedback: "Bitte gib deine Kennung ein.",
+      loginFeedback: "Bitte gib deine ID ein.",
       knownDeviceFeedback: state.accessKnownDeviceFeedback,
       showRegistration: state.accessRegistrationOpen,
     });
@@ -1565,7 +1647,7 @@ async function handlePinSubmit(event) {
       renderAccessState({
         loginTabletId: tabletId,
         registrationTabletId: tabletId,
-        registrationFeedback: "Diese Kennung ist auf diesem Gerät noch nicht eingerichtet.",
+        registrationFeedback: "Diese ID ist auf diesem Gerät noch nicht eingerichtet.",
         showRegistration: true,
       });
       return;
