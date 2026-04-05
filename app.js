@@ -612,7 +612,7 @@ function renderAccessState({
 
   const loginTitle = document.createElement("h2");
   loginTitle.className = "student-screen__access-section-title";
-  loginTitle.textContent = "Ich habe schon eine Kennung";
+  loginTitle.textContent = "Schon registriert?";
 
   const loginText = document.createElement("p");
   loginText.className = "student-screen__access-section-text";
@@ -650,7 +650,7 @@ function renderAccessState({
 
   const registrationTitle = document.createElement("h2");
   registrationTitle.className = "student-screen__access-section-title";
-  registrationTitle.textContent = "Neu auf diesem Gerät";
+  registrationTitle.textContent = "Registrierung";
 
   const registrationText = document.createElement("p");
   registrationText.className = "student-screen__access-section-text";

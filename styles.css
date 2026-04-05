@@ -35,8 +35,9 @@ body {
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  overflow: hidden;
-  overscroll-behavior: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: auto;
 }
 
 button,
@@ -56,12 +57,13 @@ select {
 
 .app-shell {
   min-height: 100dvh;
-  height: 100dvh;
+  height: auto;
   display: grid;
   align-content: center;
   justify-items: center;
   padding: var(--app-pad-block) var(--app-pad-inline);
-  overflow: visible;
+  overflow-x: visible;
+  overflow-y: auto;
 }
 
 .student-screen {
@@ -703,8 +705,13 @@ select {
   width: min(100%, 84rem);
 }
 
+.app-shell[data-app-mode="access"] {
+  align-content: start;
+}
+
 .app-shell[data-app-mode="access"] .student-screen__panel {
   grid-template-columns: minmax(0, 1fr) minmax(17rem, 20rem);
+  min-height: auto;
   align-content: start;
   justify-items: stretch;
   gap: 1rem 1.5rem;
@@ -1859,7 +1866,7 @@ select {
 
 @media (any-pointer: coarse) {
   .student-screen__panel {
-    min-height: min(30rem, 68dvh);
+    min-height: auto;
     padding: 1.8rem;
   }
 
