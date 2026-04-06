@@ -483,16 +483,55 @@ select {
   gap: 0.5rem;
 }
 
+.student-screen__device-selection {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.student-screen__device-selection-clear {
+  width: 1.9rem;
+  height: 1.9rem;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 1px solid rgba(214, 224, 246, 0.16);
+  border-radius: 999px;
+  background: rgba(214, 224, 246, 0.05);
+  color: rgba(234, 241, 255, 0.8);
+  font: inherit;
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.student-screen__device-selection-clear:hover,
+.student-screen__device-selection-clear:focus-visible {
+  border-color: rgba(214, 224, 246, 0.28);
+  background: rgba(214, 224, 246, 0.1);
+  color: rgba(246, 249, 255, 0.96);
+  transform: translateY(-1px);
+}
+
+.student-screen__device-selection-clear:focus-visible {
+  outline: 2px solid rgba(234, 241, 255, 0.32);
+  outline-offset: 2px;
+}
+
 .student-screen__device-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.58rem;
-  max-height: 15.75rem;
-  padding-right: 0.18rem;
-  overflow: auto;
+  overflow: visible;
   align-content: start;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
   animation: access-content-enter 420ms ease both;
 }
 
@@ -1360,8 +1399,8 @@ button.student-screen__device-card {
   width: min(100%, 32rem);
   display: grid;
   justify-items: center;
-  gap: 0.7rem;
-  padding: 1rem;
+  gap: 0.8rem;
+  padding: 1rem 1rem 0.9rem;
   border-radius: 1.2rem;
   background: rgba(214, 224, 246, 0.035);
 }
@@ -1384,22 +1423,25 @@ button.student-screen__device-card {
 }
 
 .student-share__qr-shell {
-  width: 11.5rem;
-  height: 11.5rem;
+  width: 11rem;
+  height: 11rem;
   display: grid;
   place-items: center;
   border-radius: 1rem;
-  background: rgba(214, 224, 246, 0.07);
+  padding: 0.45rem;
+  background: rgba(214, 224, 246, 0.04);
+  box-shadow:
+    inset 0 0 0 1px rgba(214, 224, 246, 0.08),
+    0 10px 24px rgba(7, 11, 20, 0.14);
 }
 
 .student-share__qr-frame {
-  width: 10rem;
-  height: 10rem;
+  width: 100%;
+  height: 100%;
   display: grid;
   place-items: center;
-  padding: 0.6rem;
   border-radius: 0.75rem;
-  background: #ffffff;
+  background: #f7f9fc;
   overflow: hidden;
 }
 
@@ -1407,47 +1449,44 @@ button.student-screen__device-card {
   width: 100%;
   height: 100%;
   display: block;
-  background: transparent;
+  border-radius: 0.45rem;
+  background: #f7f9fc;
   image-rendering: pixelated;
 }
 
 .student-share__link-row {
-  width: 100%;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  min-height: 2.7rem;
-}
-
-.student-share__link {
-  min-width: 0;
-  flex: 1;
-  color: rgba(206, 217, 238, 0.74);
-  font-size: 0.92rem;
-  font-weight: 600;
-  line-height: 1.45;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  justify-content: center;
+  gap: 0.65rem;
+  min-height: 2.35rem;
 }
 
 .student-share__copy {
-  width: 2.35rem;
-  height: 2.35rem;
-  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: inline-grid;
   place-items: center;
   flex: 0 0 auto;
-  border: 0;
+  border: 1px solid rgba(214, 224, 246, 0.12);
   border-radius: 999px;
-  background: transparent;
-  color: rgba(214, 224, 246, 0.58);
+  background: rgba(214, 224, 246, 0.04);
+  color: rgba(214, 224, 246, 0.74);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   cursor: pointer;
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
 }
 
 .student-share__copy:hover,
 .student-share__copy:focus-visible {
+  border-color: rgba(214, 224, 246, 0.22);
   background: rgba(214, 224, 246, 0.08);
   color: rgba(241, 246, 255, 0.92);
+  transform: translateY(-1px);
 }
 
 .student-share__copy:focus-visible {
@@ -1461,8 +1500,8 @@ button.student-screen__device-card {
   gap: 0.28rem;
   flex: 0 0 auto;
   min-width: 0;
-  color: rgba(158, 171, 194, 0.74);
-  font-size: 0.82rem;
+  color: rgba(180, 193, 214, 0.76);
+  font-size: 0.8rem;
   font-weight: 700;
   opacity: 0;
   transform: translateY(2px);
@@ -1477,7 +1516,7 @@ button.student-screen__device-card {
 }
 
 .student-share__feedback.is-success {
-  color: rgba(160, 201, 171, 0.98);
+  color: rgba(188, 223, 198, 0.98);
 }
 
 .student-share__feedback.is-success::before {
@@ -1711,13 +1750,9 @@ button.student-screen__device-card {
 }
 
 .app-shell[data-app-mode="access"] .student-share__qr-shell {
-  width: 8.4rem;
-  height: 8.4rem;
-}
-
-.app-shell[data-app-mode="access"] .student-share__qr {
-  width: 7.15rem;
-  height: 7.15rem;
+  width: 8.1rem;
+  height: 8.1rem;
+  padding: 0.32rem;
 }
 
 .card-stage {

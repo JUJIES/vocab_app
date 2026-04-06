@@ -103,7 +103,6 @@ const elements = {
   studentScreenSecondaryAction: document.getElementById("student-screen-secondary-action"),
   studentShareBlock: document.getElementById("student-share-block"),
   studentShareQr: document.getElementById("student-share-qr"),
-  studentShareLink: document.getElementById("student-share-link"),
   studentShareCopy: document.getElementById("student-share-copy"),
   studentShareFeedback: document.getElementById("student-share-feedback"),
   launchModeModal: document.getElementById("launch-mode-modal"),
@@ -518,7 +517,8 @@ function updateStudentShareBlock() {
   }
 
   const shareUrl = buildStudentShareUrlForCurrentLocation();
-  elements.studentShareLink.textContent = shareUrl;
+  elements.studentShareBlock.dataset.shareUrl = shareUrl;
+  elements.studentShareCopy.setAttribute("data-share-url", shareUrl);
   elements.studentShareFeedback.textContent = "";
   elements.studentShareFeedback.classList.remove("is-success");
 
@@ -533,7 +533,7 @@ function updateStudentShareBlock() {
 
 function renderQrIntoCanvas(canvas, value, {
   foreground = "#1f1f1f",
-  background = "#ffffff",
+  background = "#f7f9fc",
 } = {}) {
   if (!canvas || !window.QRious) {
     return;
@@ -573,7 +573,7 @@ function buildStudentShareUrlForCurrentLocation() {
 }
 
 async function handleStudentShareCopy() {
-  const shareUrl = elements.studentShareLink.textContent.trim();
+  const shareUrl = elements.studentShareCopy?.dataset.shareUrl?.trim() || "";
 
   if (!shareUrl) {
     return;
@@ -581,10 +581,10 @@ async function handleStudentShareCopy() {
 
   try {
     await navigator.clipboard.writeText(shareUrl);
-    elements.studentShareFeedback.textContent = "Kopiert.";
+    elements.studentShareFeedback.textContent = "Link kopiert.";
     elements.studentShareFeedback.classList.add("is-success");
   } catch (error) {
-    elements.studentShareFeedback.textContent = "Fehler.";
+    elements.studentShareFeedback.textContent = "Kopieren fehlgeschlagen.";
     elements.studentShareFeedback.classList.remove("is-success");
   }
 }
@@ -732,7 +732,7 @@ function renderAccessState({
 
   renderStudentScreen({
     mode: APP_MODES.ACCESS,
-    title: "Vokabel App",
+    title: "",
     message: "",
     detail: "",
     kicker: "",
@@ -799,7 +799,7 @@ function renderAccessState({
     otherButton.addEventListener("click", () => {
       state.accessUseAlternate = true;
       renderAccessState({
-        loginTabletId: "",
+        loginTabletId: localTabletId,
         showRegistration: false,
       });
     });
@@ -906,6 +906,8 @@ function renderAccessState({
       control: createTabletPicker("tabletId", resolvedLoginTabletId, {
         tablets: loginTablets,
         emptyStateText: "Noch kein Tablet eingerichtet. Nutze stattdessen „Zugang einrichten“.",
+        collapseWhenSelected: hasKnownDevice,
+        allowEmptySelection: hasKnownDevice,
       }),
     }),
     createStudentField({
@@ -2048,13 +2050,16 @@ function createHiddenInput(name, value) {
 function createTabletPicker(name, selectedTabletId = "", {
   tablets = getAvailableTablets(),
   emptyStateText = "Keine Tablets verfügbar.",
+  preferFirstAvailable = true,
+  collapseWhenSelected = false,
+  allowEmptySelection = false,
 } = {}) {
   const wrapper = document.createElement("div");
   wrapper.className = "student-screen__device-picker";
 
   const resolvedSelection = resolveTabletSelection(selectedTabletId, {
     tablets,
-    preferFirstAvailable: true,
+    preferFirstAvailable,
   });
 
   const hiddenInput = createHiddenInput(name, resolvedSelection);
@@ -2071,8 +2076,36 @@ function createTabletPicker(name, selectedTabletId = "", {
 
   const grid = document.createElement("div");
   grid.className = "student-screen__device-grid";
+  grid.hidden = collapseWhenSelected && Boolean(resolvedSelection);
 
   const buttons = [];
+  let selectedSummary = null;
+  let selectedPillLabel = null;
+
+  const setGridVisible = (isVisible) => {
+    grid.hidden = !isVisible;
+    wrapper.classList.toggle("is-choosing", isVisible);
+  };
+
+  const syncSelectedSummary = (nextTabletId) => {
+    if (!selectedSummary || !selectedPillLabel) {
+      return;
+    }
+
+    const selectedPill = selectedSummary.querySelector(".device-pill");
+
+    if (!nextTabletId) {
+      selectedSummary.hidden = true;
+      selectedPillLabel.textContent = "";
+      return;
+    }
+
+    if (selectedPill) {
+      selectedPill.dataset.tabletGroup = getTabletGroupName(getTabletLabel(nextTabletId));
+    }
+    selectedPillLabel.textContent = getTabletLabel(nextTabletId);
+    selectedSummary.hidden = false;
+  };
 
   const updateSelection = (nextTabletId) => {
     hiddenInput.value = nextTabletId;
@@ -2082,7 +2115,56 @@ function createTabletPicker(name, selectedTabletId = "", {
       button.classList.toggle("is-selected", isSelected);
       button.setAttribute("aria-pressed", isSelected ? "true" : "false");
     }
+
+    syncSelectedSummary(nextTabletId);
+
+    if (collapseWhenSelected) {
+      setGridVisible(!nextTabletId);
+    }
   };
+
+  if (collapseWhenSelected) {
+    selectedSummary = document.createElement("div");
+    selectedSummary.className = "student-screen__device-selection";
+    selectedSummary.hidden = !resolvedSelection;
+
+    const selectedPill = document.createElement("div");
+    selectedPill.className = "device-pill device-pill--selected";
+    selectedPill.dataset.tabletGroup = getTabletGroupName(getTabletLabel(resolvedSelection || DEFAULT_TABLET_ID));
+
+    const icon = document.createElement("img");
+    icon.className = "device-pill__icon";
+    icon.src = TABLET_ICON_PATH;
+    icon.alt = "";
+    icon.setAttribute("aria-hidden", "true");
+
+    selectedPillLabel = document.createElement("span");
+    selectedPillLabel.className = "device-pill__label";
+    selectedPillLabel.textContent = resolvedSelection ? getTabletLabel(resolvedSelection) : "";
+
+    selectedPill.append(icon, selectedPillLabel);
+    selectedSummary.append(selectedPill);
+
+    if (allowEmptySelection) {
+      const clearButton = document.createElement("button");
+      clearButton.type = "button";
+      clearButton.className = "student-screen__device-selection-clear";
+      clearButton.setAttribute("aria-label", "Tablet-Auswahl entfernen");
+      clearButton.textContent = "×";
+      clearButton.addEventListener("click", () => {
+        updateSelection("");
+        window.requestAnimationFrame(() => {
+          const firstButton = grid.querySelector(".student-screen__device-option");
+          if (firstButton instanceof HTMLElement) {
+            firstButton.focus();
+          }
+        });
+      });
+      selectedSummary.append(clearButton);
+    }
+
+    wrapper.append(selectedSummary);
+  }
 
   for (const tablet of tablets) {
     const button = createTabletOption(tablet, {
