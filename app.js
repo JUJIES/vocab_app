@@ -90,6 +90,8 @@ const DEFAULT_TABLET_ID = "rot-1";
 const DEFAULT_TABLET_LABEL = "Rot 1";
 const TABLET_DIRECTORY_API_PATH = "/api/tablet-directory";
 const TABLET_ICON_PATH = "./assets/icons/tablet-device.svg";
+const ACCESS_CONTINUE_ICON_PATH = "./assets/icons/continue-session.svg";
+const ACCESS_REGISTER_ICON_PATH = "./assets/icons/key-access.svg";
 
 const elements = {
   appShell: document.querySelector(".app-shell"),
@@ -142,6 +144,8 @@ const elements = {
 let addSetScanner = null;
 let addSetScanHandled = false;
 let tabletDirectoryPromise = null;
+const qrModuleCountCache = new Map();
+const QR_PROBE_SIZE = 997;
 
 document.addEventListener("DOMContentLoaded", () => {
   bindEvents();
@@ -501,6 +505,7 @@ function updateStudentShareBlock() {
 
   const isVisible = shouldShowStudentShareBlock();
   const inAccessMode = state.appMode === APP_MODES.ACCESS;
+  const shouldRenderQr = isVisible || (inAccessMode && state.accessShareExpanded);
 
   if (inAccessMode) {
     elements.studentShareBlock.hidden = false;
@@ -512,7 +517,7 @@ function updateStudentShareBlock() {
     elements.studentShareBlock.setAttribute("aria-hidden", isVisible ? "false" : "true");
   }
 
-  if (!isVisible && !inAccessMode) {
+  if (!shouldRenderQr) {
     return;
   }
 
@@ -534,20 +539,22 @@ function updateStudentShareBlock() {
 function renderQrIntoCanvas(canvas, value, {
   foreground = "#1f1f1f",
   background = "#f7f9fc",
+  level = "M",
 } = {}) {
   if (!canvas || !window.QRious) {
     return;
   }
 
-  const rect = canvas.getBoundingClientRect();
-  const canvasSize = Math.max(
-    160,
-    Math.round(
-      Math.min(rect.width || canvas.width || 0, rect.height || canvas.height || 0)
-      || canvas.width
-      || 220,
-    ),
-  );
+  const canvasSize = resolveQrCanvasSize(canvas, value, { level });
+  const frame = canvas.parentElement;
+
+  if (frame instanceof HTMLElement) {
+    frame.style.width = `${canvasSize}px`;
+    frame.style.height = `${canvasSize}px`;
+  }
+
+  canvas.style.width = `${canvasSize}px`;
+  canvas.style.height = `${canvasSize}px`;
 
   canvas.width = canvasSize;
   canvas.height = canvasSize;
@@ -556,11 +563,126 @@ function renderQrIntoCanvas(canvas, value, {
     element: canvas,
     value,
     size: canvasSize,
-    level: "M",
+    level,
     padding: 0,
     foreground,
     background,
   });
+}
+
+function resolveQrCanvasSize(canvas, value, {
+  level = "M",
+} = {}) {
+  const availableSize = getQrAvailableSize(canvas);
+  const moduleCount = inferQrModuleCount(value, { level });
+
+  if (!moduleCount) {
+    return availableSize;
+  }
+
+  const moduleSize = Math.max(1, Math.floor(availableSize / moduleCount));
+  return Math.max(moduleCount, moduleCount * moduleSize);
+}
+
+function getQrAvailableSize(canvas) {
+  const shell = canvas.closest(".student-share__qr-shell");
+
+  if (shell instanceof HTMLElement) {
+    const styles = window.getComputedStyle(shell);
+    const availableWidth = shell.clientWidth
+      - parseFloat(styles.paddingLeft || "0")
+      - parseFloat(styles.paddingRight || "0");
+    const availableHeight = shell.clientHeight
+      - parseFloat(styles.paddingTop || "0")
+      - parseFloat(styles.paddingBottom || "0");
+    const nextSize = Math.min(
+      availableWidth || 0,
+      availableHeight || availableWidth || 0,
+    );
+
+    if (nextSize > 0) {
+      return Math.max(64, Math.round(nextSize));
+    }
+  }
+
+  const rect = canvas.getBoundingClientRect();
+  return Math.max(
+    64,
+    Math.round(
+      Math.min(rect.width || canvas.width || 0, rect.height || canvas.height || 0)
+      || canvas.width
+      || 220,
+    ),
+  );
+}
+
+function inferQrModuleCount(value, {
+  level = "M",
+} = {}) {
+  const cacheKey = `${level}:${value}`;
+
+  if (qrModuleCountCache.has(cacheKey)) {
+    return qrModuleCountCache.get(cacheKey);
+  }
+
+  const probeCanvas = document.createElement("canvas");
+  probeCanvas.width = QR_PROBE_SIZE;
+  probeCanvas.height = QR_PROBE_SIZE;
+
+  new window.QRious({
+    element: probeCanvas,
+    value,
+    size: QR_PROBE_SIZE,
+    level,
+    padding: 0,
+    foreground: "#000000",
+    background: "#ffffff",
+  });
+
+  const contentSize = measureQrContentSize(probeCanvas);
+  const candidates = [];
+
+  for (let moduleCount = 21; moduleCount <= 177; moduleCount += 4) {
+    if (Math.floor(QR_PROBE_SIZE / moduleCount) * moduleCount === contentSize) {
+      candidates.push(moduleCount);
+    }
+  }
+
+  const resolvedModuleCount = candidates[0] || null;
+  qrModuleCountCache.set(cacheKey, resolvedModuleCount);
+  return resolvedModuleCount;
+}
+
+function measureQrContentSize(canvas) {
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+
+  if (!context) {
+    return 0;
+  }
+
+  const { width, height, data } = context.getImageData(0, 0, canvas.width, canvas.height);
+  let maxX = -1;
+  let maxY = -1;
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const index = (y * width + x) * 4;
+      const alpha = data[index + 3];
+      const red = data[index];
+
+      if (alpha > 0 && red < 250) {
+        if (x > maxX) {
+          maxX = x;
+        }
+
+        if (y > maxY) {
+          maxY = y;
+        }
+      }
+    }
+  }
+
+  return Math.max(maxX + 1, maxY + 1, 0);
 }
 
 function buildStudentShareUrlForCurrentLocation() {
@@ -662,7 +784,7 @@ function createDevicePill(tablet, {
 function createAccessChoiceCard({
   title,
   text,
-  actionLabel,
+  iconPath = TABLET_ICON_PATH,
   onClick,
 } = {}) {
   const button = document.createElement("button");
@@ -675,7 +797,7 @@ function createAccessChoiceCard({
 
   const icon = document.createElement("img");
   icon.className = "student-screen__access-choice-icon-image";
-  icon.src = TABLET_ICON_PATH;
+  icon.src = iconPath;
   icon.alt = "";
   icon.decoding = "async";
   iconShell.append(icon);
@@ -691,11 +813,7 @@ function createAccessChoiceCard({
   textElement.className = "student-screen__access-choice-text";
   textElement.textContent = text;
 
-  const action = document.createElement("span");
-  action.className = "student-screen__access-choice-action";
-  action.textContent = actionLabel;
-
-  copy.append(titleElement, textElement, action);
+  copy.append(titleElement, textElement);
   button.append(iconShell, copy);
   return button;
 }
@@ -716,14 +834,19 @@ function renderAccessState({
   loginTabletId = "",
   loginFeedback = "",
   knownDeviceFeedback = "",
-  registrationTabletId = DEFAULT_TABLET_ID,
+  registrationTabletId = "",
   registrationFeedback = "",
   showRegistration = false,
 } = {}) {
   const localTabletId = loadLocalTabletId();
   const hasKnownDevice = Boolean(localTabletId);
   const showContinueState = hasKnownDevice && !state.accessUseAlternate;
-  const showChooserState = !hasKnownDevice && !state.accessUseAlternate && !showRegistration;
+  const showChooserState = !showContinueState
+    && !showRegistration
+    && (
+      (!hasKnownDevice && !state.accessUseAlternate)
+      || (state.accessUseAlternate && !loginTabletId && !registrationTabletId)
+    );
   const loginTablets = getLoginTablets();
   const registrationTablets = getRegistrationTablets();
 
@@ -741,7 +864,7 @@ function renderAccessState({
   });
   elements.appShell.dataset.accessState = showContinueState
     ? "continue"
-    : (showChooserState ? "chooser" : "entry");
+    : (showChooserState ? "chooser" : (showRegistration ? "registration" : "login"));
 
   const container = document.createElement("div");
   container.className = "student-screen__access";
@@ -799,7 +922,6 @@ function renderAccessState({
     otherButton.addEventListener("click", () => {
       state.accessUseAlternate = true;
       renderAccessState({
-        loginTabletId: localTabletId,
         showRegistration: false,
       });
     });
@@ -836,7 +958,7 @@ function renderAccessState({
       createAccessChoiceCard({
         title: "Weiterlernen",
         text: "Mit PIN anmelden.",
-        actionLabel: "Tablet auswählen",
+        iconPath: ACCESS_CONTINUE_ICON_PATH,
         onClick: () => {
           state.accessUseAlternate = true;
           renderAccessState({
@@ -851,7 +973,7 @@ function renderAccessState({
       createAccessChoiceCard({
         title: "Neu einrichten",
         text: "Freies Tablet und PIN.",
-        actionLabel: "Einrichten",
+        iconPath: ACCESS_REGISTER_ICON_PATH,
         onClick: () => {
           state.accessUseAlternate = true;
           renderAccessState({
@@ -866,92 +988,100 @@ function renderAccessState({
     );
 
     chooserSection.append(chooserHeader, chooserGrid);
-    container.append(chooserSection, createStudentShareUtilityButton());
+    container.append(chooserSection);
+
+    if (hasKnownDevice) {
+      const backButton = document.createElement("button");
+      backButton.type = "button";
+      backButton.className = "student-screen__inline-action";
+      backButton.append("Weiter mit ", createDevicePill(getTabletMeta(localTabletId)));
+      backButton.addEventListener("click", () => {
+        state.accessUseAlternate = false;
+        renderAccessState({
+          loginTabletId: localTabletId,
+          knownDeviceFeedback,
+          showRegistration: false,
+        });
+      });
+      container.append(backButton);
+    }
+
+    container.append(createStudentShareUtilityButton());
     elements.studentScreenForm.replaceChildren(container);
     elements.studentScreenForm.hidden = false;
     updateStudentShareBlock();
     return;
   }
 
-  const loginSection = document.createElement("section");
-  loginSection.className = "student-screen__access-card student-screen__access-card--login";
+  if (!showRegistration) {
+    const loginSection = document.createElement("section");
+    loginSection.className = "student-screen__access-card student-screen__access-card--login";
 
-  const loginHeader = document.createElement("div");
-  loginHeader.className = "student-screen__access-section-header";
+    const loginHeader = document.createElement("div");
+    loginHeader.className = "student-screen__access-section-header";
 
-  const loginTitle = document.createElement("h2");
-  loginTitle.className = "student-screen__access-section-title";
-  loginTitle.textContent = "Weiterlernen";
+    const loginTitle = document.createElement("h2");
+    loginTitle.className = "student-screen__access-section-title";
+    loginTitle.textContent = "Weiterlernen";
 
-  const loginText = document.createElement("p");
-  loginText.className = "student-screen__access-section-text";
-  loginText.textContent = "Tablet und PIN";
+    const loginText = document.createElement("p");
+    loginText.className = "student-screen__access-section-text";
+    loginText.textContent = "Tablet und PIN";
 
-  const resolvedLoginTabletId = resolveTabletSelection(loginTabletId, {
-    tablets: loginTablets,
-    preferFirstAvailable: loginTablets.length === 1,
-  });
-
-  loginHeader.append(loginTitle, loginText);
-
-  const loginForm = document.createElement("form");
-  loginForm.className = "student-screen__access-form";
-  loginForm.noValidate = true;
-  loginForm.dataset.accessVariant = "login";
-  loginForm.addEventListener("submit", handlePinSubmit);
-
-  loginForm.append(
-    createStudentField({
-      label: "Tablet",
-      control: createTabletPicker("tabletId", resolvedLoginTabletId, {
-        tablets: loginTablets,
-        emptyStateText: "Noch kein Tablet eingerichtet. Nutze stattdessen „Zugang einrichten“.",
-        collapseWhenSelected: hasKnownDevice,
-        allowEmptySelection: hasKnownDevice,
-      }),
-    }),
-    createStudentField({
-      label: "PIN",
-      control: createPinInput("pin-entry", "PIN eingeben"),
-    }),
-    createStudentSubmitButton("Starten"),
-    createStudentFeedback(loginFeedback),
-  );
-
-  loginSection.append(loginHeader, loginForm);
-  container.append(loginSection);
-
-  if (hasKnownDevice) {
-    const backButton = document.createElement("button");
-    backButton.type = "button";
-    backButton.className = "student-screen__inline-action";
-    backButton.append("Weiter mit ", createDevicePill(getTabletMeta(localTabletId)));
-    backButton.addEventListener("click", () => {
-      state.accessUseAlternate = false;
-      renderAccessState({
-        loginTabletId: localTabletId,
-        knownDeviceFeedback,
-        showRegistration: false,
-      });
+    const resolvedLoginTabletId = resolveTabletSelection(loginTabletId, {
+      tablets: loginTablets,
+      preferFirstAvailable: loginTablets.length === 1,
     });
-    container.append(backButton);
-  } else {
+
+    loginHeader.append(loginTitle, loginText);
+
+    const loginForm = document.createElement("form");
+    loginForm.className = "student-screen__access-form";
+    loginForm.noValidate = true;
+    loginForm.dataset.accessVariant = "login";
+    loginForm.addEventListener("submit", handlePinSubmit);
+
+    loginForm.append(
+      createStudentField({
+        label: "Tablet",
+        control: createTabletPicker("tabletId", resolvedLoginTabletId, {
+          tablets: loginTablets,
+          emptyStateText: "Noch kein Tablet eingerichtet. Nutze stattdessen „Neu einrichten“.",
+          collapseWhenSelected: hasKnownDevice,
+          allowEmptySelection: hasKnownDevice,
+        }),
+      }),
+      createStudentField({
+        label: "PIN",
+        control: createPinInput("pin-entry", "PIN eingeben"),
+      }),
+      createStudentSubmitButton("Starten"),
+      createStudentFeedback(loginFeedback),
+    );
+
+    loginSection.append(loginHeader, loginForm);
+
     const backButton = document.createElement("button");
     backButton.type = "button";
     backButton.className = "student-screen__inline-action";
     backButton.textContent = "Zurück";
     backButton.addEventListener("click", () => {
-      state.accessUseAlternate = false;
+      state.accessUseAlternate = true;
       renderAccessState({
+        knownDeviceFeedback,
         showRegistration: false,
       });
     });
-    container.append(backButton);
+
+    container.append(loginSection, backButton, createStudentShareUtilityButton());
+    elements.studentScreenForm.replaceChildren(container);
+    elements.studentScreenForm.hidden = false;
+    updateStudentShareBlock();
+    return;
   }
 
   const registrationSection = document.createElement("section");
-  registrationSection.className = "student-screen__access-card student-screen__access-card--setup";
-  registrationSection.classList.toggle("is-expanded", showRegistration);
+  registrationSection.className = "student-screen__access-card student-screen__access-card--setup is-expanded";
 
   const registrationHeader = document.createElement("div");
   registrationHeader.className = "student-screen__access-section-header";
@@ -967,74 +1097,50 @@ function renderAccessState({
   registrationHeader.append(registrationTitle, registrationText);
   registrationSection.append(registrationHeader);
 
-  if (showRegistration) {
-    const resolvedRegistrationTabletId = resolveTabletSelection(registrationTabletId, {
-      tablets: registrationTablets,
-      preferFirstAvailable: registrationTablets.length === 1,
-    });
-    const registrationForm = document.createElement("form");
-    registrationForm.className = "student-screen__access-form";
-    registrationForm.noValidate = true;
-    registrationForm.addEventListener("submit", handleRegistrationSubmit);
+  const resolvedRegistrationTabletId = resolveTabletSelection(registrationTabletId, {
+    tablets: registrationTablets,
+    preferFirstAvailable: registrationTablets.length === 1,
+  });
+  const registrationForm = document.createElement("form");
+  registrationForm.className = "student-screen__access-form";
+  registrationForm.noValidate = true;
+  registrationForm.addEventListener("submit", handleRegistrationSubmit);
 
-    registrationForm.append(
-      createStudentField({
-        label: "Tablet",
-        control: createTabletPicker("tabletId", resolvedRegistrationTabletId, {
-          tablets: registrationTablets,
-          emptyStateText: "Alle Tablets sind bereits eingerichtet.",
-        }),
+  registrationForm.append(
+    createStudentField({
+      label: "Tablet",
+      control: createTabletPicker("tabletId", resolvedRegistrationTabletId, {
+        tablets: registrationTablets,
+        emptyStateText: "Alle Tablets sind bereits eingerichtet.",
       }),
-      createStudentField({
-        label: "PIN",
-        control: createPinInput("registration-pin", "Neuen PIN eingeben"),
-      }),
-      createStudentField({
-        label: "PIN bestätigen",
-        control: createPinInput("registration-pin-confirm", "PIN wiederholen"),
-      }),
-      createStudentSubmitButton("Starten"),
-      createStudentFeedback(registrationFeedback),
-    );
+    }),
+    createStudentField({
+      label: "PIN",
+      control: createPinInput("registration-pin", "Neuen PIN eingeben"),
+    }),
+    createStudentField({
+      label: "PIN bestätigen",
+      control: createPinInput("registration-pin-confirm", "PIN wiederholen"),
+    }),
+    createStudentSubmitButton("Starten"),
+    createStudentFeedback(registrationFeedback),
+  );
 
-    const collapseButton = document.createElement("button");
-    collapseButton.type = "button";
-    collapseButton.className = "student-screen__inline-action";
-    collapseButton.textContent = "Abbrechen";
-    collapseButton.addEventListener("click", () => {
-      if (!hasKnownDevice) {
-        state.accessUseAlternate = false;
-        renderAccessState({
-          showRegistration: false,
-        });
-        return;
-      }
+  registrationSection.append(registrationForm);
 
-      renderAccessState({
-        loginTabletId: loginTabletId || "",
-        knownDeviceFeedback,
-        showRegistration: false,
-      });
+  const backButton = document.createElement("button");
+  backButton.type = "button";
+  backButton.className = "student-screen__inline-action";
+  backButton.textContent = "Zurück";
+  backButton.addEventListener("click", () => {
+    state.accessUseAlternate = true;
+    renderAccessState({
+      knownDeviceFeedback,
+      showRegistration: false,
     });
+  });
 
-    registrationSection.append(registrationForm, collapseButton);
-  } else {
-    const openButton = document.createElement("button");
-    openButton.type = "button";
-    openButton.className = "student-screen__inline-action student-screen__inline-action--solid";
-    openButton.textContent = "Zugang einrichten";
-    openButton.addEventListener("click", () => {
-      renderAccessState({
-        loginTabletId: loginTabletId || "",
-        knownDeviceFeedback,
-        registrationTabletId,
-        showRegistration: true,
-      });
-    });
-    registrationSection.append(openButton);
-  }
-
-  container.append(registrationSection, createStudentShareUtilityButton());
+  container.append(registrationSection, backButton, createStudentShareUtilityButton());
   elements.studentScreenForm.replaceChildren(container);
   elements.studentScreenForm.hidden = false;
   updateStudentShareBlock();

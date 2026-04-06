@@ -448,12 +448,11 @@ select {
 .student-screen__access-choice-copy {
   min-width: 0;
   display: grid;
-  gap: 0.26rem;
+  gap: 0.18rem;
 }
 
 .student-screen__access-choice-title,
-.student-screen__access-choice-text,
-.student-screen__access-choice-action {
+.student-screen__access-choice-text {
   display: block;
 }
 
@@ -468,13 +467,6 @@ select {
   font-size: 0.88rem;
   font-weight: 600;
   line-height: 1.45;
-}
-
-.student-screen__access-choice-action {
-  margin-top: 0.12rem;
-  color: rgba(235, 241, 252, 0.9);
-  font-size: 0.84rem;
-  font-weight: 800;
 }
 
 .student-screen__device-picker {
