@@ -210,7 +210,7 @@ function createTabletAssignmentBlock(setEntry) {
   if (setEntry.tablets.length === 0) {
     const empty = document.createElement("p");
     empty.className = "teacher-set-row__tablet-empty";
-    empty.textContent = "Nicht zugeordnet";
+    empty.textContent = "Nicht abonniert";
     wrapper.append(empty);
     return wrapper;
   }
@@ -226,7 +226,7 @@ function createTabletAssignmentBlock(setEntry) {
     const removeButton = document.createElement("button");
     removeButton.type = "button";
     removeButton.className = "teacher-tablet-remove";
-    removeButton.textContent = "Entfernen";
+    removeButton.textContent = "Abo beenden";
     removeButton.addEventListener("click", () => {
       void handleRemoveTabletSubscription(tablet.id, setEntry.path);
     });
@@ -284,9 +284,10 @@ async function renderShareQr(shareUrl) {
     elements.shareQrCanvas.width,
     elements.shareQrCanvas.height,
   );
-  const qrPadding = Math.round(canvasSize * 0.06);
-
   if (window.QRious) {
+    elements.shareQrCanvas.width = canvasSize;
+    elements.shareQrCanvas.height = canvasSize;
+
     new window.QRious({
       element: elements.shareQrCanvas,
       value: shareUrl,
@@ -294,7 +295,7 @@ async function renderShareQr(shareUrl) {
       level: "M",
       background: "#ffffff",
       foreground: "#111111",
-      padding: qrPadding,
+      padding: 0,
     });
 
     state.activeQrDataUrl = elements.shareQrCanvas.toDataURL("image/png");
@@ -350,7 +351,7 @@ async function handleRemoveTabletSubscription(tabletId, setPath) {
     );
 
     if (!response.ok) {
-      throw new Error(response.data?.error || "Set konnte nicht entfernt werden.");
+      throw new Error(response.data?.error || "Abo konnte nicht beendet werden.");
     }
 
     const sets = await loadSetIndex();
@@ -358,7 +359,7 @@ async function handleRemoveTabletSubscription(tabletId, setPath) {
     renderSetList();
   } catch (error) {
     console.error("Unable to remove set assignment:", error);
-    renderErrorState(typeof error?.message === "string" ? error.message : "Set konnte nicht entfernt werden.");
+    renderErrorState(typeof error?.message === "string" ? error.message : "Abo konnte nicht beendet werden.");
   }
 }
 

@@ -300,11 +300,22 @@ input {
   border: 1px solid var(--line);
 }
 
+.share-panel__qr-frame {
+  width: min(100%, 18rem);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  padding: 0.9rem;
+  border-radius: 1rem;
+  background: #ffffff;
+  overflow: hidden;
+}
+
 .share-panel__qr {
   display: block;
-  width: min(100%, 18rem);
-  height: min(100%, 18rem);
-  background: #ffffff;
+  width: 100%;
+  height: 100%;
+  background: transparent;
   image-rendering: pixelated;
 }
 

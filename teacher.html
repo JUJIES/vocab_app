@@ -10,9 +10,9 @@
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./teacher.css?v=2026-04-06-0015-less-is-more-pass" />
+    <link rel="stylesheet" href="./teacher.css?v=2026-04-06-1515-qr-crop-fix" />
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
-    <script src="./teacher.js?v=2026-04-05-1946-umlauts" defer></script>
+    <script src="./teacher.js?v=2026-04-06-1515-qr-crop-fix" defer></script>
   </head>
   <body>
     <main class="teacher-app">
@@ -66,7 +66,9 @@
         <p id="share-path" class="share-panel__path"></p>
 
         <div class="share-panel__qr-shell">
-          <canvas id="share-qr-canvas" class="share-panel__qr" width="280" height="280"></canvas>
+          <div class="share-panel__qr-frame">
+            <canvas id="share-qr-canvas" class="share-panel__qr" width="280" height="280"></canvas>
+          </div>
         </div>
 
         <div class="share-panel__link-block">

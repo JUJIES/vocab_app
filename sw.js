@@ -1,9 +1,9 @@
-const CACHE_NAME = "dino-vocab-shell-v22";
+const CACHE_NAME = "dino-vocab-shell-v28";
 const APP_SHELL_URLS = [
   "/",
   "/index.html",
-  "/styles.css?v=2026-04-06-0015-less-is-more-pass",
-  "/app.js?v=2026-04-06-0015-less-is-more-pass",
+  "/styles.css?v=2026-04-06-1515-qr-crop-fix",
+  "/app.js?v=2026-04-06-1515-qr-crop-fix",
   "/manifest.webmanifest",
   "/icons/icon-192.png",
   "/icons/icon-512.png",

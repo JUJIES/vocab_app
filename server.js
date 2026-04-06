@@ -229,7 +229,7 @@ app.post("/api/tablets/:tabletId/subscriptions", async (request, response) => {
   } catch (error) {
     console.error("Unable to save tablet subscription:", error);
     response.status(500).json({
-      error: "Set konnte nicht hinzugefügt werden.",
+      error: "Lernset konnte nicht abonniert werden.",
     });
   }
 });
@@ -267,7 +267,7 @@ app.delete("/api/tablets/:tabletId/subscriptions", async (request, response) => 
   } catch (error) {
     console.error("Unable to remove tablet subscription:", error);
     response.status(500).json({
-      error: "Set konnte nicht entfernt werden.",
+      error: "Abo konnte nicht beendet werden.",
     });
   }
 });

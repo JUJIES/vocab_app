@@ -60,6 +60,11 @@ const state = {
   screenSecondaryAction: "",
   pendingLaunchSetPath: "",
   pendingLaunchSetTitle: "",
+  addSetModalView: "choice",
+  studentSetModalMode: "",
+  activeStudentSetPath: "",
+  activeStudentSetTitle: "",
+  activeStudentSetShareUrl: "",
   publicOrigin: "",
 };
 
@@ -101,6 +106,12 @@ const elements = {
   launchModeStart: document.getElementById("launch-mode-start"),
   launchModeCancel: document.getElementById("launch-mode-cancel"),
   launchModeClose: document.getElementById("launch-mode-close"),
+  addSetModal: document.getElementById("add-set-modal"),
+  addSetClose: document.getElementById("add-set-close"),
+  addSetBody: document.getElementById("add-set-body"),
+  studentSetModal: document.getElementById("student-set-modal"),
+  studentSetModalClose: document.getElementById("student-set-modal-close"),
+  studentSetModalBody: document.getElementById("student-set-modal-body"),
   studentHomeLink: document.getElementById("student-home-link"),
   cardStage: document.getElementById("card-stage"),
   flashcard: document.getElementById("flashcard"),
@@ -123,6 +134,9 @@ const elements = {
   backHint: document.getElementById("back-hint"),
   statusMessage: document.getElementById("status-message"),
 };
+
+let addSetScanner = null;
+let addSetScanHandled = false;
 
 document.addEventListener("DOMContentLoaded", () => {
   bindEvents();
@@ -177,6 +191,11 @@ function bindEvents() {
   elements.launchModeCancel.addEventListener("click", closeLaunchModeModal);
   elements.launchModeClose.addEventListener("click", closeLaunchModeModal);
   elements.launchModeModal.addEventListener("click", handleLaunchModeOverlayClick);
+  elements.addSetClose.addEventListener("click", closeAddSetModal);
+  elements.addSetModal.addEventListener("click", handleAddSetModalOverlayClick);
+  elements.studentSetModalClose.addEventListener("click", closeStudentSetModal);
+  elements.studentSetModal.addEventListener("click", handleStudentSetModalOverlayClick);
+  document.addEventListener("click", handleDocumentClick);
 }
 
 async function initializeStudentApp() {
@@ -265,7 +284,7 @@ async function continueAfterDeviceAccess(tabletId) {
 
     if (!subscriptionResult.ok) {
       renderStudentLoadErrorState({
-        title: "Set nicht hinzugefügt",
+        title: "Lernset nicht abonniert",
         message: "Bitte erneut versuchen.",
         detail: subscriptionResult.error,
         primaryAction: "retry-set",
@@ -284,10 +303,10 @@ async function continueAfterDeviceAccess(tabletId) {
 
     await renderStudentHome(tabletId, {
       feedback: setIntent.isSubscribed
-        ? "Schon im Menü."
-        : "Zum Menü hinzugefügt.",
+        ? "Schon abonniert."
+        : "Abonniert.",
       highlightedSetPath: requestedSetPath,
-      highlightedSetLabel: setIntent.isSubscribed ? "Schon da" : "Neu",
+      highlightedSetLabel: setIntent.isSubscribed ? "Schon abonniert" : "Neu abonniert",
     });
     return;
   }
@@ -427,27 +446,66 @@ function updateStudentShareBlock() {
   }
 
   const isVisible = shouldShowStudentShareBlock();
-  elements.studentShareBlock.hidden = !isVisible;
+  const inAccessMode = state.appMode === APP_MODES.ACCESS;
 
-  if (!isVisible) {
+  if (inAccessMode) {
+    elements.studentShareBlock.hidden = false;
+    elements.studentShareBlock.classList.toggle("is-revealed", state.accessShareExpanded);
+    elements.studentShareBlock.setAttribute("aria-hidden", state.accessShareExpanded ? "false" : "true");
+  } else {
+    elements.studentShareBlock.hidden = !isVisible;
+    elements.studentShareBlock.classList.toggle("is-revealed", isVisible);
+    elements.studentShareBlock.setAttribute("aria-hidden", isVisible ? "false" : "true");
+  }
+
+  if (!isVisible && !inAccessMode) {
     return;
   }
 
   const shareUrl = buildStudentShareUrlForCurrentLocation();
-  elements.studentShareLink.value = shareUrl;
+  elements.studentShareLink.textContent = shareUrl;
   elements.studentShareFeedback.textContent = "";
+  elements.studentShareFeedback.classList.remove("is-success");
 
   if (window.QRious && elements.studentShareQr) {
-    new window.QRious({
-      element: elements.studentShareQr,
-      value: shareUrl,
-      size: 180,
-      level: "M",
-      padding: 12,
-      foreground: "#1f1f1f",
-      background: "#ffffff",
+    requestAnimationFrame(() => {
+      renderQrIntoCanvas(elements.studentShareQr, shareUrl, {
+        foreground: "#1f1f1f",
+      });
     });
   }
+}
+
+function renderQrIntoCanvas(canvas, value, {
+  foreground = "#1f1f1f",
+  background = "#ffffff",
+} = {}) {
+  if (!canvas || !window.QRious) {
+    return;
+  }
+
+  const rect = canvas.getBoundingClientRect();
+  const canvasSize = Math.max(
+    160,
+    Math.round(
+      Math.min(rect.width || canvas.width || 0, rect.height || canvas.height || 0)
+      || canvas.width
+      || 220,
+    ),
+  );
+
+  canvas.width = canvasSize;
+  canvas.height = canvasSize;
+
+  new window.QRious({
+    element: canvas,
+    value,
+    size: canvasSize,
+    level: "M",
+    padding: 0,
+    foreground,
+    background,
+  });
 }
 
 function buildStudentShareUrlForCurrentLocation() {
@@ -460,7 +518,7 @@ function buildStudentShareUrlForCurrentLocation() {
 }
 
 async function handleStudentShareCopy() {
-  const shareUrl = elements.studentShareLink.value.trim();
+  const shareUrl = elements.studentShareLink.textContent.trim();
 
   if (!shareUrl) {
     return;
@@ -469,8 +527,10 @@ async function handleStudentShareCopy() {
   try {
     await navigator.clipboard.writeText(shareUrl);
     elements.studentShareFeedback.textContent = "Kopiert.";
+    elements.studentShareFeedback.classList.add("is-success");
   } catch (error) {
-    elements.studentShareFeedback.textContent = "Kopieren fehlgeschlagen.";
+    elements.studentShareFeedback.textContent = "Fehler.";
+    elements.studentShareFeedback.classList.remove("is-success");
   }
 }
 
@@ -496,11 +556,13 @@ function createStudentShareUtilityButton() {
 
   const label = document.createElement("span");
   label.className = "student-screen__access-utility-label";
-  label.textContent = "Auf anderem Gerät";
+  label.textContent = state.accessShareExpanded ? "QR-Code ausblenden" : "QR-Code anzeigen";
 
   utility.append(iconShell, label);
   utility.addEventListener("click", () => {
     state.accessShareExpanded = !state.accessShareExpanded;
+    utility.setAttribute("aria-expanded", state.accessShareExpanded ? "true" : "false");
+    label.textContent = state.accessShareExpanded ? "QR-Code ausblenden" : "QR-Code anzeigen";
     updateStudentShareBlock();
   });
 
@@ -515,60 +577,8 @@ function configureStudentScreenAction(button, action, label) {
 }
 
 function renderScannerPlaceholderState({ allowHomeReturn = false } = {}) {
-  renderStudentScreen({
-    mode: APP_MODES.SCANNER,
-    title: allowHomeReturn ? "Set hinzufügen" : "Set öffnen",
-    message: "",
-    detail: "",
-    secondaryAction: allowHomeReturn ? "go-home" : "",
-    secondaryLabel: allowHomeReturn ? "Zur Übersicht" : "",
-  });
-
-  const form = document.createElement("div");
-  form.className = "student-screen__form student-screen__form--scanner";
-
-  const scannerShell = document.createElement("div");
-  scannerShell.className = "student-screen__scanner-shell";
-
-  const scannerRegion = document.createElement("div");
-  scannerRegion.className = "student-screen__scanner-region";
-
-  const scannerLead = document.createElement("p");
-  scannerLead.className = "student-screen__scanner-note student-screen__scanner-note--lead";
-  scannerLead.textContent = "QR-Code scannen oder Link eingeben.";
-
-  const manualForm = document.createElement("form");
-  manualForm.className = "student-screen__manual-form";
-  manualForm.noValidate = true;
-  manualForm.addEventListener("submit", handleManualSetSubmit);
-
-  const manualField = document.createElement("label");
-  manualField.className = "student-screen__field";
-
-  const manualLabel = document.createElement("span");
-  manualLabel.className = "student-screen__label";
-  manualLabel.textContent = "Link oder Pfad";
-
-  const manualInput = document.createElement("input");
-  manualInput.name = "manual-set-target";
-  manualInput.type = "text";
-  manualInput.className = "student-screen__input";
-  manualInput.placeholder = "";
-  manualInput.autocapitalize = "off";
-  manualInput.autocomplete = "off";
-  manualInput.spellcheck = false;
-
-  manualField.append(manualLabel, manualInput);
-  manualForm.append(manualField, createStudentSubmitButton(allowHomeReturn ? "Set hinzufügen" : "Set öffnen"));
-
-  const feedback = createStudentFeedback("");
-  feedback.id = "student-scanner-feedback";
-
-  scannerRegion.append(scannerLead);
-  scannerShell.append(scannerRegion);
-  form.append(scannerShell, manualForm, feedback);
-  elements.studentScreenForm.replaceChildren(form);
-  elements.studentScreenForm.hidden = false;
+  void allowHomeReturn;
+  openAddSetModal();
 }
 
 function renderAccessState({
@@ -582,19 +592,16 @@ function renderAccessState({
   const localTabletId = loadLocalTabletId();
   const hasKnownDevice = Boolean(localTabletId);
   const showContinueState = hasKnownDevice && !state.accessUseAlternate;
-  const detail = state.requestedSetPath
-    ? "Nach dem Zugang wird das Set geöffnet oder zu deinem Menü hinzugefügt."
-    : "Dieses Gerät merkt sich nur lokal, welche ID hier zuletzt verwendet wurde.";
 
   state.accessRegistrationOpen = showRegistration;
   state.accessKnownDeviceFeedback = knownDeviceFeedback;
 
   renderStudentScreen({
     mode: APP_MODES.ACCESS,
-    title: showContinueState ? "Weiterlernen" : "",
+    title: "Vokabel App",
     message: "",
-    detail: showContinueState ? "" : "",
-    kicker: showContinueState ? "Vokabel App" : "",
+    detail: "",
+    kicker: "",
     secondaryAction: !localTabletId && state.requestedSetPath ? "clear-set" : "",
     secondaryLabel: !localTabletId && state.requestedSetPath ? "Start" : "",
   });
@@ -608,33 +615,20 @@ function renderAccessState({
     const quickSection = document.createElement("section");
     quickSection.className = "student-screen__access-card student-screen__access-card--continue";
 
-    const quickBadge = document.createElement("div");
-    quickBadge.className = "student-screen__access-badge";
-
-    const quickBadgeIcon = document.createElement("span");
-    quickBadgeIcon.className = "material-symbols-outlined student-screen__access-badge-icon";
-    quickBadgeIcon.setAttribute("aria-hidden", "true");
-    quickBadgeIcon.textContent = "school";
-    quickBadge.append(quickBadgeIcon);
-
     const quickHeader = document.createElement("div");
     quickHeader.className = "student-screen__access-section-header";
 
     const quickTitle = document.createElement("h2");
     quickTitle.className = "student-screen__access-section-title";
-    quickTitle.textContent = `Weiter mit ${getTabletLabel(localTabletId)}`;
+    quickTitle.textContent = "Weiterlernen";
 
     const quickText = document.createElement("p");
     quickText.className = "student-screen__access-section-text";
-    quickText.textContent = "Zuletzt auf diesem Gerät verwendet.";
+    quickText.textContent = `Gerät: ${getTabletLabel(localTabletId)}`;
 
-    const quickDots = document.createElement("div");
-    quickDots.className = "student-screen__access-dots";
-    for (let index = 0; index < 4; index += 1) {
-      const dot = document.createElement("span");
-      dot.className = "student-screen__access-dot";
-      quickDots.append(dot);
-    }
+    const quickMeta = document.createElement("p");
+    quickMeta.className = "student-screen__access-subtle";
+    quickMeta.textContent = "Zuletzt auf diesem Gerät verwendet";
 
     quickHeader.append(quickTitle, quickText);
 
@@ -649,7 +643,7 @@ function renderAccessState({
         label: "PIN",
         control: createPinInput("pin-entry", "PIN eingeben"),
       }),
-      createStudentSubmitButton("Weiter"),
+      createStudentSubmitButton("Starten"),
       createStudentFeedback(knownDeviceFeedback),
     );
 
@@ -659,7 +653,7 @@ function renderAccessState({
     const otherButton = document.createElement("button");
     otherButton.type = "button";
     otherButton.className = "student-screen__inline-action";
-    otherButton.textContent = "Andere ID verwenden";
+    otherButton.textContent = "Anderes Gerät";
     otherButton.addEventListener("click", () => {
       state.accessUseAlternate = true;
       renderAccessState({
@@ -669,36 +663,13 @@ function renderAccessState({
     });
 
     quickActions.append(otherButton);
-    quickSection.append(quickBadge, quickHeader, quickDots, quickForm);
-    quickSection.append(quickActions);
-    container.append(quickSection, createStudentShareUtilityButton());
+    quickSection.append(quickHeader, quickMeta, quickForm);
+    container.append(quickSection, quickActions, createStudentShareUtilityButton());
     elements.studentScreenForm.replaceChildren(container);
     elements.studentScreenForm.hidden = false;
     updateStudentShareBlock();
     return;
   }
-
-  const introSection = document.createElement("section");
-  introSection.className = "student-screen__access-intro";
-
-  const introTitle = document.createElement("h2");
-  introTitle.className = "student-screen__access-intro-title";
-  introTitle.textContent = "Vokabel App";
-
-  const introText = document.createElement("p");
-  introText.className = "student-screen__access-intro-text";
-  introText.textContent = state.requestedSetPath
-    ? "Mit ID anmelden. Danach erscheint das Set im Menü."
-    : "Mit ID anmelden oder hier einrichten.";
-
-  const introVisual = document.createElement("div");
-  introVisual.className = "student-screen__access-visual";
-  introVisual.setAttribute("aria-hidden", "true");
-
-  introSection.append(introTitle, introText, introVisual);
-
-  const authColumn = document.createElement("div");
-  authColumn.className = "student-screen__access-column";
 
   const loginSection = document.createElement("section");
   loginSection.className = "student-screen__access-card student-screen__access-card--login";
@@ -708,11 +679,11 @@ function renderAccessState({
 
   const loginTitle = document.createElement("h2");
   loginTitle.className = "student-screen__access-section-title";
-  loginTitle.textContent = "Ich habe schon eine ID";
+  loginTitle.textContent = "Weiterlernen";
 
   const loginText = document.createElement("p");
   loginText.className = "student-screen__access-section-text";
-  loginText.textContent = "ID und PIN eingeben.";
+  loginText.textContent = "Gerät und PIN eingeben.";
 
   loginHeader.append(loginTitle, loginText);
 
@@ -724,19 +695,19 @@ function renderAccessState({
 
   loginForm.append(
     createStudentField({
-      label: "ID",
+      label: "Gerät",
       control: createTabletIdInput("tabletId", loginTabletId || ""),
     }),
     createStudentField({
       label: "PIN",
       control: createPinInput("pin-entry", "PIN eingeben"),
     }),
-    createStudentSubmitButton("Anmelden"),
+    createStudentSubmitButton("Starten"),
     createStudentFeedback(loginFeedback),
   );
 
   loginSection.append(loginHeader, loginForm);
-  authColumn.append(loginSection);
+  container.append(loginSection);
 
   if (hasKnownDevice) {
     const backButton = document.createElement("button");
@@ -751,7 +722,7 @@ function renderAccessState({
         showRegistration: false,
       });
     });
-    loginSection.append(backButton);
+    container.append(backButton);
   }
 
   const registrationSection = document.createElement("section");
@@ -767,7 +738,7 @@ function renderAccessState({
 
   const registrationText = document.createElement("p");
   registrationText.className = "student-screen__access-section-text";
-  registrationText.textContent = "Speichert die ID auf diesem Gerät.";
+  registrationText.textContent = "Zugang hier einrichten.";
 
   registrationHeader.append(registrationTitle, registrationText);
   registrationSection.append(registrationHeader);
@@ -780,7 +751,7 @@ function renderAccessState({
 
     registrationForm.append(
       createStudentField({
-        label: "ID",
+        label: "Gerät",
         control: createTabletSelect(registrationTabletId),
       }),
       createStudentField({
@@ -791,7 +762,7 @@ function renderAccessState({
         label: "PIN bestätigen",
         control: createPinInput("registration-pin-confirm", "PIN wiederholen"),
       }),
-      createStudentSubmitButton("Speichern"),
+      createStudentSubmitButton("Starten"),
       createStudentFeedback(registrationFeedback),
     );
 
@@ -812,7 +783,7 @@ function renderAccessState({
     const openButton = document.createElement("button");
     openButton.type = "button";
     openButton.className = "student-screen__inline-action student-screen__inline-action--solid";
-    openButton.textContent = "Einrichten";
+    openButton.textContent = "Zugang einrichten";
     openButton.addEventListener("click", () => {
       renderAccessState({
         loginTabletId: loginTabletId || "",
@@ -824,11 +795,522 @@ function renderAccessState({
     registrationSection.append(openButton);
   }
 
-  authColumn.append(registrationSection);
-  container.append(introSection, authColumn, createStudentShareUtilityButton());
+  container.append(registrationSection, createStudentShareUtilityButton());
   elements.studentScreenForm.replaceChildren(container);
   elements.studentScreenForm.hidden = false;
   updateStudentShareBlock();
+}
+
+function openAddSetModal(initialView = "choice") {
+  state.addSetModalView = initialView;
+  document.body.classList.add("add-set-modal-open");
+  elements.addSetModal.hidden = false;
+  renderAddSetModalView();
+}
+
+function closeAddSetModal() {
+  state.addSetModalView = "choice";
+  delete elements.addSetModal.dataset.view;
+  document.body.classList.remove("add-set-modal-open");
+  elements.addSetModal.hidden = true;
+  elements.addSetBody.replaceChildren();
+  void stopAddSetScanner();
+}
+
+function handleAddSetModalOverlayClick(event) {
+  if (event.target === elements.addSetModal) {
+    closeAddSetModal();
+  }
+}
+
+function handleStudentSetModalOverlayClick(event) {
+  if (event.target === elements.studentSetModal || event.target.closest(".student-set-modal__backdrop")) {
+    closeStudentSetModal();
+  }
+}
+
+function handleDocumentClick(event) {
+  if (event.target.closest(".student-screen__library-menu")) {
+    return;
+  }
+
+  closeStudentSetMenus();
+}
+
+function closeStudentSetMenus(exceptMenu = null) {
+  for (const menu of document.querySelectorAll(".student-screen__library-menu[open]")) {
+    if (exceptMenu && menu === exceptMenu) {
+      continue;
+    }
+    menu.open = false;
+  }
+}
+
+function setAddSetModalView(view) {
+  state.addSetModalView = view;
+  renderAddSetModalView();
+}
+
+function renderAddSetModalView() {
+  const container = document.createElement("div");
+  container.className = "add-set-modal__view";
+  container.dataset.view = state.addSetModalView;
+  elements.addSetModal.dataset.view = state.addSetModalView;
+
+  if (state.addSetModalView === "scanner") {
+    container.append(createAddSetScannerView());
+  } else if (state.addSetModalView === "link") {
+    container.append(createAddSetLinkView());
+  } else {
+    container.append(createAddSetChoiceView());
+  }
+
+  elements.addSetBody.replaceChildren(container);
+  requestAnimationFrame(() => {
+    container.classList.add("is-entered");
+    container.querySelector("[data-autofocus]")?.focus();
+  });
+
+  if (state.addSetModalView === "scanner") {
+    void startAddSetScanner();
+  } else {
+    void stopAddSetScanner();
+  }
+}
+
+function createAddSetChoiceView() {
+  const section = document.createElement("section");
+  section.className = "add-set-modal__section add-set-modal__section--choice";
+
+  const title = document.createElement("h2");
+  title.id = "add-set-title";
+  title.className = "add-set-modal__title";
+  title.textContent = "Lernset abonnieren";
+
+  const actions = document.createElement("div");
+  actions.className = "add-set-modal__choices";
+  actions.append(
+    createAddSetChoiceButton("QR", createAddSetQrIcon(), () => setAddSetModalView("scanner"), true),
+    createAddSetChoiceButton("Link", createAddSetLinkIcon(), () => setAddSetModalView("link")),
+  );
+
+  section.append(title, actions);
+  return section;
+}
+
+function createAddSetChoiceButton(label, iconNode, onClick, autoFocus = false) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "add-set-modal__choice";
+  if (autoFocus) {
+    button.dataset.autofocus = "true";
+  }
+  button.addEventListener("click", onClick);
+
+  const iconWrap = document.createElement("span");
+  iconWrap.className = "add-set-modal__choice-icon";
+  iconWrap.append(iconNode);
+
+  const text = document.createElement("span");
+  text.className = "add-set-modal__choice-label";
+  text.textContent = label;
+
+  button.append(iconWrap, text);
+  return button;
+}
+
+function createAddSetLinkView() {
+  const section = document.createElement("section");
+  section.className = "add-set-modal__section";
+
+  const title = document.createElement("h2");
+  title.id = "add-set-title";
+  title.className = "add-set-modal__title";
+  title.textContent = "Link";
+
+  const form = document.createElement("form");
+  form.className = "add-set-modal__form";
+  form.noValidate = true;
+  form.addEventListener("submit", handleAddSetLinkSubmit);
+
+  const input = document.createElement("input");
+  input.name = "manual-set-target";
+  input.type = "text";
+  input.className = "add-set-modal__input";
+  input.setAttribute("aria-label", "Link");
+  input.autocapitalize = "off";
+  input.autocomplete = "off";
+  input.spellcheck = false;
+  input.placeholder = "https://";
+  input.dataset.autofocus = "true";
+
+  const actions = document.createElement("div");
+  actions.className = "add-set-modal__actions";
+
+  const submit = document.createElement("button");
+  submit.type = "submit";
+  submit.className = "add-set-modal__action add-set-modal__action--primary";
+  submit.textContent = "Öffnen";
+
+  const qr = document.createElement("button");
+  qr.type = "button";
+  qr.className = "add-set-modal__action add-set-modal__action--secondary";
+  qr.textContent = "QR";
+  qr.addEventListener("click", () => setAddSetModalView("scanner"));
+
+  actions.append(submit, qr);
+  form.append(input, actions);
+
+  const feedback = document.createElement("p");
+  feedback.id = "add-set-feedback";
+  feedback.className = "add-set-modal__feedback";
+
+  section.append(title, form, feedback);
+  return section;
+}
+
+function createAddSetScannerView() {
+  const section = document.createElement("section");
+  section.className = "add-set-modal__section";
+
+  const title = document.createElement("h2");
+  title.id = "add-set-title";
+  title.className = "add-set-modal__title";
+  title.textContent = "QR";
+
+  const scanner = document.createElement("div");
+  scanner.id = "add-set-qr-region";
+  scanner.className = "add-set-modal__scanner";
+
+  const actions = document.createElement("div");
+  actions.className = "add-set-modal__actions";
+
+  const link = document.createElement("button");
+  link.type = "button";
+  link.className = "add-set-modal__action add-set-modal__action--secondary";
+  link.textContent = "Link";
+  link.dataset.autofocus = "true";
+  link.addEventListener("click", () => setAddSetModalView("link"));
+
+  const back = document.createElement("button");
+  back.type = "button";
+  back.className = "add-set-modal__action add-set-modal__action--ghost";
+  back.textContent = "Zurück";
+  back.addEventListener("click", () => setAddSetModalView("choice"));
+
+  actions.append(link, back);
+
+  const feedback = document.createElement("p");
+  feedback.id = "add-set-feedback";
+  feedback.className = "add-set-modal__feedback";
+
+  section.append(title, scanner, actions, feedback);
+  return section;
+}
+
+function getAddSetFeedbackElement() {
+  return document.getElementById("add-set-feedback");
+}
+
+function setAddSetFeedback(message, isError = true) {
+  const feedback = getAddSetFeedbackElement();
+  if (!feedback) {
+    return;
+  }
+  feedback.textContent = message;
+  feedback.classList.toggle("is-success", Boolean(message) && !isError);
+}
+
+async function handleAddSetLinkSubmit(event) {
+  event.preventDefault();
+  const formData = new FormData(event.currentTarget);
+  const rawTarget = typeof formData.get("manual-set-target") === "string"
+    ? formData.get("manual-set-target").trim()
+    : "";
+  const target = normalizeScannedSetTarget(rawTarget);
+
+  if (!target.isValid) {
+    setAddSetFeedback(target.error);
+    return;
+  }
+
+  closeAddSetModal();
+  window.location.assign(target.url);
+}
+
+async function startAddSetScanner() {
+  await stopAddSetScanner();
+  addSetScanHandled = false;
+
+  if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia || !window.Html5Qrcode) {
+    setAddSetFeedback("Kamera nicht verfügbar.");
+    return;
+  }
+
+  const scannerRegion = document.getElementById("add-set-qr-region");
+  if (!scannerRegion) {
+    return;
+  }
+
+  const scanner = new window.Html5Qrcode("add-set-qr-region");
+  addSetScanner = scanner;
+
+  const handleDecoded = (decodedText) => {
+    if (addSetScanHandled) {
+      return;
+    }
+
+    const target = normalizeScannedSetTarget(decodedText);
+    if (!target.isValid) {
+      setAddSetFeedback(target.error);
+      return;
+    }
+
+    addSetScanHandled = true;
+    closeAddSetModal();
+    window.location.assign(target.url);
+  };
+
+  try {
+    await scanner.start(
+      { facingMode: { exact: "environment" } },
+      {
+        fps: 10,
+        qrbox: { width: 220, height: 220 },
+        aspectRatio: 1,
+      },
+      handleDecoded,
+      () => {},
+    );
+  } catch (error) {
+    try {
+      await scanner.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: { width: 220, height: 220 },
+          aspectRatio: 1,
+        },
+        handleDecoded,
+        () => {},
+      );
+    } catch (fallbackError) {
+      console.error("Unable to start QR scanner:", fallbackError);
+      setAddSetFeedback("Kamera nicht verfügbar.");
+    }
+  }
+}
+
+async function stopAddSetScanner() {
+  if (!addSetScanner) {
+    return;
+  }
+
+  const scanner = addSetScanner;
+  addSetScanner = null;
+
+  try {
+    await scanner.stop();
+  } catch (_error) {}
+
+  try {
+    await scanner.clear();
+  } catch (_error) {}
+}
+
+function createAddSetQrIcon() {
+  return createAddSetIcon([
+    ["rect", { x: "5", y: "5", width: "5", height: "5", rx: "1" }],
+    ["rect", { x: "14", y: "5", width: "5", height: "5", rx: "1" }],
+    ["rect", { x: "5", y: "14", width: "5", height: "5", rx: "1" }],
+    ["path", { d: "M13 13h2v2h-2zm3 0h3v3h-2v1h-1zm-3 3h1v1h-1zm2 2h1v1h-1zm2-1h2v2h-2z" }],
+  ]);
+}
+
+function createAddSetLinkIcon() {
+  return createAddSetIcon([
+    ["path", { d: "M10.5 14.5l3-3" }],
+    ["path", { d: "M8.5 16.5l-1 1a3 3 0 104.2 4.2l2.3-2.3a3 3 0 000-4.2l-.5-.5" }],
+    ["path", { d: "M15.5 8.5l1-1a3 3 0 10-4.2-4.2L10 5.6a3 3 0 000 4.2l.5.5" }],
+  ]);
+}
+
+function createAddSetIcon(shapes) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor");
+  svg.setAttribute("stroke-width", "1.9");
+  svg.setAttribute("stroke-linecap", "round");
+  svg.setAttribute("stroke-linejoin", "round");
+  svg.setAttribute("aria-hidden", "true");
+
+  for (const [tag, attrs] of shapes) {
+    const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for (const [key, value] of Object.entries(attrs)) {
+      node.setAttribute(key, value);
+    }
+    svg.append(node);
+  }
+
+  return svg;
+}
+
+function buildStudentShareUrlForSetPath(setPath) {
+  const origin = state.publicOrigin || window.location.origin;
+  const currentUrl = new URL(window.location.href);
+  const shareUrl = new URL(currentUrl.pathname || "/index.html", `${origin}/`);
+  shareUrl.search = "";
+  shareUrl.hash = "";
+  shareUrl.searchParams.set("set", setPath);
+  return shareUrl.href;
+}
+
+function openStudentSetShareModal(subscription) {
+  state.studentSetModalMode = "share";
+  state.activeStudentSetPath = subscription.setPath;
+  state.activeStudentSetTitle = subscription.title === subscription.setPath
+    ? (subscription.id || "Lernset")
+    : subscription.title;
+  state.activeStudentSetShareUrl = buildStudentShareUrlForSetPath(subscription.setPath);
+  renderStudentSetModalBody();
+  elements.studentSetModal.hidden = false;
+}
+
+function openStudentSetConfirmModal(subscription) {
+  state.studentSetModalMode = "confirm-unsubscribe";
+  state.activeStudentSetPath = subscription.setPath;
+  state.activeStudentSetTitle = subscription.title === subscription.setPath
+    ? (subscription.id || "Lernset")
+    : subscription.title;
+  state.activeStudentSetShareUrl = "";
+  renderStudentSetModalBody();
+  elements.studentSetModal.hidden = false;
+}
+
+function closeStudentSetModal() {
+  state.studentSetModalMode = "";
+  state.activeStudentSetPath = "";
+  state.activeStudentSetTitle = "";
+  state.activeStudentSetShareUrl = "";
+  elements.studentSetModal.hidden = true;
+  elements.studentSetModalBody.replaceChildren();
+}
+
+function renderStudentSetModalBody() {
+  const body = document.createElement("div");
+  body.className = "student-set-panel__body";
+
+  if (state.studentSetModalMode === "share") {
+    const title = document.createElement("h2");
+    title.className = "student-set-panel__title";
+    title.textContent = state.activeStudentSetTitle;
+
+    const qrShell = document.createElement("div");
+    qrShell.className = "student-set-panel__qr-shell";
+
+    const qrFrame = document.createElement("div");
+    qrFrame.className = "student-set-panel__qr-frame";
+
+    const qrCanvas = document.createElement("canvas");
+    qrCanvas.className = "student-set-panel__qr";
+    qrCanvas.width = 220;
+    qrCanvas.height = 220;
+    qrFrame.append(qrCanvas);
+    qrShell.append(qrFrame);
+
+    const linkRow = document.createElement("div");
+    linkRow.className = "student-set-panel__link-row";
+
+    const linkText = document.createElement("span");
+    linkText.className = "student-set-panel__link";
+    linkText.textContent = state.activeStudentSetShareUrl;
+
+    const copyButton = document.createElement("button");
+    copyButton.type = "button";
+    copyButton.className = "student-set-panel__copy";
+    copyButton.setAttribute("aria-label", "Link kopieren");
+    copyButton.innerHTML = '<span class="student-set-panel__copy-icon" aria-hidden="true"></span>';
+    copyButton.addEventListener("click", handleStudentSetShareCopy);
+
+    const feedback = document.createElement("span");
+    feedback.id = "student-set-modal-feedback";
+    feedback.className = "student-set-panel__feedback";
+    feedback.setAttribute("aria-live", "polite");
+
+    linkRow.append(linkText, copyButton, feedback);
+    body.append(title, qrShell, linkRow);
+
+    requestAnimationFrame(() => {
+      renderQrIntoCanvas(qrCanvas, state.activeStudentSetShareUrl, {
+        foreground: "#1f1f1f",
+      });
+    });
+  } else if (state.studentSetModalMode === "confirm-unsubscribe") {
+    const title = document.createElement("h2");
+    title.className = "student-set-panel__title";
+    title.textContent = "Abo beenden?";
+
+    const message = document.createElement("p");
+    message.className = "student-set-panel__message";
+    message.textContent = "Dabei gehen Lernstände, Übungsdaten und spätere Highscores für dieses Lernset verloren.";
+
+    const hint = document.createElement("p");
+    hint.className = "student-set-panel__hint";
+    hint.textContent = "Ein neues Abo startet wieder mit einem neuen Speicherstand.";
+
+    const actions = document.createElement("div");
+    actions.className = "student-set-panel__actions";
+
+    const cancelButton = document.createElement("button");
+    cancelButton.type = "button";
+    cancelButton.className = "student-set-panel__action student-set-panel__action--secondary";
+    cancelButton.textContent = "Abbrechen";
+    cancelButton.addEventListener("click", closeStudentSetModal);
+
+    const confirmButton = document.createElement("button");
+    confirmButton.type = "button";
+    confirmButton.className = "student-set-panel__action student-set-panel__action--danger";
+    confirmButton.textContent = "Abo beenden";
+    confirmButton.addEventListener("click", () => {
+      void confirmStudentSetUnsubscribe();
+    });
+
+    actions.append(cancelButton, confirmButton);
+    body.append(title, message, hint, actions);
+  }
+
+  elements.studentSetModalBody.replaceChildren(body);
+}
+
+async function handleStudentSetShareCopy() {
+  if (!state.activeStudentSetShareUrl) {
+    return;
+  }
+
+  const feedback = document.getElementById("student-set-modal-feedback");
+
+  try {
+    await navigator.clipboard.writeText(state.activeStudentSetShareUrl);
+    if (feedback) {
+      feedback.textContent = "Kopiert.";
+      feedback.classList.add("is-success");
+    }
+  } catch (_error) {
+    if (feedback) {
+      feedback.textContent = "Fehler.";
+      feedback.classList.remove("is-success");
+    }
+  }
+}
+
+async function confirmStudentSetUnsubscribe() {
+  const setPath = state.activeStudentSetPath;
+  closeStudentSetModal();
+  if (!setPath) {
+    return;
+  }
+  await handleRemoveSubscribedSet(setPath);
 }
 
 function renderRegistrationState({
@@ -848,8 +1330,8 @@ function renderRegistrationState({
 function renderPinState(tabletId, {
   feedback = "",
   title = "PIN eingeben",
-  message = `ID: ${getTabletLabel(tabletId)}`,
-  detail = "Gib den PIN für diese ID ein.",
+  message = `Gerät: ${getTabletLabel(tabletId)}`,
+  detail = "Gib den PIN für dieses Gerät ein.",
   submitLabel = "Entsperren und starten",
 } = {}) {
   void title;
@@ -872,7 +1354,7 @@ async function renderStudentHome(tabletId, {
   renderStudentScreen({
     mode: APP_MODES.HOME,
     title: "Lernsets",
-    message: `ID: ${getTabletLabel(tabletId)}`,
+    message: `Gerät: ${getTabletLabel(tabletId)}`,
     detail: "",
     kicker: "Menü",
     secondaryAction: "clear-local-tablet",
@@ -916,7 +1398,7 @@ async function renderStudentHome(tabletId, {
 
     const emptyTitle = document.createElement("p");
     emptyTitle.className = "student-screen__empty-title";
-    emptyTitle.textContent = "Keine Sets";
+    emptyTitle.textContent = "Noch keine Abos";
 
     const emptyMessage = document.createElement("p");
     emptyMessage.className = "student-screen__empty-message";
@@ -1194,13 +1676,19 @@ function createTabletIdInput(name, value = "") {
   input.name = name;
   input.type = "text";
   input.className = "student-screen__input";
-  input.placeholder = `z. B. ${DEFAULT_TABLET_ID}`;
+  input.placeholder = `z. B. ${DEFAULT_TABLET_LABEL}`;
   input.autocapitalize = "off";
   input.autocomplete = "off";
   input.spellcheck = false;
   input.required = true;
   input.value = value;
   return input;
+}
+
+function normalizeTabletIdInput(value) {
+  const normalized = value.trim().toLowerCase().replace(/\s+/g, "-");
+  const defaultLabel = DEFAULT_TABLET_LABEL.trim().toLowerCase().replace(/\s+/g, "-");
+  return normalized === defaultLabel ? DEFAULT_TABLET_ID : normalized;
 }
 
 function createPinInput(name, placeholder) {
@@ -1289,15 +1777,49 @@ function createStudentSetRow(subscription, {
     void handleStartSubscribedSet(subscription.setPath);
   });
 
-  const removeButton = document.createElement("button");
-  removeButton.type = "button";
-  removeButton.className = "student-screen__library-action student-screen__library-action--secondary";
-  removeButton.textContent = "Entfernen";
-  removeButton.addEventListener("click", () => {
-    void handleRemoveSubscribedSet(subscription.setPath);
+  const menu = document.createElement("details");
+  menu.className = "student-screen__library-menu";
+  menu.addEventListener("toggle", () => {
+    if (menu.open) {
+      closeStudentSetMenus(menu);
+    }
   });
 
-  actions.append(startButton, removeButton);
+  const summary = document.createElement("summary");
+  summary.className = "student-screen__library-menu-toggle";
+  summary.setAttribute("aria-label", "Mehr");
+
+  const summaryIcon = document.createElement("span");
+  summaryIcon.className = "material-symbols-outlined";
+  summaryIcon.setAttribute("aria-hidden", "true");
+  summaryIcon.textContent = "more_horiz";
+  summary.append(summaryIcon);
+
+  const menuPanel = document.createElement("div");
+  menuPanel.className = "student-screen__library-menu-panel";
+
+  const shareButton = document.createElement("button");
+  shareButton.type = "button";
+  shareButton.className = "student-screen__library-menu-action";
+  shareButton.textContent = "Teilen";
+  shareButton.addEventListener("click", () => {
+    menu.open = false;
+    openStudentSetShareModal(subscription);
+  });
+
+  const unsubscribeButton = document.createElement("button");
+  unsubscribeButton.type = "button";
+  unsubscribeButton.className = "student-screen__library-menu-action student-screen__library-menu-action--danger";
+  unsubscribeButton.textContent = "Abo beenden";
+  unsubscribeButton.addEventListener("click", () => {
+    menu.open = false;
+    openStudentSetConfirmModal(subscription);
+  });
+
+  menuPanel.append(shareButton, unsubscribeButton);
+  menu.append(summary, menuPanel);
+
+  actions.append(startButton, menu);
   copy.append(title, meta);
   row.append(cover, copy, actions);
   return row;
@@ -1323,7 +1845,7 @@ function createStudentAddSetCard() {
 
   const title = document.createElement("span");
   title.className = "student-screen__library-add-title";
-  title.textContent = "Set hinzufügen";
+  title.textContent = "Lernset abonnieren";
 
   const text = document.createElement("span");
   text.className = "student-screen__library-add-text";
@@ -1410,7 +1932,7 @@ async function handleRemoveSubscribedSet(setPath) {
   const result = await removeTabletSubscription(tabletId, setPath);
 
   await renderStudentHome(tabletId, {
-    feedback: result.ok ? "Set entfernt." : result.error,
+    feedback: result.ok ? "Abo beendet." : result.error,
     feedbackIsError: !result.ok,
   });
 }
@@ -1493,7 +2015,7 @@ async function subscribeTabletToSet(tabletId, setPath) {
     if (!response.ok) {
       return {
         ok: false,
-        error: getApiErrorMessage(response, "Set konnte nicht hinzugefügt werden."),
+        error: getApiErrorMessage(response, "Lernset konnte nicht abonniert werden."),
       };
     }
 
@@ -1522,7 +2044,7 @@ async function removeTabletSubscription(tabletId, setPath) {
     if (!response.ok) {
       return {
         ok: false,
-        error: getApiErrorMessage(response, "Set konnte nicht entfernt werden."),
+        error: getApiErrorMessage(response, "Abo konnte nicht beendet werden."),
       };
     }
 
@@ -1557,7 +2079,7 @@ async function handleRegistrationSubmit(event) {
   if (!tabletId) {
     renderRegistrationState({
       selectedTabletId: DEFAULT_TABLET_ID,
-      feedback: "Bitte wähle eine ID aus.",
+      feedback: "Bitte wähle ein Gerät aus.",
     });
     return;
   }
@@ -1600,7 +2122,7 @@ async function handleRegistrationSubmit(event) {
     if (response.status === 409) {
       renderAccessState({
         loginTabletId: tabletId,
-        loginFeedback: "Diese ID ist schon eingerichtet. Bitte mit PIN weiter.",
+        loginFeedback: "Dieser Zugang ist schon eingerichtet. Bitte mit PIN weiter.",
       });
       return;
     }
@@ -1629,7 +2151,7 @@ async function handlePinSubmit(event) {
   const accessVariant = form.dataset.accessVariant || "login";
   const formData = new FormData(form);
   const tabletId = typeof formData.get("tabletId") === "string"
-    ? formData.get("tabletId").trim().toLowerCase()
+    ? normalizeTabletIdInput(formData.get("tabletId"))
     : (form.dataset.tabletId || loadLocalTabletId() || DEFAULT_TABLET_ID);
   const pin = typeof formData.get("pin-entry") === "string"
     ? formData.get("pin-entry").trim()
@@ -1637,7 +2159,7 @@ async function handlePinSubmit(event) {
 
   if (!tabletId) {
     renderAccessState({
-      loginFeedback: "Bitte gib deine ID ein.",
+      loginFeedback: "Bitte gib dein Gerät ein.",
       knownDeviceFeedback: state.accessKnownDeviceFeedback,
       showRegistration: state.accessRegistrationOpen,
     });
@@ -1678,7 +2200,7 @@ async function handlePinSubmit(event) {
       renderAccessState({
         loginTabletId: tabletId,
         registrationTabletId: tabletId,
-        registrationFeedback: "Diese ID ist auf diesem Gerät noch nicht eingerichtet.",
+        registrationFeedback: "Dieser Zugang ist auf diesem Gerät noch nicht eingerichtet.",
         showRegistration: true,
       });
       return;
@@ -2022,10 +2544,26 @@ function handleCardKeydown(event) {
 }
 
 function handleWindowKeydown(event) {
+  if (elements.studentSetModal && !elements.studentSetModal.hidden && event.key === "Escape") {
+    event.preventDefault();
+    closeStudentSetModal();
+    return;
+  }
+
+  if (elements.addSetModal && !elements.addSetModal.hidden && event.key === "Escape") {
+    event.preventDefault();
+    closeAddSetModal();
+    return;
+  }
+
   if (elements.launchModeModal && !elements.launchModeModal.hidden && event.key === "Escape") {
     event.preventDefault();
     closeLaunchModeModal();
     return;
+  }
+
+  if (event.key === "Escape") {
+    closeStudentSetMenus();
   }
 
   if (event.defaultPrevented || !canFlipCard()) {
