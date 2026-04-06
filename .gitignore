@@ -4,3 +4,5 @@ certs/dev-local-ca-cert.pem
 certs/dev-server-cert.pem
 certs/dev-server-key.pem
 /tmp/
+artifacts/
+test-results/

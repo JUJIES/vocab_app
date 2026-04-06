@@ -1,19 +1,34 @@
 const SET_INDEX_API_PATH = "/api/sets";
-const SET_INDEX_FALLBACK_PATH = "./sets/sets-index.json";
 const STUDENT_PAGE_NAME = "index.html";
+const TABLET_ICON_PATH = "./assets/icons/tablet-device.svg";
+const TEACHER_SESSION_STORAGE_KEY = "dino-vocab-teacher-session-v1";
 
 const state = {
   sets: [],
+  tablets: [],
+  activeTab: "sets",
   publicOrigin: "",
   activeSet: null,
   activeShareUrl: "",
   activeQrDataUrl: "",
   feedbackTimeoutId: null,
+  authReady: false,
 };
 
 const elements = {
+  authPanel: document.getElementById("teacher-auth-panel"),
+  authForm: document.getElementById("teacher-auth-form"),
+  authPinInput: document.getElementById("teacher-pin-input"),
+  authFeedback: document.getElementById("teacher-auth-feedback"),
+  shell: document.getElementById("teacher-shell"),
+  logoutButton: document.getElementById("teacher-logout-button"),
   setsMeta: document.getElementById("sets-meta"),
   setList: document.getElementById("teacher-set-list"),
+  tabletsMeta: document.getElementById("tablets-meta"),
+  tabletList: document.getElementById("teacher-tablet-list"),
+  tabletEmptyState: document.getElementById("teacher-tablet-empty-state"),
+  tabButtons: document.querySelectorAll("[data-teacher-tab]"),
+  tabPanels: document.querySelectorAll("[data-teacher-panel]"),
   emptyState: document.getElementById("teacher-empty-state"),
   errorState: document.getElementById("teacher-error-state"),
   errorMessage: document.getElementById("teacher-error-message"),
@@ -35,12 +50,20 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function bindEvents() {
+  elements.authForm.addEventListener("submit", handleTeacherAuthSubmit);
+  elements.logoutButton.addEventListener("click", handleTeacherLogout);
   elements.copyLinkButton.addEventListener("click", handleCopyLink);
   elements.printShareButton.addEventListener("click", handlePrintShare);
   elements.shareCloseButton.addEventListener("click", closeShareOverlay);
 
   for (const trigger of elements.closeShareTriggers) {
     trigger.addEventListener("click", closeShareOverlay);
+  }
+
+  for (const button of elements.tabButtons) {
+    button.addEventListener("click", () => {
+      setActiveTeacherTab(button.dataset.teacherTab || "sets");
+    });
   }
 
   document.addEventListener("keydown", (event) => {
@@ -51,15 +74,15 @@ function bindEvents() {
 }
 
 async function initializeTeacherApp() {
-  try {
-    state.publicOrigin = await loadTeacherShareOrigin();
-    const sets = await loadSetIndex();
-    state.sets = sets;
-    renderSetList();
-  } catch (error) {
-    console.error("Unable to initialize teacher page:", error);
-    renderErrorState("Sets konnten nicht geladen werden.");
+  state.publicOrigin = await loadTeacherShareOrigin();
+  setActiveTeacherTab(state.activeTab);
+
+  if (!loadTeacherSessionToken()) {
+    showTeacherAuth();
+    return;
   }
+
+  await loadProtectedTeacherData();
 }
 
 async function loadTeacherShareOrigin() {
@@ -73,19 +96,66 @@ async function loadTeacherShareOrigin() {
 }
 
 async function loadSetIndex() {
-  let data;
+  const response = await requestJson(SET_INDEX_API_PATH, {
+    auth: "teacher",
+  });
 
-  try {
-    data = await fetchSetIndex(SET_INDEX_API_PATH);
-  } catch (error) {
-    data = await fetchSetIndex(SET_INDEX_FALLBACK_PATH);
+  if (!response.ok) {
+    throw createTeacherRequestError(response, "Set-Liste konnte nicht geladen werden.");
   }
 
-  const rawSets = Array.isArray(data?.sets) ? data.sets : [];
+  const rawSets = Array.isArray(response.data?.sets) ? response.data.sets : [];
 
   return rawSets
     .map(normalizeSetEntry)
     .filter(Boolean);
+}
+
+async function loadTabletDirectory() {
+  const response = await requestJson("/api/tablets", {
+    auth: "teacher",
+    headers: {
+      "Cache-Control": "no-store",
+    },
+  });
+
+  if (!response.ok) {
+    throw createTeacherRequestError(response, "Tablet-Verzeichnis konnte nicht geladen werden.");
+  }
+
+  return Array.isArray(response.data?.tablets)
+    ? response.data.tablets
+        .map((tablet) => normalizeDirectoryTabletEntry(tablet))
+        .filter(Boolean)
+    : [];
+}
+
+async function reloadTeacherData() {
+  const [sets, tablets] = await Promise.all([
+    loadSetIndex(),
+    loadTabletDirectory(),
+  ]);
+
+  state.sets = sets;
+  state.tablets = tablets;
+  renderSetList();
+  renderTabletList();
+}
+
+async function loadProtectedTeacherData() {
+  try {
+    await reloadTeacherData();
+    showTeacherShell();
+  } catch (error) {
+    if (error?.requiresAuth) {
+      showTeacherAuth(error.message);
+      return;
+    }
+
+    console.error("Unable to initialize teacher page:", error);
+    showTeacherShell();
+    renderErrorState(typeof error?.message === "string" ? error.message : "Sets konnten nicht geladen werden.");
+  }
 }
 
 async function fetchSetIndex(path) {
@@ -136,6 +206,31 @@ function normalizeTabletEntry(entry) {
     id,
     label,
     subscribedAt: typeof entry?.subscribedAt === "string" ? entry.subscribedAt.trim() : "",
+    failedPinAttempts: Number.isFinite(entry?.failedPinAttempts) ? Math.max(0, Math.trunc(entry.failedPinAttempts)) : 0,
+    lockedAt: typeof entry?.lockedAt === "string" ? entry.lockedAt.trim() : "",
+    isLocked: Boolean(entry?.isLocked),
+  };
+}
+
+function normalizeDirectoryTabletEntry(entry) {
+  const id = typeof entry?.id === "string" ? entry.id.trim() : "";
+  const label = typeof entry?.label === "string" ? entry.label.trim() : "";
+
+  if (!id || !label) {
+    return null;
+  }
+
+  return {
+    id,
+    label,
+    registered: Boolean(entry?.registered),
+    isCoupled: Boolean(entry?.isCoupled),
+    failedPinAttempts: Number.isFinite(entry?.failedPinAttempts) ? Math.max(0, Math.trunc(entry.failedPinAttempts)) : 0,
+    lockedAt: typeof entry?.lockedAt === "string" ? entry.lockedAt.trim() : "",
+    isLocked: Boolean(entry?.isLocked),
+    subscriptions: Array.isArray(entry?.subscriptions) ? entry.subscriptions : [],
+    updatedAt: typeof entry?.updatedAt === "string" ? entry.updatedAt.trim() : "",
+    lastSeenAt: typeof entry?.lastSeenAt === "string" ? entry.lastSeenAt.trim() : "",
   };
 }
 
@@ -171,6 +266,36 @@ function renderSetList() {
 
   for (const setEntry of state.sets) {
     elements.setList.append(createSetRow(setEntry));
+  }
+}
+
+function setActiveTeacherTab(nextTab) {
+  state.activeTab = nextTab === "tablets" ? "tablets" : "sets";
+
+  for (const button of elements.tabButtons) {
+    const isActive = button.dataset.teacherTab === state.activeTab;
+    button.setAttribute("aria-selected", isActive ? "true" : "false");
+  }
+
+  for (const panel of elements.tabPanels) {
+    panel.hidden = panel.dataset.teacherPanel !== state.activeTab;
+  }
+}
+
+function renderTabletList() {
+  elements.tabletList.replaceChildren();
+
+  if (state.tablets.length === 0) {
+    elements.tabletEmptyState.hidden = false;
+    elements.tabletsMeta.textContent = "0 Geräte";
+    return;
+  }
+
+  elements.tabletEmptyState.hidden = true;
+  elements.tabletsMeta.textContent = `${state.tablets.length} Gerät${state.tablets.length === 1 ? "" : "e"}`;
+
+  for (const tablet of state.tablets) {
+    elements.tabletList.append(createTabletDirectoryRow(tablet));
   }
 }
 
@@ -219,9 +344,9 @@ function createTabletAssignmentBlock(setEntry) {
     const row = document.createElement("div");
     row.className = "teacher-set-row__tablet";
 
-    const label = document.createElement("span");
-    label.className = "teacher-set-row__tablet-label";
-    label.textContent = tablet.label;
+    const tabletInfo = document.createElement("div");
+    tabletInfo.className = "teacher-set-row__tablet-info";
+    tabletInfo.append(createDevicePill(tablet), createTabletStatusBadge(tablet));
 
     const removeButton = document.createElement("button");
     removeButton.type = "button";
@@ -231,19 +356,194 @@ function createTabletAssignmentBlock(setEntry) {
       void handleRemoveTabletSubscription(tablet.id, setEntry.path);
     });
 
-    row.append(label, removeButton);
+    row.append(tabletInfo, removeButton);
     wrapper.append(row);
   }
 
   return wrapper;
 }
 
+function createDevicePill(tablet) {
+  const pill = document.createElement("span");
+  pill.className = "device-pill";
+  pill.dataset.tabletGroup = getTabletGroupName(tablet.label || tablet.id);
+  if (tablet.isLocked) {
+    pill.classList.add("device-pill--locked");
+  }
+
+  const icon = document.createElement("img");
+  icon.className = "device-pill__icon";
+  icon.src = TABLET_ICON_PATH;
+  icon.alt = "";
+  icon.decoding = "async";
+
+  const label = document.createElement("span");
+  label.className = "device-pill__label";
+  label.textContent = tablet.label || tablet.id;
+
+  pill.append(icon, label);
+  return pill;
+}
+
+function createTabletStatusBadge(tablet) {
+  const status = document.createElement("span");
+  status.className = "teacher-status-badge";
+
+  if (tablet.isLocked) {
+    status.classList.add("teacher-status-badge--locked");
+    status.append(createStatusIcon("lock"), document.createTextNode("Gesperrt"));
+    return status;
+  }
+
+  if (tablet.failedPinAttempts > 0) {
+    status.classList.add("teacher-status-badge--warning");
+    status.textContent = `${tablet.failedPinAttempts}/${3} Fehlversuche`;
+    return status;
+  }
+
+  status.textContent = tablet.registered ? "Gekoppelt" : "Frei";
+  return status;
+}
+
+function createTabletDirectoryRow(tablet) {
+  const row = document.createElement("article");
+  row.className = "teacher-tablet-row";
+
+  const copy = document.createElement("div");
+  copy.className = "teacher-tablet-row__copy";
+
+  const header = document.createElement("div");
+  header.className = "teacher-tablet-row__header";
+  header.append(createDevicePill(tablet), createTabletStatusBadge(tablet));
+
+  const meta = document.createElement("p");
+  meta.className = "teacher-tablet-row__meta";
+  meta.textContent = getTabletDirectoryMetaText(tablet);
+
+  copy.append(header, meta);
+
+  const actions = document.createElement("div");
+  actions.className = "teacher-tablet-row__actions";
+
+  const unlockAction = document.createElement("button");
+  unlockAction.type = "button";
+  unlockAction.className = "teacher-button teacher-button--secondary";
+  unlockAction.textContent = "Sperre aufheben";
+  unlockAction.disabled = !tablet.isLocked;
+  unlockAction.addEventListener("click", () => {
+    void handleResetTabletLock(tablet.id);
+  });
+
+  const decoupleAction = document.createElement("button");
+  decoupleAction.type = "button";
+  decoupleAction.className = "teacher-button teacher-button--danger";
+  decoupleAction.textContent = "Kopplung löschen";
+  decoupleAction.disabled = !tablet.registered;
+  decoupleAction.addEventListener("click", () => {
+    void handleDecoupleTablet(tablet);
+  });
+
+  actions.append(unlockAction, decoupleAction);
+
+  row.append(copy, actions);
+  return row;
+}
+
+function getTabletDirectoryMetaText(tablet) {
+  if (tablet.isLocked) {
+    return "Nach 3 falschen PIN-Eingaben gesperrt.";
+  }
+
+  if (tablet.failedPinAttempts > 0) {
+    return `${tablet.failedPinAttempts} von 3 Fehlversuchen erreicht.`;
+  }
+
+  if (!tablet.registered) {
+    return "Frei. Kann neu gekoppelt werden.";
+  }
+
+  const subscriptionCount = Array.isArray(tablet.subscriptions) ? tablet.subscriptions.length : 0;
+  return `${subscriptionCount} Lernset${subscriptionCount === 1 ? "" : "s"} aktiv. Kopplung löschen entfernt PIN, Lernsets und Lernstände für die nächste Registrierung.`;
+}
+
+function getTabletGroupName(value) {
+  return value
+    .trim()
+    .split(/\s+/)[0]
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
 function renderErrorState(message) {
   elements.setList.replaceChildren();
+  elements.tabletList.replaceChildren();
   elements.emptyState.hidden = true;
+  elements.tabletEmptyState.hidden = true;
   elements.errorState.hidden = false;
   elements.errorMessage.textContent = message;
   elements.setsMeta.textContent = "Fehler";
+  elements.tabletsMeta.textContent = "";
+}
+
+function loadTeacherSessionToken() {
+  const value = window.sessionStorage.getItem(TEACHER_SESSION_STORAGE_KEY);
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function persistTeacherSessionToken(token) {
+  if (!token) {
+    clearTeacherSessionToken();
+    return;
+  }
+
+  window.sessionStorage.setItem(TEACHER_SESSION_STORAGE_KEY, token);
+}
+
+function clearTeacherSessionToken() {
+  window.sessionStorage.removeItem(TEACHER_SESSION_STORAGE_KEY);
+}
+
+function createTeacherRequestError(response, fallbackMessage) {
+  const error = new Error(response.data?.error || fallbackMessage);
+  error.requiresAuth = response.status === 401 || response.status === 403;
+  return error;
+}
+
+function showTeacherAuth(feedback = "") {
+  clearTeacherSessionToken();
+  closeShareOverlay();
+  state.authReady = false;
+  elements.authPanel.hidden = false;
+  elements.shell.hidden = true;
+  elements.authFeedback.textContent = feedback;
+  elements.authPinInput.value = "";
+  requestAnimationFrame(() => {
+    elements.authPinInput.focus();
+  });
+}
+
+function showTeacherShell() {
+  state.authReady = true;
+  elements.authPanel.hidden = true;
+  elements.shell.hidden = false;
+  elements.authFeedback.textContent = "";
+}
+
+function createStatusIcon(kind) {
+  const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  icon.setAttribute("viewBox", "0 0 24 24");
+  icon.setAttribute("aria-hidden", "true");
+  icon.classList.add("teacher-status-badge__icon");
+
+  if (kind === "lock") {
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("fill", "currentColor");
+    path.setAttribute("d", "M7 10V8a5 5 0 0 1 10 0v2h1a2 2 0 0 1 2 2v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-7a2 2 0 0 1 2-2h1zm2 0h6V8a3 3 0 1 0-6 0v2z");
+    icon.append(path);
+  }
+
+  return icon;
 }
 
 async function openShareOverlay(setEntry) {
@@ -347,19 +647,80 @@ async function handleRemoveTabletSubscription(tabletId, setPath) {
   try {
     const response = await requestJson(
       `/api/tablets/${encodeURIComponent(tabletId)}/subscriptions?set=${encodeURIComponent(setPath)}`,
-      { method: "DELETE" },
+      {
+        method: "DELETE",
+        auth: "teacher",
+      },
     );
 
     if (!response.ok) {
-      throw new Error(response.data?.error || "Abo konnte nicht beendet werden.");
+      throw createTeacherRequestError(response, "Abo konnte nicht beendet werden.");
     }
 
-    const sets = await loadSetIndex();
-    state.sets = sets;
-    renderSetList();
+    await reloadTeacherData();
   } catch (error) {
+    if (error?.requiresAuth) {
+      showTeacherAuth(error.message);
+      return;
+    }
+
     console.error("Unable to remove set assignment:", error);
     renderErrorState(typeof error?.message === "string" ? error.message : "Abo konnte nicht beendet werden.");
+  }
+}
+
+async function handleResetTabletLock(tabletId) {
+  try {
+    const response = await requestJson(`/api/tablets/${encodeURIComponent(tabletId)}/reset-lock`, {
+      auth: "teacher",
+      method: "POST",
+    });
+
+    if (!response.ok) {
+      throw createTeacherRequestError(response, "Sperre konnte nicht aufgehoben werden.");
+    }
+
+    await reloadTeacherData();
+  } catch (error) {
+    if (error?.requiresAuth) {
+      showTeacherAuth(error.message);
+      return;
+    }
+
+    console.error("Unable to reset tablet lock:", error);
+    renderErrorState(typeof error?.message === "string" ? error.message : "Sperre konnte nicht aufgehoben werden.");
+  }
+}
+
+async function handleDecoupleTablet(tablet) {
+  const label = tablet.label || tablet.id;
+  const confirmed = window.confirm(
+    `${label} wirklich entkoppeln?\n\nDabei werden PIN, Lernsets und die Zuordnung gelöscht. Bei einer neuen Registrierung startet das Tablet wieder leer.`,
+  );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    const response = await requestJson(`/api/tablets/${encodeURIComponent(tablet.id)}/decouple`, {
+      auth: "teacher",
+      method: "POST",
+    });
+
+    if (!response.ok) {
+      throw createTeacherRequestError(response, "Kopplung konnte nicht gelöscht werden.");
+    }
+
+    await reloadTeacherData();
+  } catch (error) {
+    if (error?.requiresAuth) {
+      showTeacherAuth(error.message);
+      return;
+    }
+
+    console.error("Unable to decouple tablet:", error);
+    renderErrorState(typeof error?.message === "string" ? error.message : "Kopplung konnte nicht gelöscht werden.");
   }
 }
 
@@ -383,13 +744,76 @@ async function handleCopyLink() {
   }
 }
 
+async function handleTeacherAuthSubmit(event) {
+  event.preventDefault();
+  const formData = new FormData(event.currentTarget);
+  const pin = typeof formData.get("teacher-pin") === "string"
+    ? formData.get("teacher-pin").trim()
+    : "";
+
+  if (!pin) {
+    elements.authFeedback.textContent = "Bitte PIN eingeben.";
+    return;
+  }
+
+  const submitButton = event.currentTarget.querySelector('button[type="submit"]');
+
+  if (submitButton) {
+    submitButton.disabled = true;
+  }
+
+  try {
+    const response = await requestJson("/api/teacher/session", {
+      method: "POST",
+      body: { pin },
+    });
+
+    if (!response.ok) {
+      throw createTeacherRequestError(response, "Lehrerbereich konnte nicht entsperrt werden.");
+    }
+
+    persistTeacherSessionToken(response.data?.session?.token || "");
+    await loadProtectedTeacherData();
+  } catch (error) {
+    console.error("Unable to unlock teacher page:", error);
+    showTeacherAuth(typeof error?.message === "string" ? error.message : "Lehrerbereich konnte nicht entsperrt werden.");
+  } finally {
+    if (submitButton) {
+      submitButton.disabled = false;
+    }
+  }
+}
+
+async function handleTeacherLogout() {
+  try {
+    await requestJson("/api/teacher/session", {
+      method: "DELETE",
+      auth: "teacher",
+    });
+  } catch (error) {
+    console.error("Unable to close teacher session:", error);
+  }
+
+  showTeacherAuth();
+}
+
 async function requestJson(path, options = {}) {
+  const headers = {
+    "Content-Type": "application/json",
+    ...(options.headers || {}),
+  };
+
+  if (options.auth === "teacher") {
+    const token = loadTeacherSessionToken();
+
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+  }
+
   const response = await fetch(path, {
     method: options.method || "GET",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    },
+    headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
 

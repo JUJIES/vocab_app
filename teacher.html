@@ -10,19 +10,79 @@
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./teacher.css?v=2026-04-06-1515-qr-crop-fix" />
+    <link rel="stylesheet" href="./teacher.css?v=2026-04-06-2305-teacher-auth" />
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
-    <script src="./teacher.js?v=2026-04-06-1515-qr-crop-fix" defer></script>
+    <script src="./teacher.js?v=2026-04-06-2305-teacher-auth" defer></script>
   </head>
   <body>
-    <main class="teacher-app">
-      <header class="teacher-header">
+    <main id="teacher-auth-panel" class="teacher-auth">
+      <section class="teacher-auth__card" aria-labelledby="teacher-auth-title">
         <p class="teacher-header__kicker">Lehrkraft</p>
-        <h1 class="teacher-header__title">Sets</h1>
-        <p class="teacher-header__message"></p>
+        <h1 id="teacher-auth-title" class="teacher-header__title">Lehrerbereich</h1>
+        <p class="teacher-header__message">
+          PIN eingeben, um Lernsets, Sperren und Kopplungen zu verwalten.
+        </p>
+
+        <form id="teacher-auth-form" class="teacher-auth__form" novalidate>
+          <label class="teacher-auth__label" for="teacher-pin-input">PIN</label>
+          <input
+            id="teacher-pin-input"
+            class="teacher-auth__input"
+            name="teacher-pin"
+            type="password"
+            inputmode="numeric"
+            autocomplete="current-password"
+            placeholder="PIN eingeben"
+          />
+          <button class="teacher-button" type="submit">Freischalten</button>
+          <p id="teacher-auth-feedback" class="teacher-auth__feedback" aria-live="polite"></p>
+        </form>
+      </section>
+    </main>
+
+    <main id="teacher-shell" class="teacher-app" hidden>
+      <header class="teacher-header">
+        <div class="teacher-header__topline">
+          <div>
+            <p class="teacher-header__kicker">Lehrkraft</p>
+            <h1 class="teacher-header__title">Sets</h1>
+          </div>
+          <button id="teacher-logout-button" class="teacher-button teacher-button--secondary" type="button">
+            Abmelden
+          </button>
+        </div>
+        <p class="teacher-header__message">Lernsets verwalten, Sperren aufheben und Kopplungen bewusst zurücksetzen.</p>
+        <div class="teacher-tabs" role="tablist" aria-label="Lehrerbereiche">
+          <button
+            class="teacher-tab-button"
+            type="button"
+            role="tab"
+            aria-selected="true"
+            aria-controls="teacher-panel-sets"
+            data-teacher-tab="sets"
+          >
+            Lernsets
+          </button>
+          <button
+            class="teacher-tab-button"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="teacher-panel-tablets"
+            data-teacher-tab="tablets"
+          >
+            Tablets
+          </button>
+        </div>
       </header>
 
-      <section class="teacher-section" aria-labelledby="sets-title">
+      <section
+        id="teacher-panel-sets"
+        class="teacher-section"
+        aria-labelledby="sets-title"
+        role="tabpanel"
+        data-teacher-panel="sets"
+      >
         <div class="teacher-section__header">
           <h2 id="sets-title" class="teacher-section__title">Verfügbare Sets</h2>
           <p id="sets-meta" class="teacher-section__meta"></p>
@@ -41,6 +101,29 @@
         </div>
 
         <div id="teacher-set-list" class="teacher-set-list" role="list"></div>
+      </section>
+
+      <section
+        id="teacher-panel-tablets"
+        class="teacher-section"
+        aria-labelledby="tablets-title"
+        role="tabpanel"
+        data-teacher-panel="tablets"
+        hidden
+      >
+        <div class="teacher-section__header">
+          <h2 id="tablets-title" class="teacher-section__title">Geräte</h2>
+          <p id="tablets-meta" class="teacher-section__meta"></p>
+        </div>
+
+        <div id="teacher-tablet-empty-state" class="teacher-empty-state" hidden>
+          <p class="teacher-empty-state__title">Keine Geräte gefunden</p>
+          <p class="teacher-empty-state__message">
+            Noch keine Tablets registriert.
+          </p>
+        </div>
+
+        <div id="teacher-tablet-list" class="teacher-tablet-list" role="list"></div>
       </section>
     </main>
 
