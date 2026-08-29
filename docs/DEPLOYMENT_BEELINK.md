@@ -17,6 +17,16 @@ Produktiver App-Port: `127.0.0.1:6000`
 Healthcheck: `http://127.0.0.1:6000/health`
 Öffentlicher Zugang: benannter Cloudflare-Tunnel mit eigenem HTTPS-Hostnamen
 
+## Aktiver Stand
+
+- Öffentliche URL: `https://lerndeck.jujies.app`
+- App-Dienst: `BeelinkApp-Lerndeck`
+- Tunnel-Dienst: `BeelinkTunnel-Lerndeck`
+- Aktiver Release: Git-Commit `b18b145`
+- Runtime: `_runtime\Lerndeck`
+
+Der Release wurde lokal und öffentlich geprüft. App- und Tunnel-Dienst starten automatisch und haben einen kontrollierten Neustarttest bestanden.
+
 ## Deployment-Gates
 
 Ein Release wird erst aktiviert, wenn:

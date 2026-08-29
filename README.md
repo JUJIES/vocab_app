@@ -37,7 +37,7 @@ npm install
 npm start
 ```
 
-Standardmäßig läuft die App auf `http://localhost:3000`. Für einen echten Lehrerzugang sollte `TEACHER_PIN` gesetzt werden. Der Standard `0000` ist ausschließlich für lokale Entwicklung gedacht.
+Standardmäßig läuft die App auf `http://localhost:3000`. Der Lehrerzugang bleibt deaktiviert, bis `TEACHER_PIN` ausdrücklich gesetzt wurde. Es gibt keinen produktiven Standard-PIN.
 
 Wichtige Checks:
 

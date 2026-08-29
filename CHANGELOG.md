@@ -9,6 +9,8 @@
 - Historisch eingecheckten lokalen CA-Privatschlüssel aus dem aktuellen Git-Stand entfernt und künftig ignoriert.
 - Tablet-Runtime mit PIN-Hashes aus Git entfernt; neue Installationen starten aus einem PIN-freien Geräteverzeichnis.
 - Tablet-Zugänge nach fünf falschen PINs dauerhaft sperrbar gemacht und Lehrerlogin gegen wiederholte Fehlversuche begrenzt.
+- Lehrerlogin ohne gesetzten `TEACHER_PIN` deaktiviert; kein unsicherer Standard-PIN mehr.
+- Beelink-Release `b18b145` auf Port 6000 mit eigenem App-Dienst, Tunnel-Dienst und `https://lerndeck.jujies.app` in Betrieb genommen.
 - Express und transitive Abhängigkeiten auf Versionen ohne bekannte Audit-Befunde aktualisiert.
 - Veraltete UI-Tests an die aktuelle Zugangsauswahl und DOM-Struktur angepasst.
 - Aktuellen Produkt-, Datenfluss- und Beelink-Betriebsstand dokumentiert.

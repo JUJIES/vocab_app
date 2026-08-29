@@ -56,7 +56,7 @@ const HTTPS_KEY_PATH = path.join(ROOT_DIR, "certs", "dev-server-key.pem");
 const HTTPS_CERT_PATH = path.join(ROOT_DIR, "certs", "dev-server-cert.pem");
 const TEACHER_PIN = typeof process.env.TEACHER_PIN === "string" && process.env.TEACHER_PIN.trim()
   ? process.env.TEACHER_PIN.trim()
-  : "0000";
+  : "";
 const tabletSessions = loadPersistedTabletSessions();
 const teacherSessions = new Map();
 const accessSessions = new Map();
@@ -75,6 +75,13 @@ app.post("/api/teacher/session", (request, response) => {
   const pin = typeof request.body?.pin === "string" ? request.body.pin.trim() : "";
   const clientIdentity = getClientIdentity(request);
   const teacherFailureState = getTeacherPinFailureState(clientIdentity);
+
+  if (!TEACHER_PIN) {
+    response.status(503).json({
+      error: "Lehrerzugang ist auf diesem Server nicht konfiguriert.",
+    });
+    return;
+  }
 
   if (teacherFailureState?.lockedUntil > Date.now()) {
     response.status(429).json({
