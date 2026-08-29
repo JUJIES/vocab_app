@@ -8,6 +8,7 @@
 - Öffentliche Dateiauslieferung auf App-Assets und Lernsets begrenzt; Runtime-Daten, Servercode und Zertifikate sind nicht mehr statisch erreichbar.
 - Historisch eingecheckten lokalen CA-Privatschlüssel aus dem aktuellen Git-Stand entfernt und künftig ignoriert.
 - Tablet-Runtime mit PIN-Hashes aus Git entfernt; neue Installationen starten aus einem PIN-freien Geräteverzeichnis.
+- Tablet-Zugänge nach fünf falschen PINs dauerhaft sperrbar gemacht und Lehrerlogin gegen wiederholte Fehlversuche begrenzt.
 - Express und transitive Abhängigkeiten auf Versionen ohne bekannte Audit-Befunde aktualisiert.
 - Veraltete UI-Tests an die aktuelle Zugangsauswahl und DOM-Struktur angepasst.
 - Aktuellen Produkt-, Datenfluss- und Beelink-Betriebsstand dokumentiert.

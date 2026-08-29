@@ -18,6 +18,9 @@ const ACCESS_PIN_COOLDOWN_STEPS_MS = [
   60 * 1000,
   5 * 60 * 1000,
 ];
+const MAX_TABLET_PIN_FAILURES = 5;
+const MAX_TEACHER_PIN_FAILURES = 5;
+const TEACHER_PIN_LOCKOUT_MS = 15 * 60 * 1000;
 const ACCESS_SESSION_COOKIE_NAME = "dino_vocab_access_session";
 const ACCESS_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const ACCESS_SESSION_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -57,6 +60,7 @@ const TEACHER_PIN = typeof process.env.TEACHER_PIN === "string" && process.env.T
 const tabletSessions = loadPersistedTabletSessions();
 const teacherSessions = new Map();
 const accessSessions = new Map();
+const teacherPinFailures = new Map();
 
 app.use(express.json());
 
@@ -69,6 +73,15 @@ app.get("/health", (_request, response) => {
 
 app.post("/api/teacher/session", (request, response) => {
   const pin = typeof request.body?.pin === "string" ? request.body.pin.trim() : "";
+  const clientIdentity = getClientIdentity(request);
+  const teacherFailureState = getTeacherPinFailureState(clientIdentity);
+
+  if (teacherFailureState?.lockedUntil > Date.now()) {
+    response.status(429).json({
+      error: "Zu viele falsche Versuche. Bitte später erneut versuchen.",
+    });
+    return;
+  }
 
   if (!pin) {
     response.status(400).json({
@@ -78,11 +91,14 @@ app.post("/api/teacher/session", (request, response) => {
   }
 
   if (pin !== TEACHER_PIN) {
+    registerTeacherPinFailure(clientIdentity);
     response.status(401).json({
       error: "PIN stimmt nicht.",
     });
     return;
   }
+
+  teacherPinFailures.delete(clientIdentity);
 
   response.json({
     success: true,
@@ -814,6 +830,15 @@ app.post("/api/tablets/:tabletId/verify-pin", async (request, response) => {
       return;
     }
 
+    if (tablet.lockedAt) {
+      response.status(423).json({
+        error: "Dieser Tablet-Zugang ist gesperrt. Bitte eine Lehrkraft um Freigabe.",
+        tablet: toSafeTablet(tablet),
+        accessSession: serializeAccessSession(accessSession, now),
+      });
+      return;
+    }
+
     if (accessSession.tabletId && accessSession.tabletId !== tablet.id) {
       const boundTablet = findTablet(store, accessSession.tabletId);
       response.status(423).json({
@@ -832,11 +857,21 @@ app.post("/api/tablets/:tabletId/verify-pin", async (request, response) => {
     const isMatch = await bcrypt.compare(pin, tablet.pinHash);
 
     if (!isMatch) {
+      tablet.failedPinAttempts = Math.max(0, Math.trunc(tablet.failedPinAttempts || 0)) + 1;
+
+      if (tablet.failedPinAttempts >= MAX_TABLET_PIN_FAILURES) {
+        tablet.lockedAt = new Date(now).toISOString();
+      }
+
+      tablet.updatedAt = new Date(now).toISOString();
+      await writeTabletStore(store);
       registerAccessPinFailure(accessSession, now);
       commitAccessSession(accessSessionResult.token, accessSession, now);
 
-      response.status(429).json({
-        error: buildAccessPinCooldownMessage(accessSession.lockedUntil - now, { includeWrongPin: true }),
+      response.status(tablet.lockedAt ? 423 : 429).json({
+        error: tablet.lockedAt
+          ? "Dieser Tablet-Zugang ist nach zu vielen falschen Versuchen gesperrt. Bitte eine Lehrkraft um Freigabe."
+          : buildAccessPinCooldownMessage(accessSession.lockedUntil - now, { includeWrongPin: true }),
         tablet: toSafeTablet(tablet),
         accessSession: serializeAccessSession(accessSession, now),
       });
@@ -889,6 +924,10 @@ app.post("/api/tablets/:tabletId/reset-access-session", async (request, response
     }
 
     clearAccessSessionsForTablet(tablet.id);
+    tablet.failedPinAttempts = 0;
+    tablet.lockedAt = null;
+    tablet.updatedAt = new Date().toISOString();
+    await writeTabletStore(store);
 
     response.json({
       success: true,
@@ -1195,6 +1234,8 @@ function toSafeTablet(tablet) {
     registered: Boolean(tablet.registered),
     pairingId: normalizePairingId(tablet),
     isCoupled: Boolean(tablet.registered),
+    isLocked: Boolean(tablet.lockedAt),
+    failedPinAttempts: Math.max(0, Math.trunc(tablet.failedPinAttempts || 0)),
     subscriptions: normalizeTabletSubscriptions(tablet),
     progressSetCount: normalizeTabletLearningProgress(tablet).length,
     accessSession: getTabletAccessSessionSnapshot(tablet.id),
@@ -1202,6 +1243,46 @@ function toSafeTablet(tablet) {
     updatedAt: tablet.updatedAt || null,
     lastSeenAt: tablet.lastSeenAt || null,
   };
+}
+
+function getClientIdentity(request) {
+  const cloudflareAddress = typeof request.get === "function"
+    ? request.get("cf-connecting-ip")
+    : request.headers?.["cf-connecting-ip"];
+
+  return (typeof cloudflareAddress === "string" && cloudflareAddress.trim())
+    ? cloudflareAddress.trim()
+    : (request.socket?.remoteAddress || "unknown");
+}
+
+function getTeacherPinFailureState(clientIdentity, now = Date.now()) {
+  const state = teacherPinFailures.get(clientIdentity);
+
+  if (!state) {
+    return null;
+  }
+
+  if (state.lockedUntil && state.lockedUntil <= now) {
+    teacherPinFailures.delete(clientIdentity);
+    return null;
+  }
+
+  return state;
+}
+
+function registerTeacherPinFailure(clientIdentity, now = Date.now()) {
+  const currentState = getTeacherPinFailureState(clientIdentity, now) || {
+    failureCount: 0,
+    lockedUntil: 0,
+  };
+  currentState.failureCount += 1;
+
+  if (currentState.failureCount >= MAX_TEACHER_PIN_FAILURES) {
+    currentState.lockedUntil = now + TEACHER_PIN_LOCKOUT_MS;
+  }
+
+  teacherPinFailures.set(clientIdentity, currentState);
+  return currentState;
 }
 
 function toPublicTablet(tablet) {

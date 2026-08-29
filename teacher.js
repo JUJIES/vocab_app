@@ -253,6 +253,10 @@ function normalizeDirectoryTabletEntry(entry) {
     label,
     registered: Boolean(entry?.registered),
     isCoupled: Boolean(entry?.isCoupled),
+    isLocked: Boolean(entry?.isLocked),
+    failedPinAttempts: Number.isFinite(entry?.failedPinAttempts)
+      ? Math.max(0, Math.trunc(entry.failedPinAttempts))
+      : 0,
     subscriptions: Array.isArray(entry?.subscriptions) ? entry.subscriptions : [],
     accessSession: normalizeAccessSession(entry?.accessSession),
     updatedAt: typeof entry?.updatedAt === "string" ? entry.updatedAt.trim() : "",
@@ -485,6 +489,12 @@ function createTabletStatusBadge(tablet) {
   const status = document.createElement("span");
   status.className = "teacher-chip teacher-status-badge";
 
+  if (tablet.isLocked) {
+    status.classList.add("teacher-status-badge--warning");
+    status.textContent = "PIN gesperrt";
+    return status;
+  }
+
   if (tablet.accessSession?.isCoolingDown) {
     status.classList.add("teacher-status-badge--warning");
     status.textContent = `Timeout ${formatDuration(tablet.accessSession.remainingMs)}`;
@@ -578,10 +588,10 @@ function createTabletDirectoryRow(tablet) {
   releaseAction.type = "button";
   releaseAction.className = "teacher-tablet-row__menu-action";
   releaseAction.setAttribute("role", "menuitem");
-  releaseAction.disabled = !tablet.accessSession?.isBound;
+  releaseAction.disabled = !tablet.accessSession?.isBound && !tablet.isLocked;
   releaseAction.append(
     createButtonIcon(TIMEOUT_ICON_PATH),
-    document.createTextNode("Freigabe aufheben"),
+    document.createTextNode(tablet.isLocked ? "Sperre aufheben" : "Freigabe aufheben"),
   );
   releaseAction.addEventListener("click", () => {
     closeTabletActionMenus();
