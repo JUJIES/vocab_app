@@ -22,7 +22,7 @@ Healthcheck: `http://127.0.0.1:6000/health`
 - Öffentliche URL: `https://lerndeck.jujies.app`
 - App-Dienst: `BeelinkApp-Lerndeck`
 - Tunnel-Dienst: `BeelinkTunnel-Lerndeck`
-- Aktiver Release: Git-Commit `b18b145`
+- Aktiver Release: Git-Commit `8c8e1cf`
 - Runtime: `_runtime\Lerndeck`
 
 Der Release wurde lokal und öffentlich geprüft. App- und Tunnel-Dienst starten automatisch und haben einen kontrollierten Neustarttest bestanden.
