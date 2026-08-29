@@ -4,6 +4,7 @@
   --surface: #20293a;
   --surface-soft: #2a3448;
   --text: #f4f7ff;
+  --heading-text: #e6eaf0;
   --text-muted: #9eabc2;
   --line: rgba(214, 224, 246, 0.08);
   --shadow: 0 28px 60px -28px rgba(2, 8, 20, 0.72);
@@ -37,6 +38,10 @@ body {
 button,
 input {
   font: inherit;
+}
+
+[hidden] {
+  display: none !important;
 }
 
 .teacher-app {
@@ -126,6 +131,9 @@ input {
 .teacher-tab-button {
   min-height: 2.55rem;
   padding: 0.65rem 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.48rem;
   border: 1px solid rgba(214, 224, 246, 0.08);
   border-radius: 999px;
   background: rgba(214, 224, 246, 0.06);
@@ -138,6 +146,19 @@ input {
   background: linear-gradient(180deg, rgba(223, 232, 255, 0.18), rgba(183, 198, 229, 0.14));
   color: var(--text);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.teacher-tab-button__icon {
+  width: 0.95rem;
+  height: 0.95rem;
+  display: block;
+  flex: 0 0 auto;
+  object-fit: contain;
+  filter: brightness(0) saturate(100%) invert(67%) sepia(11%) saturate(599%) hue-rotate(185deg) brightness(94%) contrast(88%);
+}
+
+.teacher-tab-button[aria-selected="true"] .teacher-tab-button__icon {
+  filter: brightness(0) saturate(100%) invert(93%) sepia(8%) saturate(346%) hue-rotate(185deg) brightness(103%) contrast(97%);
 }
 
 .teacher-header__kicker,
@@ -153,6 +174,7 @@ input {
 .teacher-header__title,
 .share-panel__title {
   margin: 0;
+  color: var(--heading-text);
   font-size: clamp(2rem, 4vw, 3.2rem);
   line-height: 0.96;
   letter-spacing: -0.05em;
@@ -189,6 +211,7 @@ input {
 .teacher-section__title,
 .teacher-empty-state__title {
   margin: 0;
+  color: var(--heading-text);
   font-size: 1.15rem;
   font-weight: 800;
 }
@@ -205,8 +228,8 @@ input {
 
 .teacher-set-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(7rem, auto);
-  gap: 1.15rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.9rem;
   align-items: start;
   padding: 1.2rem 1.15rem;
   border: 1px solid var(--line);
@@ -219,8 +242,13 @@ input {
     0 16px 34px rgba(2, 8, 20, 0.18);
 }
 
+.teacher-set-row__copy {
+  min-width: 0;
+}
+
 .teacher-set-row__title {
   margin: 0;
+  color: var(--heading-text);
   font-size: 1rem;
   font-weight: 800;
 }
@@ -242,8 +270,79 @@ input {
 
 .teacher-set-row__tablets {
   display: grid;
-  gap: 0.5rem;
-  margin-top: 1rem;
+  gap: 0.55rem;
+  margin-top: 0.8rem;
+}
+
+.teacher-set-row__toggle {
+  justify-self: start;
+  min-height: 2.1rem;
+  padding: 0.34rem 0.78rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+  border: 1px solid rgba(214, 224, 246, 0.08);
+  border-radius: var(--radius-pill);
+  background: rgba(214, 224, 246, 0.06);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition:
+    background 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease,
+    transform 220ms ease;
+}
+
+.teacher-set-row__toggle:hover,
+.teacher-set-row__toggle:focus-visible {
+  background: rgba(214, 224, 246, 0.1);
+  color: var(--text);
+  border-color: rgba(214, 224, 246, 0.14);
+}
+
+.teacher-set-row__toggle-label {
+  color: var(--text);
+}
+
+.teacher-set-row__toggle-meta {
+  color: var(--text-muted);
+}
+
+.teacher-set-row__toggle-chevron {
+  display: inline-block;
+  margin-left: 0.08rem;
+  color: var(--text-muted);
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.teacher-set-row__tablets[data-expanded="true"] .teacher-set-row__toggle-chevron {
+  transform: rotate(180deg);
+}
+
+.teacher-set-row__tablets-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0.4;
+  pointer-events: none;
+  transition:
+    grid-template-rows 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 220ms ease;
+}
+
+.teacher-set-row__tablets[data-expanded="true"] .teacher-set-row__tablets-panel {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.teacher-set-row__tablets-panel-inner {
+  min-height: 0;
+  overflow: hidden;
+  display: grid;
+  gap: 0.42rem;
 }
 
 .teacher-set-row__tablet,
@@ -251,8 +350,8 @@ input {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.8rem;
-  padding: 0.7rem 0.8rem;
+  gap: 0.65rem;
+  padding: 0.58rem 0.72rem;
   border-radius: 0.85rem;
   background: rgba(214, 224, 246, 0.06);
   border: 1px solid rgba(214, 224, 246, 0.05);
@@ -266,6 +365,10 @@ input {
   flex-wrap: wrap;
 }
 
+.teacher-set-row__tablet-info {
+  min-width: 0;
+}
+
 .teacher-set-row__tablet-empty {
   color: var(--text-muted);
   font-size: 0.88rem;
@@ -273,8 +376,8 @@ input {
 
 .teacher-tablet-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) fit-content(20rem);
+  gap: 0.8rem;
   align-items: center;
   padding: 1rem 1.05rem;
   border-radius: 1rem;
@@ -289,15 +392,127 @@ input {
 
 .teacher-tablet-row__actions {
   display: flex;
-  gap: 0.65rem;
-  flex-wrap: wrap;
+  gap: 0.5rem;
+  flex-wrap: nowrap;
   justify-content: end;
+  align-items: center;
+}
+
+.teacher-tablet-row__menu-shell {
+  position: relative;
+}
+
+.teacher-tablet-row__menu-button {
+  width: 2.55rem;
+  height: 2.55rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.22rem;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(214, 224, 246, 0.08);
+  color: var(--text);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 8px 20px rgba(4, 9, 20, 0.18);
+  cursor: pointer;
+}
+
+.teacher-tablet-row__menu-button:hover,
+.teacher-tablet-row__menu-button:focus-visible,
+.teacher-tablet-row__menu-shell.is-open .teacher-tablet-row__menu-button {
+  background: rgba(214, 224, 246, 0.14);
+}
+
+.teacher-tablet-row__menu-dot {
+  width: 0.22rem;
+  height: 0.22rem;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.9;
+}
+
+.teacher-tablet-row__menu {
+  position: absolute;
+  top: calc(100% + 0.45rem);
+  right: 0;
+  z-index: 5;
+  min-width: 13.5rem;
+  padding: 0.38rem;
+  display: grid;
+  gap: 0.2rem;
+  border-radius: 1rem;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(180deg, rgba(22, 28, 42, 0.98), rgba(12, 17, 28, 0.98)),
+    rgba(15, 20, 31, 0.98);
+  box-shadow: 0 22px 48px rgba(2, 6, 14, 0.42);
+}
+
+.teacher-tablet-row__menu-action {
+  min-height: 2.45rem;
+  padding: 0.62rem 0.82rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  border: 0;
+  border-radius: 0.85rem;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.teacher-tablet-row__menu-action:hover,
+.teacher-tablet-row__menu-action:focus-visible {
+  background: rgba(214, 224, 246, 0.1);
+}
+
+.teacher-tablet-row__menu-action--danger {
+  color: rgba(255, 209, 209, 0.98);
+}
+
+.teacher-tablet-row__menu-action--danger:hover,
+.teacher-tablet-row__menu-action--danger:focus-visible {
+  background: rgba(232, 108, 108, 0.14);
+}
+
+.teacher-tablet-row__menu-action:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.teacher-tablet-row__menu-action:disabled:hover,
+.teacher-tablet-row__menu-action:disabled:focus-visible {
+  background: transparent;
 }
 
 .teacher-tablet-row__meta {
   margin: 0;
   color: var(--text-muted);
   font-size: 0.88rem;
+}
+
+.teacher-chip {
+  min-height: 2.1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.46rem;
+  max-width: 100%;
+  padding: 0.38rem 0.78rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(214, 224, 246, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .teacher-button--danger {
@@ -311,38 +526,44 @@ input {
 }
 
 .teacher-tablet-remove {
-  min-height: 2.25rem;
+  min-height: 2rem;
   padding: 0 0.25rem;
   border: 0;
   border-radius: var(--radius-pill);
   background: transparent;
   color: rgba(206, 217, 238, 0.74);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 700;
   box-shadow: none;
   cursor: pointer;
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .teacher-button,
-.share-panel__action,
-.share-panel__close {
-  height: 2.9rem;
-  padding: 0 1rem;
+.share-panel__action {
+  height: 2.55rem;
+  padding: 0 0.86rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.42rem;
   border: 0;
   border-radius: var(--radius-pill);
   background: linear-gradient(180deg, rgba(223, 232, 255, 0.18), rgba(183, 198, 229, 0.14));
   color: var(--text);
+  font-size: 0.94rem;
   font-weight: 700;
   letter-spacing: 0.01em;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.05),
     0 8px 20px rgba(4, 9, 20, 0.18);
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .teacher-button--secondary,
-.share-panel__action--secondary,
-.share-panel__close {
+.share-panel__action--secondary {
   background: rgba(214, 224, 246, 0.08);
   color: var(--text);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
@@ -361,36 +582,80 @@ input {
   box-shadow: none;
 }
 
+.teacher-button__icon {
+  width: 0.88rem;
+  height: 0.88rem;
+  display: block;
+  flex: 0 0 auto;
+  object-fit: contain;
+  filter: brightness(0) saturate(100%) invert(92%) sepia(12%) saturate(342%) hue-rotate(183deg) brightness(102%) contrast(95%);
+}
+
 .teacher-tablet-remove:hover,
 .teacher-tablet-remove:focus-visible,
 .teacher-button--secondary:hover,
 .teacher-button--secondary:focus-visible,
 .share-panel__action--secondary:hover,
-.share-panel__action--secondary:focus-visible,
-.share-panel__close:hover,
-.share-panel__close:focus-visible {
+.share-panel__action--secondary:focus-visible {
   background: rgba(214, 224, 246, 0.06);
   color: var(--text);
+}
+
+.teacher-button--danger .teacher-button__icon {
+  filter: brightness(0) saturate(100%) invert(90%) sepia(10%) saturate(983%) hue-rotate(296deg) brightness(108%) contrast(99%);
+}
+
+.teacher-set-row__share {
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: start;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text);
+  box-shadow: none;
+  cursor: pointer;
+  opacity: 0.86;
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease,
+    background 180ms ease;
+}
+
+.teacher-set-row__share:hover,
+.teacher-set-row__share:focus-visible {
+  opacity: 1;
+  transform: translateY(-1px);
+  background: rgba(214, 224, 246, 0.05);
+}
+
+.teacher-set-row__share .teacher-button__icon {
+  width: 1.05rem;
+  height: 1.05rem;
 }
 
 .device-pill {
   --device-accent: rgba(166, 181, 206, 0.88);
   --device-accent-soft: rgba(166, 181, 206, 0.16);
-  min-height: 2rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.46rem;
-  max-width: 100%;
-  padding: 0.22rem 0.68rem 0.22rem 0.58rem;
-  border-radius: 999px;
+  padding-left: 0.58rem;
+  padding-right: 0.7rem;
   border: 1px solid color-mix(in srgb, var(--device-accent) 44%, rgba(255, 255, 255, 0.12));
-  background: color-mix(in srgb, var(--device-accent) 16%, rgba(255, 255, 255, 0.04));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--device-accent) 18%, rgba(255, 255, 255, 0.08)),
+    color-mix(in srgb, var(--device-accent) 12%, rgba(255, 255, 255, 0.04))
+  );
   color: color-mix(in srgb, var(--device-accent) 84%, white);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  font-size: 0.9rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 8px 20px rgba(4, 9, 20, 0.1);
+  font-size: 0.84rem;
   font-weight: 800;
   letter-spacing: -0.01em;
-  line-height: 1;
 }
 
 .device-pill[data-tablet-group="rot"] {
@@ -418,11 +683,6 @@ input {
   --device-accent-soft: rgba(184, 190, 201, 0.14);
 }
 
-.device-pill--locked {
-  --device-accent: rgba(232, 108, 108, 0.94);
-  --device-accent-soft: rgba(232, 108, 108, 0.18);
-}
-
 .device-pill__icon {
   width: 0.95rem;
   height: 0.95rem;
@@ -447,35 +707,70 @@ input {
 }
 
 .teacher-status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  min-height: 1.8rem;
-  padding: 0.2rem 0.6rem;
-  border-radius: 999px;
-  background: rgba(117, 203, 149, 0.14);
-  color: rgba(166, 244, 195, 0.92);
-  font-size: 0.75rem;
+  background: linear-gradient(180deg, rgba(214, 224, 246, 0.14), rgba(214, 224, 246, 0.08));
+  border-color: rgba(214, 224, 246, 0.14);
+  color: rgba(226, 235, 248, 0.92);
   font-weight: 800;
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
 
 .teacher-status-badge__icon {
-  width: 0.85rem;
-  height: 0.85rem;
+  width: 0.9rem;
+  height: 0.9rem;
   display: block;
   flex: 0 0 auto;
+  object-fit: contain;
+  filter: brightness(0) saturate(100%) invert(88%) sepia(14%) saturate(657%) hue-rotate(84deg) brightness(102%) contrast(93%);
+}
+
+.teacher-status-badge--secondary {
+  background: linear-gradient(180deg, rgba(214, 224, 246, 0.12), rgba(214, 224, 246, 0.08));
+  border-color: rgba(214, 224, 246, 0.12);
+  color: rgba(226, 235, 248, 0.92);
+}
+
+.teacher-status-badge--available {
+  background: linear-gradient(180deg, rgba(255, 193, 94, 0.2), rgba(255, 193, 94, 0.12));
+  border-color: rgba(255, 193, 94, 0.24);
+  color: rgba(255, 227, 173, 0.98);
+}
+
+.teacher-status-badge--registered {
+  background: linear-gradient(180deg, rgba(117, 203, 149, 0.18), rgba(117, 203, 149, 0.12));
+  border-color: rgba(117, 203, 149, 0.22);
+  color: rgba(166, 244, 195, 0.92);
 }
 
 .teacher-status-badge--warning {
-  background: rgba(255, 193, 94, 0.14);
+  background: linear-gradient(180deg, rgba(255, 193, 94, 0.18), rgba(255, 193, 94, 0.12));
+  border-color: rgba(255, 193, 94, 0.2);
   color: rgba(255, 220, 158, 0.96);
 }
 
-.teacher-status-badge--locked {
-  background: rgba(232, 108, 108, 0.16);
-  color: rgba(255, 186, 186, 0.98);
+.teacher-status-badge--metric {
+  background: linear-gradient(180deg, rgba(94, 162, 255, 0.18), rgba(94, 162, 255, 0.1));
+  border-color: rgba(94, 162, 255, 0.2);
+  color: rgba(204, 228, 255, 0.96);
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+.teacher-status-badge--metric .teacher-status-badge__icon,
+.teacher-status-badge--secondary .teacher-status-badge__icon {
+  filter: brightness(0) saturate(100%) invert(90%) sepia(12%) saturate(352%) hue-rotate(182deg) brightness(105%) contrast(95%);
+}
+
+.teacher-status-badge--available .teacher-status-badge__icon {
+  filter: brightness(0) saturate(100%) invert(87%) sepia(33%) saturate(1131%) hue-rotate(327deg) brightness(103%) contrast(102%);
+}
+
+.teacher-status-badge--registered .teacher-status-badge__icon {
+  filter: brightness(0) saturate(100%) invert(88%) sepia(14%) saturate(657%) hue-rotate(84deg) brightness(102%) contrast(93%);
+}
+
+.teacher-status-badge--warning .teacher-status-badge__icon {
+  filter: brightness(0) saturate(100%) invert(87%) sepia(20%) saturate(851%) hue-rotate(326deg) brightness(103%) contrast(101%);
 }
 
 .share-overlay {
@@ -508,7 +803,44 @@ input {
 }
 
 .share-panel__close {
-  justify-self: end;
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(235, 241, 252, 0.82);
+  box-shadow: none;
+  cursor: pointer;
+  transition:
+    background 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.share-panel__close:hover,
+.share-panel__close:focus-visible {
+  background: rgba(214, 224, 246, 0.08);
+  color: rgba(248, 250, 255, 0.96);
+  transform: translateY(-1px);
+}
+
+.share-panel__close:focus-visible {
+  outline: none;
+}
+
+.share-panel__close-icon {
+  width: 1rem;
+  height: 1rem;
+  display: block;
+  object-fit: contain;
+  filter: brightness(0) saturate(100%) invert(94%) sepia(8%) saturate(330%) hue-rotate(186deg) brightness(103%) contrast(95%);
 }
 
 .share-panel__path {
@@ -529,9 +861,9 @@ input {
   aspect-ratio: 1;
   display: grid;
   place-items: center;
-  padding: 0.9rem;
+  padding: 0.4rem;
   border-radius: 1rem;
-  background: #ffffff;
+  background: #f7f9fc;
   overflow: hidden;
 }
 
@@ -539,7 +871,8 @@ input {
   display: block;
   width: 100%;
   height: 100%;
-  background: transparent;
+  border-radius: 0.7rem;
+  background: #f7f9fc;
   image-rendering: pixelated;
 }
 
@@ -566,8 +899,25 @@ input {
 
 .share-panel__actions {
   display: flex;
+  justify-content: center;
+  align-items: center;
   gap: 0.8rem;
   flex-wrap: wrap;
+}
+
+.share-panel__action {
+  width: 3.25rem;
+  min-width: 3.25rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.share-panel__action-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+  display: block;
 }
 
 .share-panel__feedback {
@@ -580,23 +930,45 @@ input {
     grid-template-columns: 1fr;
   }
 
+  .teacher-set-row__share {
+    justify-self: end;
+  }
+
+  .teacher-set-row__tablet,
+  .teacher-set-row__tablet-empty {
+    flex-wrap: wrap;
+  }
+
   .teacher-tablet-row {
     grid-template-columns: 1fr;
   }
 
   .teacher-tablet-row__actions {
-    justify-content: stretch;
+    display: grid;
+    justify-content: end;
   }
 
   .teacher-button,
   .teacher-tab-button,
-  .share-panel__action,
   .share-panel__close {
     width: 100%;
   }
 
+  .share-panel__close {
+    width: 2.5rem;
+  }
+
   .share-panel__actions {
-    display: grid;
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .teacher-set-row__toggle,
+  .teacher-set-row__toggle-chevron,
+  .teacher-set-row__tablets-panel,
+  .teacher-set-row__share {
+    transition: none;
   }
 }
 

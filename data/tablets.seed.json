@@ -1,0 +1,33 @@
+{
+  "tablets": [
+    { "id": "blau-1", "label": "Blau 1", "registered": false },
+    { "id": "blau-2", "label": "Blau 2", "registered": false },
+    { "id": "blau-3", "label": "Blau 3", "registered": false },
+    { "id": "blau-4", "label": "Blau 4", "registered": false },
+    { "id": "blau-5", "label": "Blau 5", "registered": false },
+    { "id": "blau-6", "label": "Blau 6", "registered": false },
+    { "id": "lila-1", "label": "Lila 1", "registered": false },
+    { "id": "lila-2", "label": "Lila 2", "registered": false },
+    { "id": "lila-3", "label": "Lila 3", "registered": false },
+    { "id": "lila-4", "label": "Lila 4", "registered": false },
+    { "id": "lila-5", "label": "Lila 5", "registered": false },
+    { "id": "pink-1", "label": "Pink 1", "registered": false },
+    { "id": "pink-2", "label": "Pink 2", "registered": false },
+    { "id": "pink-3", "label": "Pink 3", "registered": false },
+    { "id": "pink-4", "label": "Pink 4", "registered": false },
+    { "id": "pink-5", "label": "Pink 5", "registered": false },
+    { "id": "pink-6", "label": "Pink 6", "registered": false },
+    { "id": "rot-1", "label": "Rot 1", "registered": false },
+    { "id": "rot-2", "label": "Rot 2", "registered": false },
+    { "id": "rot-3", "label": "Rot 3", "registered": false },
+    { "id": "rot-4", "label": "Rot 4", "registered": false },
+    { "id": "rot-5", "label": "Rot 5", "registered": false },
+    { "id": "rot-6", "label": "Rot 6", "registered": false },
+    { "id": "schwarz-1", "label": "Schwarz 1", "registered": false },
+    { "id": "schwarz-2", "label": "Schwarz 2", "registered": false },
+    { "id": "schwarz-3", "label": "Schwarz 3", "registered": false },
+    { "id": "schwarz-4", "label": "Schwarz 4", "registered": false },
+    { "id": "schwarz-5", "label": "Schwarz 5", "registered": false },
+    { "id": "schwarz-6", "label": "Schwarz 6", "registered": false }
+  ]
+}

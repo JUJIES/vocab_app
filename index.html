@@ -6,8 +6,8 @@
     <meta name="theme-color" content="#171e2b" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Dino Vocab" />
-    <title>Dino Vocab App</title>
+    <meta name="apple-mobile-web-app-title" content="Lerndeck" />
+    <title>Lerndeck</title>
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -20,10 +20,10 @@
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./styles.css?v=2026-04-06-2014-access-flow-separated" />
+    <link rel="stylesheet" href="./styles.css?v=2026-04-18-2148-input-banner-spacing" />
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
-    <script src="./app.js?v=2026-04-06-2014-access-flow-separated" defer></script>
+    <script src="./app.js?v=2026-04-18-2138-input-progress-banner" defer></script>
   </head>
   <body>
     <main class="app-shell">
@@ -33,12 +33,11 @@
         aria-labelledby="student-screen-title"
         hidden
       >
-        <div class="student-screen__panel">
+        <section class="student-screen__header">
           <p id="student-screen-kicker" class="student-screen__kicker">Student</p>
           <h1 id="student-screen-title" class="student-screen__title">Set laden</h1>
           <p id="student-screen-message" class="student-screen__message"></p>
           <p id="student-screen-detail" class="student-screen__detail"></p>
-          <div id="student-screen-form" class="student-screen__form" hidden></div>
           <div class="student-screen__actions">
             <button
               id="student-screen-primary-action"
@@ -53,49 +52,80 @@
               hidden
             ></button>
           </div>
-          <section id="student-share-block" class="student-share" hidden>
-            <p class="student-share__kicker">Auf anderem Tablet öffnen</p>
+        </section>
+        <div id="student-screen-form" class="student-screen__content student-screen__form" hidden></div>
+        <section
+          id="student-share-block"
+          class="student-share"
+          aria-label="Zugang"
+          aria-describedby="student-share-description"
+          hidden
+        >
+          <div class="student-share__backdrop share-dialog__backdrop" data-close-share></div>
+          <div class="student-share__modal share-dialog__panel">
+            <button
+              class="share-dialog__close"
+              type="button"
+              aria-label="Schließen"
+              data-close-share
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">close</span>
+            </button>
+            <p class="student-share__kicker">Zugang</p>
+            <h2 id="student-share-title" class="student-share__title"></h2>
+            <p id="student-share-description" class="student-share__description">
+              Seite direkt öffnen oder Link teilen
+            </p>
             <div class="student-share__qr-shell">
               <div class="student-share__qr-frame">
                 <canvas id="student-share-qr" class="student-share__qr" width="180" height="180"></canvas>
               </div>
+              <div class="student-share__link-row">
+                <button id="student-share-copy" class="student-share__copy" type="button" aria-label="Link kopieren">
+                  <span class="student-share__copy-text">Link kopieren</span>
+                  <span class="student-share__copy-icon" aria-hidden="true"></span>
+                </button>
+              </div>
             </div>
-            <div class="student-share__link-row">
-              <button id="student-share-copy" class="student-share__copy" type="button" aria-label="Link kopieren">
-                <span class="student-share__copy-icon" aria-hidden="true"></span>
-              </button>
-              <span id="student-share-feedback" class="student-share__feedback" aria-live="polite"></span>
-            </div>
-          </section>
-        </div>
+          </div>
+        </section>
       </section>
 
       <section id="card-stage" class="card-stage" aria-label="Flashcard stage">
         <div class="card-stage__topbar">
-          <button
-            id="student-home-link"
-            class="student-home-link"
-            type="button"
-          >
-            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
-            <span>Zur Übersicht</span>
-          </button>
-        </div>
+          <div class="card-stage__topbar-back">
+            <button
+              id="student-home-link"
+              class="student-home-link"
+              type="button"
+              aria-label="Zur Übersicht"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+              <span>Zur Übersicht</span>
+            </button>
+          </div>
 
-        <div id="progress-shell" class="progress-shell" aria-hidden="true">
-          <p id="progress-label" class="progress-label"></p>
-          <div class="progress-row">
-            <span class="progress-metric progress-metric--unknown" aria-hidden="true">
-              <span class="progress-metric__icon progress-metric__icon--unknown"></span>
-              <span data-unknown-count>0</span>
-            </span>
-            <div class="progress-bar" aria-hidden="true">
-              <div id="progress-fill" class="progress-bar__fill"></div>
+          <div class="card-stage__topbar-progress">
+            <div id="progress-shell" class="progress-shell input-progress-shell card-stage__topbar-progress-shell" aria-hidden="true">
+              <p id="progress-label" class="progress-label"></p>
+              <div class="progress-row">
+                <div class="progress-bar" aria-hidden="true">
+                  <div id="progress-fill" class="progress-bar__fill"></div>
+                </div>
+              </div>
             </div>
-            <span class="progress-metric progress-metric--known" aria-hidden="true">
-              <span data-known-count>0</span>
-              <span class="progress-metric__icon progress-metric__icon--known"></span>
-            </span>
+          </div>
+
+          <div class="card-stage__topbar-context">
+            <button
+              id="flashcard-menu-logout"
+              class="student-screen__action student-screen__action--secondary student-screen__home-logout card-stage__menu-logout"
+              type="button"
+              aria-label="Abmelden"
+            >
+              <span class="student-screen__action-icon" aria-hidden="true"></span>
+              <span>Abmelden</span>
+            </button>
           </div>
         </div>
 
@@ -189,6 +219,12 @@
                         arrow_forward
                       </span>
                     </button>
+                    <button
+                      id="card-secondary-action"
+                      class="card-secondary-action card-control"
+                      type="button"
+                      hidden
+                    ></button>
                   </div>
                 </span>
 
@@ -247,6 +283,35 @@
                     >
                       <span class="back-action__icon back-action__icon--known" aria-hidden="true"></span>
                     </button>
+                    <div class="view-rating card-control" data-view-rating hidden>
+                      <button
+                        class="view-star"
+                        type="button"
+                        aria-label="Als gruen markieren"
+                        data-view-star-button
+                        data-view-star-value="green"
+                      >
+                        <span class="view-star__icon" aria-hidden="true"></span>
+                      </button>
+                      <button
+                        class="view-star"
+                        type="button"
+                        aria-label="Als gelb markieren"
+                        data-view-star-button
+                        data-view-star-value="yellow"
+                      >
+                        <span class="view-star__icon" aria-hidden="true"></span>
+                      </button>
+                      <button
+                        class="view-star"
+                        type="button"
+                        aria-label="Als orange markieren"
+                        data-view-star-button
+                        data-view-star-value="orange"
+                      >
+                        <span class="view-star__icon" aria-hidden="true"></span>
+                      </button>
+                    </div>
                   </div>
                 </span>
               </span>
@@ -257,45 +322,389 @@
         <p id="status-message" class="status-message visually-hidden" role="status"></p>
       </section>
 
+      <section id="input-stage" class="input-stage" aria-label="Eingabemodus" hidden>
+        <div class="input-stage__menu">
+          <div class="input-stage__menu-back">
+            <button
+              id="input-home-link"
+              class="student-home-link"
+              type="button"
+              aria-label="Zur Übersicht"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+              <span>Zur Übersicht</span>
+            </button>
+          </div>
+
+          <div class="input-stage__menu-progress">
+            <div id="input-progress-shell" class="progress-shell input-progress-shell" aria-hidden="true">
+              <p id="input-progress-label" class="progress-label"></p>
+              <div class="progress-row">
+                <div class="progress-bar" aria-hidden="true">
+                  <div id="input-progress-fill" class="progress-bar__fill"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="input-menu-context" class="input-stage__menu-context">
+            <div id="input-settings-shell" class="input-stage__settings">
+              <button
+                id="input-settings-button"
+                class="input-stage__settings-button"
+                type="button"
+                aria-label="Einstellungen öffnen"
+                aria-expanded="false"
+                aria-controls="input-settings-popover"
+              >
+                <svg
+                  class="input-stage__settings-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="3"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+
+              <section
+                id="input-settings-popover"
+                class="input-stage__settings-popover"
+                aria-label="Eingabeeinstellungen"
+                aria-hidden="true"
+              >
+                <div class="input-stage__settings-group">
+                  <div class="input-stage__settings-copy">
+                    <span class="input-stage__settings-label">
+                      <svg
+                        class="input-stage__settings-label-icon input-stage__settings-label-icon--edit"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M13 21h8"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                        <path
+                          d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                      <span>Korrekturmodus</span>
+                    </span>
+                  </div>
+                  <label class="input-stage__switch" for="input-correction-toggle">
+                    <input
+                      id="input-correction-toggle"
+                      class="input-stage__switch-input"
+                      type="checkbox"
+                      role="switch"
+                      aria-label="Korrekturmodus"
+                    />
+                    <span class="input-stage__switch-track" aria-hidden="true">
+                      <span class="input-stage__switch-thumb"></span>
+                    </span>
+                  </label>
+                </div>
+
+                <div class="input-stage__settings-block input-stage__settings-block--delay">
+                  <div class="input-stage__settings-row">
+                    <span class="input-stage__settings-label">
+                      <svg
+                        class="input-stage__settings-label-icon input-stage__settings-label-icon--time"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        aria-hidden="true"
+                      >
+                        <line
+                          x1="10"
+                          x2="14"
+                          y1="2"
+                          y2="2"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                        <line
+                          x1="12"
+                          x2="15"
+                          y1="14"
+                          y2="11"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                        <circle
+                          cx="12"
+                          cy="14"
+                          r="8"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                      <span>Anzeigezeit</span>
+                    </span>
+                    <output id="input-delay-value" class="input-stage__settings-value" for="input-delay-slider">mittel</output>
+                  </div>
+
+                  <div
+                    id="input-delay-type-switch"
+                    class="input-stage__segment-switch"
+                    role="tablist"
+                    aria-label="Anzeigezeit bearbeiten für"
+                  >
+                    <button
+                      id="input-delay-type-correct"
+                      class="input-stage__segment-button"
+                      type="button"
+                      role="tab"
+                      aria-selected="true"
+                      aria-controls="input-delay-slider"
+                      data-delay-type="correct"
+                      data-tone="correct"
+                    >
+                      Richtig
+                    </button>
+                    <button
+                      id="input-delay-type-wrong"
+                      class="input-stage__segment-button"
+                      type="button"
+                      role="tab"
+                      aria-selected="false"
+                      aria-controls="input-delay-slider"
+                      data-delay-type="wrong"
+                      data-tone="wrong"
+                    >
+                      Falsch
+                    </button>
+                  </div>
+
+                  <input
+                    id="input-delay-slider"
+                    class="input-stage__settings-slider"
+                    type="range"
+                    min="0"
+                    max="2"
+                    step="1"
+                    value="1"
+                    aria-label="Anzeigezeit"
+                  />
+                  <div class="input-stage__settings-scale" aria-hidden="true">
+                    <span>kurz</span>
+                    <span>mittel</span>
+                    <span>lang</span>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <button
+              id="input-menu-logout"
+              class="student-screen__action student-screen__action--secondary student-screen__home-logout input-stage__menu-logout"
+              type="button"
+              aria-label="Abmelden"
+            >
+              <span class="student-screen__action-icon" aria-hidden="true"></span>
+              <span>Abmelden</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="input-stage__shell">
+          <article class="input-stage__card">
+            <section class="input-stage__prompt-pane" aria-live="polite">
+              <p id="input-prompt-kicker" class="input-stage__prompt-kicker">Eingabe</p>
+              <h2 id="input-prompt-word" class="input-stage__prompt-word">Lädt</h2>
+              <p id="input-prompt-detail" class="input-stage__prompt-detail">Set wird geöffnet.</p>
+            </section>
+
+            <section class="input-stage__response-pane">
+              <form id="input-answer-form" class="input-stage__form">
+                <div class="input-stage__form-head">
+                  <label id="input-answer-label" class="input-stage__label" for="input-answer-field">Deine Antwort</label>
+                </div>
+                <div id="input-answer-row" class="input-stage__input-row">
+                  <input
+                    id="input-answer-field"
+                    class="input-stage__input"
+                    type="text"
+                    autocomplete="off"
+                    autocapitalize="none"
+                    spellcheck="false"
+                    placeholder="Antwort eingeben"
+                  />
+                  <button
+                    id="input-check-button"
+                    class="input-stage__button input-stage__button--enter"
+                    type="submit"
+                    aria-label="Antwort prüfen"
+                  >
+                    <svg
+                      id="input-check-icon"
+                      class="input-stage__button-icon"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      aria-hidden="true"
+                    >
+                      <g class="input-stage__button-icon-glyph input-stage__button-icon-glyph--enter">
+                        <path
+                          d="M5 12h13"
+                          stroke="currentColor"
+                          stroke-width="1.9"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                        <path
+                          d="m13 7 5 5-5 5"
+                          stroke="currentColor"
+                          stroke-width="1.9"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </g>
+                      <g class="input-stage__button-icon-glyph input-stage__button-icon-glyph--rewrite">
+                        <path
+                          d="M13 21h7.2"
+                          stroke="currentColor"
+                          stroke-width="1.85"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                        <path
+                          d="M20.9 6.8a1 1 0 0 0-4-4L4 15.8a2 2 0 0 0-.5.8l-1.3 4.3a.5.5 0 0 0 .6.6l4.3-1.3a2 2 0 0 0 .8-.5z"
+                          stroke="currentColor"
+                          stroke-width="1.85"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </g>
+                    </svg>
+                  </button>
+                </div>
+              </form>
+
+              <section id="input-feedback" class="input-feedback" aria-live="polite" aria-hidden="true">
+                <p id="input-feedback-title" class="input-feedback__title"></p>
+                <div class="input-feedback__grid">
+                  <p class="input-feedback__row">
+                    <span class="input-feedback__label">Deine Eingabe</span>
+                    <strong id="input-feedback-input" class="input-feedback__value"></strong>
+                  </p>
+                  <p id="input-feedback-correct-row" class="input-feedback__row">
+                    <span class="input-feedback__label">Korrekte Lösung</span>
+                    <strong id="input-feedback-correct" class="input-feedback__value"></strong>
+                  </p>
+                </div>
+              </section>
+            </section>
+          </article>
+        </div>
+
+        <p id="input-status-message" class="status-message visually-hidden" role="status"></p>
+      </section>
+
       <div
         id="launch-mode-modal"
         class="launch-mode-modal"
         role="dialog"
         aria-modal="true"
         aria-labelledby="launch-mode-title"
+        aria-describedby="launch-mode-description"
         hidden
       >
-        <div class="launch-mode-modal__panel">
-          <button
-            id="launch-mode-close"
-            class="launch-mode-modal__close"
-            type="button"
-            aria-label="Schließen"
-          >
-            <span class="material-symbols-outlined" aria-hidden="true">close</span>
-          </button>
-
+        <div class="launch-mode-modal__panel" tabindex="-1">
           <div class="launch-mode-modal__header">
-            <p class="launch-mode-modal__kicker"></p>
-            <h2 id="launch-mode-title" class="launch-mode-modal__title">Set</h2>
+            <div class="launch-mode-modal__header-copy">
+              <p class="launch-mode-modal__kicker">Lernmodus</p>
+              <h2 id="launch-mode-title" class="launch-mode-modal__title">Set</h2>
+              <p id="launch-mode-description" class="launch-mode-modal__description visually-hidden">
+                Lernmodus waehlen.
+              </p>
+            </div>
+
+            <div class="launch-mode-modal__header-aside">
+              <button
+                id="launch-mode-close"
+                class="launch-mode-modal__close"
+                type="button"
+                aria-label="Schließen"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">close</span>
+              </button>
+
+              <div
+                id="launch-mode-distribution"
+                class="launch-mode-modal__distribution"
+                aria-label="Lernverteilung"
+              >
+                <div
+                  id="launch-mode-distribution-legend"
+                  class="launch-mode-modal__distribution-legend"
+                  aria-hidden="true"
+                ></div>
+                <div
+                  id="launch-mode-distribution-bar"
+                  class="launch-mode-modal__distribution-bar"
+                  aria-hidden="true"
+                >
+                  <div
+                    id="launch-mode-distribution-indicator"
+                    class="launch-mode-modal__distribution-indicator"
+                  ></div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div class="launch-mode-modal__actions">
-            <button
-              id="launch-mode-start"
-              class="launch-mode-modal__action launch-mode-modal__action--primary"
-              type="button"
-            >
-              Starten
-            </button>
-            <button
-              id="launch-mode-cancel"
-              class="launch-mode-modal__action launch-mode-modal__action--secondary"
-              type="button"
-            >
-              Abbrechen
-            </button>
-          </div>
+          <div id="launch-mode-modes" class="launch-mode-modal__modes"></div>
+
+          <section class="launch-mode-modal__detail" aria-live="polite">
+            <div class="launch-mode-modal__detail-copy">
+              <div id="launch-mode-detail-stage" class="launch-mode-modal__detail-stage"></div>
+            </div>
+
+            <div class="launch-mode-modal__detail-actions">
+              <button
+                id="launch-mode-start"
+                class="launch-mode-modal__action launch-mode-modal__action--primary"
+                type="button"
+              >
+                <span id="launch-mode-start-stage" class="launch-mode-modal__action-stage">
+                  <span class="launch-mode-modal__action-content is-current">Üben starten</span>
+                </span>
+              </button>
+            </div>
+          </section>
         </div>
       </div>
 
@@ -328,11 +737,11 @@
         aria-modal="true"
         hidden
       >
-        <div class="student-set-modal__backdrop"></div>
-        <div class="student-set-panel">
+        <div class="student-set-modal__backdrop share-dialog__backdrop"></div>
+        <div class="student-set-panel share-dialog__panel">
           <button
             id="student-set-modal-close"
-            class="student-set-panel__close"
+            class="student-set-panel__close share-dialog__close"
             type="button"
             aria-label="Schließen"
           >

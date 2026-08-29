@@ -1,0 +1,2011 @@
+{
+  "schemaVersion": "1.1",
+  "set": {
+    "id": "society-sustainability-01",
+    "slug": "society-sustainability-01",
+    "title": "Society and Sustainability",
+    "subject": "English",
+    "description": "Migration, Nachhaltigkeit und gesellschaftliche Themen",
+    "languages": {
+      "source": "de",
+      "target": "en"
+    },
+    "defaultDirections": {
+      "flashcard": "source_to_target",
+      "test": "source_to_target"
+    },
+    "tags": [
+      "english",
+      "society",
+      "sustainability",
+      "migration",
+      "unit5"
+    ],
+    "createdAt": "2026-04-09T12:00:00Z",
+    "updatedAt": "2026-04-09T12:00:00Z"
+  },
+  "settings": {
+    "enabledModes": [
+      "flashcard",
+      "test"
+    ],
+    "starLevels": [
+      {
+        "value": 0,
+        "label": "none",
+        "color": "none"
+      },
+      {
+        "value": 1,
+        "label": "easy",
+        "color": "green"
+      },
+      {
+        "value": 2,
+        "label": "medium",
+        "color": "yellow"
+      },
+      {
+        "value": 3,
+        "label": "hard",
+        "color": "orange"
+      }
+    ],
+    "hintStrategies": {
+      "flashcard": [
+        "context",
+        "context_plus_first_letter"
+      ],
+      "test": [
+        "first_letter",
+        "context",
+        "partial_reveal"
+      ]
+    },
+    "print": {
+      "showExamples": true,
+      "showQrCode": true
+    }
+  },
+  "cards": [
+    {
+      "id": "ss001",
+      "source": {
+        "text": "umsiedeln"
+      },
+      "target": {
+        "text": "to resettle"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "After the flood, several families had to resettle in a safer town.",
+          "source": "Nach der Flut mussten mehrere Familien in eine sicherere Stadt umsiedeln."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "__ ________",
+          "firstLetterHint": "r_______"
+        },
+        "test": {
+          "firstLetter": "r",
+          "partialReveal": "r _ s _ t _ l _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "resettle",
+        "to resettle"
+      ],
+      "meta": {
+        "tags": [
+          "migration",
+          "verb"
+        ],
+        "difficulty": "medium",
+        "active": true
+      }
+    },
+    {
+      "id": "ss002",
+      "source": {
+        "text": "Ausbildung"
+      },
+      "target": {
+        "text": "education"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "A good education can improve your chances on the job market.",
+          "source": "Eine gute Ausbildung kann deine Chancen auf dem Arbeitsmarkt verbessern."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "_________",
+          "firstLetterHint": "e________"
+        },
+        "test": {
+          "firstLetter": "e",
+          "partialReveal": "e _ u _ a _ i _ n",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "education"
+      ],
+      "meta": {
+        "tags": [
+          "society",
+          "noun"
+        ],
+        "difficulty": "easy",
+        "active": true
+      }
+    },
+    {
+      "id": "ss003",
+      "source": {
+        "text": "Vielfalt"
+      },
+      "target": {
+        "text": "diversity"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "Cultural diversity makes a community stronger.",
+          "source": "Kulturelle Vielfalt macht eine Gemeinschaft stärker."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "_________",
+          "firstLetterHint": "d________"
+        },
+        "test": {
+          "firstLetter": "d",
+          "partialReveal": "d _ v _ r _ i _ y",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "diversity"
+      ],
+      "meta": {
+        "tags": [
+          "society",
+          "noun"
+        ],
+        "difficulty": "medium",
+        "active": true
+      }
+    },
+    {
+      "id": "ss004",
+      "source": {
+        "text": "flüchten"
+      },
+      "target": {
+        "text": "to flee"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "Some people flee their homes because of war.",
+          "source": "Manche Menschen flüchten wegen eines Krieges aus ihrer Heimat."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "____",
+          "firstLetterHint": "f___"
+        },
+        "test": {
+          "firstLetter": "f",
+          "partialReveal": "f _ e _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "flee",
+        "to flee"
+      ],
+      "meta": {
+        "tags": [
+          "migration",
+          "verb"
+        ],
+        "difficulty": "medium",
+        "active": true
+      }
+    },
+    {
+      "id": "ss005",
+      "source": {
+        "text": "Flüchtling"
+      },
+      "target": {
+        "text": "refugee"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "The town welcomed each refugee with practical support.",
+          "source": "Die Stadt begrüßte jeden Flüchtling mit praktischer Unterstützung."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "_______",
+          "firstLetterHint": "r______"
+        },
+        "test": {
+          "firstLetter": "r",
+          "partialReveal": "r _ f _ g _ e",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "refugee"
+      ],
+      "meta": {
+        "tags": [
+          "migration",
+          "noun"
+        ],
+        "difficulty": "medium",
+        "active": true
+      }
+    },
+    {
+      "id": "ss006",
+      "source": {
+        "text": "sich anpassen an"
+      },
+      "target": {
+        "text": "to adapt to"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "Children often adapt to a new school quite quickly.",
+          "source": "Kinder passen sich oft ziemlich schnell an eine neue Schule an."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "_____ __",
+          "firstLetterHint": "a____ __"
+        },
+        "test": {
+          "firstLetter": "a",
+          "partialReveal": "a _ a _ t   _ o",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "adapt to",
+        "adapt",
+        "to adapt to"
+      ],
+      "meta": {
+        "tags": [
+          "society",
+          "verb"
+        ],
+        "difficulty": "medium",
+        "active": true
+      }
+    },
+    {
+      "id": "ss007",
+      "source": {
+        "text": "Gelegenheit"
+      },
+      "target": {
+        "text": "opportunity"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "The exchange program gave her the opportunity to travel abroad.",
+          "source": "Das Austauschprogramm gab ihr die Gelegenheit, ins Ausland zu reisen."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "___________",
+          "firstLetterHint": "o__________"
+        },
+        "test": {
+          "firstLetter": "o",
+          "partialReveal": "o _ p _ r _ u _ i _ y",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "opportunity"
+      ],
+      "meta": {
+        "tags": [
+          "society",
+          "noun"
+        ],
+        "difficulty": "easy",
+        "active": true
+      }
+    },
+    {
+      "id": "ss008",
+      "source": {
+        "text": "Erfolg haben"
+      },
+      "target": {
+        "text": "to succeed"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "If you practise every day, you can succeed in the exam.",
+          "source": "Wenn du jeden Tag übst, kannst du in der Prüfung Erfolg haben."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "_______",
+          "firstLetterHint": "s______"
+        },
+        "test": {
+          "firstLetter": "s",
+          "partialReveal": "s _ c _ e _ d",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "succeed",
+        "to succeed"
+      ],
+      "meta": {
+        "tags": [
+          "society",
+          "verb"
+        ],
+        "difficulty": "medium",
+        "active": true
+      }
+    },
+    {
+      "id": "ss009",
+      "source": {
+        "text": "umweltfreundlich"
+      },
+      "target": {
+        "text": "eco-friendly"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "Riding a bike is an eco-friendly way to get to school.",
+          "source": "Mit dem Fahrrad zu fahren ist ein umweltfreundlicher Weg zur Schule."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "____________",
+          "firstLetterHint": "e___________"
+        },
+        "test": {
+          "firstLetter": "e",
+          "partialReveal": "e _ o _ f _ i _ n _ l _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "eco-friendly",
+        "eco friendly"
+      ],
+      "meta": {
+        "tags": [
+          "sustainability",
+          "adjective"
+        ],
+        "difficulty": "easy",
+        "active": true
+      }
+    },
+    {
+      "id": "ss010",
+      "source": {
+        "text": "Freiwilliger"
+      },
+      "target": {
+        "text": "volunteer"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "A volunteer helped the children with their homework.",
+          "source": "Ein Freiwilliger half den Kindern bei ihren Hausaufgaben."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "_________",
+          "firstLetterHint": "v________"
+        },
+        "test": {
+          "firstLetter": "v",
+          "partialReveal": "v _ l _ n _ e _ r",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "volunteer"
+      ],
+      "meta": {
+        "tags": [
+          "society",
+          "noun"
+        ],
+        "difficulty": "easy",
+        "active": true
+      }
+    },
+    {
+      "id": "ss011",
+      "source": {
+        "text": "nachhaltig"
+      },
+      "target": {
+        "text": "sustainable"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "The school wants to use more sustainable materials.",
+          "source": "Die Schule möchte nachhaltigere Materialien verwenden."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "___________",
+          "firstLetterHint": "s__________"
+        },
+        "test": {
+          "firstLetter": "s",
+          "partialReveal": "s _ s _ a _ n _ b _ e",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "sustainable"
+      ],
+      "meta": {
+        "tags": [
+          "sustainability",
+          "adjective"
+        ],
+        "difficulty": "medium",
+        "active": true
+      }
+    },
+    {
+      "id": "ss012",
+      "source": {
+        "text": "ernten"
+      },
+      "target": {
+        "text": "to harvest"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "Farmers harvest the grapes in early autumn.",
+          "source": "Die Bauern ernten die Trauben im frühen Herbst."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "_______",
+          "firstLetterHint": "h______"
+        },
+        "test": {
+          "firstLetter": "h",
+          "partialReveal": "h _ r _ e _ t",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "harvest",
+        "to harvest"
+      ],
+      "meta": {
+        "tags": [
+          "farming",
+          "verb"
+        ],
+        "difficulty": "easy",
+        "active": true
+      }
+    },
+    {
+      "id": "ss013",
+      "source": {
+        "text": "Weinberg"
+      },
+      "target": {
+        "text": "vineyard"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "The vineyard looks beautiful in the evening light.",
+          "source": "Der Weinberg sieht im Abendlicht wunderschön aus."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "________",
+          "firstLetterHint": "v_______"
+        },
+        "test": {
+          "firstLetter": "v",
+          "partialReveal": "v _ n _ y _ r _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "vineyard"
+      ],
+      "meta": {
+        "tags": [
+          "farming",
+          "noun"
+        ],
+        "difficulty": "medium",
+        "active": true
+      }
+    },
+    {
+      "id": "ss014",
+      "source": {
+        "text": "pflanzen"
+      },
+      "target": {
+        "text": "planting"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "Planting new trees can improve the air in a city.",
+          "source": "Neue Bäume zu pflanzen kann die Luft in einer Stadt verbessern."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "________",
+          "firstLetterHint": "P_______"
+        },
+        "test": {
+          "firstLetter": "p",
+          "partialReveal": "P _ a _ t _ n _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "planting",
+        "to plant",
+        "plant"
+      ],
+      "meta": {
+        "tags": [
+          "farming",
+          "verb"
+        ],
+        "difficulty": "medium",
+        "active": true
+      }
+    },
+    {
+      "id": "ss015",
+      "source": {
+        "text": "Nutztiere"
+      },
+      "target": {
+        "text": "livestock"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "The farmer keeps livestock behind the main barn.",
+          "source": "Der Bauer hält Nutztiere hinter der großen Scheune."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "_________",
+          "firstLetterHint": "l________"
+        },
+        "test": {
+          "firstLetter": "l",
+          "partialReveal": "l _ v _ s _ o _ k",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "livestock"
+      ],
+      "meta": {
+        "tags": [
+          "farming",
+          "noun"
+        ],
+        "difficulty": "medium",
+        "active": true
+      }
+    },
+    {
+      "id": "ss016",
+      "source": {
+        "text": "ländliche Gegend"
+      },
+      "target": {
+        "text": "rural area"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "Public transport is often limited in a rural area.",
+          "source": "Öffentliche Verkehrsmittel sind in einer ländlichen Gegend oft begrenzt."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "_____ ____",
+          "firstLetterHint": "r____ ____"
+        },
+        "test": {
+          "firstLetter": "r",
+          "partialReveal": "r _ r _ l   _ r _ a",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "rural area"
+      ],
+      "meta": {
+        "tags": [
+          "farming",
+          "phrase"
+        ],
+        "difficulty": "medium",
+        "active": true
+      }
+    },
+    {
+      "id": "ss017",
+      "source": {
+        "text": "Erfahrung"
+      },
+      "target": {
+        "text": "experience"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "Working on the farm was a valuable experience for me.",
+          "source": "Die Arbeit auf dem Bauernhof war für mich eine wertvolle Erfahrung."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "__________",
+          "firstLetterHint": "e_________"
+        },
+        "test": {
+          "firstLetter": "e",
+          "partialReveal": "e _ p _ r _ e _ c _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "experience"
+      ],
+      "meta": {
+        "tags": [
+          "society",
+          "noun"
+        ],
+        "difficulty": "easy",
+        "active": true
+      }
+    },
+    {
+      "id": "ss018",
+      "source": {
+        "text": "Gastgeber"
+      },
+      "target": {
+        "text": "host"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "Our host showed us around the village after dinner.",
+          "source": "Unser Gastgeber zeigte uns nach dem Abendessen das Dorf."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "____",
+          "firstLetterHint": "h___"
+        },
+        "test": {
+          "firstLetter": "h",
+          "partialReveal": "h _ s _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "host"
+      ],
+      "meta": {
+        "tags": [
+          "society",
+          "noun"
+        ],
+        "difficulty": "easy",
+        "active": true
+      }
+    },
+    {
+      "id": "ss019",
+      "source": {
+        "text": "Unterkunft"
+      },
+      "target": {
+        "text": "accommodation"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "The students found simple but clean accommodation near the farm.",
+          "source": "Die Schülerinnen und Schüler fanden eine einfache, aber saubere Unterkunft in der Nähe des Bauernhofs."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "_____________",
+          "firstLetterHint": "a____________"
+        },
+        "test": {
+          "firstLetter": "a",
+          "partialReveal": "a _ c _ m _ o _ a _ i _ n",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "accommodation"
+      ],
+      "meta": {
+        "tags": [
+          "travel",
+          "noun"
+        ],
+        "difficulty": "medium",
+        "active": true
+      }
+    },
+    {
+      "id": "ss020",
+      "source": {
+        "text": "tägliche Aufgaben"
+      },
+      "target": {
+        "text": "daily tasks"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "Feeding the animals was one of our daily tasks.",
+          "source": "Die Tiere zu füttern war eine unserer täglichen Aufgaben."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "_____ _____",
+          "firstLetterHint": "d____ _____"
+        },
+        "test": {
+          "firstLetter": "d",
+          "partialReveal": "d _ i _ y   _ a _ k _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "daily tasks"
+      ],
+      "meta": {
+        "tags": [
+          "farming",
+          "phrase"
+        ],
+        "difficulty": "easy",
+        "active": true
+      }
+    },
+    {
+      "id": "ss021",
+      "source": {
+        "text": "Gartenarbeit"
+      },
+      "target": {
+        "text": "gardening"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "She enjoys gardening because it helps her relax.",
+          "source": "Sie mag Gartenarbeit, weil sie ihr beim Entspannen hilft."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "_________",
+          "firstLetterHint": "g________"
+        },
+        "test": {
+          "firstLetter": "g",
+          "partialReveal": "g _ r _ e _ i _ g",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "gardening"
+      ],
+      "meta": {
+        "tags": [
+          "farming",
+          "noun"
+        ],
+        "difficulty": "easy",
+        "active": true
+      }
+    },
+    {
+      "id": "ss022",
+      "source": {
+        "text": "Gemeinschaft"
+      },
+      "target": {
+        "text": "community"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "A strong community supports people in difficult times.",
+          "source": "Eine starke Gemeinschaft unterstützt Menschen in schwierigen Zeiten."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "_________",
+          "firstLetterHint": "c________"
+        },
+        "test": {
+          "firstLetter": "c",
+          "partialReveal": "c _ m _ u _ i _ y",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "community"
+      ],
+      "meta": {
+        "tags": [
+          "society",
+          "noun"
+        ],
+        "difficulty": "easy",
+        "active": true
+      }
+    },
+    {
+      "id": "ss023",
+      "source": {
+        "text": "Bio-Bauernhof"
+      },
+      "target": {
+        "text": "organic farm"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "They spent two weeks working on an organic farm in Austria.",
+          "source": "Sie verbrachten zwei Wochen damit, auf einem Bio-Bauernhof in Österreich zu arbeiten."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "_______ ____",
+          "firstLetterHint": "o______ ____"
+        },
+        "test": {
+          "firstLetter": "o",
+          "partialReveal": "o _ g _ n _ c   _ a _ m",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "organic farm"
+      ],
+      "meta": {
+        "tags": [
+          "farming",
+          "phrase"
+        ],
+        "difficulty": "medium",
+        "active": true
+      }
+    },
+    {
+      "id": "ss024",
+      "source": {
+        "text": "Anbaupflanzen"
+      },
+      "target": {
+        "text": "crops"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "Too little rain can damage the crops.",
+          "source": "Zu wenig Regen kann den Anbaupflanzen schaden."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "_____",
+          "firstLetterHint": "c____"
+        },
+        "test": {
+          "firstLetter": "c",
+          "partialReveal": "c _ o _ s",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "crops"
+      ],
+      "meta": {
+        "tags": [
+          "farming",
+          "noun"
+        ],
+        "difficulty": "easy",
+        "active": true
+      }
+    },
+    {
+      "id": "ss025",
+      "source": {
+        "text": "Abkürzung"
+      },
+      "target": {
+        "text": "abbreviation"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "UN is a common abbreviation for the United Nations.",
+          "source": "UN ist eine bekannte Abkürzung für die Vereinten Nationen."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "____________",
+          "firstLetterHint": "a___________"
+        },
+        "test": {
+          "firstLetter": "a",
+          "partialReveal": "a _ b _ e _ i _ t _ o _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "abbreviation"
+      ],
+      "meta": {
+        "tags": [
+          "society",
+          "noun"
+        ],
+        "difficulty": "medium",
+        "active": true
+      }
+    },
+    {
+      "id": "ss026",
+      "source": {
+        "text": "Herkunftsland"
+      },
+      "target": {
+        "text": "country of origin"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "The form asks for your country of origin.",
+          "source": "Im Formular wird nach deinem Herkunftsland gefragt."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "_______ __ ______",
+          "firstLetterHint": "c______ __ ______"
+        },
+        "test": {
+          "firstLetter": "c",
+          "partialReveal": "c _ u _ t _ y   _ f   _ r _ g _ n",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "country of origin"
+      ],
+      "meta": {
+        "tags": [
+          "migration",
+          "phrase"
+        ],
+        "difficulty": "medium",
+        "active": true
+      }
+    },
+    {
+      "id": "ss027",
+      "source": {
+        "text": "Aufenthaltsdauer"
+      },
+      "target": {
+        "text": "duration of stay"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "The visa depends on the duration of stay.",
+          "source": "Das Visum hängt von der Aufenthaltsdauer ab."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "________ __ ____",
+          "firstLetterHint": "d_______ __ ____"
+        },
+        "test": {
+          "firstLetter": "d",
+          "partialReveal": "d _ r _ t _ o _   o _   s _ a _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "duration of stay"
+      ],
+      "meta": {
+        "tags": [
+          "migration",
+          "phrase"
+        ],
+        "difficulty": "hard",
+        "active": true
+      }
+    },
+    {
+      "id": "ss028",
+      "source": {
+        "text": "Jurastudent"
+      },
+      "target": {
+        "text": "law student"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "The law student volunteered at a refugee centre.",
+          "source": "Der Jurastudent half freiwillig in einem Flüchtlingszentrum."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "___ _______",
+          "firstLetterHint": "l__ _______"
+        },
+        "test": {
+          "firstLetter": "l",
+          "partialReveal": "l _ w   _ t _ d _ n _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "law student"
+      ],
+      "meta": {
+        "tags": [
+          "society",
+          "phrase"
+        ],
+        "difficulty": "easy",
+        "active": true
+      }
+    },
+    {
+      "id": "ss029",
+      "source": {
+        "text": "im Ausland arbeiten"
+      },
+      "target": {
+        "text": "to work abroad"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "Many young adults want to work abroad for a few months.",
+          "source": "Viele junge Erwachsene möchten für einige Monate im Ausland arbeiten."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "__ ____ ______",
+          "firstLetterHint": "w___ ______"
+        },
+        "test": {
+          "firstLetter": "w",
+          "partialReveal": "w _ r _   a _ r _ a _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "work abroad",
+        "to work abroad"
+      ],
+      "meta": {
+        "tags": [
+          "travel",
+          "verb"
+        ],
+        "difficulty": "medium",
+        "active": true
+      }
+    },
+    {
+      "id": "ss030",
+      "source": {
+        "text": "Warenautomat"
+      },
+      "target": {
+        "text": "vending machine"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "He bought a bottle of water from the vending machine.",
+          "source": "Er kaufte eine Flasche Wasser aus dem Warenautomaten."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "_______ _______",
+          "firstLetterHint": "v______ _______"
+        },
+        "test": {
+          "firstLetter": "v",
+          "partialReveal": "v _ n _ i _ g   _ a _ h _ n _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "vending machine"
+      ],
+      "meta": {
+        "tags": [
+          "daily-life",
+          "noun"
+        ],
+        "difficulty": "medium",
+        "active": true
+      }
+    },
+    {
+      "id": "ss031",
+      "source": {
+        "text": "Diebstahl"
+      },
+      "target": {
+        "text": "theft"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "The school reported the theft to the police.",
+          "source": "Die Schule meldete den Diebstahl der Polizei."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "_____",
+          "firstLetterHint": "t____"
+        },
+        "test": {
+          "firstLetter": "t",
+          "partialReveal": "t _ e _ t",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "theft"
+      ],
+      "meta": {
+        "tags": [
+          "society",
+          "noun"
+        ],
+        "difficulty": "medium",
+        "active": true
+      }
+    },
+    {
+      "id": "ss032",
+      "source": {
+        "text": "Anlass"
+      },
+      "target": {
+        "text": "occasion"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "We only wear these clothes on a special occasion.",
+          "source": "Wir tragen diese Kleidung nur zu einem besonderen Anlass."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "________",
+          "firstLetterHint": "o_______"
+        },
+        "test": {
+          "firstLetter": "o",
+          "partialReveal": "o _ c _ s _ o _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "occasion"
+      ],
+      "meta": {
+        "tags": [
+          "daily-life",
+          "noun"
+        ],
+        "difficulty": "medium",
+        "active": true
+      }
+    },
+    {
+      "id": "ss033",
+      "source": {
+        "text": "Schaden verursachen"
+      },
+      "target": {
+        "text": "to cause harm"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "Online hate can cause harm to young people.",
+          "source": "Online-Hass kann jungen Menschen Schaden verursachen."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "_____ ____",
+          "firstLetterHint": "c____ ____"
+        },
+        "test": {
+          "firstLetter": "c",
+          "partialReveal": "c _ u _ e   _ a _ m",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "cause harm",
+        "to cause harm"
+      ],
+      "meta": {
+        "tags": [
+          "society",
+          "verb"
+        ],
+        "difficulty": "hard",
+        "active": true
+      }
+    },
+    {
+      "id": "ss034",
+      "source": {
+        "text": "Spende"
+      },
+      "target": {
+        "text": "donation"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "Each family gave a small donation to the shelter.",
+          "source": "Jede Familie gab dem Heim eine kleine Spende."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "________",
+          "firstLetterHint": "d_______"
+        },
+        "test": {
+          "firstLetter": "d",
+          "partialReveal": "d _ n _ t _ o _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "donation"
+      ],
+      "meta": {
+        "tags": [
+          "society",
+          "noun"
+        ],
+        "difficulty": "easy",
+        "active": true
+      }
+    },
+    {
+      "id": "ss035",
+      "source": {
+        "text": "ein Foto machen"
+      },
+      "target": {
+        "text": "to take a photo"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "She stopped to take a photo of the old bridge.",
+          "source": "Sie blieb stehen, um ein Foto von der alten Brücke zu machen."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "__ ____ _ _____",
+          "firstLetterHint": "t___ _ _____"
+        },
+        "test": {
+          "firstLetter": "t",
+          "partialReveal": "t _ k _   a   _ h _ t _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "take a photo",
+        "take",
+        "to take a photo"
+      ],
+      "meta": {
+        "tags": [
+          "daily-life",
+          "verb"
+        ],
+        "difficulty": "easy",
+        "active": true
+      }
+    },
+    {
+      "id": "ss036",
+      "source": {
+        "text": "Silvester"
+      },
+      "target": {
+        "text": "New Year's Eve"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "We usually celebrate New Year's Eve with friends.",
+          "source": "Wir feiern Silvester normalerweise mit Freunden."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "___ ______ ___",
+          "firstLetterHint": "N__ ______ ___"
+        },
+        "test": {
+          "firstLetter": "n",
+          "partialReveal": "N _ w   _ e _ r _ s   _ v _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "New Year's Eve",
+        "New Years Eve"
+      ],
+      "meta": {
+        "tags": [
+          "culture",
+          "noun"
+        ],
+        "difficulty": "easy",
+        "active": true
+      }
+    },
+    {
+      "id": "ss037",
+      "source": {
+        "text": "Feuerwerk"
+      },
+      "target": {
+        "text": "fireworks"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "The fireworks were loud but beautiful.",
+          "source": "Das Feuerwerk war laut, aber schön."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "_________",
+          "firstLetterHint": "f________"
+        },
+        "test": {
+          "firstLetter": "f",
+          "partialReveal": "f _ r _ w _ r _ s",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "fireworks"
+      ],
+      "meta": {
+        "tags": [
+          "culture",
+          "noun"
+        ],
+        "difficulty": "easy",
+        "active": true
+      }
+    },
+    {
+      "id": "ss038",
+      "source": {
+        "text": "Thema"
+      },
+      "target": {
+        "text": "matter"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "This matter is more complicated than it seems.",
+          "source": "Dieses Thema ist komplizierter, als es scheint."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "______",
+          "firstLetterHint": "m_____"
+        },
+        "test": {
+          "firstLetter": "m",
+          "partialReveal": "m _ t _ e _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "matter"
+      ],
+      "meta": {
+        "tags": [
+          "reflection",
+          "noun"
+        ],
+        "difficulty": "medium",
+        "active": true
+      }
+    },
+    {
+      "id": "ss039",
+      "source": {
+        "text": "regelmäßig"
+      },
+      "target": {
+        "text": "on a regular basis"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "They meet on a regular basis to plan new projects.",
+          "source": "Sie treffen sich regelmäßig, um neue Projekte zu planen."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "__ _ _______ _____",
+          "firstLetterHint": "o_ _ _______ _____"
+        },
+        "test": {
+          "firstLetter": "o",
+          "partialReveal": "o _   a   _ e _ u _ a _   b _ s _ s",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "on a regular basis"
+      ],
+      "meta": {
+        "tags": [
+          "reflection",
+          "phrase"
+        ],
+        "difficulty": "hard",
+        "active": true
+      }
+    },
+    {
+      "id": "ss040",
+      "source": {
+        "text": "über etwas nachdenken"
+      },
+      "target": {
+        "text": "to reflect on"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "After the exchange, students reflect on what they learned.",
+          "source": "Nach dem Austausch denken die Schülerinnen und Schüler darüber nach, was sie gelernt haben."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "_______ __",
+          "firstLetterHint": "r______ __"
+        },
+        "test": {
+          "firstLetter": "r",
+          "partialReveal": "r _ f _ e _ t   _ n",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "reflect on",
+        "reflect",
+        "to reflect on"
+      ],
+      "meta": {
+        "tags": [
+          "reflection",
+          "verb"
+        ],
+        "difficulty": "medium",
+        "active": true
+      }
+    },
+    {
+      "id": "ss041",
+      "source": {
+        "text": "prägen"
+      },
+      "target": {
+        "text": "to shape"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "Our experiences shape the way we see the world.",
+          "source": "Unsere Erfahrungen prägen die Art, wie wir die Welt sehen."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "_____",
+          "firstLetterHint": "s____"
+        },
+        "test": {
+          "firstLetter": "s",
+          "partialReveal": "s _ a _ e",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "shape",
+        "to shape"
+      ],
+      "meta": {
+        "tags": [
+          "reflection",
+          "verb"
+        ],
+        "difficulty": "medium",
+        "active": true
+      }
+    },
+    {
+      "id": "ss042",
+      "source": {
+        "text": "beeinflussen"
+      },
+      "target": {
+        "text": "to affect"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "The new rule may affect many students.",
+          "source": "Die neue Regel kann viele Schülerinnen und Schüler beeinflussen."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "______",
+          "firstLetterHint": "a_____"
+        },
+        "test": {
+          "firstLetter": "a",
+          "partialReveal": "a _ f _ c _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "affect",
+        "to affect"
+      ],
+      "meta": {
+        "tags": [
+          "reflection",
+          "verb"
+        ],
+        "difficulty": "medium",
+        "active": true
+      }
+    },
+    {
+      "id": "ss043",
+      "source": {
+        "text": "sich bewusst sein"
+      },
+      "target": {
+        "text": "to be aware of"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "We should be aware of how our words can hurt others.",
+          "source": "Wir sollten uns bewusst sein, wie unsere Worte andere verletzen können."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "__ _____ __",
+          "firstLetterHint": "b_ _____ __"
+        },
+        "test": {
+          "firstLetter": "b",
+          "partialReveal": "b _   a _ a _ e   _ f",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "be aware of",
+        "aware of",
+        "to be aware of"
+      ],
+      "meta": {
+        "tags": [
+          "reflection",
+          "verb"
+        ],
+        "difficulty": "hard",
+        "active": true
+      }
+    },
+    {
+      "id": "ss044",
+      "source": {
+        "text": "entgegenwirken"
+      },
+      "target": {
+        "text": "to counteract"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "Schools can counteract prejudice through open discussion.",
+          "source": "Schulen können Vorurteilen durch offene Gespräche entgegenwirken."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "__________",
+          "firstLetterHint": "c_________"
+        },
+        "test": {
+          "firstLetter": "c",
+          "partialReveal": "c _ u _ t _ r _ c _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "counteract",
+        "to counteract"
+      ],
+      "meta": {
+        "tags": [
+          "reflection",
+          "verb"
+        ],
+        "difficulty": "hard",
+        "active": true
+      }
+    },
+    {
+      "id": "ss045",
+      "source": {
+        "text": "sich bewusst werden"
+      },
+      "target": {
+        "text": "to realize that"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "Many people realize that stereotypes can be unfair.",
+          "source": "Viele Menschen werden sich bewusst, dass Vorurteile unfair sein können."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "_______ ____",
+          "firstLetterHint": "r______ ____"
+        },
+        "test": {
+          "firstLetter": "r",
+          "partialReveal": "r _ a _ i _ e   _ h _ t",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "realize that",
+        "realize",
+        "to realize that"
+      ],
+      "meta": {
+        "tags": [
+          "reflection",
+          "verb"
+        ],
+        "difficulty": "hard",
+        "active": true
+      }
+    },
+    {
+      "id": "ss046",
+      "source": {
+        "text": "voreingenommen sein"
+      },
+      "target": {
+        "text": "to be biased"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "A journalist should never be biased when reporting the news.",
+          "source": "Ein Journalist sollte bei der Berichterstattung nie voreingenommen sein."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "__ ______",
+          "firstLetterHint": "b_ ______"
+        },
+        "test": {
+          "firstLetter": "b",
+          "partialReveal": "b _   b _ a _ e _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "be biased",
+        "biased",
+        "to be biased"
+      ],
+      "meta": {
+        "tags": [
+          "reflection",
+          "verb"
+        ],
+        "difficulty": "hard",
+        "active": true
+      }
+    },
+    {
+      "id": "ss047",
+      "source": {
+        "text": "offen sein"
+      },
+      "target": {
+        "text": "to be open-minded"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "It helps to be open-minded when you meet new people.",
+          "source": "Es hilft, offen zu sein, wenn man neue Menschen trifft."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "__ __ ___________",
+          "firstLetterHint": "b_ ___________"
+        },
+        "test": {
+          "firstLetter": "b",
+          "partialReveal": "b _   o _ e _ - _ i _ d _ d",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "be open-minded",
+        "open-minded",
+        "to be open-minded"
+      ],
+      "meta": {
+        "tags": [
+          "reflection",
+          "verb"
+        ],
+        "difficulty": "medium",
+        "active": true
+      }
+    },
+    {
+      "id": "ss048",
+      "source": {
+        "text": "Sichtweise"
+      },
+      "target": {
+        "text": "perspective"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "Travel can change your perspective on other cultures.",
+          "source": "Reisen kann deine Sichtweise auf andere Kulturen verändern."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "___________",
+          "firstLetterHint": "p__________"
+        },
+        "test": {
+          "firstLetter": "p",
+          "partialReveal": "p _ r _ p _ c _ i _ e",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "perspective"
+      ],
+      "meta": {
+        "tags": [
+          "reflection",
+          "noun"
+        ],
+        "difficulty": "medium",
+        "active": true
+      }
+    },
+    {
+      "id": "ss049",
+      "source": {
+        "text": "nicht zustimmen"
+      },
+      "target": {
+        "text": "to disagree"
+      },
+      "examples": [
+        {
+          "id": "ex1",
+          "target": "It is possible to disagree without being rude.",
+          "source": "Man kann widersprechen, ohne unhöflich zu sein."
+        }
+      ],
+      "hintData": {
+        "flashcard": {
+          "exampleId": "ex1",
+          "maskedWord": "__ ________",
+          "firstLetterHint": "d_______"
+        },
+        "test": {
+          "firstLetter": "d",
+          "partialReveal": "d _ s _ g _ e _",
+          "exampleId": "ex1"
+        }
+      },
+      "acceptedAnswers": [
+        "disagree",
+        "to disagree"
+      ],
+      "meta": {
+        "tags": [
+          "reflection",
+          "verb"
+        ],
+        "difficulty": "easy",
+        "active": true
+      }
+    }
+  ]
+}

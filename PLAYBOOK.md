@@ -1,70 +1,39 @@
-# Dino Vocab App – Playbook
+# Lerndeck – Produkt-Playbook
 
-## 🎯 Ziel
-Minimalistische, tablet-optimierte WebApp zum Vokabellernen.
+## Ziel
 
-Fokus:
-- Konzentration statt Ablenkung  
-- klare, ruhige UI  
-- sehr einfache Bedienung (Touch-first)  
-- schnelle Nutzung im Unterricht (QR / Link später)
+Lerndeck ist ein schnelles, ruhiges Lernwerkzeug für Unterrichtstablets. Kinder sollen ohne Ablenkung und ohne wiederholte Kontowahl in ihr zugewiesenes Lerndeck gelangen. Lehrkräfte verteilen Sets per Link oder QR-Code und behalten die Gerätezuordnung unter Kontrolle.
 
-## 🚀 MVP Scope
+## Aktueller MVP
 
-### Flashcard Mode (Kernfeature)
-- Anzeige einer Vokabel (z. B. Deutsch → Englisch)
-- Tap → Karte umdrehen (Flip)
-- Swipe:
-  - rechts → gewusst
-  - links → nicht gewusst
-- Pfeile unten:
-  - Navigation (vor / zurück)
+- ein serverseitiger Zugang pro physischem Tablet
+- einmalige Registrierung mit Tablet-PIN
+- dauerhafte, widerrufbare Tablet-Sitzung
+- Set-Zuweisung per Link oder QR-Code
+- Modi `Sichten`, `Üben` und `Eingabe`
+- Lernstand pro Tablet, Set und Modus
+- Lehrerbereich für Set-Freigabe und Tablet-Verwaltung
+- installierbare PWA
 
-### Tippsystem (2-stufig)
-- Tipp erst nach kurzer Verzögerung aktiv (ca. 2 Sekunden)
-- Level 1: Kontextsatz ohne Wort  
-- Level 2: Kontext + Anfangsbuchstabe  
+Der Modus `Testen` und ein Lehrer-Editor/Import sind noch nicht Teil des einsatzbereiten MVP.
 
-### Wiederholungslogik
-- falsche Karten sammeln
-- am Ende erneut anzeigen
-- Ziel: alle Karten einmal als „gewusst“ markieren
+## Produktregeln
 
-### Sternsystem (Schwierigkeit)
-- Tap auf Stern
-- 3 Levels:
-  - grün = leicht
-  - gelb = mittel
-  - orange = schwer
-- Speicherung im localStorage
+- Tablet-Identität, Sitzung, Set-Zuweisung und Lernstand sind getrennte Konzepte.
+- Ein Deployment ersetzt niemals persistente Runtime-Daten.
+- Eine erneute Anmeldung, PIN-Änderung oder Entkopplung widerruft bestehende Tablet-Sitzungen.
+- Lernsets haben genau ein kanonisches JSON-Format. Ein künftiger Editor importiert und exportiert dieses Format, statt ein paralleles Datenmodell einzuführen.
+- Der Schülerbereich bleibt auf Lernen und wenige klare Aktionen reduziert.
+- Lehrerfunktionen bleiben PIN-geschützt und gehören in `/teacher`.
 
-## 🎨 Designprinzipien
-- minimal, ruhig, fokussiert
-- Flashcard ist zentrales Element
-- keine visuelle Überladung
-- smooth, subtile Animationen
+## Nächste sinnvolle Produktphase
 
-## ⚙️ Technische Prinzipien
-- Vanilla JS
-- lokale JSON-Datei
-- kein Login
-- localStorage für Fortschritt
+1. Feldtest mit einem echten Set und wenigen Tablets.
+2. Beobachtete Reibung bei Registrierung, QR-Zuweisung und Wiederaufnahme beheben.
+3. JSON-Import im Lehrerbereich mit Schema- und Duplikatsprüfung.
+4. Einfachen Set-Editor auf demselben Datenmodell ergänzen.
+5. Modus `Testen` fachlich definieren und erst danach freischalten.
 
-## ❌ Nicht Teil des MVP
-- Login-System
-- Backend
-- Edit-Vorschläge
-- Matching-Modus
-- Audio
+## Design
 
-## 🧭 Entwicklungsreihenfolge
-1. Flashcard UI + Anzeige
-2. Tippsystem
-3. Flip
-4. Swipe-Bewertung
-5. Wiederholungsrunde
-6. Sternsystem (localStorage)
-7. JSON laden
-
-## 💡 Leitgedanke
-Das Produkt soll sich wie ein ruhiges, klares Lernwerkzeug anfühlen.
+Tablet-first, touchfreundlich, ruhig und ohne Gamification-Druck. Die ausführliche visuelle Spezifikation liegt in `DESIGN.md`.

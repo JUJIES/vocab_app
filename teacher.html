@@ -3,16 +3,16 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dino Vocab Teacher</title>
+    <title>Lerndeck – Lehrerbereich</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./teacher.css?v=2026-04-06-2305-teacher-auth" />
+    <link rel="stylesheet" href="./teacher.css?v=2026-04-07-0212-reset-pin-icon" />
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
-    <script src="./teacher.js?v=2026-04-06-2305-teacher-auth" defer></script>
+    <script src="./teacher.js?v=2026-04-09-1015-sticky-sessions" defer></script>
   </head>
   <body>
     <main id="teacher-auth-panel" class="teacher-auth">
@@ -20,7 +20,7 @@
         <p class="teacher-header__kicker">Lehrkraft</p>
         <h1 id="teacher-auth-title" class="teacher-header__title">Lehrerbereich</h1>
         <p class="teacher-header__message">
-          PIN eingeben, um Lernsets, Sperren und Kopplungen zu verwalten.
+          PIN eingeben, um Lernsets und Kopplungen zu verwalten.
         </p>
 
         <form id="teacher-auth-form" class="teacher-auth__form" novalidate>
@@ -45,13 +45,16 @@
         <div class="teacher-header__topline">
           <div>
             <p class="teacher-header__kicker">Lehrkraft</p>
-            <h1 class="teacher-header__title">Sets</h1>
+            <h1 id="teacher-shell-title" class="teacher-header__title">Lernsets</h1>
           </div>
           <button id="teacher-logout-button" class="teacher-button teacher-button--secondary" type="button">
-            Abmelden
+            <img class="teacher-button__icon" src="./assets/icons/logout.svg" alt="" decoding="async" />
+            <span>Abmelden</span>
           </button>
         </div>
-        <p class="teacher-header__message">Lernsets verwalten, Sperren aufheben und Kopplungen bewusst zurücksetzen.</p>
+        <p id="teacher-shell-message" class="teacher-header__message">
+          Lernsets verwalten, teilen und Tablet-Abos gezielt beenden.
+        </p>
         <div class="teacher-tabs" role="tablist" aria-label="Lehrerbereiche">
           <button
             class="teacher-tab-button"
@@ -61,7 +64,8 @@
             aria-controls="teacher-panel-sets"
             data-teacher-tab="sets"
           >
-            Lernsets
+            <img class="teacher-tab-button__icon" src="./assets/icons/sets-tab.svg" alt="" decoding="async" />
+            <span>Lernsets</span>
           </button>
           <button
             class="teacher-tab-button"
@@ -71,7 +75,8 @@
             aria-controls="teacher-panel-tablets"
             data-teacher-tab="tablets"
           >
-            Tablets
+            <img class="teacher-tab-button__icon" src="./assets/icons/tablet-device.svg" alt="" decoding="async" />
+            <span>Tablets</span>
           </button>
         </div>
       </header>
@@ -139,9 +144,9 @@
           id="share-close-button"
           class="share-panel__close"
           type="button"
-            aria-label="Schließen"
+          aria-label="Schließen"
         >
-          Schließen
+          <img class="share-panel__close-icon" src="./assets/icons/x-mark.svg" alt="" />
         </button>
 
         <p class="share-panel__kicker">Teilen</p>
@@ -160,9 +165,23 @@
         </div>
 
         <div class="share-panel__actions">
-          <button id="copy-link-button" class="share-panel__action" type="button">Kopieren</button>
-          <button id="print-share-button" class="share-panel__action share-panel__action--secondary" type="button">
-            Drucken
+          <button
+            id="copy-link-button"
+            class="share-panel__action"
+            type="button"
+            aria-label="Link kopieren"
+            title="Link kopieren"
+          >
+            <img class="share-panel__action-icon" src="./assets/icons/copy.svg" alt="" />
+          </button>
+          <button
+            id="print-share-button"
+            class="share-panel__action share-panel__action--secondary"
+            type="button"
+            aria-label="Drucken"
+            title="Drucken"
+          >
+            <img class="share-panel__action-icon" src="./assets/icons/print.svg" alt="" />
           </button>
         </div>
 

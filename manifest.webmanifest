@@ -1,7 +1,7 @@
 {
-  "name": "Dino Vocab App",
-  "short_name": "Dino Vocab",
-  "description": "Minimal vocabulary learning app for classroom use.",
+  "name": "Lerndeck",
+  "short_name": "Lerndeck",
+  "description": "Ruhige Lernkarten-App für den Unterricht.",
   "id": "/index.html",
   "start_url": "/index.html",
   "scope": "/",

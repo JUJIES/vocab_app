@@ -13,24 +13,59 @@ app.set("trust proxy", true);
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || "0.0.0.0";
 const HTTPS_PORT = Number(process.env.HTTPS_PORT || 3443);
-const MAX_PIN_FAILURES = 3;
-const TABLET_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
-const TEACHER_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
+const ACCESS_PIN_COOLDOWN_STEPS_MS = [
+  30 * 1000,
+  60 * 1000,
+  5 * 60 * 1000,
+];
+const ACCESS_SESSION_COOKIE_NAME = "dino_vocab_access_session";
+const ACCESS_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
+const ACCESS_SESSION_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+// Keep classroom devices signed in across lessons and restarts.
+const TABLET_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const TEACHER_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const TABLET_SET_CARD_COLOR_KEYS = new Set([
+  "slate",
+  "blue",
+  "indigo",
+  "teal",
+  "sage",
+  "amber",
+  "rose",
+  "violet",
+]);
+const LEARNING_MODE_KEYS = Object.freeze([
+  "view",
+  "practice",
+  "write",
+  "test",
+]);
+const DEFAULT_LEARNING_MODE_KEY = "practice";
 const ROOT_DIR = __dirname;
 const DATA_DIR = process.env.DATA_DIR
   ? path.resolve(process.env.DATA_DIR)
   : path.join(ROOT_DIR, "data");
 const SET_INDEX_PATH = path.join(ROOT_DIR, "sets", "sets-index.json");
 const TABLETS_PATH = path.join(DATA_DIR, "tablets.json");
+const TABLET_SEED_PATH = path.join(ROOT_DIR, "data", "tablets.seed.json");
+const TABLET_SESSIONS_PATH = path.join(DATA_DIR, "tablet-sessions.json");
 const HTTPS_KEY_PATH = path.join(ROOT_DIR, "certs", "dev-server-key.pem");
 const HTTPS_CERT_PATH = path.join(ROOT_DIR, "certs", "dev-server-cert.pem");
 const TEACHER_PIN = typeof process.env.TEACHER_PIN === "string" && process.env.TEACHER_PIN.trim()
   ? process.env.TEACHER_PIN.trim()
-  : "2468";
-const tabletSessions = new Map();
+  : "0000";
+const tabletSessions = loadPersistedTabletSessions();
 const teacherSessions = new Map();
+const accessSessions = new Map();
 
 app.use(express.json());
+
+app.get("/health", (_request, response) => {
+  response.json({
+    status: "ok",
+    service: "lerndeck",
+  });
+});
 
 app.post("/api/teacher/session", (request, response) => {
   const pin = typeof request.body?.pin === "string" ? request.body.pin.trim() : "";
@@ -78,7 +113,7 @@ app.get("/api/sets", async (request, response) => {
   try {
     const data = await readJsonFile(SET_INDEX_PATH, { sets: [] });
     const store = await readTabletStore();
-    const sets = Array.isArray(data?.sets) ? data.sets : [];
+    const sets = await buildResolvedSetEntries(Array.isArray(data?.sets) ? data.sets : []);
 
     response.json({
       sets: sets.map((setEntry) => ({
@@ -98,6 +133,14 @@ app.get("/api/runtime-info", (request, response) => {
   response.json({
     publicOrigin: getPublicOrigin(request),
     localIp: getLocalLanIp(),
+  });
+});
+
+app.get("/api/access-session", (request, response) => {
+  const accessSessionResult = ensureAccessSession(request, response);
+
+  response.json({
+    accessSession: serializeAccessSession(accessSessionResult.session),
   });
 });
 
@@ -208,22 +251,37 @@ app.get("/api/tablets/:tabletId/subscriptions", async (request, response) => {
     }
 
     const setIndex = await readJsonFile(SET_INDEX_PATH, { sets: [] });
-    const setEntries = Array.isArray(setIndex?.sets) ? setIndex.sets : [];
+    const setEntries = await buildResolvedSetEntries(Array.isArray(setIndex?.sets) ? setIndex.sets : []);
 
     response.json({
       tablet: toSafeTablet(tablet),
       subscriptions: normalizeTabletSubscriptions(tablet).map((subscription) => {
         const setEntry = setEntries.find((entry) => entry?.path === subscription.setPath);
+        const progressEntry = getTabletLearningProgress(tablet, subscription.setPath);
 
         return {
           setPath: subscription.setPath,
           subscribedAt: subscription.subscribedAt,
+          cardColor: subscription.cardColor,
           title: typeof setEntry?.title === "string" && setEntry.title.trim()
             ? setEntry.title.trim()
             : subscription.setPath,
+          subject: typeof setEntry?.subject === "string" && setEntry.subject.trim()
+            ? setEntry.subject.trim()
+            : "",
           description: typeof setEntry?.description === "string" ? setEntry.description.trim() : "",
           cardCount: Number.isFinite(setEntry?.cardCount) ? setEntry.cardCount : null,
           category: typeof setEntry?.category === "string" ? setEntry.category.trim() : "",
+          completedRoundCount: Number.isFinite(progressEntry?.completedRoundCount)
+            ? progressEntry.completedRoundCount
+            : 0,
+          averageScorePercent: Number.isFinite(progressEntry?.averageScorePercent)
+            ? progressEntry.averageScorePercent
+            : null,
+          lastRoundPercent: Number.isFinite(progressEntry?.lastRoundPercent)
+            ? progressEntry.lastRoundPercent
+            : null,
+          modeProgress: progressEntry?.modeProgress || createPublicLearningModeProgressMap(),
           id: typeof setEntry?.id === "string" && setEntry.id.trim()
             ? setEntry.id.trim()
             : subscription.setPath,
@@ -332,7 +390,7 @@ app.post("/api/tablets/:tabletId/subscriptions", async (request, response) => {
     }
 
     const setIndex = await readJsonFile(SET_INDEX_PATH, { sets: [] });
-    const setEntries = Array.isArray(setIndex?.sets) ? setIndex.sets : [];
+    const setEntries = await buildResolvedSetEntries(Array.isArray(setIndex?.sets) ? setIndex.sets : []);
     const setExists = setEntries.some((entry) => entry?.path === setPath);
 
     if (!setExists) {
@@ -365,6 +423,83 @@ app.post("/api/tablets/:tabletId/subscriptions", async (request, response) => {
     console.error("Unable to save tablet subscription:", error);
     response.status(500).json({
       error: "Lernset konnte nicht abonniert werden.",
+    });
+  }
+});
+
+app.patch("/api/tablets/:tabletId/subscriptions/card-color", async (request, response) => {
+  const sessionResult = requireTabletSession(request, request.params.tabletId);
+
+  if (!sessionResult.ok) {
+    response.status(sessionResult.status).json({
+      error: sessionResult.error,
+    });
+    return;
+  }
+
+  const setPath = normalizeSetPath(request.body?.setPath);
+  const cardColor = normalizeTabletSetCardColor(request.body?.cardColor);
+
+  if (!setPath) {
+    response.status(400).json({
+      error: "Gültiger Set-Pfad fehlt.",
+    });
+    return;
+  }
+
+  if (!cardColor) {
+    response.status(400).json({
+      error: "Gültige Kartenfarbe fehlt.",
+    });
+    return;
+  }
+
+  try {
+    const store = await readTabletStore();
+    const tablet = findTablet(store, request.params.tabletId);
+
+    if (!tablet) {
+      response.status(404).json({
+        error: "Tablet nicht gefunden.",
+      });
+      return;
+    }
+
+    if (!tablet.registered) {
+      response.status(409).json({
+        error: "Tablet ist noch nicht registriert.",
+      });
+      return;
+    }
+
+    const subscriptions = normalizeTabletSubscriptions(tablet);
+    const existingIndex = subscriptions.findIndex((entry) => entry.setPath === setPath);
+
+    if (existingIndex === -1) {
+      response.status(404).json({
+        error: "Lernset ist auf diesem Tablet nicht abonniert.",
+      });
+      return;
+    }
+
+    subscriptions[existingIndex] = {
+      ...subscriptions[existingIndex],
+      cardColor,
+    };
+
+    tablet.subscriptions = subscriptions;
+    tablet.updatedAt = new Date().toISOString();
+    await writeTabletStore(store);
+
+    response.json({
+      success: true,
+      tablet: toSafeTablet(tablet),
+      subscription: subscriptions[existingIndex],
+    });
+  } catch (error) {
+    console.error("Unable to save tablet subscription card color:", error);
+    response.status(500).json({
+      error: "Kartenfarbe konnte nicht gespeichert werden.",
     });
   }
 });
@@ -462,9 +597,11 @@ app.put("/api/tablets/:tabletId/learning-progress", async (request, response) =>
 
     const learningProgress = normalizeTabletLearningProgress(tablet);
     const timestamp = new Date().toISOString();
+    const previousEntry = learningProgress.find((entry) => entry.setPath === setPath) || null;
     const nextEntry = {
       setPath,
       starStates,
+      modeProgress: cloneLearningModeProgressMap(previousEntry?.modeProgress),
       updatedAt: timestamp,
     };
     const existingIndex = learningProgress.findIndex((entry) => entry.setPath === setPath);
@@ -488,6 +625,98 @@ app.put("/api/tablets/:tabletId/learning-progress", async (request, response) =>
     console.error("Unable to save learning progress:", error);
     response.status(500).json({
       error: "Lernstand konnte nicht gespeichert werden.",
+    });
+  }
+});
+
+app.post("/api/tablets/:tabletId/learning-progress/rounds", async (request, response) => {
+  const sessionResult = requireTabletSession(request, request.params.tabletId);
+
+  if (!sessionResult.ok) {
+    response.status(sessionResult.status).json({
+      error: sessionResult.error,
+    });
+    return;
+  }
+
+  const setPath = normalizeSetPath(request.body?.setPath);
+  const incrementBy = Number.isFinite(request.body?.incrementBy)
+    ? Math.max(1, Math.floor(request.body.incrementBy))
+    : 1;
+  const modeKey = normalizeLearningModeKey(request.body?.modeKey);
+  const lastRoundPercent = normalizeRoundPercent(request.body?.lastRoundPercent);
+
+  if (!setPath) {
+    response.status(400).json({
+      error: "Gültiger Set-Pfad fehlt.",
+    });
+    return;
+  }
+
+  try {
+    const store = await readTabletStore();
+    const tablet = findTablet(store, request.params.tabletId);
+
+    if (!tablet) {
+      response.status(404).json({
+        error: "Tablet nicht gefunden.",
+      });
+      return;
+    }
+
+    if (!tablet.registered) {
+      response.status(409).json({
+        error: "Tablet ist nicht mehr gekoppelt. Bitte neu registrieren.",
+        tablet: toSafeTablet(tablet),
+      });
+      return;
+    }
+
+    const learningProgress = normalizeTabletLearningProgress(tablet);
+    const timestamp = new Date().toISOString();
+    const existingIndex = learningProgress.findIndex((entry) => entry.setPath === setPath);
+    const previousEntry = existingIndex === -1 ? null : learningProgress[existingIndex];
+    const nextModeProgress = cloneLearningModeProgressMap(previousEntry?.modeProgress);
+    const previousModeEntry = nextModeProgress[modeKey];
+    const nextCompletedRoundCount = previousModeEntry.completedRoundCount + incrementBy;
+    const nextTotalScorePercent = getNextLearningModeTotalScorePercent(previousModeEntry, {
+      incrementBy,
+      lastRoundPercent,
+    });
+
+    nextModeProgress[modeKey] = {
+      completedRoundCount: nextCompletedRoundCount,
+      totalScorePercent: nextTotalScorePercent,
+      lastRoundPercent: lastRoundPercent ?? previousModeEntry.lastRoundPercent,
+      updatedAt: timestamp,
+    };
+
+    const nextEntry = {
+      setPath,
+      starStates: previousEntry?.starStates || {},
+      modeProgress: nextModeProgress,
+      updatedAt: timestamp,
+    };
+
+    if (existingIndex === -1) {
+      learningProgress.push(nextEntry);
+    } else {
+      learningProgress[existingIndex] = nextEntry;
+    }
+
+    tablet.learningProgress = learningProgress;
+    tablet.updatedAt = timestamp;
+    await writeTabletStore(store);
+
+    response.json({
+      success: true,
+      tablet: toSafeTablet(tablet),
+      progress: getTabletLearningProgress(tablet, setPath),
+    });
+  } catch (error) {
+    console.error("Unable to save round progress:", error);
+    response.status(500).json({
+      error: "Durchgang konnte nicht gespeichert werden.",
     });
   }
 });
@@ -543,10 +772,22 @@ app.delete("/api/tablets/:tabletId/subscriptions", async (request, response) => 
 
 app.post("/api/tablets/:tabletId/verify-pin", async (request, response) => {
   const pin = typeof request.body?.pin === "string" ? request.body.pin.trim() : "";
+  const accessSessionResult = ensureAccessSession(request, response);
+  const accessSession = accessSessionResult.session;
+  const now = Date.now();
 
   if (!pin) {
     response.status(400).json({
       error: "PIN fehlt.",
+      accessSession: serializeAccessSession(accessSession, now),
+    });
+    return;
+  }
+
+  if (isAccessSessionCoolingDown(accessSession, now)) {
+    response.status(429).json({
+      error: buildAccessPinCooldownMessage(accessSession.lockedUntil - now),
+      accessSession: serializeAccessSession(accessSession, now),
     });
     return;
   }
@@ -558,54 +799,52 @@ app.post("/api/tablets/:tabletId/verify-pin", async (request, response) => {
     if (!tablet) {
       response.status(404).json({
         error: "Tablet nicht gefunden.",
+        accessSession: serializeAccessSession(accessSession, now),
       });
       return;
     }
 
     if (!tablet.registered || !tablet.pinHash) {
+      resetAccessSessionState(accessSession, now);
+      commitAccessSession(accessSessionResult.token, accessSession, now);
       response.status(409).json({
         error: "Tablet ist noch nicht registriert.",
+        accessSession: serializeAccessSession(accessSession, now),
       });
       return;
     }
 
-    if (isTabletLocked(tablet)) {
+    if (accessSession.tabletId && accessSession.tabletId !== tablet.id) {
+      const boundTablet = findTablet(store, accessSession.tabletId);
       response.status(423).json({
-        error: "Gerät ist gesperrt. Die Lehrkraft muss die Sperre im Lehrerbereich aufheben.",
-        tablet: toSafeTablet(tablet),
+        error: `Du bist gerade auf ${boundTablet?.label || accessSession.tabletId} festgelegt. Erst nach erfolgreichem Login kannst du ein anderes Tablet auswählen.`,
+        accessSession: serializeAccessSession(accessSession, now),
       });
       return;
+    }
+
+    if (!accessSession.tabletId) {
+      accessSession.tabletId = tablet.id;
+      accessSession.updatedAt = now;
+      commitAccessSession(accessSessionResult.token, accessSession, now);
     }
 
     const isMatch = await bcrypt.compare(pin, tablet.pinHash);
 
     if (!isMatch) {
-      const nextAttempts = normalizeFailedPinAttempts(tablet) + 1;
-      const timestamp = new Date().toISOString();
+      registerAccessPinFailure(accessSession, now);
+      commitAccessSession(accessSessionResult.token, accessSession, now);
 
-      tablet.failedPinAttempts = nextAttempts;
-      tablet.updatedAt = timestamp;
-
-      if (nextAttempts >= MAX_PIN_FAILURES) {
-        tablet.lockedAt = timestamp;
-        await writeTabletStore(store);
-
-        response.status(423).json({
-          error: "Gerät ist nach 3 Fehlversuchen gesperrt. Die Lehrkraft muss die Sperre im Lehrerbereich aufheben.",
-          tablet: toSafeTablet(tablet),
-        });
-        return;
-      }
-
-      await writeTabletStore(store);
-
-      response.status(401).json({
-        error: `PIN stimmt nicht. Noch ${MAX_PIN_FAILURES - nextAttempts} Versuch${MAX_PIN_FAILURES - nextAttempts === 1 ? "" : "e"}.`,
+      response.status(429).json({
+        error: buildAccessPinCooldownMessage(accessSession.lockedUntil - now, { includeWrongPin: true }),
         tablet: toSafeTablet(tablet),
+        accessSession: serializeAccessSession(accessSession, now),
       });
       return;
     }
 
+    resetAccessSessionState(accessSession, now);
+    commitAccessSession(accessSessionResult.token, accessSession, now);
     tablet.failedPinAttempts = 0;
     tablet.lockedAt = null;
     tablet.lastSeenAt = new Date().toISOString();
@@ -617,16 +856,18 @@ app.post("/api/tablets/:tabletId/verify-pin", async (request, response) => {
       success: true,
       session: createTabletSession(tablet.id),
       tablet: toSafeTablet(tablet),
+      accessSession: serializeAccessSession(accessSession, now),
     });
   } catch (error) {
     console.error("Unable to verify tablet pin:", error);
     response.status(500).json({
       error: "PIN konnte nicht geprüft werden.",
+      accessSession: serializeAccessSession(accessSession, now),
     });
   }
 });
 
-app.post("/api/tablets/:tabletId/reset-lock", async (request, response) => {
+app.post("/api/tablets/:tabletId/reset-access-session", async (request, response) => {
   const sessionResult = requireTeacherSession(request);
 
   if (!sessionResult.ok) {
@@ -647,9 +888,64 @@ app.post("/api/tablets/:tabletId/reset-lock", async (request, response) => {
       return;
     }
 
+    clearAccessSessionsForTablet(tablet.id);
+
+    response.json({
+      success: true,
+      tablet: toSafeTablet(tablet),
+    });
+  } catch (error) {
+    console.error("Unable to reset access session:", error);
+    response.status(500).json({
+      error: "Timeout konnte nicht aufgehoben werden.",
+    });
+  }
+});
+
+app.post("/api/tablets/:tabletId/reset-pin", async (request, response) => {
+  const sessionResult = requireTeacherSession(request);
+
+  if (!sessionResult.ok) {
+    response.status(sessionResult.status).json({
+      error: sessionResult.error,
+    });
+    return;
+  }
+
+  const pin = typeof request.body?.pin === "string" ? request.body.pin.trim() : "";
+
+  if (!isValidPin(pin)) {
+    response.status(400).json({
+      error: "PIN muss aus 4 bis 8 Ziffern bestehen.",
+    });
+    return;
+  }
+
+  try {
+    const store = await readTabletStore();
+    const tablet = findTablet(store, request.params.tabletId);
+
+    if (!tablet) {
+      response.status(404).json({
+        error: "Tablet nicht gefunden.",
+      });
+      return;
+    }
+
+    if (!tablet.registered) {
+      response.status(409).json({
+        error: "Tablet ist nicht gekoppelt.",
+      });
+      return;
+    }
+
+    const timestamp = new Date().toISOString();
+    tablet.pinHash = await bcrypt.hash(pin, 10);
     tablet.failedPinAttempts = 0;
     tablet.lockedAt = null;
-    tablet.updatedAt = new Date().toISOString();
+    tablet.updatedAt = timestamp;
+    invalidateTabletSessions(tablet.id);
+    clearAccessSessionsForTablet(tablet.id);
     await writeTabletStore(store);
 
     response.json({
@@ -657,9 +953,9 @@ app.post("/api/tablets/:tabletId/reset-lock", async (request, response) => {
       tablet: toSafeTablet(tablet),
     });
   } catch (error) {
-    console.error("Unable to reset tablet lock:", error);
+    console.error("Unable to reset tablet pin:", error);
     response.status(500).json({
-      error: "Sperre konnte nicht aufgehoben werden.",
+      error: "PIN konnte nicht zurückgesetzt werden.",
     });
   }
 });
@@ -696,6 +992,7 @@ app.post("/api/tablets/:tabletId/decouple", async (request, response) => {
     tablet.updatedAt = null;
     tablet.lastSeenAt = null;
     invalidateTabletSessions(tablet.id);
+    clearAccessSessionsForTablet(tablet.id);
     await writeTabletStore(store);
 
     response.json({
@@ -714,10 +1011,34 @@ app.get("/teacher", (_request, response) => {
   response.sendFile(path.join(ROOT_DIR, "teacher.html"));
 });
 
-app.use(express.static(ROOT_DIR));
+const PUBLIC_ROOT_FILES = new Map([
+  ["/", "index.html"],
+  ["/index.html", "index.html"],
+  ["/styles.css", "styles.css"],
+  ["/app.js", "app.js"],
+  ["/teacher.css", "teacher.css"],
+  ["/teacher.js", "teacher.js"],
+  ["/manifest.webmanifest", "manifest.webmanifest"],
+  ["/sw.js", "sw.js"],
+  ["/noise.svg", "noise.svg"],
+  ["/code.html", "code.html"],
+  ["/food-basics-01.json", "food-basics-01.json"],
+  ["/example-set-improved.json", "example-set-improved.json"],
+]);
+
+app.get([...PUBLIC_ROOT_FILES.keys()], (request, response) => {
+  response.sendFile(path.join(ROOT_DIR, PUBLIC_ROOT_FILES.get(request.path)));
+});
+
+for (const publicDirectory of ["assets", "audio", "icons", "sets"]) {
+  app.use(`/${publicDirectory}`, express.static(path.join(ROOT_DIR, publicDirectory), {
+    dotfiles: "deny",
+    index: false,
+  }));
+}
 
 http.createServer(app).listen(PORT, HOST, () => {
-  console.log(`Dino Vocab App listening on http://${HOST}:${PORT}`);
+  console.log(`Lerndeck listening on http://${HOST}:${PORT}`);
 });
 
 const shouldStartLocalHttps = !process.env.RENDER && fs.existsSync(HTTPS_KEY_PATH) && fs.existsSync(HTTPS_CERT_PATH);
@@ -728,7 +1049,7 @@ if (shouldStartLocalHttps) {
     const cert = fs.readFileSync(HTTPS_CERT_PATH);
 
     https.createServer({ key, cert }, app).listen(HTTPS_PORT, HOST, () => {
-      console.log(`Dino Vocab App listening on https://${HOST}:${HTTPS_PORT}`);
+      console.log(`Lerndeck listening on https://${HOST}:${HTTPS_PORT}`);
     });
   } catch (error) {
     console.error("Unable to start HTTPS server:", error);
@@ -751,7 +1072,18 @@ async function readJsonFile(filePath, fallbackValue) {
 }
 
 async function readTabletStore() {
-  const store = await readJsonFile(TABLETS_PATH, { tablets: [] });
+  let store;
+
+  try {
+    store = await readJsonFile(TABLETS_PATH);
+  } catch (error) {
+    if (error?.code !== "ENOENT") {
+      throw error;
+    }
+
+    store = await readJsonFile(TABLET_SEED_PATH, { tablets: [] });
+    await writeTabletStore(store);
+  }
 
   return {
     tablets: Array.isArray(store?.tablets)
@@ -760,11 +1092,85 @@ async function readTabletStore() {
           subscriptions: normalizeTabletSubscriptions(tablet),
           learningProgress: normalizeTabletLearningProgress(tablet),
           pairingId: normalizePairingId(tablet),
-          failedPinAttempts: normalizeFailedPinAttempts(tablet),
-          lockedAt: normalizeLockedAt(tablet),
         }))
       : [],
   };
+}
+
+async function buildResolvedSetEntries(setEntries) {
+  const resolvedEntries = await Promise.all(
+    (Array.isArray(setEntries) ? setEntries : []).map((entry) => resolveSetEntryMetadata(entry)),
+  );
+
+  return resolvedEntries.filter(Boolean);
+}
+
+async function resolveSetEntryMetadata(entry) {
+  if (!entry || typeof entry !== "object") {
+    return null;
+  }
+
+  const setPath = normalizeSetPath(entry.path);
+
+  if (!setPath) {
+    return null;
+  }
+
+  const normalizedEntry = {
+    ...entry,
+    path: setPath,
+  };
+
+  try {
+    const setDocument = await readJsonFile(path.join(ROOT_DIR, setPath), null);
+    const setMeta = setDocument?.set && typeof setDocument.set === "object" ? setDocument.set : null;
+    const languages = setMeta?.languages && typeof setMeta.languages === "object" ? setMeta.languages : null;
+    const derivedSubject = resolveSetSubject(normalizedEntry.subject, setMeta?.subject, languages);
+    const derivedDescription = typeof normalizedEntry.description === "string" && normalizedEntry.description.trim()
+      ? normalizedEntry.description.trim()
+      : (typeof setMeta?.description === "string" ? setMeta.description.trim() : "");
+
+    return {
+      ...normalizedEntry,
+      title: typeof normalizedEntry.title === "string" && normalizedEntry.title.trim()
+        ? normalizedEntry.title.trim()
+        : (typeof setMeta?.title === "string" ? setMeta.title.trim() : normalizedEntry.path),
+      subject: derivedSubject,
+      description: derivedDescription,
+      cardCount: Number.isFinite(normalizedEntry.cardCount)
+        ? normalizedEntry.cardCount
+        : (Array.isArray(setDocument?.cards) ? setDocument.cards.length : null),
+    };
+  } catch (_error) {
+    return {
+      ...normalizedEntry,
+      subject: resolveSetSubject(normalizedEntry.subject, "", null),
+      description: typeof normalizedEntry.description === "string" ? normalizedEntry.description.trim() : "",
+    };
+  }
+}
+
+function resolveSetSubject(indexSubject, setSubject, languages) {
+  const explicitSubject = typeof indexSubject === "string" && indexSubject.trim()
+    ? indexSubject.trim()
+    : (typeof setSubject === "string" && setSubject.trim() ? setSubject.trim() : "");
+
+  if (explicitSubject) {
+    return explicitSubject;
+  }
+
+  const source = typeof languages?.source === "string" ? languages.source.trim().toLowerCase() : "";
+  const target = typeof languages?.target === "string" ? languages.target.trim().toLowerCase() : "";
+
+  if (source === "en" || target === "en") {
+    return "English";
+  }
+
+  if (source === "de" || target === "de") {
+    return "German";
+  }
+
+  return "";
 }
 
 async function writeTabletStore(store) {
@@ -791,9 +1197,7 @@ function toSafeTablet(tablet) {
     isCoupled: Boolean(tablet.registered),
     subscriptions: normalizeTabletSubscriptions(tablet),
     progressSetCount: normalizeTabletLearningProgress(tablet).length,
-    failedPinAttempts: normalizeFailedPinAttempts(tablet),
-    lockedAt: normalizeLockedAt(tablet),
-    isLocked: isTabletLocked(tablet),
+    accessSession: getTabletAccessSessionSnapshot(tablet.id),
     createdAt: tablet.createdAt || null,
     updatedAt: tablet.updatedAt || null,
     lastSeenAt: tablet.lastSeenAt || null,
@@ -806,7 +1210,7 @@ function toPublicTablet(tablet) {
     label: tablet.label,
     registered: Boolean(tablet.registered),
     isCoupled: Boolean(tablet.registered),
-    isLocked: isTabletLocked(tablet),
+    accessSession: getTabletAccessSessionSnapshot(tablet.id),
   };
 }
 
@@ -864,22 +1268,182 @@ function normalizePairingId(tablet) {
   return `legacy:${tablet.id}:${legacySeed}`;
 }
 
-function normalizeFailedPinAttempts(tablet) {
-  if (!Number.isFinite(tablet?.failedPinAttempts)) {
+function ensureAccessSession(request, response) {
+  purgeExpiredSessions(accessSessions);
+  const existingToken = readCookie(request, ACCESS_SESSION_COOKIE_NAME);
+  const now = Date.now();
+  let token = existingToken;
+  let session = accessSessions.get(existingToken);
+
+  if (!token || !session) {
+    token = createSessionToken();
+    session = createEmptyAccessSession(now);
+  }
+
+  session.expiresAt = now + ACCESS_SESSION_TTL_MS;
+  accessSessions.set(token, session);
+  response.cookie(ACCESS_SESSION_COOKIE_NAME, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: request.secure,
+    path: "/",
+    maxAge: ACCESS_SESSION_COOKIE_MAX_AGE_MS,
+  });
+
+  return {
+    token,
+    session,
+  };
+}
+
+function readCookie(request, cookieName) {
+  const headerValue = typeof request.headers?.cookie === "string" ? request.headers.cookie : "";
+
+  if (!headerValue) {
+    return "";
+  }
+
+  const segments = headerValue.split(";");
+
+  for (const segment of segments) {
+    const [rawName, ...rawValueParts] = segment.split("=");
+
+    if (typeof rawName !== "string" || rawName.trim() !== cookieName) {
+      continue;
+    }
+
+    try {
+      return decodeURIComponent(rawValueParts.join("=").trim());
+    } catch (_error) {
+      return "";
+    }
+  }
+
+  return "";
+}
+
+function createEmptyAccessSession(now = Date.now()) {
+  return {
+    tabletId: "",
+    failureCount: 0,
+    lockedUntil: 0,
+    updatedAt: now,
+    expiresAt: now + ACCESS_SESSION_TTL_MS,
+  };
+}
+
+function commitAccessSession(token, session, now = Date.now()) {
+  session.updatedAt = now;
+  session.expiresAt = now + ACCESS_SESSION_TTL_MS;
+  accessSessions.set(token, session);
+}
+
+function registerAccessPinFailure(session, now = Date.now()) {
+  session.failureCount = Math.max(0, Math.trunc(session.failureCount || 0)) + 1;
+  session.lockedUntil = now + getAccessPinCooldownDuration(session.failureCount);
+  session.updatedAt = now;
+  return session;
+}
+
+function getAccessPinCooldownDuration(failureCount) {
+  if (!Number.isFinite(failureCount) || failureCount <= 0) {
     return 0;
   }
 
-  return Math.max(0, Math.trunc(tablet.failedPinAttempts));
+  const stepIndex = Math.min(
+    ACCESS_PIN_COOLDOWN_STEPS_MS.length - 1,
+    Math.max(0, Math.trunc(failureCount) - 1),
+  );
+
+  return ACCESS_PIN_COOLDOWN_STEPS_MS[stepIndex];
 }
 
-function normalizeLockedAt(tablet) {
-  return typeof tablet?.lockedAt === "string" && tablet.lockedAt.trim()
-    ? tablet.lockedAt.trim()
-    : null;
+function resetAccessSessionState(session, now = Date.now()) {
+  session.tabletId = "";
+  session.failureCount = 0;
+  session.lockedUntil = 0;
+  session.updatedAt = now;
+  return session;
 }
 
-function isTabletLocked(tablet) {
-  return Boolean(normalizeLockedAt(tablet));
+function isAccessSessionCoolingDown(session, now = Date.now()) {
+  return Number.isFinite(session?.lockedUntil) && session.lockedUntil > now;
+}
+
+function serializeAccessSession(session, now = Date.now()) {
+  if (!session || !session.tabletId) {
+    return {
+      tabletId: "",
+      failureCount: 0,
+      isBound: false,
+      isCoolingDown: false,
+      lockedUntil: null,
+      remainingMs: 0,
+    };
+  }
+
+  const lockedUntil = Number.isFinite(session.lockedUntil) && session.lockedUntil > now
+    ? session.lockedUntil
+    : 0;
+
+  return {
+    tabletId: session.tabletId,
+    failureCount: Math.max(0, Math.trunc(session.failureCount || 0)),
+    isBound: true,
+    isCoolingDown: lockedUntil > now,
+    lockedUntil: lockedUntil > now ? new Date(lockedUntil).toISOString() : null,
+    remainingMs: lockedUntil > now ? lockedUntil - now : 0,
+  };
+}
+
+function clearAccessSessionsForTablet(tabletId) {
+  for (const [token, session] of accessSessions.entries()) {
+    if (session?.tabletId === tabletId) {
+      accessSessions.delete(token);
+    }
+  }
+}
+
+function getTabletAccessSessionSnapshot(tabletId, now = Date.now()) {
+  purgeExpiredSessions(accessSessions);
+  let activeSession = null;
+
+  for (const session of accessSessions.values()) {
+    if (session?.tabletId !== tabletId) {
+      continue;
+    }
+
+    if (!activeSession) {
+      activeSession = session;
+      continue;
+    }
+
+    const activeLockedUntil = Number.isFinite(activeSession.lockedUntil) ? activeSession.lockedUntil : 0;
+    const nextLockedUntil = Number.isFinite(session.lockedUntil) ? session.lockedUntil : 0;
+
+    if (nextLockedUntil > activeLockedUntil || (session.updatedAt || 0) > (activeSession.updatedAt || 0)) {
+      activeSession = session;
+    }
+  }
+
+  return activeSession ? serializeAccessSession(activeSession, now) : null;
+}
+
+function formatRemainingCooldown(remainingMs) {
+  const safeRemainingMs = Math.max(0, Math.ceil(remainingMs));
+
+  if (safeRemainingMs >= 60 * 1000) {
+    const minutes = Math.ceil(safeRemainingMs / (60 * 1000));
+    return `${minutes} Minute${minutes === 1 ? "" : "n"}`;
+  }
+
+  const seconds = Math.max(1, Math.ceil(safeRemainingMs / 1000));
+  return `${seconds} Sekunde${seconds === 1 ? "" : "n"}`;
+}
+
+function buildAccessPinCooldownMessage(remainingMs, { includeWrongPin = false } = {}) {
+  const prefix = includeWrongPin ? "PIN stimmt nicht." : "Bitte warte";
+  return `${prefix} ${formatRemainingCooldown(remainingMs)} und versuche es dann erneut.`;
 }
 
 function createPairingId() {
@@ -898,11 +1462,13 @@ function createTabletSession(tabletId) {
   purgeExpiredSessions(tabletSessions);
   const expiresAt = Date.now() + TABLET_SESSION_TTL_MS;
   const token = createSessionToken();
+  const tokenHash = hashSessionToken(token);
 
-  tabletSessions.set(token, {
+  tabletSessions.set(tokenHash, {
     tabletId,
     expiresAt,
   });
+  persistTabletSessions();
 
   return {
     token,
@@ -927,19 +1493,30 @@ function createTeacherSession() {
 
 function purgeExpiredSessions(sessionStore) {
   const now = Date.now();
+  let removedCount = 0;
 
   for (const [token, session] of sessionStore.entries()) {
     if (!session || !Number.isFinite(session.expiresAt) || session.expiresAt <= now) {
       sessionStore.delete(token);
+      removedCount += 1;
     }
   }
+
+  return removedCount;
 }
 
 function invalidateTabletSessions(tabletId) {
-  for (const [token, session] of tabletSessions.entries()) {
+  let hasChanges = false;
+
+  for (const [tokenHash, session] of tabletSessions.entries()) {
     if (session?.tabletId === tabletId) {
-      tabletSessions.delete(token);
+      tabletSessions.delete(tokenHash);
+      hasChanges = true;
     }
+  }
+
+  if (hasChanges) {
+    persistTabletSessions();
   }
 }
 
@@ -955,7 +1532,12 @@ function getBearerToken(request) {
 }
 
 function requireTabletSession(request, tabletId) {
-  purgeExpiredSessions(tabletSessions);
+  const expiredSessionCount = purgeExpiredSessions(tabletSessions);
+
+  if (expiredSessionCount > 0) {
+    persistTabletSessions();
+  }
+
   const token = getBearerToken(request);
 
   if (!token) {
@@ -966,7 +1548,7 @@ function requireTabletSession(request, tabletId) {
     };
   }
 
-  const session = tabletSessions.get(token);
+  const session = tabletSessions.get(hashSessionToken(token));
 
   if (!session) {
     return {
@@ -984,15 +1566,65 @@ function requireTabletSession(request, tabletId) {
     };
   }
 
-  session.expiresAt = Date.now() + TABLET_SESSION_TTL_MS;
-  tabletSessions.set(token, session);
-
   return {
     ok: true,
     status: 200,
     token,
     session,
   };
+}
+
+function hashSessionToken(token) {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+function loadPersistedTabletSessions() {
+  try {
+    const rawValue = fs.readFileSync(TABLET_SESSIONS_PATH, "utf8");
+    const parsed = JSON.parse(rawValue);
+    const now = Date.now();
+    const entries = Array.isArray(parsed?.sessions) ? parsed.sessions : [];
+
+    return new Map(entries
+      .filter((entry) => (
+        typeof entry?.tokenHash === "string"
+        && /^[a-f0-9]{64}$/.test(entry.tokenHash)
+        && typeof entry?.tabletId === "string"
+        && entry.tabletId.trim()
+        && Number.isFinite(entry?.expiresAt)
+        && entry.expiresAt > now
+      ))
+      .map((entry) => [entry.tokenHash, {
+        tabletId: entry.tabletId.trim(),
+        expiresAt: entry.expiresAt,
+      }]));
+  } catch (error) {
+    if (error?.code !== "ENOENT") {
+      console.error("Unable to load persisted tablet sessions:", error);
+    }
+
+    return new Map();
+  }
+}
+
+function persistTabletSessions() {
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    const tempPath = `${TABLET_SESSIONS_PATH}.${process.pid}.tmp`;
+    const payload = {
+      sessions: [...tabletSessions.entries()].map(([tokenHash, session]) => ({
+        tokenHash,
+        tabletId: session.tabletId,
+        expiresAt: session.expiresAt,
+      })),
+    };
+
+    fs.writeFileSync(tempPath, JSON.stringify(payload, null, 2));
+    fs.renameSync(tempPath, TABLET_SESSIONS_PATH);
+  } catch (error) {
+    console.error("Unable to persist tablet sessions:", error);
+    throw error;
+  }
 }
 
 function requireTeacherSession(request) {
@@ -1056,9 +1688,174 @@ function normalizeTabletSubscriptions(tablet) {
         subscribedAt: typeof entry?.subscribedAt === "string" && entry.subscribedAt.trim()
           ? entry.subscribedAt.trim()
           : null,
+        cardColor: normalizeTabletSetCardColor(entry?.cardColor),
       };
     })
     .filter(Boolean);
+}
+
+function normalizeTabletSetCardColor(value) {
+  const normalizedValue = typeof value === "string" ? value.trim().toLowerCase() : "";
+  return TABLET_SET_CARD_COLOR_KEYS.has(normalizedValue) ? normalizedValue : null;
+}
+
+function normalizeRoundPercent(value) {
+  if (!Number.isFinite(value)) {
+    return null;
+  }
+
+  return Math.round(Math.min(100, Math.max(0, value)));
+}
+
+function normalizeLearningModeKey(value) {
+  const normalizedValue = typeof value === "string" ? value.trim().toLowerCase() : "";
+  return LEARNING_MODE_KEYS.includes(normalizedValue) ? normalizedValue : DEFAULT_LEARNING_MODE_KEY;
+}
+
+function createEmptyLearningModeProgressEntry() {
+  return {
+    completedRoundCount: 0,
+    totalScorePercent: null,
+    lastRoundPercent: null,
+    updatedAt: null,
+  };
+}
+
+function createEmptyLearningModeProgressMap() {
+  return Object.fromEntries(LEARNING_MODE_KEYS.map((modeKey) => [modeKey, createEmptyLearningModeProgressEntry()]));
+}
+
+function cloneLearningModeProgressMap(value) {
+  const normalized = normalizeLearningModeProgressMap(value);
+  return Object.fromEntries(LEARNING_MODE_KEYS.map((modeKey) => [modeKey, {
+    ...normalized[modeKey],
+  }]));
+}
+
+function normalizeLearningModeTotalScorePercent(value) {
+  if (!Number.isFinite(value)) {
+    return null;
+  }
+
+  return Math.max(0, Math.round(value));
+}
+
+function normalizeLearningModeProgressEntry(value) {
+  const completedRoundCount = Number.isFinite(value?.completedRoundCount)
+    ? Math.max(0, Math.floor(value.completedRoundCount))
+    : 0;
+  const totalScorePercent = normalizeLearningModeTotalScorePercent(
+    value?.totalScorePercent ?? value?.scoreTotalPercent,
+  );
+  const derivedAverageScorePercent = Number.isFinite(value?.averageScorePercent)
+    ? Math.max(0, Math.round(value.averageScorePercent))
+    : null;
+  const lastRoundPercent = normalizeRoundPercent(value?.lastRoundPercent);
+
+  return {
+    completedRoundCount,
+    totalScorePercent: totalScorePercent ?? (
+      derivedAverageScorePercent !== null && completedRoundCount > 0
+        ? derivedAverageScorePercent * completedRoundCount
+        : null
+    ),
+    lastRoundPercent,
+    updatedAt: typeof value?.updatedAt === "string" && value.updatedAt.trim()
+      ? value.updatedAt.trim()
+      : null,
+  };
+}
+
+function buildLegacyPracticeModeProgressEntry(value) {
+  const completedRoundCount = Number.isFinite(value?.completedRoundCount)
+    ? Math.max(0, Math.floor(value.completedRoundCount))
+    : 0;
+  const lastRoundPercent = normalizeRoundPercent(value?.lastRoundPercent);
+  const explicitAverageScorePercent = Number.isFinite(value?.averageScorePercent)
+    ? Math.max(0, Math.round(value.averageScorePercent))
+    : null;
+  const totalScorePercent = normalizeLearningModeTotalScorePercent(value?.totalScorePercent);
+
+  return {
+    completedRoundCount,
+    totalScorePercent: totalScorePercent ?? (
+      explicitAverageScorePercent !== null && completedRoundCount > 0
+        ? explicitAverageScorePercent * completedRoundCount
+        : (completedRoundCount === 1 && lastRoundPercent !== null ? lastRoundPercent : null)
+    ),
+    lastRoundPercent,
+    updatedAt: typeof value?.updatedAt === "string" && value.updatedAt.trim()
+      ? value.updatedAt.trim()
+      : null,
+  };
+}
+
+function hasLearningModeProgressData(value) {
+  return Boolean(
+    value
+    && (
+      value.completedRoundCount > 0
+      || value.totalScorePercent !== null
+      || value.lastRoundPercent !== null
+      || value.updatedAt
+    )
+  );
+}
+
+function normalizeLearningModeProgressMap(value, legacyValue = null) {
+  const nextProgress = createEmptyLearningModeProgressMap();
+
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    for (const modeKey of LEARNING_MODE_KEYS) {
+      nextProgress[modeKey] = normalizeLearningModeProgressEntry(value[modeKey]);
+    }
+  }
+
+  const legacyPracticeProgress = buildLegacyPracticeModeProgressEntry(legacyValue);
+  if (!hasLearningModeProgressData(nextProgress[DEFAULT_LEARNING_MODE_KEY]) && hasLearningModeProgressData(legacyPracticeProgress)) {
+    nextProgress[DEFAULT_LEARNING_MODE_KEY] = legacyPracticeProgress;
+  }
+
+  return nextProgress;
+}
+
+function getAverageLearningModeScorePercent(value) {
+  if (!value || value.completedRoundCount < 1 || !Number.isFinite(value.totalScorePercent)) {
+    return null;
+  }
+
+  return Math.round(value.totalScorePercent / value.completedRoundCount);
+}
+
+function createPublicLearningModeProgressMap(value, legacyValue = null) {
+  const normalizedProgress = normalizeLearningModeProgressMap(value, legacyValue);
+
+  return Object.fromEntries(LEARNING_MODE_KEYS.map((modeKey) => {
+    const progressEntry = normalizedProgress[modeKey];
+    return [modeKey, {
+      completedRoundCount: progressEntry.completedRoundCount,
+      averageScorePercent: getAverageLearningModeScorePercent(progressEntry),
+      lastRoundPercent: progressEntry.lastRoundPercent,
+      updatedAt: progressEntry.updatedAt,
+    }];
+  }));
+}
+
+function getNextLearningModeTotalScorePercent(previousEntry, {
+  incrementBy = 1,
+  lastRoundPercent = null,
+} = {}) {
+  if (Number.isFinite(previousEntry?.totalScorePercent)) {
+    return previousEntry.totalScorePercent + (
+      lastRoundPercent !== null ? lastRoundPercent * incrementBy : 0
+    );
+  }
+
+  if ((previousEntry?.completedRoundCount || 0) > 0) {
+    return null;
+  }
+
+  return lastRoundPercent !== null ? lastRoundPercent * incrementBy : null;
 }
 
 function normalizeTabletLearningProgress(tablet) {
@@ -1077,6 +1874,7 @@ function normalizeTabletLearningProgress(tablet) {
       return {
         setPath,
         starStates: normalizeStarStates(entry?.starStates),
+        modeProgress: normalizeLearningModeProgressMap(entry?.modeProgress, entry),
         updatedAt: typeof entry?.updatedAt === "string" && entry.updatedAt.trim()
           ? entry.updatedAt.trim()
           : null,
@@ -1113,10 +1911,16 @@ function isValidStoredStarState(value) {
 function getTabletLearningProgress(tablet, setPath) {
   const normalizedSetPath = normalizeSetPath(setPath);
   const entry = normalizeTabletLearningProgress(tablet).find((progress) => progress.setPath === normalizedSetPath);
+  const modeProgress = createPublicLearningModeProgressMap(entry?.modeProgress, entry);
+  const practiceProgress = modeProgress[DEFAULT_LEARNING_MODE_KEY];
 
   return {
     setPath: normalizedSetPath,
     starStates: entry?.starStates || {},
+    completedRoundCount: practiceProgress?.completedRoundCount || 0,
+    averageScorePercent: practiceProgress?.averageScorePercent ?? null,
+    lastRoundPercent: practiceProgress?.lastRoundPercent ?? null,
+    modeProgress,
     updatedAt: entry?.updatedAt || null,
   };
 }
@@ -1139,9 +1943,6 @@ function getTabletsForSet(store, setPath) {
         id: tablet.id,
         label: tablet.label,
         subscribedAt: subscription?.subscribedAt || null,
-        failedPinAttempts: normalizeFailedPinAttempts(tablet),
-        lockedAt: normalizeLockedAt(tablet),
-        isLocked: isTabletLocked(tablet),
       };
     });
 }

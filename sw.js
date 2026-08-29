@@ -1,9 +1,9 @@
-const CACHE_NAME = "dino-vocab-shell-v28";
+const CACHE_NAME = "lerndeck-shell-v91";
 const APP_SHELL_URLS = [
   "/",
   "/index.html",
-  "/styles.css?v=2026-04-06-1515-qr-crop-fix",
-  "/app.js?v=2026-04-06-1515-qr-crop-fix",
+  "/styles.css?v=2026-04-18-2148-input-banner-spacing",
+  "/app.js?v=2026-04-18-2138-input-progress-banner",
   "/manifest.webmanifest",
   "/icons/icon-192.png",
   "/icons/icon-512.png",

@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: dino-vocab-app
+    name: lerndeck
     runtime: node
     plan: starter
     buildCommand: npm install

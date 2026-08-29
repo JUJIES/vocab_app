@@ -1,12 +1,19 @@
 const SET_INDEX_API_PATH = "/api/sets";
 const STUDENT_PAGE_NAME = "index.html";
 const TABLET_ICON_PATH = "./assets/icons/tablet-device.svg";
+const STATUS_CONNECTED_ICON_PATH = "./assets/icons/status-connected.svg";
+const STATUS_DISCONNECTED_ICON_PATH = "./assets/icons/status-disconnected.svg";
+const EXTERNAL_LINK_ICON_PATH = "./assets/icons/external-link.svg";
+const BROKEN_LINK_ICON_PATH = "./assets/icons/broken-link.svg";
+const TIMEOUT_ICON_PATH = "./assets/icons/timeout.svg";
+const PASSWORD_ICON_PATH = "./assets/icons/password-svgrepo-com.svg";
 const TEACHER_SESSION_STORAGE_KEY = "dino-vocab-teacher-session-v1";
 
 const state = {
   sets: [],
   tablets: [],
   activeTab: "sets",
+  setPanels: {},
   publicOrigin: "",
   activeSet: null,
   activeShareUrl: "",
@@ -15,12 +22,25 @@ const state = {
   authReady: false,
 };
 
+const TEACHER_TAB_COPY = {
+  sets: {
+    title: "Lernsets",
+    message: "Lernsets verwalten, teilen und Tablet-Zuweisungen gezielt entfernen.",
+  },
+  tablets: {
+    title: "Tablets",
+    message: "Geräte prüfen, aktive Login-Timeouts sehen und Kopplungen bewusst zurücksetzen.",
+  },
+};
+
 const elements = {
   authPanel: document.getElementById("teacher-auth-panel"),
   authForm: document.getElementById("teacher-auth-form"),
   authPinInput: document.getElementById("teacher-pin-input"),
   authFeedback: document.getElementById("teacher-auth-feedback"),
   shell: document.getElementById("teacher-shell"),
+  shellTitle: document.getElementById("teacher-shell-title"),
+  shellMessage: document.getElementById("teacher-shell-message"),
   logoutButton: document.getElementById("teacher-logout-button"),
   setsMeta: document.getElementById("sets-meta"),
   setList: document.getElementById("teacher-set-list"),
@@ -67,8 +87,19 @@ function bindEvents() {
   }
 
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && !elements.shareOverlay.hidden) {
-      closeShareOverlay();
+    if (event.key === "Escape") {
+      if (!elements.shareOverlay.hidden) {
+        closeShareOverlay();
+        return;
+      }
+
+      closeTabletActionMenus();
+    }
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!(event.target instanceof Element) || !event.target.closest("[data-tablet-menu]")) {
+      closeTabletActionMenus();
     }
   });
 }
@@ -206,9 +237,6 @@ function normalizeTabletEntry(entry) {
     id,
     label,
     subscribedAt: typeof entry?.subscribedAt === "string" ? entry.subscribedAt.trim() : "",
-    failedPinAttempts: Number.isFinite(entry?.failedPinAttempts) ? Math.max(0, Math.trunc(entry.failedPinAttempts)) : 0,
-    lockedAt: typeof entry?.lockedAt === "string" ? entry.lockedAt.trim() : "",
-    isLocked: Boolean(entry?.isLocked),
   };
 }
 
@@ -225,12 +253,24 @@ function normalizeDirectoryTabletEntry(entry) {
     label,
     registered: Boolean(entry?.registered),
     isCoupled: Boolean(entry?.isCoupled),
-    failedPinAttempts: Number.isFinite(entry?.failedPinAttempts) ? Math.max(0, Math.trunc(entry.failedPinAttempts)) : 0,
-    lockedAt: typeof entry?.lockedAt === "string" ? entry.lockedAt.trim() : "",
-    isLocked: Boolean(entry?.isLocked),
     subscriptions: Array.isArray(entry?.subscriptions) ? entry.subscriptions : [],
+    accessSession: normalizeAccessSession(entry?.accessSession),
     updatedAt: typeof entry?.updatedAt === "string" ? entry.updatedAt.trim() : "",
     lastSeenAt: typeof entry?.lastSeenAt === "string" ? entry.lastSeenAt.trim() : "",
+  };
+}
+
+function normalizeAccessSession(entry) {
+  const tabletId = typeof entry?.tabletId === "string" ? entry.tabletId.trim() : "";
+  const failureCount = Number.isFinite(entry?.failureCount) ? Math.max(0, Math.trunc(entry.failureCount)) : 0;
+  const remainingMs = Number.isFinite(entry?.remainingMs) ? Math.max(0, Math.ceil(entry.remainingMs)) : 0;
+
+  return {
+    tabletId,
+    failureCount,
+    isBound: Boolean(entry?.isBound && tabletId),
+    isCoolingDown: Boolean(entry?.isCoolingDown && remainingMs > 0),
+    remainingMs,
   };
 }
 
@@ -271,19 +311,30 @@ function renderSetList() {
 
 function setActiveTeacherTab(nextTab) {
   state.activeTab = nextTab === "tablets" ? "tablets" : "sets";
+  updateTeacherShellCopy();
 
   for (const button of elements.tabButtons) {
     const isActive = button.dataset.teacherTab === state.activeTab;
     button.setAttribute("aria-selected", isActive ? "true" : "false");
+    button.setAttribute("tabindex", isActive ? "0" : "-1");
   }
 
   for (const panel of elements.tabPanels) {
-    panel.hidden = panel.dataset.teacherPanel !== state.activeTab;
+    const isActive = panel.dataset.teacherPanel === state.activeTab;
+    panel.hidden = !isActive;
+    panel.setAttribute("aria-hidden", isActive ? "false" : "true");
   }
+}
+
+function updateTeacherShellCopy() {
+  const copy = TEACHER_TAB_COPY[state.activeTab] || TEACHER_TAB_COPY.sets;
+  elements.shellTitle.textContent = copy.title;
+  elements.shellMessage.textContent = copy.message;
 }
 
 function renderTabletList() {
   elements.tabletList.replaceChildren();
+  closeTabletActionMenus();
 
   if (state.tablets.length === 0) {
     elements.tabletEmptyState.hidden = false;
@@ -305,6 +356,7 @@ function createSetRow(setEntry) {
   row.setAttribute("role", "listitem");
 
   const copy = document.createElement("div");
+  copy.className = "teacher-set-row__copy";
 
   const title = document.createElement("h3");
   title.className = "teacher-set-row__title";
@@ -317,9 +369,13 @@ function createSetRow(setEntry) {
   copy.append(title, meta, createTabletAssignmentBlock(setEntry));
 
   const action = document.createElement("button");
-  action.className = "teacher-button";
+  action.className = "teacher-set-row__share";
   action.type = "button";
-  action.textContent = "Teilen";
+  action.setAttribute("aria-label", `Set ${setEntry.title} teilen`);
+  action.title = "Teilen";
+  action.append(
+    createButtonIcon(EXTERNAL_LINK_ICON_PATH),
+  );
   action.addEventListener("click", () => {
     openShareOverlay(setEntry);
   });
@@ -335,10 +391,43 @@ function createTabletAssignmentBlock(setEntry) {
   if (setEntry.tablets.length === 0) {
     const empty = document.createElement("p");
     empty.className = "teacher-set-row__tablet-empty";
-    empty.textContent = "Nicht abonniert";
+    empty.textContent = "Nicht zugewiesen";
     wrapper.append(empty);
     return wrapper;
   }
+
+  const isExpanded = isSetTabletListExpanded(setEntry);
+  wrapper.dataset.expanded = isExpanded ? "true" : "false";
+
+  const panelId = `teacher-set-panel-${createDomSafeToken(setEntry.path)}`;
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "teacher-set-row__toggle";
+  toggle.setAttribute("aria-expanded", isExpanded ? "true" : "false");
+  toggle.setAttribute("aria-controls", panelId);
+
+  const toggleLabel = document.createElement("span");
+  toggleLabel.className = "teacher-set-row__toggle-label";
+  toggleLabel.textContent = `${setEntry.tablets.length} Tablet${setEntry.tablets.length === 1 ? "" : "s"}`;
+
+  const toggleMeta = document.createElement("span");
+  toggleMeta.className = "teacher-set-row__toggle-meta";
+  toggleMeta.textContent = "zugewiesen";
+
+  const toggleChevron = document.createElement("span");
+  toggleChevron.className = "teacher-set-row__toggle-chevron";
+  toggleChevron.setAttribute("aria-hidden", "true");
+  toggleChevron.textContent = "⌄";
+
+  toggle.append(toggleLabel, toggleMeta, toggleChevron);
+
+  const panel = document.createElement("div");
+  panel.className = "teacher-set-row__tablets-panel";
+  panel.id = panelId;
+  panel.setAttribute("aria-hidden", isExpanded ? "false" : "true");
+
+  const panelInner = document.createElement("div");
+  panelInner.className = "teacher-set-row__tablets-panel-inner";
 
   for (const tablet of setEntry.tablets) {
     const row = document.createElement("div");
@@ -346,30 +435,37 @@ function createTabletAssignmentBlock(setEntry) {
 
     const tabletInfo = document.createElement("div");
     tabletInfo.className = "teacher-set-row__tablet-info";
-    tabletInfo.append(createDevicePill(tablet), createTabletStatusBadge(tablet));
+    tabletInfo.append(createDevicePill(tablet));
 
     const removeButton = document.createElement("button");
     removeButton.type = "button";
     removeButton.className = "teacher-tablet-remove";
-    removeButton.textContent = "Abo beenden";
+    removeButton.textContent = "Zuweisung entfernen";
     removeButton.addEventListener("click", () => {
       void handleRemoveTabletSubscription(tablet.id, setEntry.path);
     });
 
     row.append(tabletInfo, removeButton);
-    wrapper.append(row);
+    panelInner.append(row);
   }
 
+  panel.append(panelInner);
+  toggle.addEventListener("click", () => {
+    const nextExpanded = wrapper.dataset.expanded !== "true";
+    setSetTabletListExpanded(setEntry.path, nextExpanded);
+    wrapper.dataset.expanded = nextExpanded ? "true" : "false";
+    toggle.setAttribute("aria-expanded", nextExpanded ? "true" : "false");
+    panel.setAttribute("aria-hidden", nextExpanded ? "false" : "true");
+  });
+
+  wrapper.append(toggle, panel);
   return wrapper;
 }
 
 function createDevicePill(tablet) {
   const pill = document.createElement("span");
-  pill.className = "device-pill";
+  pill.className = "teacher-chip device-pill";
   pill.dataset.tabletGroup = getTabletGroupName(tablet.label || tablet.id);
-  if (tablet.isLocked) {
-    pill.classList.add("device-pill--locked");
-  }
 
   const icon = document.createElement("img");
   icon.className = "device-pill__icon";
@@ -387,22 +483,35 @@ function createDevicePill(tablet) {
 
 function createTabletStatusBadge(tablet) {
   const status = document.createElement("span");
-  status.className = "teacher-status-badge";
+  status.className = "teacher-chip teacher-status-badge";
 
-  if (tablet.isLocked) {
-    status.classList.add("teacher-status-badge--locked");
-    status.append(createStatusIcon("lock"), document.createTextNode("Gesperrt"));
-    return status;
-  }
-
-  if (tablet.failedPinAttempts > 0) {
+  if (tablet.accessSession?.isCoolingDown) {
     status.classList.add("teacher-status-badge--warning");
-    status.textContent = `${tablet.failedPinAttempts}/${3} Fehlversuche`;
+    status.textContent = `Timeout ${formatDuration(tablet.accessSession.remainingMs)}`;
     return status;
   }
 
-  status.textContent = tablet.registered ? "Gekoppelt" : "Frei";
+  if (tablet.accessSession?.isBound) {
+    status.classList.add("teacher-status-badge--secondary");
+    status.textContent = "Login aktiv";
+    return status;
+  }
+
+  const isRegistered = tablet.registered;
+  status.classList.add(isRegistered ? "teacher-status-badge--registered" : "teacher-status-badge--available");
+  status.append(
+    createBadgeIcon(isRegistered ? STATUS_CONNECTED_ICON_PATH : STATUS_DISCONNECTED_ICON_PATH),
+    document.createTextNode(isRegistered ? "Gekoppelt" : "Frei"),
+  );
   return status;
+}
+
+function createTabletSubscriptionBadge(tablet) {
+  const subscriptionCount = Array.isArray(tablet.subscriptions) ? tablet.subscriptions.length : 0;
+  const badge = document.createElement("span");
+  badge.className = "teacher-chip teacher-status-badge teacher-status-badge--metric";
+  badge.textContent = `${subscriptionCount} Lernset${subscriptionCount === 1 ? "" : "s"} aktiv`;
+  return badge;
 }
 
 function createTabletDirectoryRow(tablet) {
@@ -415,55 +524,115 @@ function createTabletDirectoryRow(tablet) {
   const header = document.createElement("div");
   header.className = "teacher-tablet-row__header";
   header.append(createDevicePill(tablet), createTabletStatusBadge(tablet));
+  if (tablet.registered) {
+    header.append(createTabletSubscriptionBadge(tablet));
+  }
 
-  const meta = document.createElement("p");
-  meta.className = "teacher-tablet-row__meta";
-  meta.textContent = getTabletDirectoryMetaText(tablet);
-
-  copy.append(header, meta);
+  copy.append(header);
+  const metaText = getTabletDirectoryMetaText(tablet);
+  if (metaText) {
+    const meta = document.createElement("p");
+    meta.className = "teacher-tablet-row__meta";
+    meta.textContent = metaText;
+    copy.append(meta);
+  }
 
   const actions = document.createElement("div");
   actions.className = "teacher-tablet-row__actions";
+  actions.dataset.tabletMenu = tablet.id;
 
-  const unlockAction = document.createElement("button");
-  unlockAction.type = "button";
-  unlockAction.className = "teacher-button teacher-button--secondary";
-  unlockAction.textContent = "Sperre aufheben";
-  unlockAction.disabled = !tablet.isLocked;
-  unlockAction.addEventListener("click", () => {
-    void handleResetTabletLock(tablet.id);
+  const menuShell = document.createElement("div");
+  menuShell.className = "teacher-tablet-row__menu-shell";
+  menuShell.dataset.tabletMenu = tablet.id;
+
+  const menuButton = document.createElement("button");
+  menuButton.type = "button";
+  menuButton.className = "teacher-tablet-row__menu-button";
+  menuButton.setAttribute("aria-label", `Aktionen für ${tablet.label || tablet.id}`);
+  menuButton.setAttribute("aria-expanded", "false");
+  menuButton.setAttribute("aria-haspopup", "menu");
+  menuButton.dataset.tabletMenu = tablet.id;
+  menuButton.append(createMenuDot(), createMenuDot(), createMenuDot());
+
+  const menu = document.createElement("div");
+  menu.className = "teacher-tablet-row__menu";
+  menu.setAttribute("role", "menu");
+  menu.hidden = true;
+  menu.dataset.tabletMenu = tablet.id;
+
+  const resetPinAction = document.createElement("button");
+  resetPinAction.type = "button";
+  resetPinAction.className = "teacher-tablet-row__menu-action";
+  resetPinAction.setAttribute("role", "menuitem");
+  resetPinAction.disabled = !tablet.registered;
+  resetPinAction.append(
+    createButtonIcon(PASSWORD_ICON_PATH),
+    document.createTextNode("PIN neu setzen"),
+  );
+  resetPinAction.addEventListener("click", () => {
+    closeTabletActionMenus();
+    void handleResetTabletPin(tablet);
+  });
+
+  const releaseAction = document.createElement("button");
+  releaseAction.type = "button";
+  releaseAction.className = "teacher-tablet-row__menu-action";
+  releaseAction.setAttribute("role", "menuitem");
+  releaseAction.disabled = !tablet.accessSession?.isBound;
+  releaseAction.append(
+    createButtonIcon(TIMEOUT_ICON_PATH),
+    document.createTextNode("Freigabe aufheben"),
+  );
+  releaseAction.addEventListener("click", () => {
+    closeTabletActionMenus();
+    void handleResetAccessSession(tablet.id);
   });
 
   const decoupleAction = document.createElement("button");
   decoupleAction.type = "button";
-  decoupleAction.className = "teacher-button teacher-button--danger";
-  decoupleAction.textContent = "Kopplung löschen";
+  decoupleAction.className = "teacher-tablet-row__menu-action teacher-tablet-row__menu-action--danger";
+  decoupleAction.setAttribute("role", "menuitem");
   decoupleAction.disabled = !tablet.registered;
+  decoupleAction.append(
+    createButtonIcon(BROKEN_LINK_ICON_PATH),
+    document.createTextNode("Kopplung löschen"),
+  );
   decoupleAction.addEventListener("click", () => {
+    closeTabletActionMenus();
     void handleDecoupleTablet(tablet);
   });
 
-  actions.append(unlockAction, decoupleAction);
+  menuButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    toggleTabletActionMenu(menuShell, menuButton, menu);
+  });
+
+  menu.addEventListener("click", (event) => {
+    event.stopPropagation();
+  });
+
+  menu.append(resetPinAction, releaseAction, decoupleAction);
+  menuShell.append(menuButton, menu);
+  actions.append(menuShell);
 
   row.append(copy, actions);
   return row;
 }
 
 function getTabletDirectoryMetaText(tablet) {
-  if (tablet.isLocked) {
-    return "Nach 3 falschen PIN-Eingaben gesperrt.";
+  if (tablet.accessSession?.isCoolingDown) {
+    return "";
   }
 
-  if (tablet.failedPinAttempts > 0) {
-    return `${tablet.failedPinAttempts} von 3 Fehlversuchen erreicht.`;
+  if (tablet.accessSession?.isBound) {
+    return "Login-Versuch ist auf dieses Tablet festgelegt. Ein Gerätewechsel ist erst nach erfolgreichem Login oder einer Freigabe möglich.";
   }
 
   if (!tablet.registered) {
-    return "Frei. Kann neu gekoppelt werden.";
+    return "";
   }
 
-  const subscriptionCount = Array.isArray(tablet.subscriptions) ? tablet.subscriptions.length : 0;
-  return `${subscriptionCount} Lernset${subscriptionCount === 1 ? "" : "s"} aktiv. Kopplung löschen entfernt PIN, Lernsets und Lernstände für die nächste Registrierung.`;
+  return "";
 }
 
 function getTabletGroupName(value) {
@@ -473,6 +642,80 @@ function getTabletGroupName(value) {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+}
+
+function isSetTabletListExpanded(setEntry) {
+  const savedState = state.setPanels[setEntry.path];
+  if (typeof savedState === "boolean") {
+    return savedState;
+  }
+
+  return setEntry.tablets.length <= 1;
+}
+
+function setSetTabletListExpanded(path, expanded) {
+  state.setPanels[path] = expanded;
+}
+
+function createDomSafeToken(value) {
+  return value.replace(/[^a-zA-Z0-9_-]+/g, "-");
+}
+
+function createBadgeIcon(path) {
+  const icon = document.createElement("img");
+  icon.className = "teacher-status-badge__icon";
+  icon.src = path;
+  icon.alt = "";
+  icon.decoding = "async";
+  return icon;
+}
+
+function createButtonIcon(path) {
+  const icon = document.createElement("img");
+  icon.className = "teacher-button__icon";
+  icon.src = path;
+  icon.alt = "";
+  icon.decoding = "async";
+  return icon;
+}
+
+function createMenuDot() {
+  const dot = document.createElement("span");
+  dot.className = "teacher-tablet-row__menu-dot";
+  dot.setAttribute("aria-hidden", "true");
+  return dot;
+}
+
+function toggleTabletActionMenu(shell, button, menu) {
+  const shouldOpen = menu.hidden;
+  closeTabletActionMenus();
+
+  if (!shouldOpen) {
+    return;
+  }
+
+  shell.classList.add("is-open");
+  button.setAttribute("aria-expanded", "true");
+  menu.hidden = false;
+}
+
+function closeTabletActionMenus() {
+  const openMenus = document.querySelectorAll(".teacher-tablet-row__menu-shell.is-open");
+
+  for (const shell of openMenus) {
+    shell.classList.remove("is-open");
+
+    const button = shell.querySelector(".teacher-tablet-row__menu-button");
+    const menu = shell.querySelector(".teacher-tablet-row__menu");
+
+    if (button instanceof HTMLElement) {
+      button.setAttribute("aria-expanded", "false");
+    }
+
+    if (menu instanceof HTMLElement) {
+      menu.hidden = true;
+    }
+  }
 }
 
 function renderErrorState(message) {
@@ -486,8 +729,44 @@ function renderErrorState(message) {
   elements.tabletsMeta.textContent = "";
 }
 
+function showTeacherActionError(message) {
+  window.alert(message);
+}
+
+function loadPersistentStorageItem(key) {
+  const localValue = window.localStorage.getItem(key);
+
+  if (typeof localValue === "string" && localValue) {
+    return localValue;
+  }
+
+  const sessionValue = window.sessionStorage.getItem(key);
+
+  if (typeof sessionValue === "string" && sessionValue) {
+    window.localStorage.setItem(key, sessionValue);
+    return sessionValue;
+  }
+
+  return "";
+}
+
+function persistPersistentStorageItem(key, value) {
+  if (!value) {
+    clearPersistentStorageItem(key);
+    return;
+  }
+
+  window.localStorage.setItem(key, value);
+  window.sessionStorage.setItem(key, value);
+}
+
+function clearPersistentStorageItem(key) {
+  window.localStorage.removeItem(key);
+  window.sessionStorage.removeItem(key);
+}
+
 function loadTeacherSessionToken() {
-  const value = window.sessionStorage.getItem(TEACHER_SESSION_STORAGE_KEY);
+  const value = loadPersistentStorageItem(TEACHER_SESSION_STORAGE_KEY);
   return typeof value === "string" ? value.trim() : "";
 }
 
@@ -497,11 +776,11 @@ function persistTeacherSessionToken(token) {
     return;
   }
 
-  window.sessionStorage.setItem(TEACHER_SESSION_STORAGE_KEY, token);
+  persistPersistentStorageItem(TEACHER_SESSION_STORAGE_KEY, token);
 }
 
 function clearTeacherSessionToken() {
-  window.sessionStorage.removeItem(TEACHER_SESSION_STORAGE_KEY);
+  clearPersistentStorageItem(TEACHER_SESSION_STORAGE_KEY);
 }
 
 function createTeacherRequestError(response, fallbackMessage) {
@@ -513,6 +792,7 @@ function createTeacherRequestError(response, fallbackMessage) {
 function showTeacherAuth(feedback = "") {
   clearTeacherSessionToken();
   closeShareOverlay();
+  closeTabletActionMenus();
   state.authReady = false;
   elements.authPanel.hidden = false;
   elements.shell.hidden = true;
@@ -528,22 +808,7 @@ function showTeacherShell() {
   elements.authPanel.hidden = true;
   elements.shell.hidden = false;
   elements.authFeedback.textContent = "";
-}
-
-function createStatusIcon(kind) {
-  const icon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  icon.setAttribute("viewBox", "0 0 24 24");
-  icon.setAttribute("aria-hidden", "true");
-  icon.classList.add("teacher-status-badge__icon");
-
-  if (kind === "lock") {
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    path.setAttribute("fill", "currentColor");
-    path.setAttribute("d", "M7 10V8a5 5 0 0 1 10 0v2h1a2 2 0 0 1 2 2v7a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-7a2 2 0 0 1 2-2h1zm2 0h6V8a3 3 0 1 0-6 0v2z");
-    icon.append(path);
-  }
-
-  return icon;
+  closeTabletActionMenus();
 }
 
 async function openShareOverlay(setEntry) {
@@ -580,45 +845,36 @@ function buildStudentShareUrl(setPath) {
 
 async function renderShareQr(shareUrl) {
   clearQrCanvas();
-  const canvasSize = Math.min(
-    elements.shareQrCanvas.width,
-    elements.shareQrCanvas.height,
-  );
   if (window.QRious) {
-    elements.shareQrCanvas.width = canvasSize;
-    elements.shareQrCanvas.height = canvasSize;
-
-    new window.QRious({
-      element: elements.shareQrCanvas,
-      value: shareUrl,
-      size: canvasSize,
-      level: "M",
-      background: "#ffffff",
+    renderQrIntoCanvas(elements.shareQrCanvas, shareUrl, {
       foreground: "#111111",
-      padding: 0,
+      background: "#f7f9fc",
+      level: "M",
     });
 
     state.activeQrDataUrl = elements.shareQrCanvas.toDataURL("image/png");
     return;
   }
 
+  const canvasSize = getShareQrAvailableSize(elements.shareQrCanvas);
+
   if (window.QRCode && typeof window.QRCode.toCanvas === "function") {
     await window.QRCode.toCanvas(elements.shareQrCanvas, shareUrl, {
       width: canvasSize,
-      margin: 2,
+      margin: 0,
       color: {
         dark: "#111111",
-        light: "#ffffff",
+        light: "#f7f9fc",
       },
     });
 
     if (typeof window.QRCode.toDataURL === "function") {
       state.activeQrDataUrl = await window.QRCode.toDataURL(shareUrl, {
         width: 720,
-        margin: 1,
+        margin: 0,
         color: {
           dark: "#111111",
-          light: "#ffffff",
+          light: "#f7f9fc",
         },
       });
       return;
@@ -629,6 +885,132 @@ async function renderShareQr(shareUrl) {
   }
 
   throw new Error("QRCode library is unavailable.");
+}
+
+function renderQrIntoCanvas(canvas, value, {
+  foreground = "#111111",
+  background = "#f7f9fc",
+  level = "M",
+} = {}) {
+  if (!canvas || !window.QRious) {
+    return;
+  }
+
+  const canvasSize = resolveQrCanvasSize(canvas, value, { level });
+  canvas.style.width = `${canvasSize}px`;
+  canvas.style.height = `${canvasSize}px`;
+  canvas.width = canvasSize;
+  canvas.height = canvasSize;
+
+  new window.QRious({
+    element: canvas,
+    value,
+    size: canvasSize,
+    level,
+    padding: 0,
+    foreground,
+    background,
+  });
+}
+
+function resolveQrCanvasSize(canvas, value, {
+  level = "M",
+} = {}) {
+  const availableSize = getShareQrAvailableSize(canvas);
+  const moduleCount = inferQrModuleCount(value, { level });
+
+  if (!moduleCount) {
+    return availableSize;
+  }
+
+  const moduleSize = Math.max(1, Math.floor(availableSize / moduleCount));
+  return Math.max(moduleCount, moduleCount * moduleSize);
+}
+
+function getShareQrAvailableSize(canvas) {
+  const frame = canvas.closest(".share-panel__qr-frame");
+
+  if (frame instanceof HTMLElement) {
+    const styles = window.getComputedStyle(frame);
+    const availableWidth = frame.clientWidth
+      - parseFloat(styles.paddingLeft || "0")
+      - parseFloat(styles.paddingRight || "0");
+    const availableHeight = frame.clientHeight
+      - parseFloat(styles.paddingTop || "0")
+      - parseFloat(styles.paddingBottom || "0");
+    const nextSize = Math.min(availableWidth || 0, availableHeight || availableWidth || 0);
+
+    if (nextSize > 0) {
+      return Math.max(64, Math.round(nextSize));
+    }
+  }
+
+  return Math.max(64, Math.min(canvas.width || 280, canvas.height || 280));
+}
+
+function inferQrModuleCount(value, {
+  level = "M",
+} = {}) {
+  if (!window.QRious) {
+    return 0;
+  }
+
+  const probeCanvas = document.createElement("canvas");
+
+  new window.QRious({
+    element: probeCanvas,
+    value,
+    size: 997,
+    level,
+    padding: 0,
+    foreground: "#000000",
+    background: "#ffffff",
+  });
+
+  const context = probeCanvas.getContext("2d");
+
+  if (!context) {
+    return 0;
+  }
+
+  const { data, width } = context.getImageData(0, 0, probeCanvas.width, probeCanvas.height);
+  let firstDarkX = -1;
+  let lastDarkX = -1;
+
+  for (let x = 0; x < width; x += 1) {
+    const offset = x * 4;
+    const isDark = data[offset] < 128;
+
+    if (isDark) {
+      if (firstDarkX === -1) {
+        firstDarkX = x;
+      }
+      lastDarkX = x;
+    }
+  }
+
+  if (firstDarkX === -1 || lastDarkX === -1) {
+    return 0;
+  }
+
+  let moduleSize = 0;
+
+  for (let x = firstDarkX; x <= lastDarkX; x += 1) {
+    const offset = x * 4;
+    const isDark = data[offset] < 128;
+
+    if (isDark) {
+      moduleSize += 1;
+    } else if (moduleSize > 0) {
+      break;
+    }
+  }
+
+  if (moduleSize <= 0) {
+    return 0;
+  }
+
+  return Math.round((lastDarkX - firstDarkX + 1) / moduleSize);
 }
 
 function clearQrCanvas() {
@@ -654,7 +1036,7 @@ async function handleRemoveTabletSubscription(tabletId, setPath) {
     );
 
     if (!response.ok) {
-      throw createTeacherRequestError(response, "Abo konnte nicht beendet werden.");
+      throw createTeacherRequestError(response, "Zuweisung konnte nicht entfernt werden.");
     }
 
     await reloadTeacherData();
@@ -665,19 +1047,19 @@ async function handleRemoveTabletSubscription(tabletId, setPath) {
     }
 
     console.error("Unable to remove set assignment:", error);
-    renderErrorState(typeof error?.message === "string" ? error.message : "Abo konnte nicht beendet werden.");
+    showTeacherActionError(typeof error?.message === "string" ? error.message : "Zuweisung konnte nicht entfernt werden.");
   }
 }
 
-async function handleResetTabletLock(tabletId) {
+async function handleResetAccessSession(tabletId) {
   try {
-    const response = await requestJson(`/api/tablets/${encodeURIComponent(tabletId)}/reset-lock`, {
+    const response = await requestJson(`/api/tablets/${encodeURIComponent(tabletId)}/reset-access-session`, {
       auth: "teacher",
       method: "POST",
     });
 
     if (!response.ok) {
-      throw createTeacherRequestError(response, "Sperre konnte nicht aufgehoben werden.");
+      throw createTeacherRequestError(response, "Timeout konnte nicht aufgehoben werden.");
     }
 
     await reloadTeacherData();
@@ -687,8 +1069,49 @@ async function handleResetTabletLock(tabletId) {
       return;
     }
 
-    console.error("Unable to reset tablet lock:", error);
-    renderErrorState(typeof error?.message === "string" ? error.message : "Sperre konnte nicht aufgehoben werden.");
+    console.error("Unable to reset access session:", error);
+    showTeacherActionError(typeof error?.message === "string" ? error.message : "Timeout konnte nicht aufgehoben werden.");
+  }
+}
+
+async function handleResetTabletPin(tablet) {
+  const label = tablet.label || tablet.id;
+  const nextPin = window.prompt(
+    `Neuen PIN für ${label} eingeben.\n\nDie Kopplung, Lernsets und Lernstände bleiben erhalten.`,
+    "",
+  );
+
+  if (nextPin === null) {
+    return;
+  }
+
+  const pin = nextPin.trim();
+
+  if (!/^[0-9]{4,8}$/.test(pin)) {
+    window.alert("PIN muss aus 4 bis 8 Ziffern bestehen.");
+    return;
+  }
+
+  try {
+    const response = await requestJson(`/api/tablets/${encodeURIComponent(tablet.id)}/reset-pin`, {
+      auth: "teacher",
+      method: "POST",
+      body: { pin },
+    });
+
+    if (!response.ok) {
+      throw createTeacherRequestError(response, "PIN konnte nicht zurückgesetzt werden.");
+    }
+
+    await reloadTeacherData();
+  } catch (error) {
+    if (error?.requiresAuth) {
+      showTeacherAuth(error.message);
+      return;
+    }
+
+    console.error("Unable to reset tablet pin:", error);
+    showTeacherActionError(typeof error?.message === "string" ? error.message : "PIN konnte nicht zurückgesetzt werden.");
   }
 }
 
@@ -720,7 +1143,7 @@ async function handleDecoupleTablet(tablet) {
     }
 
     console.error("Unable to decouple tablet:", error);
-    renderErrorState(typeof error?.message === "string" ? error.message : "Kopplung konnte nicht gelöscht werden.");
+    showTeacherActionError(typeof error?.message === "string" ? error.message : "Kopplung konnte nicht gelöscht werden.");
   }
 }
 
@@ -824,6 +1247,18 @@ async function requestJson(path, options = {}) {
     status: response.status,
     data,
   };
+}
+
+function formatDuration(durationMs) {
+  const safeDurationMs = Math.max(0, Math.ceil(durationMs));
+
+  if (safeDurationMs >= 60 * 1000) {
+    const minutes = Math.ceil(safeDurationMs / (60 * 1000));
+    return `${minutes} Minute${minutes === 1 ? "" : "n"}`;
+  }
+
+  const seconds = Math.max(1, Math.ceil(safeDurationMs / 1000));
+  return `${seconds} Sekunde${seconds === 1 ? "" : "n"}`;
 }
 
 function handlePrintShare() {
