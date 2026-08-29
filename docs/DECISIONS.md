@@ -1,0 +1,29 @@
+# Produkt- und Architekturentscheidungen
+
+## 2026-08-29 – Montag-MVP
+
+- **Web zuerst:** Schüler- und Lehrerbereich funktionieren vollständig im Browser. PWA/Relution sind Komfort und Verteilung, keine Voraussetzung. Tauri ist vertagt.
+- **Geräte statt Schülerkonten:** Im Unterricht sind die 29 bekannten Tabletprofile die Identität. Lernstände gehören zum Tablet. Schüler registrieren sich nicht persönlich.
+- **Teilen statt Zuweisen:** Lehrkräfte teilen ein Set über stabilen sechsstelligen Code oder QR-Link; das Tablet fügt es selbst hinzu. Der Lehrerbereich zeigt deshalb nur kompakt `0 Tablets`, `1 Tablet` oder `n Tablets` und bei Bedarf die Gerätenamen. Er behauptet keine Zuweisung durch die Lehrkraft. Schulen, Gruppen und ein Admin-UI sind vertagt.
+- **Startpasswort statt Einrichtungscode:** Die sechs vorbereiteten Lehrkraftkonten erhalten beim Provisionieren ein zufälliges Startpasswort. Die erste Anmeldung führt direkt zum Passwortwechsel; später ist er im Zahnrad-Menü erreichbar. Der Wechsel verlangt das aktuelle Passwort, beendet alle alten Sitzungen und setzt eine neue. Sets bleiben im Editor nur für ihren Eigentümer sichtbar.
+- **Keine Vorlagenbibliothek im MVP:** Der Lehrerbereich zeigt ausschließlich `Meine Sets`. Die fünf historischen App-Sets werden einmalig und idempotent Julius zugeordnet; andere Lehrkräfte starten leer. Ihre bisherigen Set-Pfade und Karten-IDs bleiben für bestehende Set-Verknüpfungen der Tablets und Lernstände stabil.
+- **Live-Set statt Kopie:** Set-Code und Pfad bleiben bei Bearbeitungen stabil. Tablets laden beim nächsten Öffnen/Neuladen die aktuelle Revision. Ein laufender Durchgang wird bewusst nicht mitten in einer Karte verändert.
+- **Kartenidentität schützt Lernstand:** Unveränderte Karten behalten ihre ID. Inhaltlich geänderte Karten erhalten eine neue ID, damit dafür kein veralteter Lernstand fortgeschrieben wird.
+- **Import ist ein Entwurf:** Klare Zweispaltenlisten werden deterministisch geparst. Freitext und Binärdateien laufen serverseitig über die OpenAI Responses API mit strukturiertem Ergebnis. Vor dem Speichern bleibt alles editierbar; Quelldateien werden nicht dauerhaft gespeichert.
+- **Import und Bearbeitung sind getrennte Arbeitsmodi:** Neue Sets starten mit der Wahl zwischen manuell und automatisch. Nach einem Erstimport erscheint nur der prüfbare Karteneditor. Ein späterer Import wird als eigener Schritt geöffnet, ergänzt die Kartenliste und verändert bei vorhandenen Sets weder Titel, vorhandene Karten noch deren Abfragerichtung.
+- **Material und Importnotiz sind getrennt:** Die optionale Notiz beschreibt Auswahl, Umfang und Abfragerichtung, etwa `nur Lektion 1, Deutsch → Englisch` oder `die wichtigsten Fachbegriffe mit Definitionen`. Mit Notiz wird bewusst der KI-Pfad verwendet; andernfalls bleibt eine klare Zweispaltenliste der schnelle lokale Pfad.
+- **Quelltreue mit gezielter Ergänzung:** Kartenbegriffe müssen im hochgeladenen Material vorkommen. Vorhandene Begriffspaare haben Vorrang. Eine Übersetzung oder kurze Definition darf das Modell nur ergänzen, wenn die Importnotiz dies verlangt; neue Quellbegriffe, Beispiele und Sachinformationen bleiben ausgeschlossen. Dichte Buchseiten werden als Originalbild übertragen.
+- **Ein Prozess, atomare JSON-Stores:** Für den einzelnen Beelink-Prozess sind serialisierte, atomar ersetzte Runtime-JSON-Dateien die kleinste wartbare Lösung. Mehrere App-Instanzen benötigen später eine gemeinsame Datenbank/Repository-Implementierung.
+- **Korrektur zuerst:** Im Eingabemodus müssen falsche Antworten korrekt wiederholt werden. Erweiterte Lernalgorithmen kommen nach dem Feldtest.
+
+## Bewusst vertagt
+
+- KI-generierte Lernkartenbilder und ein späterer Modus `Bild → Wort`; Produkt- und Architekturentwurf siehe [VISUAL_VOCABULARY_PLAN.md](VISUAL_VOCABULARY_PLAN.md)
+- Dino-Lernpässe und persönliche Schüleridentitäten
+- private Handys und geräteübergreifender persönlicher Lernstand
+- Schulen, Einrichtungen, Gruppen und zentrale Set-Zuweisung
+- Set-Sharing zwischen Lehrkräften
+- gemeinsame oder systemweite Set-Vorlagen
+- Tauri-Lehrer-App
+- vollständiger Offlinebetrieb dynamischer Sets
+- Modus `Testen` und komplexere Lernalgorithmen

@@ -1,7 +1,8 @@
 const { test, expect } = require("playwright/test");
 
 const BASE_URL = process.env.BASE_URL || "https://vocab-app-vea0.onrender.com";
-const TEACHER_PIN = process.env.TEACHER_PIN || "";
+const TEACHER_ID = process.env.TEACHER_ID || "julius";
+const TEACHER_PASSWORD = process.env.TEACHER_PASSWORD || "";
 const TEST_TABLET_ID = process.env.TEST_TABLET_ID || "blau-1";
 const TEST_TABLET_PIN = process.env.TEST_TABLET_PIN || "1234";
 const ALT_TEST_TABLET_ID = process.env.ALT_TEST_TABLET_ID || "pink-1";
@@ -47,7 +48,8 @@ test.beforeEach(async ({ page }, testInfo) => {
       BASE_URL,
       TEST_TABLET_ID,
       TEST_SET_PATH,
-      hasTeacherPin: Boolean(TEACHER_PIN),
+      teacherId: TEACHER_ID,
+      hasTeacherPassword: Boolean(TEACHER_PASSWORD),
     }, null, 2),
     contentType: "application/json",
   });
@@ -89,24 +91,25 @@ test("public flow works and protected APIs stay locked", async ({ page, request 
   expect(protectedResponse.status()).toBe(401);
 
   await page.goto("/");
-  await expect(page.locator("#student-screen-title")).toHaveText("Lerndeck");
+  await expect(page.locator("#student-screen-title")).toContainText("Lerndeck");
   await expect(page.getByText("Weiterlernen")).toBeVisible();
 
   await page.goto(`${TEACHER_PATH}`);
-  await expect(page.locator("#teacher-auth-title")).toHaveText("Lehrerbereich");
+  await expect(page.locator("#teacher-auth-title")).toHaveText("Anmelden");
   await expect(page.locator("#teacher-auth-panel")).toBeVisible();
   await expect(page.locator("#teacher-shell")).toBeHidden();
 });
 
 test("teacher login and tabs only show the active panel", async ({ page }) => {
-  test.skip(!TEACHER_PIN, "TEACHER_PIN fehlt fuer den Teacher-Login-Test.");
+  test.skip(!TEACHER_PASSWORD, "TEACHER_PASSWORD fehlt fuer den Teacher-Login-Test.");
 
   await page.goto(TEACHER_PATH);
   await expect(page.locator("#teacher-auth-panel")).toBeVisible();
   await expect(page.locator("#teacher-shell")).toBeHidden();
 
-  await page.locator("#teacher-pin-input").fill(TEACHER_PIN);
-  await page.getByRole("button", { name: "Freischalten" }).click();
+  await page.locator("#teacher-account-select").selectOption(TEACHER_ID);
+  await page.locator("#teacher-password-input").fill(TEACHER_PASSWORD);
+  await page.getByRole("button", { name: "Anmelden" }).click();
 
   await expect(page.locator("#teacher-auth-panel")).toBeHidden();
   await expect(page.locator("#teacher-shell")).toBeVisible();
@@ -121,16 +124,16 @@ test("teacher login and tabs only show the active panel", async ({ page }) => {
 });
 
 test.describe("live mutation flow", () => {
-  test.skip(!TEACHER_PIN, "TEACHER_PIN fehlt fuer die Live-Mutationstests.");
+  test.skip(!TEACHER_PASSWORD, "TEACHER_PASSWORD fehlt fuer die Live-Mutationstests.");
 
-  test("teacher login, registration, subscription, lockout and cleanup", async ({ page, request }) => {
+  test("teacher login, registration, subscription, lockout and cleanup", async ({ page, request, browser }) => {
     test.setTimeout(120000);
     const teacherHeaders = await loginTeacher(page, request);
     await ensureTabletIsDecoupled(request, teacherHeaders, TEST_TABLET_ID);
 
     await page.goto("/");
     await registerTablet(page, TEST_TABLET_ID, TEST_TABLET_PIN);
-    await expect(page.locator("#student-screen-title")).toHaveText("Lerndeck");
+    await expect(page.locator("#student-screen-title")).toContainText("Lerndeck");
 
     await addSubscriptionViaUi(page, TEST_SET_PATH);
 
@@ -141,49 +144,43 @@ test.describe("live mutation flow", () => {
     await expect(page.getByText("Schon hinzugefügt.")).toHaveCount(0);
     await page.locator("[data-star-button]").filter({ has: page.locator(":visible") }).first().click();
 
-    const context = page.context();
-    const freshPage = await context.newPage();
+    const freshContext = await browser.newContext();
+    const freshPage = await freshContext.newPage();
     await primeKnownTabletPage(freshPage, TEST_TABLET_ID);
     await freshPage.goto("/");
-    await expect(freshPage.locator("#student-screen-title")).toHaveText("Lerndeck");
+    await expect(freshPage.locator("#student-screen-title")).toContainText("Lerndeck");
     await quickLogin(freshPage, TEST_TABLET_PIN);
     await openFirstSet(freshPage);
     await expect(
       freshPage.locator("[data-star-button]").filter({ has: freshPage.locator(":visible") }).first(),
     ).toHaveAttribute("data-star-state", "green");
-    await freshPage.close();
+    await freshContext.close();
 
     await ensureTabletIsDecoupled(request, teacherHeaders, TEST_TABLET_ID);
 
-    const decoupledCheckPage = await context.newPage();
+    const decoupledCheckContext = await browser.newContext();
+    const decoupledCheckPage = await decoupledCheckContext.newPage();
     await primeKnownTabletPage(decoupledCheckPage, TEST_TABLET_ID);
     await decoupledCheckPage.goto("/");
-    await expect(decoupledCheckPage.locator("#student-screen-title")).toHaveText("Lerndeck");
+    await expect(decoupledCheckPage.locator("#student-screen-title")).toContainText("Lerndeck");
     await expect(decoupledCheckPage.locator('input[name="pin-entry"]')).toBeVisible();
     await decoupledCheckPage.locator('input[name="pin-entry"]').fill(TEST_TABLET_PIN);
     await submitFormForField(decoupledCheckPage, 'input[name="pin-entry"]');
     await expect(decoupledCheckPage.getByText("Dieser Zugang ist auf diesem Tablet noch nicht eingerichtet.")).toBeVisible();
-    await decoupledCheckPage.close();
+    await decoupledCheckContext.close();
 
     await registerTablet(page, TEST_TABLET_ID, TEST_TABLET_PIN);
-    await expect(page.locator("#student-screen-title")).toHaveText("Lerndeck");
+    await expect(page.locator("#student-screen-title")).toContainText("Lerndeck");
 
-    const lockoutPage = await context.newPage();
+    const lockoutContext = await browser.newContext();
+    const lockoutPage = await lockoutContext.newPage();
     await primeKnownTabletPage(lockoutPage, TEST_TABLET_ID);
     await lockoutPage.goto("/");
     await expect(lockoutPage.locator('input[name="pin-entry"]')).toBeVisible();
     await lockoutPage.locator('input[name="pin-entry"]').fill("0000");
     await submitFormForField(lockoutPage, 'input[name="pin-entry"]');
-    await expect(lockoutPage.getByText(/Noch 2 Versuche/)).toBeVisible();
-
-    await lockoutPage.locator('input[name="pin-entry"]').fill("0000");
-    await submitFormForField(lockoutPage, 'input[name="pin-entry"]');
-    await expect(lockoutPage.getByText(/Noch 1 Versuch/)).toBeVisible();
-
-    await lockoutPage.locator('input[name="pin-entry"]').fill("0000");
-    await submitFormForField(lockoutPage, 'input[name="pin-entry"]');
-    await expect(lockoutPage.getByText(/gesperrt/i)).toBeVisible();
-    await lockoutPage.close();
+    await expect(lockoutPage.getByText(/PIN stimmt nicht.*Sekunden/i)).toBeVisible();
+    await lockoutContext.close();
 
     await page.goto(TEACHER_PATH);
     await loginTeacher(page, request);
@@ -191,21 +188,23 @@ test.describe("live mutation flow", () => {
     const tabletRow = page.locator(".teacher-tablet-row", {
       has: page.getByText(TEST_TABLET_ID === "blau-1" ? "Blau 1" : TEST_TABLET_ID),
     });
-    await expect(tabletRow.locator(".teacher-status-badge--locked")).toBeVisible();
-    await tabletRow.getByRole("button", { name: "Sperre aufheben" }).click();
-    await expect(tabletRow.locator(".teacher-status-badge--locked")).toHaveCount(0);
+    await expect(tabletRow.getByText(/Timeout/)).toBeVisible();
+    await tabletRow.getByRole("button", { name: /Aktionen für/ }).click();
+    await tabletRow.getByRole("menuitem", { name: "Freigabe aufheben" }).click();
+    await expect(tabletRow.getByText(/Timeout/)).toHaveCount(0);
 
-    const unlockedPage = await context.newPage();
+    const unlockedContext = await browser.newContext();
+    const unlockedPage = await unlockedContext.newPage();
     await primeKnownTabletPage(unlockedPage, TEST_TABLET_ID);
     await unlockedPage.goto("/");
     await quickLogin(unlockedPage, TEST_TABLET_PIN);
-    await expect(unlockedPage.locator("#student-screen-title")).toHaveText("Lerndeck");
-    await unlockedPage.close();
+    await expect(unlockedPage.locator("#student-screen-title")).toContainText("Lerndeck");
+    await unlockedContext.close();
 
     await ensureTabletIsDecoupled(request, teacherHeaders, TEST_TABLET_ID);
   });
 
-  test("known tablet can be cleared and replaced without updating local storage before login", async ({ page, request }) => {
+  test("known tablet can be cleared and replaced without updating local storage before login", async ({ page, request, browser }) => {
     test.setTimeout(120000);
     const teacherHeaders = await loginTeacher(page, request);
 
@@ -215,29 +214,29 @@ test.describe("live mutation flow", () => {
     await registerTablet(page, TEST_TABLET_ID, TEST_TABLET_PIN);
     await registerTablet(page, ALT_TEST_TABLET_ID, ALT_TEST_TABLET_PIN);
 
-    await primeKnownTabletPage(page, TEST_TABLET_ID);
-    await page.goto("/");
+    const loginContext = await browser.newContext();
+    const loginPage = await loginContext.newPage();
+    await primeKnownTabletPage(loginPage, TEST_TABLET_ID);
+    await loginPage.goto("/");
 
-    await expect(page.locator('input[name="pin-entry"]')).toBeVisible();
-    await page.getByRole("button", { name: "Anderes Tablet" }).click();
+    await expect(loginPage.locator('input[name="pin-entry"]')).toBeVisible();
+    await loginPage.getByRole("button", { name: "Anderes Gerät" }).click();
+    await loginPage.getByRole("button", { name: /Weiterlernen/ }).click();
+    await selectTabletOption(loginPage, ALT_TEST_TABLET_ID);
 
-    await expect(page.locator(".student-screen__device-selection")).toContainText(formatTabletLabel(TEST_TABLET_ID));
-    await page.getByRole("button", { name: "Tablet-Auswahl entfernen" }).click();
-    await expect(page.locator(".student-screen__device-selection")).toBeHidden();
-
-    await selectTabletOption(page, ALT_TEST_TABLET_ID);
-
-    await expect.poll(async () => page.evaluate((deviceStorageKey) => {
+    await expect.poll(async () => loginPage.evaluate((deviceStorageKey) => {
       return window.localStorage.getItem(deviceStorageKey);
     }, DEVICE_STORAGE_KEY)).toBe(TEST_TABLET_ID);
 
-    await page.locator('input[name="pin-entry"]').fill(ALT_TEST_TABLET_PIN);
-    await submitFormForField(page, 'input[name="pin-entry"]');
-    await expect(page.locator("#student-screen-title")).toHaveText("Lerndeck");
+    await loginPage.locator('input[name="pin-entry"]').fill(ALT_TEST_TABLET_PIN);
+    await submitFormForField(loginPage, 'input[name="pin-entry"]');
+    await expect(loginPage.locator("#student-screen-title")).toContainText("Lerndeck");
 
-    await expect.poll(async () => page.evaluate((deviceStorageKey) => {
+    await expect.poll(async () => loginPage.evaluate((deviceStorageKey) => {
       return window.localStorage.getItem(deviceStorageKey);
     }, DEVICE_STORAGE_KEY)).toBe(ALT_TEST_TABLET_ID);
+
+    await loginContext.close();
 
     await ensureTabletIsDecoupled(request, teacherHeaders, TEST_TABLET_ID);
     await ensureTabletIsDecoupled(request, teacherHeaders, ALT_TEST_TABLET_ID);
@@ -246,11 +245,12 @@ test.describe("live mutation flow", () => {
 
 async function loginTeacher(page, request) {
   await page.goto(TEACHER_PATH);
-  await expect(page.locator("#teacher-auth-title")).toHaveText("Lehrerbereich");
-  await expect(page.locator("#teacher-auth-panel")).toBeVisible();
-  await expect(page.locator("#teacher-shell")).toBeHidden();
-  await page.locator("#teacher-pin-input").fill(TEACHER_PIN);
-  await page.getByRole("button", { name: "Freischalten" }).click();
+  if (await page.locator("#teacher-auth-panel").isVisible()) {
+    await expect(page.locator("#teacher-auth-title")).toHaveText("Anmelden");
+    await page.locator("#teacher-account-select").selectOption(TEACHER_ID);
+    await page.locator("#teacher-password-input").fill(TEACHER_PASSWORD);
+    await page.getByRole("button", { name: "Anmelden" }).click();
+  }
   await expect(page.locator("#teacher-shell")).toBeVisible();
   await expect(page.locator("#teacher-auth-panel")).toBeHidden();
   await expect(page.locator("#teacher-shell .teacher-header__title")).toHaveText("Lernsets");
@@ -268,16 +268,10 @@ async function loginTeacher(page, request) {
   await expect(page.locator("#teacher-panel-tablets")).toBeHidden();
 
   const teacherLoginResponse = await request.post("/api/teacher/session", {
-    data: { pin: TEACHER_PIN },
+    data: { teacherId: TEACHER_ID, password: TEACHER_PASSWORD },
   });
   expect(teacherLoginResponse.ok()).toBeTruthy();
-  const teacherLoginJson = await teacherLoginResponse.json();
-  const token = teacherLoginJson?.session?.token;
-  expect(token).toBeTruthy();
-
-  return {
-    Authorization: `Bearer ${token}`,
-  };
+  return {};
 }
 
 async function ensureTabletIsDecoupled(request, headers, tabletId) {
@@ -290,7 +284,12 @@ async function ensureTabletIsDecoupled(request, headers, tabletId) {
 
 async function registerTablet(page, tabletId, pin) {
   await page.goto("/");
-  await expect(page.locator("#student-screen-title")).toHaveText("Lerndeck");
+  await page.evaluate(() => {
+    window.localStorage.clear();
+    window.sessionStorage.clear();
+  });
+  await page.reload();
+  await expect(page.locator("#student-screen-title")).toContainText("Lerndeck");
   await page.getByRole("button", { name: "Neu einrichten" }).click();
   await expect(page.getByRole("heading", { name: "Neu einrichten" })).toBeVisible();
 
@@ -310,7 +309,7 @@ async function quickLogin(page, pin) {
 
 async function addSubscriptionViaUi(page, setPath) {
   await page.goto(`/?set=${encodeURIComponent(setPath)}`);
-  await expect(page.locator("#student-screen-title")).toHaveText("Lerndeck");
+  await expect(page.locator("#student-screen-title")).toContainText("Lerndeck");
   await expect(page.locator(".student-screen__library-card").first()).toBeVisible();
 }
 

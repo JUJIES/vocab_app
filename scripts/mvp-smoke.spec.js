@@ -1,10 +1,10 @@
 const { test, expect } = require("playwright/test");
 
 const BASE_URL = process.env.BASE_URL || "http://127.0.0.1:4012";
-const TEACHER_PIN = process.env.TEACHER_PIN || "";
+const TEACHER_ID = process.env.TEACHER_ID || "julius";
+const TEACHER_PASSWORD = process.env.TEACHER_PASSWORD || "";
 const TEST_TABLET_ID = process.env.TEST_TABLET_ID || "blau-1";
 const TEST_TABLET_PIN = process.env.TEST_TABLET_PIN || "1234";
-const TEST_SET_PATH = process.env.TEST_SET_PATH || "sets/food-basics-01.json";
 
 test.use({
   baseURL: BASE_URL,
@@ -13,50 +13,65 @@ test.use({
   locale: "de-DE",
 });
 
-test("Monday MVP: register, add a set, learn and keep progress API protected", async ({ page, request }) => {
-  test.skip(!TEACHER_PIN, "TEACHER_PIN fehlt für den isolierten Mutationstest.");
+test("Monday MVP: teacher draft, stable code, tablet subscription and correction loop", async ({ page, request }) => {
+  test.skip(!TEACHER_PASSWORD, "TEACHER_PASSWORD fehlt für den isolierten Mutationstest.");
 
   const teacherLogin = await request.post("/api/teacher/session", {
-    data: { pin: TEACHER_PIN },
+    data: { teacherId: TEACHER_ID, password: TEACHER_PASSWORD },
   });
   expect(teacherLogin.ok()).toBeTruthy();
-  const teacherToken = (await teacherLogin.json())?.session?.token;
-  expect(teacherToken).toBeTruthy();
-  const teacherHeaders = { Authorization: `Bearer ${teacherToken}` };
 
   const decoupleTablet = async () => {
-    const response = await request.post(`/api/tablets/${encodeURIComponent(TEST_TABLET_ID)}/decouple`, {
-      headers: teacherHeaders,
-    });
+    const response = await request.post(`/api/tablets/${encodeURIComponent(TEST_TABLET_ID)}/decouple`);
     expect(response.ok()).toBeTruthy();
   };
 
   await decoupleTablet();
 
   try {
+    const importResponse = await request.post("/api/teacher/import-draft", {
+      data: { text: "Hund; dog\nKatze; cat\nVogel; bird" },
+    });
+    expect(importResponse.ok()).toBeTruthy();
+    const draft = (await importResponse.json()).draft;
+
+    const createResponse = await request.post("/api/teacher/sets", {
+      data: { ...draft, title: "MVP Smoke Tiere" },
+    });
+    expect(createResponse.ok()).toBeTruthy();
+    const createdSet = (await createResponse.json()).set;
+    expect(createdSet.shareCode).toMatch(/^[A-HJ-NP-Z2-9]{6}$/);
+
+    const updateResponse = await request.put(`/api/teacher/sets/${createdSet.id}`, {
+      data: { ...draft, title: "MVP Smoke Tiere live" },
+    });
+    expect(updateResponse.ok()).toBeTruthy();
+    const updatedSet = (await updateResponse.json()).set;
+    expect(updatedSet.shareCode).toBe(createdSet.shareCode);
+    expect(updatedSet.path).toBe(createdSet.path);
+
     await page.goto("/", { waitUntil: "networkidle" });
-    await expect(page.locator("#student-screen-title")).toHaveText("Lerndeck");
-    await page.getByRole("button", { name: "Neu einrichten" }).click();
+    await page.getByRole("button", { name: /Neu einrichten/ }).click();
     await page.locator('select[name="tabletId"]').selectOption(TEST_TABLET_ID);
     await page.locator('input[name="registration-pin"]').fill(TEST_TABLET_PIN);
     await page.locator('input[name="registration-pin-confirm"]').fill(TEST_TABLET_PIN);
-    await page.locator('input[name="registration-pin-confirm"]')
-      .locator("xpath=ancestor::form[1]")
-      .getByRole("button", { name: "Starten" })
-      .click();
+    await page.getByRole("button", { name: "Starten" }).click();
     await expect(page.locator(".student-screen__home-actions")).toBeVisible();
 
-    await page.goto(`/?set=${encodeURIComponent(TEST_SET_PATH)}`, { waitUntil: "networkidle" });
-    const firstSet = page.locator(".student-screen__library-card").first();
-    await expect(firstSet).toBeVisible();
-    await firstSet.click();
-    await expect(page.locator("#launch-mode-modal")).toBeVisible();
-    await page.locator("#launch-mode-start").click();
-    await expect(page.locator("#flashcard")).toBeVisible();
-    await expect(page.locator("#front-word")).not.toHaveText("");
+    await page.goto(`/?code=${createdSet.shareCode}`, { waitUntil: "networkidle" });
+    const setCard = page.getByRole("button", { name: /MVP Smoke Tiere live/ });
+    await expect(setCard).toBeVisible();
+    await setCard.click();
+    await page.getByRole("button", { name: /Eingabe 00/ }).click();
+    await page.getByRole("button", { name: "Eingabe starten" }).click();
 
-    const protectedResponse = await request.get(`/api/tablets/${encodeURIComponent(TEST_TABLET_ID)}/subscriptions`);
-    expect(protectedResponse.status()).toBe(401);
+    const answer = page.getByPlaceholder("Antwort eingeben");
+    await answer.fill("falsch");
+    await page.getByRole("button", { name: "Antwort prüfen" }).click();
+    await expect(page.getByText("Noch nicht korrekt", { exact: true })).toBeVisible();
+    await answer.fill("dog");
+    await page.getByRole("button", { name: "Antwort noch einmal eingeben" }).click();
+    await expect(page.getByText("Korrigiert", { exact: true })).toBeVisible();
 
     const healthResponse = await request.get("/health");
     expect(healthResponse.ok()).toBeTruthy();

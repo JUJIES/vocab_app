@@ -8,8 +8,13 @@ const OUTPUT_DIR = process.env.SCREENSHOT_DIR
 const DEVICE_STORAGE_KEY = "dino-vocab-device-id-v1";
 const SESSION_UNLOCK_KEY = "dino-vocab-session-unlocked-v1";
 const TABLET_SESSION_STORAGE_KEY = "dino-vocab-tablet-session-v1";
+const TEST_TABLET_ID = "rot-1";
+const TEST_TABLET_PIN = "4177";
+const TEACHER_ID = process.env.TEACHER_ID || "julius";
+const TEACHER_PASSWORD = process.env.TEACHER_PASSWORD || "";
 
 test.use({
+  baseURL: BASE_URL,
   viewport: { width: 900, height: 700 },
   colorScheme: "dark",
   locale: "de-DE",
@@ -19,14 +24,26 @@ test.beforeAll(async () => {
   await fs.mkdir(OUTPUT_DIR, { recursive: true });
 });
 
-async function prepareHome(page) {
+test.afterEach(async ({ request }) => {
+  await request.post(`/api/tablets/${encodeURIComponent(TEST_TABLET_ID)}/decouple`);
+});
+
+async function prepareHome(page, request) {
+  const teacherLogin = await request.post("/api/teacher/session", {
+    data: { teacherId: TEACHER_ID, password: TEACHER_PASSWORD },
+  });
+  expect(teacherLogin.ok()).toBeTruthy();
+
+  await request.post(`/api/tablets/${encodeURIComponent(TEST_TABLET_ID)}/decouple`);
+  const registration = await request.post(`/api/tablets/${encodeURIComponent(TEST_TABLET_ID)}/register`, {
+    data: { pin: TEST_TABLET_PIN },
+  });
+  expect(registration.ok()).toBeTruthy();
+
   await page.goto(new URL("/index.html", BASE_URL).toString(), { waitUntil: "networkidle" });
-  await page.evaluate(async ({ deviceKey, sessionKey, tabletSessionKey }) => {
+  await page.evaluate(async ({ deviceKey, sessionKey, tabletSessionKey, tabletId, pin }) => {
     window.localStorage.clear();
     window.sessionStorage.clear();
-
-    const tabletId = "rot-1";
-    const pin = "1111";
 
     await fetch("/api/access-session", {
       credentials: "same-origin",
@@ -57,6 +74,8 @@ async function prepareHome(page) {
     deviceKey: DEVICE_STORAGE_KEY,
     sessionKey: SESSION_UNLOCK_KEY,
     tabletSessionKey: TABLET_SESSION_STORAGE_KEY,
+    tabletId: TEST_TABLET_ID,
+    pin: TEST_TABLET_PIN,
   });
 
   await page.goto(new URL("/index.html", BASE_URL).toString(), { waitUntil: "networkidle" });
@@ -71,19 +90,23 @@ const VIEWPORTS = [
   { name: "900w", width: 900, height: 700 },
   { name: "820w", width: 820, height: 700 },
   { name: "768w", width: 768, height: 700 },
+  { name: "390w", width: 390, height: 760 },
 ];
 
 for (const viewport of VIEWPORTS) {
-  test(`capture student home header on tablet (${viewport.name})`, async ({ page }, testInfo) => {
+  test(`student home header stays stable (${viewport.name})`, async ({ page, request }, testInfo) => {
+    test.skip(!TEACHER_PASSWORD, "TEACHER_PASSWORD fehlt für den isolierten Tablet-Test.");
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
-    await prepareHome(page);
+    await prepareHome(page, request);
 
     const selectors = {
       actions: ".student-screen__home-actions",
       context: ".student-screen__home-context",
       divider: ".student-screen__home-divider--actions",
+      header: ".student-screen__header",
       logout: ".student-screen__home-actions .student-screen__home-logout",
       pill: ".device-pill--home-meta",
+      title: "#student-screen-title",
     };
 
     const boxes = {};
@@ -101,6 +124,22 @@ for (const viewport of VIEWPORTS) {
       JSON.stringify(boxes, null, 2),
       "utf8",
     );
+
+    expect(await page.locator(".student-screen__home-summary").count()).toBe(0);
+    expect(boxes.header.x).toBeGreaterThanOrEqual(0);
+    expect(boxes.header.x + boxes.header.width).toBeLessThanOrEqual(viewport.width + 1);
+    expect(boxes.actions.width).toBeLessThan(240);
+
+    if (viewport.width > 620) {
+      expect(boxes.actions.x).toBeGreaterThanOrEqual(boxes.title.x + boxes.title.width);
+      expect(Math.abs(
+        (boxes.actions.y + boxes.actions.height / 2)
+        - (boxes.title.y + boxes.title.height / 2),
+      )).toBeLessThan(8);
+    } else {
+      expect(boxes.actions.y).toBeGreaterThanOrEqual(boxes.title.y + boxes.title.height);
+      expect(boxes.actions.x).toBeLessThan(boxes.title.x + 8);
+    }
 
     await page.locator(".student-screen__header").screenshot({
       path: path.join(OUTPUT_DIR, `student-home-tablet-header-full-${viewport.name}.png`),

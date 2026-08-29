@@ -4,56 +4,92 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Lerndeck – Lehrerbereich</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="./teacher.css?v=2026-04-07-0212-reset-pin-icon" />
+    <link rel="stylesheet" href="./teacher.css?v=2026-08-29-import-spacing" />
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
-    <script src="./teacher.js?v=2026-04-09-1015-sticky-sessions" defer></script>
+    <script src="./teacher.js?v=2026-08-29-import-note" defer></script>
   </head>
   <body>
     <main id="teacher-auth-panel" class="teacher-auth">
-      <section class="teacher-auth__card" aria-labelledby="teacher-auth-title">
-        <p class="teacher-header__kicker">Lehrkraft</p>
-        <h1 id="teacher-auth-title" class="teacher-header__title">Lehrerbereich</h1>
-        <p class="teacher-header__message">
-          PIN eingeben, um Lernsets und Kopplungen zu verwalten.
-        </p>
+      <div class="teacher-auth__shell">
+        <div class="teacher-auth__brand" aria-label="Lerndeck">
+          <img class="teacher-auth__brand-icon" src="./assets/icons/lerndeck-stack.svg" alt="" decoding="async" />
+          <span class="teacher-auth__brand-name">Lerndeck</span>
+        </div>
 
-        <form id="teacher-auth-form" class="teacher-auth__form" novalidate>
-          <label class="teacher-auth__label" for="teacher-pin-input">PIN</label>
-          <input
-            id="teacher-pin-input"
-            class="teacher-auth__input"
-            name="teacher-pin"
-            type="password"
-            inputmode="numeric"
-            autocomplete="current-password"
-            placeholder="PIN eingeben"
-          />
-          <button class="teacher-button" type="submit">Freischalten</button>
-          <p id="teacher-auth-feedback" class="teacher-auth__feedback" aria-live="polite"></p>
-        </form>
-      </section>
+        <section class="teacher-auth__card" aria-labelledby="teacher-auth-title">
+          <h1 id="teacher-auth-title" class="teacher-header__title">Anmelden</h1>
+          <p class="teacher-header__message">
+            Wähle deinen Zugang und gib dein Passwort ein.
+          </p>
+
+          <form id="teacher-auth-form" class="teacher-auth__form" novalidate>
+            <label class="teacher-auth__label" for="teacher-account-select">Lehrkraft</label>
+            <div class="teacher-auth__account-field">
+              <span class="teacher-auth__account-icon" aria-hidden="true"></span>
+              <select
+                id="teacher-account-select"
+                class="teacher-auth__input teacher-auth__account-select"
+                name="teacher-id"
+                autocomplete="username"
+              >
+                <option value="">Zugang auswählen</option>
+              </select>
+              <span class="teacher-auth__account-chevron" aria-hidden="true"></span>
+            </div>
+
+            <label class="teacher-auth__label" for="teacher-password-input">Passwort</label>
+            <input
+              id="teacher-password-input"
+              class="teacher-auth__input"
+              name="teacher-password"
+              type="password"
+              autocomplete="current-password"
+              placeholder="Passwort"
+            />
+
+            <button id="teacher-auth-submit" class="teacher-button" type="submit">Anmelden</button>
+            <p id="teacher-auth-feedback" class="teacher-auth__feedback" aria-live="polite"></p>
+          </form>
+        </section>
+      </div>
     </main>
 
     <main id="teacher-shell" class="teacher-app" hidden>
       <header class="teacher-header">
         <div class="teacher-header__topline">
           <div>
-            <p class="teacher-header__kicker">Lehrkraft</p>
-            <h1 id="teacher-shell-title" class="teacher-header__title">Lernsets</h1>
+            <p id="teacher-profile-name" class="teacher-header__kicker">Lehrkraft</p>
+            <div class="teacher-header__title-row">
+              <img id="teacher-shell-icon" class="teacher-header__brand-icon" src="./assets/icons/lerndeck-stack.svg" alt="" decoding="async" data-section-icon="sets" />
+              <h1 id="teacher-shell-title" class="teacher-header__title">Lernsets</h1>
+            </div>
           </div>
-          <button id="teacher-logout-button" class="teacher-button teacher-button--secondary" type="button">
-            <img class="teacher-button__icon" src="./assets/icons/logout.svg" alt="" decoding="async" />
-            <span>Abmelden</span>
-          </button>
+          <div class="teacher-header__actions">
+            <div class="teacher-settings">
+              <button
+                id="teacher-settings-button"
+                class="teacher-button teacher-button--secondary teacher-settings__toggle"
+                type="button"
+                aria-label="Einstellungen"
+                aria-expanded="false"
+                aria-controls="teacher-settings-menu"
+              >
+                <img class="teacher-button__icon" src="./assets/icons/settings.svg" alt="" decoding="async" />
+              </button>
+              <div id="teacher-settings-menu" class="teacher-settings__menu" role="menu" hidden>
+                <button id="change-password-menu-button" class="teacher-settings__item" type="button" role="menuitem">
+                  Passwort ändern
+                </button>
+              </div>
+            </div>
+            <button id="teacher-logout-button" class="teacher-button teacher-button--secondary" type="button">
+              <img class="teacher-button__icon" src="./assets/icons/logout.svg" alt="" decoding="async" />
+              <span>Abmelden</span>
+            </button>
+          </div>
         </div>
         <p id="teacher-shell-message" class="teacher-header__message">
-          Lernsets verwalten, teilen und Tablet-Abos gezielt beenden.
+          Lernsets verwalten, teilen und ihre Nutzung auf Tablets sehen.
         </p>
         <div class="teacher-tabs" role="tablist" aria-label="Lehrerbereiche">
           <button
@@ -89,8 +125,14 @@
         data-teacher-panel="sets"
       >
         <div class="teacher-section__header">
-          <h2 id="sets-title" class="teacher-section__title">Verfügbare Sets</h2>
-          <p id="sets-meta" class="teacher-section__meta"></p>
+          <div>
+            <h2 id="sets-title" class="teacher-section__title">Meine Sets</h2>
+            <p id="sets-meta" class="teacher-section__meta"></p>
+          </div>
+          <button id="create-set-button" class="teacher-button" type="button">
+            <img class="teacher-button__icon" src="./assets/icons/square-plus.svg" alt="" decoding="async" />
+            <span>Neues Set</span>
+          </button>
         </div>
 
         <div id="teacher-empty-state" class="teacher-empty-state" hidden>
@@ -105,7 +147,7 @@
           <p id="teacher-error-message" class="teacher-empty-state__message"></p>
         </div>
 
-        <div id="teacher-set-list" class="teacher-set-list" role="list"></div>
+        <div id="teacher-set-list" class="teacher-set-list"></div>
       </section>
 
       <section
@@ -151,12 +193,15 @@
 
         <p class="share-panel__kicker">Teilen</p>
         <h2 id="share-title" class="share-panel__title"></h2>
-        <p id="share-path" class="share-panel__path"></p>
 
         <div class="share-panel__qr-shell">
           <div class="share-panel__qr-frame">
             <canvas id="share-qr-canvas" class="share-panel__qr" width="280" height="280"></canvas>
           </div>
+          <p id="share-path" class="share-panel__code">
+            <span class="share-panel__code-label">Set-Code</span>
+            <strong id="share-code" class="share-panel__code-value"></strong>
+          </p>
         </div>
 
         <div class="share-panel__link-block">
@@ -174,18 +219,163 @@
           >
             <img class="share-panel__action-icon" src="./assets/icons/copy.svg" alt="" />
           </button>
-          <button
-            id="print-share-button"
-            class="share-panel__action share-panel__action--secondary"
-            type="button"
-            aria-label="Drucken"
-            title="Drucken"
-          >
-            <img class="share-panel__action-icon" src="./assets/icons/print.svg" alt="" />
-          </button>
         </div>
 
         <p id="share-feedback" class="share-panel__feedback" aria-live="polite"></p>
+      </section>
+    </div>
+
+    <div id="password-overlay" class="share-overlay" hidden>
+      <div class="share-overlay__backdrop" data-close-password></div>
+      <section class="password-panel" role="dialog" aria-modal="true" aria-labelledby="password-dialog-title">
+        <header class="set-editor-panel__header">
+          <div>
+            <p class="share-panel__kicker">Einstellungen</p>
+            <h2 id="password-dialog-title" class="password-panel__title">Passwort ändern</h2>
+          </div>
+          <button id="password-dialog-close" class="share-panel__close" type="button" aria-label="Schließen">
+            <img class="share-panel__close-icon" src="./assets/icons/x-mark.svg" alt="" />
+          </button>
+        </header>
+
+        <form id="password-form" class="password-form" novalidate>
+          <label class="set-editor-field">
+            <span>Aktuelles Passwort</span>
+            <input id="current-password-input" name="currentPassword" type="password" autocomplete="current-password" required />
+          </label>
+          <label class="set-editor-field">
+            <span>Neues Passwort</span>
+            <input id="new-password-input" name="newPassword" type="password" autocomplete="new-password" minlength="8" maxlength="128" required />
+          </label>
+          <label class="set-editor-field">
+            <span>Neues Passwort wiederholen</span>
+            <input id="new-password-confirmation-input" name="newPasswordConfirmation" type="password" autocomplete="new-password" minlength="8" maxlength="128" required />
+          </label>
+          <p class="password-form__hint">Mindestens 8 Zeichen.</p>
+          <p id="password-feedback" class="teacher-auth__feedback" aria-live="polite"></p>
+          <div class="set-editor-actions">
+            <button id="password-dialog-cancel" class="teacher-button teacher-button--secondary" type="button">Abbrechen</button>
+            <button id="password-save-button" class="teacher-button" type="submit">Passwort speichern</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <div id="set-editor-overlay" class="share-overlay" hidden>
+      <div class="share-overlay__backdrop" data-close-set-editor></div>
+      <section
+        id="set-editor-panel"
+        class="set-editor-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="set-editor-title"
+      >
+        <header class="set-editor-panel__header">
+          <div>
+            <p class="share-panel__kicker">Lernset</p>
+            <h2 id="set-editor-title" class="share-panel__title">Neues Set</h2>
+          </div>
+          <button id="set-editor-close" class="share-panel__close" type="button" aria-label="Schließen">
+            <img class="share-panel__close-icon" src="./assets/icons/x-mark.svg" alt="" />
+          </button>
+        </header>
+
+        <section id="set-editor-choice" class="set-editor-choice" aria-label="Erstellungsart auswählen" hidden>
+          <div class="set-editor-choice__grid">
+            <button id="set-editor-choose-manual" class="set-editor-choice-card" type="button">
+              <strong>Manuell erstellen</strong>
+              <small>Karten selbst eingeben</small>
+              <span class="set-editor-choice-card__arrow" aria-hidden="true">→</span>
+            </button>
+            <button id="set-editor-choose-import" class="set-editor-choice-card set-editor-choice-card--accent" type="button">
+              <strong>Aus Material erstellen</strong>
+              <small>Datei, Bild oder Text verwenden</small>
+              <span class="set-editor-choice-card__arrow" aria-hidden="true">→</span>
+            </button>
+          </div>
+        </section>
+
+        <section id="set-import-section" class="set-import-section" aria-labelledby="set-import-title" hidden>
+          <div class="set-editor-view-header">
+            <button id="set-import-back" class="set-editor-back" type="button">
+              <span aria-hidden="true">←</span>
+              <span>Zurück</span>
+            </button>
+            <div>
+              <h3 id="set-import-title" class="set-editor-section-title">Material hinzufügen</h3>
+            </div>
+          </div>
+          <label id="set-import-dropzone" class="set-import-dropzone" for="set-import-files">
+            <span>Datei auswählen oder ablegen</span>
+            <small>Bild, PDF, DOCX, PPTX, TXT, MD oder CSV</small>
+            <small class="set-import-dropzone__privacy">Verarbeitung über OpenAI · keine Speicherung in Lerndeck</small>
+          </label>
+          <input id="set-import-files" type="file" multiple hidden accept=".txt,.md,.csv,.tsv,.jpg,.jpeg,.png,.webp,.gif,.pdf,.docx,.pptx" />
+          <textarea id="set-import-text" class="set-editor-textarea" rows="5" aria-label="Text einfügen" placeholder="Text oder Vokabelliste einfügen …"></textarea>
+          <label class="set-import-instruction-field" for="set-import-instruction">
+            <span>Was soll daraus werden? <small>optional</small></span>
+            <textarea id="set-import-instruction" class="set-editor-textarea set-import-instruction" rows="2" maxlength="2000" placeholder="z. B. Lektion 1 · Deutsch → Englisch · 15 Begriffe"></textarea>
+          </label>
+          <div class="set-editor-inline-actions">
+            <button id="create-import-draft-button" class="teacher-button" type="button">Entwurf erstellen</button>
+            <span id="set-import-file-summary" class="teacher-section__meta"></span>
+          </div>
+          <p id="set-import-feedback" class="teacher-auth__feedback" aria-live="polite"></p>
+        </section>
+
+        <form id="set-editor-form" class="set-editor-form" novalidate hidden>
+          <div class="set-editor-mode-bar">
+            <div>
+              <p class="share-panel__kicker">Manuelle Bearbeitung</p>
+              <p class="set-editor-help">Set-Daten und Karten prüfen oder direkt anpassen.</p>
+            </div>
+            <button id="set-open-import-button" class="teacher-button teacher-button--secondary" type="button">
+              Automatisch hinzufügen
+              <span aria-hidden="true">→</span>
+            </button>
+          </div>
+          <div class="set-editor-grid">
+            <label class="set-editor-field">
+              <span>Titel</span>
+              <input id="set-title-input" name="title" type="text" maxlength="160" required />
+            </label>
+            <label class="set-editor-field">
+              <span>Fach</span>
+              <input id="set-subject-input" name="subject" type="text" maxlength="120" placeholder="z. B. Englisch" />
+            </label>
+            <label class="set-editor-field">
+              <span>Vorderseite</span>
+              <input id="set-source-label-input" name="sourceLabel" type="text" maxlength="80" value="Begriff" />
+            </label>
+            <label class="set-editor-field">
+              <span>Rückseite</span>
+              <input id="set-target-label-input" name="targetLabel" type="text" maxlength="80" value="Übersetzung oder Definition" />
+            </label>
+          </div>
+
+          <label class="set-editor-field">
+            <span>Beschreibung <small>optional</small></span>
+            <input id="set-description-input" name="description" type="text" maxlength="500" />
+          </label>
+
+          <div class="set-card-editor-heading">
+            <div>
+              <h3 class="set-editor-section-title">Karten</h3>
+              <p id="set-card-count" class="teacher-section__meta">0 Karten</p>
+            </div>
+            <button id="add-card-button" class="teacher-button teacher-button--secondary" type="button">
+              <img class="teacher-button__icon" src="./assets/icons/square-plus.svg" alt="" decoding="async" />
+              <span>Karte hinzufügen</span>
+            </button>
+          </div>
+          <div id="set-card-editor-list" class="set-card-editor-list"></div>
+
+          <p id="set-editor-feedback" class="teacher-auth__feedback" aria-live="polite"></p>
+          <div class="set-editor-actions">
+            <button id="set-editor-cancel" class="teacher-button teacher-button--secondary" type="button">Abbrechen</button>
+            <button id="save-set-button" class="teacher-button" type="submit">Set speichern</button>
+          </div>
+        </form>
       </section>
     </div>
   </body>

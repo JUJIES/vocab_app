@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "teachers": [
+    { "id": "julius", "username": "julius", "displayName": "Julius" },
+    { "id": "jessi-s", "username": "jessi-s", "displayName": "Jessi S." },
+    { "id": "jessi-b", "username": "jessi-b", "displayName": "Jessi B." },
+    { "id": "joerg", "username": "joerg", "displayName": "Jörg" },
+    { "id": "aksana", "username": "aksana", "displayName": "Aksana" },
+    { "id": "matti", "username": "matti", "displayName": "Matti" }
+  ]
+}

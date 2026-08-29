@@ -7,6 +7,9 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const fsp = require("fs/promises");
 const path = require("path");
+const { ImportService } = require("./lib/import-service");
+const { SetService } = require("./lib/set-service");
+const { TeacherService } = require("./lib/teacher-service");
 
 const app = express();
 app.set("trust proxy", true);
@@ -19,14 +22,15 @@ const ACCESS_PIN_COOLDOWN_STEPS_MS = [
   5 * 60 * 1000,
 ];
 const MAX_TABLET_PIN_FAILURES = 5;
-const MAX_TEACHER_PIN_FAILURES = 5;
-const TEACHER_PIN_LOCKOUT_MS = 15 * 60 * 1000;
+const MAX_TEACHER_LOGIN_FAILURES = 5;
+const TEACHER_LOGIN_LOCKOUT_MS = 15 * 60 * 1000;
 const ACCESS_SESSION_COOKIE_NAME = "dino_vocab_access_session";
+const TEACHER_SESSION_COOKIE_NAME = "lerndeck_teacher_session";
 const ACCESS_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const ACCESS_SESSION_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 // Keep classroom devices signed in across lessons and restarts.
 const TABLET_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
-const TEACHER_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const TEACHER_SESSION_COOKIE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 const TABLET_SET_CARD_COLOR_KEYS = new Set([
   "slate",
   "blue",
@@ -48,21 +52,26 @@ const ROOT_DIR = __dirname;
 const DATA_DIR = process.env.DATA_DIR
   ? path.resolve(process.env.DATA_DIR)
   : path.join(ROOT_DIR, "data");
-const SET_INDEX_PATH = path.join(ROOT_DIR, "sets", "sets-index.json");
+const LEGACY_SET_SEED_INDEX_PATH = path.join(ROOT_DIR, "sets", "sets-index.json");
+const LEGACY_SET_OWNER_ID = "julius";
 const TABLETS_PATH = path.join(DATA_DIR, "tablets.json");
 const TABLET_SEED_PATH = path.join(ROOT_DIR, "data", "tablets.seed.json");
 const TABLET_SESSIONS_PATH = path.join(DATA_DIR, "tablet-sessions.json");
+const TEACHER_SEED_PATH = path.join(ROOT_DIR, "data", "teachers.seed.json");
 const HTTPS_KEY_PATH = path.join(ROOT_DIR, "certs", "dev-server-key.pem");
 const HTTPS_CERT_PATH = path.join(ROOT_DIR, "certs", "dev-server-cert.pem");
-const TEACHER_PIN = typeof process.env.TEACHER_PIN === "string" && process.env.TEACHER_PIN.trim()
-  ? process.env.TEACHER_PIN.trim()
-  : "";
 const tabletSessions = loadPersistedTabletSessions();
-const teacherSessions = new Map();
 const accessSessions = new Map();
-const teacherPinFailures = new Map();
+const teacherLoginFailures = new Map();
+const teacherService = new TeacherService({
+  dataDir: DATA_DIR,
+  seedPath: TEACHER_SEED_PATH,
+});
+const setService = new SetService({ dataDir: DATA_DIR });
+const importService = new ImportService();
 
-app.use(express.json());
+app.use("/api/teacher/import-draft", express.json({ limit: "18mb" }));
+app.use(express.json({ limit: "1mb" }));
 
 app.get("/health", (_request, response) => {
   response.json({
@@ -71,17 +80,42 @@ app.get("/health", (_request, response) => {
   });
 });
 
-app.post("/api/teacher/session", (request, response) => {
-  const pin = typeof request.body?.pin === "string" ? request.body.pin.trim() : "";
-  const clientIdentity = getClientIdentity(request);
-  const teacherFailureState = getTeacherPinFailureState(clientIdentity);
+app.get("/api/teacher/accounts", async (_request, response) => {
+  try {
+    response.json({ accounts: await teacherService.listPublicAccounts() });
+  } catch (error) {
+    console.error("Unable to load teacher accounts:", error);
+    response.status(500).json({ error: "Lehrkraftkonten konnten nicht geladen werden." });
+  }
+});
 
-  if (!TEACHER_PIN) {
-    response.status(503).json({
-      error: "Lehrerzugang ist auf diesem Server nicht konfiguriert.",
-    });
+app.get("/api/teacher/session", async (request, response) => {
+  const sessionResult = requireTeacherSession(request);
+
+  if (!sessionResult.ok) {
+    response.status(sessionResult.status).json({ error: sessionResult.error });
     return;
   }
+
+  try {
+    response.json({
+      teacher: await teacherService.getTeacher(sessionResult.teacherId),
+      session: {
+        teacherId: sessionResult.teacherId,
+        expiresAt: new Date(sessionResult.session.expiresAt).toISOString(),
+      },
+    });
+  } catch (error) {
+    response.status(500).json({ error: "Lehrkraftkonto konnte nicht geladen werden." });
+  }
+});
+
+app.post("/api/teacher/session", async (request, response) => {
+  const teacherId = typeof request.body?.teacherId === "string" ? request.body.teacherId.trim().toLowerCase() : "";
+  const password = typeof request.body?.password === "string" ? request.body.password : "";
+  const clientIdentity = getClientIdentity(request);
+  const failureIdentity = `${clientIdentity}:${teacherId || "unknown"}`;
+  const teacherFailureState = getTeacherLoginFailureState(failureIdentity);
 
   if (teacherFailureState?.lockedUntil > Date.now()) {
     response.status(429).json({
@@ -90,37 +124,76 @@ app.post("/api/teacher/session", (request, response) => {
     return;
   }
 
-  if (!pin) {
+  if (!teacherId || !password) {
     response.status(400).json({
-      error: "PIN fehlt.",
+      error: "Lehrkraft und Passwort sind erforderlich.",
     });
     return;
   }
 
-  if (pin !== TEACHER_PIN) {
-    registerTeacherPinFailure(clientIdentity);
-    response.status(401).json({
-      error: "PIN stimmt nicht.",
+  try {
+    const teacher = await teacherService.authenticate({ teacherId, password });
+    teacherLoginFailures.delete(failureIdentity);
+    const session = teacherService.createSession(teacher.id);
+    setTeacherSessionCookie(request, response, session.token);
+
+    response.json({
+      success: true,
+      teacher,
+      session: {
+        teacherId: teacher.id,
+        expiresAt: session.expiresAt,
+      },
     });
-    return;
+  } catch (error) {
+    if (error?.status === 401) {
+      registerTeacherLoginFailure(failureIdentity);
+    }
+
+    response.status(error?.status || 500).json({
+      error: error?.status ? error.message : "Anmeldung konnte nicht abgeschlossen werden.",
+      code: error?.code || "TEACHER_LOGIN_FAILED",
+    });
   }
-
-  teacherPinFailures.delete(clientIdentity);
-
-  response.json({
-    success: true,
-    session: createTeacherSession(),
-  });
 });
 
 app.delete("/api/teacher/session", (request, response) => {
-  const sessionResult = requireTeacherSession(request);
-
-  if (sessionResult.ok) {
-    teacherSessions.delete(sessionResult.token);
-  }
+  teacherService.deleteSession(getTeacherSessionToken(request));
+  clearTeacherSessionCookie(request, response);
 
   response.status(204).end();
+});
+
+app.post("/api/teacher/password", async (request, response) => {
+  const sessionResult = requireTeacherSession(request);
+  if (!sessionResult.ok) {
+    response.status(sessionResult.status).json({ error: sessionResult.error });
+    return;
+  }
+
+  try {
+    const teacher = await teacherService.changePassword({
+      teacherId: sessionResult.teacherId,
+      currentPassword: request.body?.currentPassword,
+      newPassword: request.body?.newPassword,
+    });
+    teacherService.deleteSessionsForTeacher(sessionResult.teacherId);
+    const session = teacherService.createSession(sessionResult.teacherId);
+    setTeacherSessionCookie(request, response, session.token);
+    response.json({
+      success: true,
+      teacher,
+      session: {
+        teacherId: session.teacherId,
+        expiresAt: session.expiresAt,
+      },
+    });
+  } catch (error) {
+    response.status(error?.status || 500).json({
+      error: error?.status ? error.message : "Passwort konnte nicht geändert werden.",
+      code: error?.code || "PASSWORD_CHANGE_FAILED",
+    });
+  }
 });
 
 app.get("/api/sets", async (request, response) => {
@@ -134,21 +207,107 @@ app.get("/api/sets", async (request, response) => {
   }
 
   try {
-    const data = await readJsonFile(SET_INDEX_PATH, { sets: [] });
     const store = await readTabletStore();
-    const sets = await buildResolvedSetEntries(Array.isArray(data?.sets) ? data.sets : []);
+    const sets = await setService.listOwnedSets(sessionResult.teacherId);
 
     response.json({
       sets: sets.map((setEntry) => ({
         ...setEntry,
         tablets: getTabletsForSet(store, setEntry?.path),
       })),
+      teacher: {
+        id: sessionResult.teacherId,
+      },
+      importConfigured: importService.isConfigured(),
     });
   } catch (error) {
     console.error("Unable to load set index:", error);
     response.status(500).json({
       error: "Set-Liste konnte nicht geladen werden.",
     });
+  }
+});
+
+app.get("/api/teacher/sets/:setId", async (request, response) => {
+  const sessionResult = requireTeacherSession(request);
+  if (!sessionResult.ok) {
+    response.status(sessionResult.status).json({ error: sessionResult.error });
+    return;
+  }
+
+  try {
+    const setEntry = await setService.getOwnedSet(sessionResult.teacherId, request.params.setId);
+    if (!setEntry) {
+      response.status(404).json({ error: "Set nicht gefunden." });
+      return;
+    }
+    response.json({ set: setEntry });
+  } catch (error) {
+    handleApiError(response, error, "Set konnte nicht geladen werden.");
+  }
+});
+
+app.post("/api/teacher/sets", async (request, response) => {
+  const sessionResult = requireTeacherSession(request);
+  if (!sessionResult.ok) {
+    response.status(sessionResult.status).json({ error: sessionResult.error });
+    return;
+  }
+
+  try {
+    const setEntry = await setService.createSet(sessionResult.teacherId, request.body);
+    response.status(201).json({ success: true, set: setEntry });
+  } catch (error) {
+    handleApiError(response, error, "Set konnte nicht erstellt werden.");
+  }
+});
+
+app.put("/api/teacher/sets/:setId", async (request, response) => {
+  const sessionResult = requireTeacherSession(request);
+  if (!sessionResult.ok) {
+    response.status(sessionResult.status).json({ error: sessionResult.error });
+    return;
+  }
+
+  try {
+    const setEntry = await setService.updateSet(sessionResult.teacherId, request.params.setId, request.body);
+    response.json({ success: true, set: setEntry });
+  } catch (error) {
+    handleApiError(response, error, "Set konnte nicht gespeichert werden.");
+  }
+});
+
+app.post("/api/teacher/import-draft", async (request, response) => {
+  const sessionResult = requireTeacherSession(request);
+  if (!sessionResult.ok) {
+    response.status(sessionResult.status).json({ error: sessionResult.error });
+    return;
+  }
+
+  try {
+    const result = await importService.createDraft({
+      teacherId: sessionResult.teacherId,
+      text: request.body?.text,
+      instruction: request.body?.instruction,
+      files: request.body?.files,
+    });
+    response.json(result);
+  } catch (error) {
+    console.error("Unable to create import draft:", error?.code || error);
+    handleApiError(response, error, "Material konnte nicht verarbeitet werden.");
+  }
+});
+
+app.get("/api/set-codes/:shareCode", async (request, response) => {
+  try {
+    const setEntry = await setService.resolveShareCode(request.params.shareCode);
+    if (!setEntry) {
+      response.status(404).json({ error: "Set-Code nicht gefunden." });
+      return;
+    }
+    response.json({ set: setEntry });
+  } catch (error) {
+    handleApiError(response, error, "Set-Code konnte nicht geprüft werden.");
   }
 });
 
@@ -166,6 +325,8 @@ app.get("/api/access-session", (request, response) => {
     accessSession: serializeAccessSession(accessSessionResult.session),
   });
 });
+
+app.use("/api/tablets", serializeMutatingRequests());
 
 app.get("/api/tablet-directory", async (_request, response) => {
   try {
@@ -273,8 +434,7 @@ app.get("/api/tablets/:tabletId/subscriptions", async (request, response) => {
       return;
     }
 
-    const setIndex = await readJsonFile(SET_INDEX_PATH, { sets: [] });
-    const setEntries = await buildResolvedSetEntries(Array.isArray(setIndex?.sets) ? setIndex.sets : []);
+    const setEntries = await getAllPublishedSetEntries();
 
     response.json({
       tablet: toSafeTablet(tablet),
@@ -412,8 +572,7 @@ app.post("/api/tablets/:tabletId/subscriptions", async (request, response) => {
       return;
     }
 
-    const setIndex = await readJsonFile(SET_INDEX_PATH, { sets: [] });
-    const setEntries = await buildResolvedSetEntries(Array.isArray(setIndex?.sets) ? setIndex.sets : []);
+    const setEntries = await getAllPublishedSetEntries();
     const setExists = setEntries.some((entry) => entry?.path === setPath);
 
     if (!setExists) {
@@ -1057,11 +1216,48 @@ app.get("/teacher", (_request, response) => {
   response.sendFile(path.join(ROOT_DIR, "teacher.html"));
 });
 
+app.get("/sets/user/:setId.json", async (request, response) => {
+  try {
+    const setEntry = await setService.findPublishedSetById(request.params.setId);
+    if (!setEntry) {
+      response.status(404).json({ error: "Set nicht gefunden." });
+      return;
+    }
+
+    response.set("Cache-Control", "no-store");
+    response.json(setService.toSetDocument(setEntry));
+  } catch (error) {
+    handleApiError(response, error, "Set konnte nicht geladen werden.");
+  }
+});
+
+app.get("/sets/:setFile", async (request, response, next) => {
+  const setPath = normalizeSetPath(`sets/${request.params.setFile}`);
+  if (!setPath) {
+    next();
+    return;
+  }
+
+  try {
+    const setEntry = await setService.findPublishedSetByPath(setPath);
+    if (!setEntry) {
+      next();
+      return;
+    }
+
+    response.set("Cache-Control", "no-store");
+    response.json(setService.toSetDocument(setEntry));
+  } catch (error) {
+    handleApiError(response, error, "Set konnte nicht geladen werden.");
+  }
+});
+
 const PUBLIC_ROOT_FILES = new Map([
   ["/", "index.html"],
   ["/index.html", "index.html"],
   ["/styles.css", "styles.css"],
   ["/app.js", "app.js"],
+  ["/teacher.html", "teacher.html"],
   ["/teacher.css", "teacher.css"],
   ["/teacher.js", "teacher.js"],
   ["/manifest.webmanifest", "manifest.webmanifest"],
@@ -1083,26 +1279,38 @@ for (const publicDirectory of ["assets", "audio", "icons", "sets"]) {
   }));
 }
 
-http.createServer(app).listen(PORT, HOST, () => {
-  console.log(`Lerndeck listening on http://${HOST}:${PORT}`);
-});
-
 const shouldStartLocalHttps = !process.env.RENDER && fs.existsSync(HTTPS_KEY_PATH) && fs.existsSync(HTTPS_CERT_PATH);
 
-if (shouldStartLocalHttps) {
-  try {
-    const key = fs.readFileSync(HTTPS_KEY_PATH);
-    const cert = fs.readFileSync(HTTPS_CERT_PATH);
-
-    https.createServer({ key, cert }, app).listen(HTTPS_PORT, HOST, () => {
-      console.log(`Lerndeck listening on https://${HOST}:${HTTPS_PORT}`);
-    });
-  } catch (error) {
-    console.error("Unable to start HTTPS server:", error);
+async function startServers() {
+  const migration = await migrateLegacySetsToJulius();
+  if (migration.added > 0) {
+    console.log(`${migration.added} vorhandene Lernsets Julius zugeordnet.`);
   }
-} else {
-  console.log("HTTPS disabled: Render handles TLS in production, local dev certs are optional.");
+
+  http.createServer(app).listen(PORT, HOST, () => {
+    console.log(`Lerndeck listening on http://${HOST}:${PORT}`);
+  });
+
+  if (shouldStartLocalHttps) {
+    try {
+      const key = fs.readFileSync(HTTPS_KEY_PATH);
+      const cert = fs.readFileSync(HTTPS_CERT_PATH);
+
+      https.createServer({ key, cert }, app).listen(HTTPS_PORT, HOST, () => {
+        console.log(`Lerndeck listening on https://${HOST}:${HTTPS_PORT}`);
+      });
+    } catch (error) {
+      console.error("Unable to start HTTPS server:", error);
+    }
+  } else {
+    console.log("HTTPS disabled: Render handles TLS in production, local dev certs are optional.");
+  }
 }
+
+startServers().catch((error) => {
+  console.error("Lerndeck konnte nicht gestartet werden:", error);
+  process.exitCode = 1;
+});
 
 async function readJsonFile(filePath, fallbackValue) {
   try {
@@ -1143,57 +1351,54 @@ async function readTabletStore() {
   };
 }
 
-async function buildResolvedSetEntries(setEntries) {
-  const resolvedEntries = await Promise.all(
-    (Array.isArray(setEntries) ? setEntries : []).map((entry) => resolveSetEntryMetadata(entry)),
-  );
-
-  return resolvedEntries.filter(Boolean);
+async function getAllPublishedSetEntries() {
+  return setService.listPublishedEntries();
 }
 
-async function resolveSetEntryMetadata(entry) {
-  if (!entry || typeof entry !== "object") {
-    return null;
-  }
+async function migrateLegacySetsToJulius() {
+  const index = await readJsonFile(LEGACY_SET_SEED_INDEX_PATH, { sets: [] });
+  const seedSets = await Promise.all((Array.isArray(index?.sets) ? index.sets : []).map(async (entry) => {
+    const setPath = normalizeSetPath(entry?.path);
+    if (!setPath) {
+      throw new Error(`Ungültiger historischer Set-Pfad: ${entry?.path || "(leer)"}`);
+    }
 
-  const setPath = normalizeSetPath(entry.path);
-
-  if (!setPath) {
-    return null;
-  }
-
-  const normalizedEntry = {
-    ...entry,
-    path: setPath,
-  };
-
-  try {
-    const setDocument = await readJsonFile(path.join(ROOT_DIR, setPath), null);
-    const setMeta = setDocument?.set && typeof setDocument.set === "object" ? setDocument.set : null;
-    const languages = setMeta?.languages && typeof setMeta.languages === "object" ? setMeta.languages : null;
-    const derivedSubject = resolveSetSubject(normalizedEntry.subject, setMeta?.subject, languages);
-    const derivedDescription = typeof normalizedEntry.description === "string" && normalizedEntry.description.trim()
-      ? normalizedEntry.description.trim()
-      : (typeof setMeta?.description === "string" ? setMeta.description.trim() : "");
+    const document = await readJsonFile(path.join(ROOT_DIR, setPath));
+    const setMeta = document?.set && typeof document.set === "object" ? document.set : {};
+    const languages = setMeta.languages && typeof setMeta.languages === "object" ? setMeta.languages : {};
+    const labels = setMeta.labels && typeof setMeta.labels === "object" ? setMeta.labels : {};
+    const id = typeof entry?.id === "string" && entry.id.trim() ? entry.id.trim() : setMeta.id;
 
     return {
-      ...normalizedEntry,
-      title: typeof normalizedEntry.title === "string" && normalizedEntry.title.trim()
-        ? normalizedEntry.title.trim()
-        : (typeof setMeta?.title === "string" ? setMeta.title.trim() : normalizedEntry.path),
-      subject: derivedSubject,
-      description: derivedDescription,
-      cardCount: Number.isFinite(normalizedEntry.cardCount)
-        ? normalizedEntry.cardCount
-        : (Array.isArray(setDocument?.cards) ? setDocument.cards.length : null),
+      id,
+      path: setPath,
+      title: entry?.title || setMeta.title,
+      subject: resolveSetSubject(entry?.subject, setMeta.subject, languages),
+      description: entry?.description || setMeta.description,
+      sourceLanguage: languages.source,
+      targetLanguage: languages.target,
+      sourceLabel: labels.source || getLanguageLabel(languages.source, "Begriff"),
+      targetLabel: labels.target || getLanguageLabel(languages.target, "Übersetzung oder Definition"),
+      revision: setMeta.revision,
+      createdAt: setMeta.createdAt,
+      updatedAt: setMeta.updatedAt,
+      publishedAt: setMeta.createdAt,
+      cards: (Array.isArray(document?.cards) ? document.cards : []).map((card) => ({
+        id: card?.id,
+        front: card?.source?.text,
+        back: card?.target?.text,
+        acceptedAnswers: card?.acceptedAnswers,
+        presentation: {
+          examples: card?.examples,
+          hintData: card?.hintData,
+          meta: card?.meta,
+          audio: card?.audio,
+        },
+      })),
     };
-  } catch (_error) {
-    return {
-      ...normalizedEntry,
-      subject: resolveSetSubject(normalizedEntry.subject, "", null),
-      description: typeof normalizedEntry.description === "string" ? normalizedEntry.description.trim() : "",
-    };
-  }
+  }));
+
+  return setService.ensureOwnedSeedSets(LEGACY_SET_OWNER_ID, seedSets);
 }
 
 function resolveSetSubject(indexSubject, setSubject, languages) {
@@ -1217,6 +1422,18 @@ function resolveSetSubject(indexSubject, setSubject, languages) {
   }
 
   return "";
+}
+
+function getLanguageLabel(languageCode, fallback) {
+  const labels = {
+    de: "Deutsch",
+    en: "Englisch",
+    fr: "Französisch",
+    es: "Spanisch",
+    it: "Italienisch",
+  };
+  const normalizedCode = typeof languageCode === "string" ? languageCode.trim().toLowerCase() : "";
+  return labels[normalizedCode] || fallback;
 }
 
 async function writeTabletStore(store) {
@@ -1262,33 +1479,33 @@ function getClientIdentity(request) {
     : (request.socket?.remoteAddress || "unknown");
 }
 
-function getTeacherPinFailureState(clientIdentity, now = Date.now()) {
-  const state = teacherPinFailures.get(clientIdentity);
+function getTeacherLoginFailureState(clientIdentity, now = Date.now()) {
+  const state = teacherLoginFailures.get(clientIdentity);
 
   if (!state) {
     return null;
   }
 
   if (state.lockedUntil && state.lockedUntil <= now) {
-    teacherPinFailures.delete(clientIdentity);
+    teacherLoginFailures.delete(clientIdentity);
     return null;
   }
 
   return state;
 }
 
-function registerTeacherPinFailure(clientIdentity, now = Date.now()) {
-  const currentState = getTeacherPinFailureState(clientIdentity, now) || {
+function registerTeacherLoginFailure(clientIdentity, now = Date.now()) {
+  const currentState = getTeacherLoginFailureState(clientIdentity, now) || {
     failureCount: 0,
     lockedUntil: 0,
   };
   currentState.failureCount += 1;
 
-  if (currentState.failureCount >= MAX_TEACHER_PIN_FAILURES) {
-    currentState.lockedUntil = now + TEACHER_PIN_LOCKOUT_MS;
+  if (currentState.failureCount >= MAX_TEACHER_LOGIN_FAILURES) {
+    currentState.lockedUntil = now + TEACHER_LOGIN_LOCKOUT_MS;
   }
 
-  teacherPinFailures.set(clientIdentity, currentState);
+  teacherLoginFailures.set(clientIdentity, currentState);
   return currentState;
 }
 
@@ -1408,6 +1625,72 @@ function readCookie(request, cookieName) {
   }
 
   return "";
+}
+
+function getTeacherSessionToken(request) {
+  return readCookie(request, TEACHER_SESSION_COOKIE_NAME) || getBearerToken(request);
+}
+
+function setTeacherSessionCookie(request, response, token) {
+  response.cookie(TEACHER_SESSION_COOKIE_NAME, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: request.secure,
+    path: "/",
+    maxAge: TEACHER_SESSION_COOKIE_MAX_AGE_MS,
+  });
+}
+
+function clearTeacherSessionCookie(request, response) {
+  response.clearCookie(TEACHER_SESSION_COOKIE_NAME, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: request.secure,
+    path: "/",
+  });
+}
+
+function serializeMutatingRequests() {
+  let queueTail = Promise.resolve();
+
+  return (request, response, next) => {
+    if (["GET", "HEAD", "OPTIONS"].includes(request.method)) {
+      next();
+      return;
+    }
+
+    const previousTurn = queueTail;
+    let releaseTurn;
+    queueTail = new Promise((resolve) => {
+      releaseTurn = resolve;
+    });
+
+    previousTurn.then(() => {
+      let released = false;
+      const release = () => {
+        if (released) {
+          return;
+        }
+        released = true;
+        releaseTurn();
+      };
+
+      response.once("finish", release);
+      response.once("close", release);
+      next();
+    });
+  };
+}
+
+function handleApiError(response, error, fallbackMessage) {
+  const status = Number.isFinite(error?.status) ? error.status : 500;
+  if (status >= 500) {
+    console.error(fallbackMessage, error);
+  }
+  response.status(status).json({
+    error: (status < 500 || error?.expose) && error?.message ? error.message : fallbackMessage,
+    code: error?.code || "INTERNAL_ERROR",
+  });
 }
 
 function createEmptyAccessSession(now = Date.now()) {
@@ -1564,21 +1847,6 @@ function createTabletSession(tabletId) {
   };
 }
 
-function createTeacherSession() {
-  purgeExpiredSessions(teacherSessions);
-  const expiresAt = Date.now() + TEACHER_SESSION_TTL_MS;
-  const token = createSessionToken();
-
-  teacherSessions.set(token, {
-    expiresAt,
-  });
-
-  return {
-    token,
-    expiresAt: new Date(expiresAt).toISOString(),
-  };
-}
-
 function purgeExpiredSessions(sessionStore) {
   const now = Date.now();
   let removedCount = 0;
@@ -1716,36 +1984,7 @@ function persistTabletSessions() {
 }
 
 function requireTeacherSession(request) {
-  purgeExpiredSessions(teacherSessions);
-  const token = getBearerToken(request);
-
-  if (!token) {
-    return {
-      ok: false,
-      status: 401,
-      error: "Lehrer-PIN erforderlich.",
-    };
-  }
-
-  const session = teacherSessions.get(token);
-
-  if (!session) {
-    return {
-      ok: false,
-      status: 401,
-      error: "Lehrer-Sitzung abgelaufen. Bitte PIN erneut eingeben.",
-    };
-  }
-
-  session.expiresAt = Date.now() + TEACHER_SESSION_TTL_MS;
-  teacherSessions.set(token, session);
-
-  return {
-    ok: true,
-    status: 200,
-    token,
-    session,
-  };
+  return teacherService.requireSession(getTeacherSessionToken(request));
 }
 
 function requireTabletOrTeacherSession(request, tabletId) {

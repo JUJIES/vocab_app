@@ -1,65 +1,79 @@
 # Lerndeck
 
-Lerndeck ist eine ruhige, tablet-optimierte Web-App zum Vokabellernen im Unterricht. Ein Tablet wird einmal einem festen Gerätezugang zugeordnet, bleibt angemeldet und erhält Lernsets per Link oder QR-Code. Lernstände werden serverseitig pro Tablet und Lernmodus gespeichert.
+Lerndeck ist eine ruhige, tablet-optimierte Web-App zum Lernen im Unterricht. Schüler arbeiten ohne persönliche Registrierung über feste Gerätenamen. Lehrkräfte erstellen private Lernsets, teilen sie per sechsstelligen Code oder QR-Link und Änderungen bleiben unter derselben Set-Adresse verfügbar.
 
-## Aktueller Produktstand
+## Montag-MVP
 
-Für einen ersten Unterrichtstest verfügbar:
+Einsatzbereit sind:
 
-- Tablet einmalig auswählen, mit PIN registrieren und dauerhaft anmelden
-- Lernsets per Link oder QR-Code hinzufügen
-- Lernmodi `Sichten`, `Üben` und `Eingabe`
-- Sterne, Durchgänge und Ergebnisse pro Tablet speichern
-- Lehrerbereich unter `/teacher` für Lernsets, QR-Codes und Tablet-Verwaltung
-- installierbare PWA mit Manifest und Service Worker
+- 29 vorbereitete Geräteprofile von `Blau 1` bis `Schwarz 6`
+- einmalige Tablet-Kopplung mit Geräte-PIN und dauerhafte, widerrufbare Sitzung
+- sechs vorbereitete Lehrkraftkonten: Julius, Jessi S., Jessi B., Jörg, Aksana und Matti
+- direkt nutzbare Lehrkraftkonten mit einmaligem Startpasswort und eigenem Passwortwechsel im Zahnrad-Menü
+- ausschließlich private Sets pro Lehrkraft mit Erstellen, Bearbeiten und stabilem Set-Code; es gibt im MVP keine Vorlagen oder zwischen Lehrkräften geteilten Bibliotheken
+- Schnellimport aus klaren Textlisten ohne KI sowie KI-Entwürfe aus Freitext, TXT, MD, CSV, Bildern, PDF, DOCX und PPTX; eine optionale Importnotiz grenzt Auswahl, Umfang und Abfragerichtung ein
+- Schülerübernahme per Code, QR oder Link; der Set-Inhalt wird nicht auf das Tablet kopiert
+- Modi `Sichten`, `Üben` und `Eingabe`; falsche Eingaben müssen im Korrekturmodus richtig wiederholt werden
+- Lernstand pro Tablet, Set und Lernmodus
+- Browserbetrieb unter Safari, Chrome und Desktop-Browsern; die PWA ist nur eine Komfortschicht
 
-Noch nicht fertig:
+Bewusst vertagt sind persönliche Schülerkonten, Dino-Lernpässe, Schulen/Gruppen, Set-Zuweisungsverwaltung, Tauri und der Modus `Testen`.
 
-- `Testen` ist in der Oberfläche als späterer Modus markiert
-- Lernsets können im Lehrerbereich noch nicht erstellt oder als Datei importiert werden
-- Sets werden derzeit als validierte JSON-Dateien unter `sets/` abgelegt und in `sets/sets-index.json` registriert
+## Zentrale Produktlogik
 
-## Zentrale Datenflüsse
+1. Das Tablet wählt einmal seinen bekannten Gerätenamen und setzt einen PIN. Browser und Server halten eine widerrufbare Gerätesitzung.
+2. Eine Lehrkraft besitzt ihre eigenen Sets. Andere Lehrkraftkonten sehen diese Sets im Editor nicht.
+3. Ein veröffentlichtes Set erhält genau einen stabilen Pfad und Code. Bearbeitungen erhöhen die Revision, ersetzen aber weder Pfad noch Code.
+4. Ein Code fügt nur den stabilen Set-Pfad zum Tablet hinzu. Beim nächsten Öffnen oder Neuladen kommt die aktuelle Revision vom Server; ein laufender Durchgang wird nicht mitten in einer Karte umgebaut.
+5. Lernstände bleiben am Tablet. Unveränderte Karten behalten bei einer Set-Bearbeitung ihre Karten-ID; nur inhaltlich geänderte Karten erhalten eine neue ID.
+6. Importmaterial erzeugt immer nur einen bearbeitbaren Entwurf. Eine optionale Importnotiz wie `nur Lektion 1, Deutsch → Englisch` steuert Auswahl und Richtung. Originaldateien werden nicht gespeichert. Modellantworten werden serverseitig gegen dasselbe Set-Datenmodell validiert.
 
-1. Ein Tablet wird aus dem serverseitigen Tablet-Verzeichnis gewählt und mit einem eigenen PIN registriert.
-2. Der Browser speichert Geräte-ID und Sitzung lokal. Der Server speichert nur einen Hash des Sitzungstokens unter `DATA_DIR/tablet-sessions.json`.
-3. Ein Set-Link fügt das Set zum Tablet hinzu. Die Setdatei bleibt unveränderlicher Inhalt unter `sets/`.
-4. Lernstände und Set-Zuweisungen werden in `DATA_DIR/tablets.json` gespeichert.
-5. Entkoppeln oder erneutes Anmelden widerruft vorhandene Tablet-Sitzungen.
+Runtime-Daten liegen ausschließlich in `DATA_DIR` und dürfen bei Deployments nicht ersetzt werden. JSON-Schreibvorgänge laufen serialisiert und über atomare Dateiersetzung. Das ist für den einzelnen Beelink-Prozess bewusst einfach; bei mehreren Serverinstanzen muss die Store-Schicht später durch eine gemeinsame Datenbank ersetzt werden.
 
-`DATA_DIR` muss im Betrieb außerhalb des Release-Verzeichnisses liegen. Ein neues Deployment darf diese Daten nicht überschreiben.
-Fehlt `DATA_DIR/tablets.json` beim ersten Start, initialisiert der Server es aus dem PIN-freien `data/tablets.seed.json`.
+Die fünf historisch mitgelieferten Lernsets werden beim ersten Start idempotent Julius zugeordnet. Dabei bleiben Set-Pfade, Karten-IDs und damit bestehende Set-Verknüpfungen der Tablets und Lernstände erhalten. Die Dateien unter `sets/` dienen danach nur noch als einmalige Migrationsquelle und erscheinen nicht als Vorlagen.
 
 ## Lokaler Start
 
 ```bash
 npm install
-npm start
+npm run provision:teachers -- --data-dir=/absoluter/pfad/zur/runtime/data
+DATA_DIR=/absoluter/pfad/zur/runtime/data OPENAI_API_KEY=... npm start
 ```
 
-Standardmäßig läuft die App auf `http://localhost:3000`. Der Lehrerzugang bleibt deaktiviert, bis `TEACHER_PIN` ausdrücklich gesetzt wurde. Es gibt keinen produktiven Standard-PIN.
+Der Provisionierungsschritt gibt einmalig zufällige Startpasswörter für Konten ohne Passwort aus. Bereits eingerichtete Konten bleiben unverändert. Die Startpasswörter werden sicher persönlich weitergegeben; nach der ersten Anmeldung führt Lerndeck direkt zum Passwortwechsel im Zahnrad-Menü. `--reset-passwords` setzt bewusst auch bestehende Passwörter zurück und gehört nicht in den normalen Ablauf. Passwörter und API-Key gehören weder ins Repository noch in Screenshots oder Tickets.
 
-Wichtige Checks:
+Ein einzelnes vergessenes Lehrkraftpasswort wird gezielt zurückgesetzt, ohne andere Konten zu verändern: `npm run provision:teachers -- --data-dir=/absoluter/pfad/zur/runtime/data --reset-teacher=julius`. Dabei werden bestehende Sitzungen dieses Kontos widerrufen und ein neues einmaliges Startpasswort ausgegeben.
+
+Der KI-Import überträgt eingegebenes Material an die konfigurierte OpenAI API. Für den Feldtest nur Material ohne personenbezogene Schülerdaten verwenden und die organisatorische Freigabe der Schule beziehungsweise des Trägers beachten.
+
+Bilder und Screenshots werden für kleine Buchschrift in Originalauflösung visuell ausgewertet; PDFs liefern Text und Seitenbilder in hoher Detailstufe. Bei DOCX und PPTX verarbeitet die API dagegen den extrahierten Text, nicht darin eingebettete Bilder oder Diagramme. Buchseiten deshalb direkt als Bild oder PDF hochladen. Begriffe müssen aus dem Material stammen; ausdrücklich gewünschte Übersetzungen oder kurze Definitionen darf das Modell fachlich ergänzen.
+
+Wichtige Umgebungsvariablen:
+
+- `DATA_DIR`: persistenter Runtime-Ordner, im Betrieb zwingend außerhalb des Releases
+- `OPENAI_API_KEY`: serverseitiger Key für KI-Import; ohne ihn funktionieren manuelle Sets und klare Textlisten weiter
+- `OPENAI_IMPORT_MODEL`: optional, Standard `gpt-5.6-terra`
+- `PUBLIC_BASE_URL`: öffentliche HTTPS-Basis für erzeugte QR-Links
+- `PORT` und `HOST`: Standard `3000` und `0.0.0.0`
+
+## Checks
 
 ```bash
-npm run check
+npm run verify
 npm audit --omit=dev
 ```
 
-Mit einem isolierten `DATA_DIR`, einem laufenden Server auf Port `4012` und gesetztem `TEACHER_PIN` prüft folgender Test den vollständigen Montag-MVP:
+Der isolierte Browser-Smoke-Test braucht eine laufende Testinstanz, einen aktivierten Testaccount und ein wegwerfbares `DATA_DIR`:
 
 ```bash
-BASE_URL=http://127.0.0.1:4012 TEACHER_PIN=... npx playwright test scripts/mvp-smoke.spec.js
+BASE_URL=http://127.0.0.1:4012 \
+TEACHER_ID=julius \
+TEACHER_PASSWORD=... \
+npx playwright test scripts/mvp-smoke.spec.js
 ```
 
-Der Healthcheck liegt unter `/health`.
+Der Test erstellt ein Set und mutiert ein Tablet; niemals gegen echte Unterrichtsdaten laufen lassen. Der Healthcheck liegt unter `/health`.
 
-## Lernset hinzufügen
+## Betrieb
 
-Eine vorhandene Setdatei unter `sets/` ist das aktuelle Importformat. Ihr Aufbau folgt den bestehenden Beispielen, insbesondere `sets/food-basics-01.json`. Danach wird genau ein Eintrag in `sets/sets-index.json` ergänzt. Vor dem Deployment müssen ID, Pfad, Titel und Kartenanzahl geprüft werden.
-
-Ein Browser-Import gehört zur nächsten Produktphase. Er sollte dieselbe JSON-Struktur validieren und keine zweite Set-Datenstruktur einführen.
-
-## Deployment
-
-Der verbindliche Beelink-Ablauf steht in [docs/DEPLOYMENT_BEELINK.md](docs/DEPLOYMENT_BEELINK.md). Releases und persistente Daten bleiben dabei strikt getrennt.
+Die verbindlichen Beelink-Schritte stehen in [docs/DEPLOYMENT_BEELINK.md](docs/DEPLOYMENT_BEELINK.md). Produktentscheidungen und vertagte Komponenten stehen in [docs/DECISIONS.md](docs/DECISIONS.md). Der geplante, noch nicht implementierte KI-Bildworkflow ist in [docs/VISUAL_VOCABULARY_PLAN.md](docs/VISUAL_VOCABULARY_PLAN.md) festgehalten. Der Lehrerbereich ist unter `/teacher`, die Schüler-App unter `/` erreichbar.

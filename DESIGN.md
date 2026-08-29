@@ -1,5 +1,7 @@
 # Design System Specification: The Academic Sanctuary
 
+> Status: Diese Datei beschreibt die visuelle Zielrichtung. Teile der bestehenden Schüler- und Lehreroberfläche verwenden noch das ältere dunkle Theme. Vor dem Unterrichtsrollout ist ein gezielter visueller Review vorgesehen; Produkt- und Datenlogik sollen dafür nicht erneut umgebaut werden.
+
 ## 1. Overview & Creative North Star
 The Creative North Star for this design system is **"The Stoic Atelier."** 
 

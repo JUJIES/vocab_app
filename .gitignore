@@ -9,3 +9,6 @@ artifacts/
 test-results/
 data/tablet-sessions.json
 data/tablets.json
+data/teacher-sessions.json
+data/teacher-sets.json
+data/teachers.json

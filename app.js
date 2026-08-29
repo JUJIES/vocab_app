@@ -104,7 +104,7 @@ const state = {
   learningProgressSavePending: false,
   inputAdvanceTimeoutId: null,
   inputSettingsOpen: false,
-  inputCorrectionModeEnabled: false,
+  inputCorrectionModeEnabled: true,
   inputDelayEditorType: "correct",
   inputCorrectAdvanceDelayMs: DEFAULT_INPUT_CORRECT_ADVANCE_DELAY_MS,
   inputIncorrectAdvanceDelayMs: DEFAULT_INPUT_INCORRECT_ADVANCE_DELAY_MS,
@@ -501,7 +501,7 @@ function bindEvents() {
   elements.flashcardMenuLogout.addEventListener("click", handleFlashcardMenuLogout);
   elements.inputMenuLogout.addEventListener("click", handleInputMenuLogout);
   elements.inputSettingsButton.addEventListener("click", handleInputSettingsToggle);
-  elements.inputCorrectionToggle.addEventListener("change", handleInputCorrectionToggleChange);
+  elements.inputCorrectionToggle?.addEventListener("change", handleInputCorrectionToggleChange);
   elements.inputDelayTypeCorrect.addEventListener("click", handleInputDelayTypeSelect);
   elements.inputDelayTypeWrong.addEventListener("click", handleInputDelayTypeSelect);
   elements.inputDelaySlider.addEventListener("input", handleInputDelaySliderChange);
@@ -514,15 +514,10 @@ function bindEvents() {
   elements.studentSetModalClose.addEventListener("click", closeStudentSetModal);
   elements.studentSetModal.addEventListener("click", handleStudentSetModalOverlayClick);
   document.addEventListener("click", handleDocumentClick);
-  window.addEventListener("resize", handleWindowResize);
-}
-
-function handleWindowResize() {
-  queueStudentHomeHeaderWidthSync();
 }
 
 async function initializeStudentApp() {
-  const setRequest = resolveRequestedSetRequest();
+  const setRequest = await resolveRequestedSetRequest();
 
   if (!setRequest.hasSetParam) {
     clearActiveLearningSession();
@@ -535,8 +530,8 @@ async function initializeStudentApp() {
   if (!setRequest.isValid) {
     renderStudentLoadErrorState({
       title: "Link ungültig",
-      message: "Bitte Link prüfen.",
-      detail: "",
+      message: "Bitte Code oder Link prüfen.",
+      detail: setRequest.detail || "",
       primaryAction: "",
       primaryLabel: "",
       secondaryAction: "clear-set",
@@ -1259,6 +1254,7 @@ async function continueAfterDeviceAccess(tabletId) {
     state.requestedSetUrl = "";
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.delete("set");
+    nextUrl.searchParams.delete("code");
     window.history.replaceState({}, "", nextUrl);
 
     await renderStudentHome(tabletId, {
@@ -1339,9 +1335,49 @@ function resolveLocalSetSubject(subject, languages) {
   return "";
 }
 
-function resolveRequestedSetRequest() {
+async function resolveRequestedSetRequest() {
   const params = new URLSearchParams(window.location.search);
+  const rawCode = normalizeSetShareCode(params.get("code"));
   const rawSet = params.get("set")?.trim();
+
+  if (rawCode) {
+    try {
+      const response = await fetch(`/api/set-codes/${encodeURIComponent(rawCode)}`, {
+        cache: "no-store",
+      });
+      const data = await response.json().catch(() => ({}));
+      const resolvedPath = normalizeSetPath(data?.set?.path);
+      if (!response.ok || !resolvedPath) {
+        return {
+          hasSetParam: true,
+          isValid: false,
+          path: "",
+          url: "",
+          detail: data?.error || "Set-Code nicht gefunden.",
+        };
+      }
+
+      const canonicalUrl = new URL(window.location.href);
+      canonicalUrl.searchParams.delete("code");
+      canonicalUrl.searchParams.set("set", resolvedPath);
+      window.history.replaceState({}, "", canonicalUrl);
+      return {
+        hasSetParam: true,
+        isValid: true,
+        path: resolvedPath,
+        url: new URL(resolvedPath, getAppBaseUrl()).href,
+        detail: "",
+      };
+    } catch (_error) {
+      return {
+        hasSetParam: true,
+        isValid: false,
+        path: "",
+        url: "",
+        detail: "Set-Code konnte nicht geprüft werden.",
+      };
+    }
+  }
 
   if (!rawSet) {
     return {
@@ -1373,6 +1409,13 @@ function resolveRequestedSetRequest() {
     url: new URL(normalizedSetPath, getAppBaseUrl()).href,
     detail: "",
   };
+}
+
+function normalizeSetShareCode(value) {
+  const normalized = typeof value === "string"
+    ? value.trim().toUpperCase().replace(/[\s-]+/g, "")
+    : "";
+  return /^[A-HJ-NP-Z2-9]{6}$/.test(normalized) ? normalized : "";
 }
 
 function getAppBaseUrl() {
@@ -1438,7 +1481,6 @@ function renderStudentScreen({
   );
   elements.statusMessage.textContent = [title, resolvedMessage, resolvedDetail].filter(Boolean).join(". ");
   updateStudentShareBlock();
-  queueStudentHomeHeaderWidthSync();
 }
 
 function renderStudentScreenTitle(title, mode) {
@@ -2727,13 +2769,13 @@ function createAddSetChoiceView() {
   const title = document.createElement("h2");
   title.id = "add-set-title";
   title.className = "add-set-modal__title";
-  title.textContent = "Deck hinzufügen";
+  title.textContent = "Lernset hinzufügen";
 
   const actions = document.createElement("div");
   actions.className = "add-set-modal__choices";
   actions.append(
-    createAddSetChoiceButton("QR", createAddSetQrIcon(), () => setAddSetModalView("scanner"), true),
-    createAddSetChoiceButton("Link", createAddSetLinkIcon(), () => setAddSetModalView("link")),
+    createAddSetChoiceButton("Code", createAddSetLinkIcon(), () => setAddSetModalView("link"), true),
+    createAddSetChoiceButton("QR", createAddSetQrIcon(), () => setAddSetModalView("scanner")),
   );
 
   section.append(title, actions);
@@ -2768,7 +2810,7 @@ function createAddSetLinkView() {
   const title = document.createElement("h2");
   title.id = "add-set-title";
   title.className = "add-set-modal__title";
-  title.textContent = "Link";
+  title.textContent = "Code oder Link";
 
   const form = document.createElement("form");
   form.className = "add-set-modal__form";
@@ -2779,11 +2821,11 @@ function createAddSetLinkView() {
   input.name = "manual-set-target";
   input.type = "text";
   input.className = "add-set-modal__input";
-  input.setAttribute("aria-label", "Link");
-  input.autocapitalize = "off";
+  input.setAttribute("aria-label", "Set-Code oder Link");
+  input.autocapitalize = "characters";
   input.autocomplete = "off";
   input.spellcheck = false;
-  input.placeholder = "https://";
+  input.placeholder = "z. B. A7K9P2";
   input.dataset.autofocus = "true";
 
   const actions = document.createElement("div");
@@ -3278,7 +3320,6 @@ async function renderStudentHome(tabletId, {
   }
 
   state.subscriptions = result.subscriptions;
-  const summary = buildSubscriptionSummary(state.subscriptions);
 
   renderStudentScreen({
     mode: APP_MODES.HOME,
@@ -3291,7 +3332,6 @@ async function renderStudentHome(tabletId, {
     secondaryAction: "",
     secondaryLabel: "",
   });
-  attachStudentHomeTitleSummary(summary);
   attachStudentHomeHeaderActions(tabletId);
 
   const library = document.createElement("div");
@@ -3320,36 +3360,6 @@ async function renderStudentHome(tabletId, {
   elements.studentScreenForm.replaceChildren(...nodes);
   elements.studentScreenForm.hidden = false;
   syncStudentLibrarySlots(library);
-  queueStudentHomeHeaderWidthSync();
-}
-
-function queueStudentHomeHeaderWidthSync() {
-  window.requestAnimationFrame(() => {
-    syncStudentHomeHeaderWidth();
-  });
-}
-
-function syncStudentHomeHeaderWidth() {
-  const header = elements.studentScreen?.querySelector(".student-screen__header");
-  const library = elements.studentScreenForm?.querySelector(".student-screen__library");
-
-  if (!(header instanceof HTMLElement)) {
-    return;
-  }
-
-  if (state.appMode !== APP_MODES.HOME || !(library instanceof HTMLElement)) {
-    header.style.removeProperty("--student-home-header-max-width");
-    return;
-  }
-
-  const libraryWidth = Math.ceil(library.getBoundingClientRect().width);
-
-  if (libraryWidth > 0) {
-    header.style.setProperty("--student-home-header-max-width", `${libraryWidth}px`);
-    return;
-  }
-
-  header.style.removeProperty("--student-home-header-max-width");
 }
 
 function syncStudentLibrarySlots(library) {
@@ -3360,65 +3370,6 @@ function syncStudentLibrarySlots(library) {
   for (const slot of library.querySelectorAll(".student-screen__library-slot")) {
     slot.remove();
   }
-}
-
-function buildSubscriptionSummary(subscriptions) {
-  const setCount = subscriptions.length;
-  const cardCount = subscriptions.reduce((total, subscription) => (
-    total + (Number.isFinite(subscription?.cardCount) ? subscription.cardCount : 0)
-  ), 0);
-  const completedRoundCount = subscriptions.reduce((total, subscription) => (
-    total + (Number.isFinite(subscription?.completedRoundCount) ? subscription.completedRoundCount : 0)
-  ), 0);
-
-  return {
-    setCount,
-    cardCount,
-    completedRoundCount,
-  };
-}
-
-function attachStudentHomeTitleSummary(summary) {
-  if (!(elements.studentScreenTitle instanceof HTMLElement)) {
-    return;
-  }
-
-  elements.studentScreenTitle.querySelector(".student-screen__home-summary-shell, .student-screen__home-summary")?.remove();
-
-  const summaryShell = document.createElement("span");
-  summaryShell.className = "student-screen__home-summary-shell";
-
-  const summaryDivider = document.createElement("span");
-  summaryDivider.className = "student-screen__home-summary-divider";
-  summaryDivider.setAttribute("aria-hidden", "true");
-
-  const summaryBlock = document.createElement("span");
-  summaryBlock.className = "student-screen__home-summary";
-
-  summaryBlock.append(
-    createStudentHomeSummaryLine(summary.setCount, "Deck", "Decks"),
-    createStudentHomeSummaryLine(summary.completedRoundCount, "Durchgang", "Durchgänge"),
-    createStudentHomeSummaryLine(summary.cardCount, "Vokabel", "Vokabeln"),
-  );
-
-  summaryShell.append(summaryDivider, summaryBlock);
-  elements.studentScreenTitle.append(summaryShell);
-}
-
-function createStudentHomeSummaryLine(value, singularLabel, pluralLabel) {
-  const line = document.createElement("span");
-  line.className = "student-screen__home-summary-line";
-
-  const amount = document.createElement("span");
-  amount.className = "student-screen__home-summary-value";
-  amount.textContent = String(value).padStart(2, "0");
-
-  const text = document.createElement("span");
-  text.className = "student-screen__home-summary-label";
-  text.textContent = value === 1 ? singularLabel : pluralLabel;
-
-  line.append(amount, text);
-  return line;
 }
 
 function attachStudentHomeHeaderActions(tabletId) {
@@ -3444,14 +3395,10 @@ function attachStudentHomeHeaderActions(tabletId) {
 
 function createStudentHomeHeaderContext(tabletId) {
   const context = document.createElement("span");
-  context.className = "student-screen__device-message student-screen__home-context";
-
-  const label = document.createElement("span");
-  label.className = "student-screen__device-message-label";
-  label.textContent = "Eingeloggt als:";
+  context.className = "student-screen__home-context";
+  context.setAttribute("aria-label", `Angemeldetes Gerät: ${getTabletMeta(tabletId).label}`);
 
   context.append(
-    label,
     createDevicePill(getTabletMeta(tabletId), {
       className: "device-pill--home-meta",
     }),
@@ -3608,6 +3555,7 @@ function executeStudentScreenAction(action) {
     state.requestedSetUrl = "";
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.delete("set");
+    nextUrl.searchParams.delete("code");
     window.history.replaceState({}, "", nextUrl);
     void continueStudentAccessFlow();
     return;
@@ -3618,6 +3566,7 @@ function executeStudentScreenAction(action) {
     clearActiveLearningSession();
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.delete("set");
+    nextUrl.searchParams.delete("code");
     window.history.replaceState({}, "", nextUrl);
     initializeStudentApp();
     return;
@@ -3656,6 +3605,7 @@ async function handleReturnToStudentHome() {
 
   const nextUrl = new URL(window.location.href);
   nextUrl.searchParams.delete("set");
+  nextUrl.searchParams.delete("code");
   window.history.replaceState({}, "", nextUrl);
 
   await continueStudentAccessFlow();
@@ -3754,7 +3704,17 @@ function normalizeScannedSetTarget(rawValue) {
       isValid: false,
       url: "",
       setPath: "",
-      error: "Link oder Pfad eingeben.",
+      error: "Code oder Link eingeben.",
+    };
+  }
+
+  const directShareCode = normalizeSetShareCode(trimmedValue);
+  if (directShareCode) {
+    return {
+      isValid: true,
+      setPath: "",
+      url: buildCanonicalStudentCodeUrl(directShareCode),
+      error: "",
     };
   }
 
@@ -3791,6 +3751,16 @@ function normalizeScannedSetTarget(rawValue) {
     };
   }
 
+  const parsedShareCode = normalizeSetShareCode(parsedUrl.searchParams.get("code"));
+  if (parsedShareCode) {
+    return {
+      isValid: true,
+      setPath: "",
+      url: buildCanonicalStudentCodeUrl(parsedShareCode),
+      error: "",
+    };
+  }
+
   const normalizedSetPath = normalizeSetPath(parsedUrl.searchParams.get("set"));
 
   if (!normalizedSetPath) {
@@ -3798,7 +3768,7 @@ function normalizeScannedSetTarget(rawValue) {
       isValid: false,
       url: "",
       setPath: "",
-      error: "Kein gültiges Set gefunden.",
+      error: "Kein gültiger Code oder Link gefunden.",
     };
   }
 
@@ -3808,6 +3778,12 @@ function normalizeScannedSetTarget(rawValue) {
     url: buildCanonicalStudentSetUrl(normalizedSetPath),
     error: "",
   };
+}
+
+function buildCanonicalStudentCodeUrl(shareCode) {
+  const url = new URL(window.location.pathname || "/index.html", window.location.origin);
+  url.searchParams.set("code", shareCode);
+  return url.href;
 }
 
 function normalizeSetPath(value) {
@@ -4996,37 +4972,15 @@ function createStudentSetMenuMaterialIcon(name, extraClassName = "") {
 }
 
 function createStudentStackIcon(className = "") {
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("viewBox", "0 0 32 32");
-  svg.setAttribute("aria-hidden", "true");
-  svg.setAttribute("focusable", "false");
-  svg.setAttribute("fill", "none");
+  const icon = document.createElement("img");
+  icon.src = "./assets/icons/lerndeck-stack.svg";
+  icon.alt = "";
+  icon.decoding = "async";
+  icon.setAttribute("aria-hidden", "true");
   if (className) {
-    svg.classList.add(className);
+    icon.classList.add(className);
   }
-
-  const shapes = [
-    "M16 17L3 11l13-6 13 6-13 6z",
-    "M3 15.5l13 6 13-6",
-    "M3 20l13 6 13-6",
-  ];
-  const iconColors = [
-    STUDENT_SET_COLOR_PALETTE[1]?.headerStart || "#6b84a6",
-    STUDENT_SET_COLOR_PALETTE[3]?.headerEnd || "#406366",
-    STUDENT_SET_COLOR_PALETTE[5]?.headerEnd || "#725d42",
-  ];
-
-  for (const [index, d] of shapes.entries()) {
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    path.setAttribute("d", d);
-    path.setAttribute("stroke", iconColors[index] || "currentColor");
-    path.setAttribute("stroke-linecap", "round");
-    path.setAttribute("stroke-linejoin", "round");
-    path.setAttribute("stroke-width", "2");
-    svg.append(path);
-  }
-
-  return svg;
+  return icon;
 }
 
 function createStudentSetColorSection(subscription, row, menu) {
@@ -5212,7 +5166,7 @@ function setStudentSetColorSectionExpanded(menu, action, panel, expanded) {
 function createStudentAddSetCard() {
   const card = document.createElement("article");
   card.className = "student-screen__library-card student-screen__library-card--add";
-  card.setAttribute("aria-label", "Deck hinzufügen");
+  card.setAttribute("aria-label", "Lernset hinzufügen");
   bindStudentLibraryPress(card, () => {
     renderScannerPlaceholderState({
       allowHomeReturn: true,
@@ -5232,11 +5186,11 @@ function createStudentAddSetCard() {
 
   const title = document.createElement("span");
   title.className = "student-screen__library-add-title";
-  title.textContent = "Deck hinzufügen";
+  title.textContent = "Lernset hinzufügen";
 
   const text = document.createElement("span");
   text.className = "student-screen__library-add-text";
-  text.textContent = "Per QR-Code oder Link";
+  text.textContent = "Mit Code oder QR";
 
   copy.append(title, text);
   card.append(iconWrap, copy);
