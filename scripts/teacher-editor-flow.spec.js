@@ -89,7 +89,10 @@ test("teacher editor separates creation, manual editing and automatic additions"
   await expect(page.getByLabel("PDF-Datei")).toBeVisible();
   await expect(page.getByText("buchseite.png", { exact: true })).toBeVisible();
   await expect(page.getByText("lektion.pdf", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Weitere Datei hinzufügen" })).toBeVisible();
+  const addMoreImportContent = page.getByRole("button", { name: "Weitere Inhalte hinzufügen" });
+  await expect(addMoreImportContent).toBeVisible();
+  await expect(page.getByText(/Verarbeitung über OpenAI/i)).toHaveCount(0);
+  await expect(addMoreImportContent).toHaveCSS("justify-self", "center");
   await page.getByRole("button", { name: "lektion.pdf entfernen" }).click();
   await expect(page.getByText("lektion.pdf", { exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "buchseite.png entfernen" }).click();

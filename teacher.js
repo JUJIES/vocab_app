@@ -1827,8 +1827,8 @@ function renderEditorFilePreviews() {
   elements.setImportFilePicker.disabled = state.editorFiles.length >= 4;
   elements.setImportPickerTitle.textContent = hasFiles
     ? state.editorFiles.length >= 4
-      ? "Maximal 4 Dateien ausgewählt"
-      : "Weitere Datei hinzufügen"
+      ? "Maximal 4 Inhalte"
+      : "Weitere Inhalte hinzufügen"
     : "Datei auswählen oder ablegen";
 
   state.editorFiles.forEach((file, index) => {

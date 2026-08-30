@@ -1199,7 +1199,7 @@ body.has-modal-open {
 }
 
 .set-import-dropzone.has-files .set-import-file-picker {
-  justify-self: start;
+  justify-self: center;
   margin-top: 0.18rem;
   padding: 0.46rem 0.7rem;
   display: inline-flex;

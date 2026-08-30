@@ -4,9 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Lerndeck – Lehrerbereich</title>
-    <link rel="stylesheet" href="./teacher.css?v=2026-08-30-card-side-labels" />
+    <link rel="stylesheet" href="./teacher.css?v=2026-08-30-centered-import-action" />
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
-    <script src="./teacher.js?v=2026-08-30-card-side-labels" defer></script>
+    <script src="./teacher.js?v=2026-08-30-centered-import-action" defer></script>
   </head>
   <body>
     <main id="teacher-auth-panel" class="teacher-auth">
@@ -315,7 +315,6 @@
               <span id="set-import-picker-title">Datei auswählen oder ablegen</span>
               <small id="set-import-picker-types">Bild, PDF, DOCX, PPTX, TXT, MD oder CSV</small>
             </button>
-            <small class="set-import-dropzone__privacy">Verarbeitung über OpenAI · keine Speicherung in Lerndeck</small>
           </div>
           <input id="set-import-files" type="file" multiple hidden accept=".txt,.md,.csv,.tsv,.jpg,.jpeg,.png,.webp,.gif,.pdf,.docx,.pptx" />
           <textarea id="set-import-text" class="set-editor-textarea" rows="5" aria-label="Text einfügen" placeholder="Text oder Vokabelliste einfügen …"></textarea>
