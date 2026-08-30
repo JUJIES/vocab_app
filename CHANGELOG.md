@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- „Weiterlernen“ zeigt ohne eingerichtetes Tablet keinen funktionslosen PIN-Login mehr, sondern einen kompakten Empty State mit direktem Einstieg in die vorhandene Tablet-Einrichtung.
 - Leerer Schülerlogin gekürzt und das Schlüssel-Icon unabhängig von der Höhe des Tablet-Hinweises sauber im PIN-Feld zentriert; eine neue PWA-Shell-Version verteilt die Korrektur auch an bestehende Installationen.
 - Beelink-Release `922a6f1` mit sechs Lehrkraftkonten, fünf migrierten Julius-Sets und funktionsfähigem OpenAI-Import auf `https://lerndeck.jujies.app` aktiviert und öffentlich abgenommen.
 - Beelink-Aktivierung adressiert das Arbeitsverzeichnis explizit als XML-Element und setzt dessen Text, statt sich auf PowerShell-Eigenschaftsadaption zu verlassen.

@@ -2286,6 +2286,17 @@ function renderAccessState({
     ? [getTabletMeta(boundTabletId)].filter(Boolean)
     : getLoginTablets();
   const registrationTablets = getRegistrationTablets();
+  const openRegistrationFlow = () => {
+    state.accessUseAlternate = true;
+    state.accessSelectedFlow = "registration";
+    renderAccessState({
+      registrationTabletId: resolveTabletSelection("", {
+        tablets: registrationTablets,
+        preferFirstAvailable: registrationTablets.length === 1,
+      }),
+      showRegistration: true,
+    });
+  };
 
   state.accessRegistrationOpen = shouldShowRegistration;
   state.accessKnownDeviceFeedback = knownDeviceFeedback;
@@ -2442,17 +2453,7 @@ function renderAccessState({
         title: "Neu einrichten",
         text: "Nur für freie Tablets, die noch nicht eingerichtet sind.",
         iconPath: ACCESS_REGISTER_ICON_PATH,
-        onClick: () => {
-          state.accessUseAlternate = true;
-          state.accessSelectedFlow = "registration";
-          renderAccessState({
-            registrationTabletId: resolveTabletSelection("", {
-              tablets: registrationTablets,
-              preferFirstAvailable: registrationTablets.length === 1,
-            }),
-            showRegistration: true,
-          });
-        },
+        onClick: openRegistrationFlow,
       }),
     );
 
@@ -2517,7 +2518,11 @@ function renderAccessState({
       preferFirstAvailable: !hasBoundAccessSession && loginTablets.length === 1,
     });
 
-    loginHeader.append(createAccessSectionHeaderIcon(ACCESS_CONTINUE_ICON_PATH), loginTitle, loginText);
+    loginHeader.append(createAccessSectionHeaderIcon(ACCESS_CONTINUE_ICON_PATH), loginTitle);
+
+    if (loginTablets.length > 0) {
+      loginHeader.append(loginText);
+    }
 
     const loginForm = document.createElement("form");
     loginForm.className = "student-screen__access-form student-screen__access-form--login";
@@ -2525,38 +2530,54 @@ function renderAccessState({
     loginForm.dataset.accessVariant = "login";
     loginForm.addEventListener("submit", handlePinSubmit);
 
-    const loginTabletPicker = createTabletDropdownPicker("tabletId", resolvedLoginTabletId, {
-      tablets: loginTablets,
-      emptyStateText: "Kein Tablet eingerichtet",
-      disabled: hasBoundAccessSession,
-      locked: hasBoundAccessSession,
-    });
+    if (loginTablets.length === 0) {
+      const emptyState = document.createElement("div");
+      emptyState.className = "student-screen__access-empty";
 
-    const loginPinInput = createAccessPinInputField("pin-entry", "PIN eingeben", {
-      disabled: isCoolingDown,
-    });
+      const emptyText = document.createElement("p");
+      emptyText.className = "student-screen__access-empty-text";
+      emptyText.textContent = "Noch kein Tablet eingerichtet";
 
-    const loginRow = document.createElement("div");
-    loginRow.className = "student-screen__access-login-row";
-    loginRow.append(
-      createStudentFieldlessControl(loginTabletPicker),
-      createStudentFieldlessControl(loginPinInput),
-    );
+      const setupButton = createStudentSubmitButton("Tablet einrichten");
+      setupButton.type = "button";
+      setupButton.classList.add("student-screen__access-empty-action");
+      setupButton.addEventListener("click", openRegistrationFlow);
 
-    const loginFeedbackMessage = hasBoundAccessSession && isCoolingDown
-      ? formatAccessCooldownFeedback(accessSession.remainingMs, { includeWrongPin: true })
-      : (loginFeedback || (hasBoundAccessSession ? formatAccessBoundTabletMessage(boundTabletId) : ""));
-    const loginFeedbackElement = createStudentFeedback(loginFeedbackMessage);
+      emptyState.append(emptyText, setupButton);
+      loginForm.append(emptyState);
+    } else {
+      const loginTabletPicker = createTabletDropdownPicker("tabletId", resolvedLoginTabletId, {
+        tablets: loginTablets,
+        disabled: hasBoundAccessSession,
+        locked: hasBoundAccessSession,
+      });
 
-    if (hasBoundAccessSession && isCoolingDown) {
-      loginFeedbackElement.dataset.accessCooldownFeedback = "true";
+      const loginPinInput = createAccessPinInputField("pin-entry", "PIN eingeben", {
+        disabled: isCoolingDown,
+      });
+
+      const loginRow = document.createElement("div");
+      loginRow.className = "student-screen__access-login-row";
+      loginRow.append(
+        createStudentFieldlessControl(loginTabletPicker),
+        createStudentFieldlessControl(loginPinInput),
+      );
+
+      const loginFeedbackMessage = hasBoundAccessSession && isCoolingDown
+        ? formatAccessCooldownFeedback(accessSession.remainingMs, { includeWrongPin: true })
+        : (loginFeedback || (hasBoundAccessSession ? formatAccessBoundTabletMessage(boundTabletId) : ""));
+      const loginFeedbackElement = createStudentFeedback(loginFeedbackMessage);
+
+      if (hasBoundAccessSession && isCoolingDown) {
+        loginFeedbackElement.dataset.accessCooldownFeedback = "true";
+      }
+
+      loginForm.append(
+        loginRow,
+        createAccessSubmitButton("Starten", accessSession),
+        loginFeedbackElement,
+      );
     }
-
-    loginForm.append(
-      loginRow,
-      createAccessSubmitButton("Starten", accessSession),
-      loginFeedbackElement,
-    );
 
     loginSection.append(loginHeader, loginForm);
     stage.append(loginSection);
