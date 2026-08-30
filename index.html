@@ -29,13 +29,14 @@
       }
     </script>
     <link rel="stylesheet" href="./pwa-splash.css?v=2026-08-30-pwa-splash-v1" />
-    <link rel="stylesheet" href="./styles.css?v=2026-08-30-direction-step-v1" />
+    <link rel="stylesheet" href="./styles.css?v=2026-08-30-irregular-verbs-v1" />
     <link rel="stylesheet" href="./ui-motion.css?v=2026-08-30-ui-motion-v1" />
     <script src="./pwa.js?v=2026-08-30-pwa-splash-v3" defer></script>
     <script src="./ui-motion.js?v=2026-08-30-ui-motion-v1" defer></script>
+    <script src="./irregular-verbs.js?v=2026-08-30-irregular-verbs-v1" defer></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js" defer></script>
-    <script src="./app.js?v=2026-08-30-ui-motion-v1" defer></script>
+    <script src="./app.js?v=2026-08-30-irregular-verbs-v1" defer></script>
   </head>
   <body>
     <div class="pwa-splash" role="status" aria-label="Lerndeck wird geladen">
@@ -633,6 +634,44 @@
                     spellcheck="false"
                     placeholder="Antwort eingeben"
                   />
+                  <div id="input-verb-answer-fields" class="input-stage__verb-fields" hidden>
+                    <label class="input-stage__verb-field" for="input-verb-form-0">
+                      <span>Infinitiv</span>
+                      <input
+                        id="input-verb-form-0"
+                        class="input-stage__verb-input"
+                        type="text"
+                        autocomplete="off"
+                        autocapitalize="none"
+                        spellcheck="false"
+                        data-irregular-verb-input="0"
+                      />
+                    </label>
+                    <label class="input-stage__verb-field" for="input-verb-form-1">
+                      <span>Simple Past</span>
+                      <input
+                        id="input-verb-form-1"
+                        class="input-stage__verb-input"
+                        type="text"
+                        autocomplete="off"
+                        autocapitalize="none"
+                        spellcheck="false"
+                        data-irregular-verb-input="1"
+                      />
+                    </label>
+                    <label class="input-stage__verb-field" for="input-verb-form-2">
+                      <span>Past Participle</span>
+                      <input
+                        id="input-verb-form-2"
+                        class="input-stage__verb-input"
+                        type="text"
+                        autocomplete="off"
+                        autocapitalize="none"
+                        spellcheck="false"
+                        data-irregular-verb-input="2"
+                      />
+                    </label>
+                  </div>
                   <button
                     id="input-check-button"
                     class="input-stage__button input-stage__button--enter"

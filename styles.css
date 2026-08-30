@@ -4437,6 +4437,93 @@ button.student-screen__device-card {
     0 0 0 2px rgba(223, 232, 255, 0.16);
 }
 
+.input-stage__input-row.has-irregular-verb {
+  align-items: end;
+  min-height: 0;
+  padding: 0.48rem;
+  background: rgba(214, 224, 246, 0.035);
+}
+
+.input-stage__verb-fields {
+  min-width: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.input-stage__verb-fields[hidden] {
+  display: none;
+}
+
+.input-stage__verb-field {
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0.38rem 0.72rem;
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.7rem;
+  border: 1px solid rgba(214, 224, 246, 0.075);
+  border-radius: 0.8rem;
+  background: rgba(214, 224, 246, 0.045);
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.input-stage__verb-field > span {
+  color: rgba(199, 212, 232, 0.58);
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+}
+
+.input-stage__verb-field:focus-within {
+  border-color: rgba(223, 232, 255, 0.18);
+  background: rgba(214, 224, 246, 0.065);
+  box-shadow: 0 0 0 2px rgba(223, 232, 255, 0.11);
+}
+
+.input-stage__verb-field[data-evaluation="correct"] {
+  border-color: rgba(126, 190, 142, 0.2);
+  background: rgba(98, 158, 113, 0.08);
+}
+
+.input-stage__verb-field[data-evaluation="almost"] {
+  border-color: rgba(207, 178, 112, 0.2);
+  background: rgba(176, 142, 76, 0.07);
+}
+
+.input-stage__verb-field[data-evaluation="wrong"] {
+  border-color: rgba(214, 132, 118, 0.18);
+  background: rgba(170, 95, 83, 0.07);
+}
+
+.input-stage__verb-input {
+  min-width: 0;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 680;
+  box-shadow: none;
+}
+
+.input-stage__verb-input:focus-visible {
+  outline: none;
+}
+
+.input-stage__verb-input:disabled,
+.input-stage__verb-input[readonly] {
+  opacity: 0.82;
+}
+
+.input-stage__input-row.has-irregular-verb .input-stage__button--enter {
+  margin-bottom: 0.02rem;
+}
+
 .input-stage__input-row[data-state="rewrite"] {
   border-color: rgba(236, 242, 255, 0.15);
   background:
@@ -6785,6 +6872,56 @@ button.student-screen__device-card {
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   transform: translateZ(0);
+}
+
+.flashcard__word.has-irregular-verb,
+.input-stage__prompt-word.has-irregular-verb {
+  width: min(100%, 42rem);
+  max-width: 42rem;
+}
+
+.irregular-verb-term {
+  width: 100%;
+  display: grid;
+  justify-items: center;
+  gap: clamp(0.65rem, 1.6vw, 1rem);
+}
+
+.irregular-verb-term__primary {
+  display: block;
+  font: inherit;
+  line-height: inherit;
+}
+
+.irregular-verb-term__secondary {
+  display: flex;
+  justify-content: center;
+  gap: clamp(0.5rem, 1.5vw, 0.85rem);
+  flex-wrap: wrap;
+}
+
+.irregular-verb-term__form {
+  min-width: min(10rem, 38vw);
+  padding: 0.5rem 0.8rem 0.58rem;
+  display: grid;
+  gap: 0.13rem;
+  border: 1px solid rgba(214, 224, 246, 0.075);
+  border-radius: 0.85rem;
+  background: rgba(214, 224, 246, 0.045);
+  color: rgba(231, 237, 248, 0.82);
+  font-size: clamp(1.05rem, 2.3vw, 1.5rem);
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  font-weight: 720;
+}
+
+.irregular-verb-term__form small {
+  color: rgba(199, 212, 232, 0.48);
+  font-size: 0.63rem;
+  line-height: 1.2;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .flashcard__alternatives {

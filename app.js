@@ -429,6 +429,8 @@ const elements = {
   inputAnswerLabel: document.getElementById("input-answer-label"),
   inputAnswerRow: document.getElementById("input-answer-row"),
   inputAnswerField: document.getElementById("input-answer-field"),
+  inputVerbAnswerFields: document.getElementById("input-verb-answer-fields"),
+  inputVerbAnswerInputs: document.querySelectorAll("[data-irregular-verb-input]"),
   inputCheckButton: document.getElementById("input-check-button"),
   inputFeedback: document.getElementById("input-feedback"),
   inputFeedbackTitle: document.getElementById("input-feedback-title"),
@@ -911,7 +913,11 @@ function getInputDirectionLabel() {
   return "";
 }
 
-function getInputAnswerLabelText() {
+function getInputAnswerLabelText(card = getCurrentInputSessionCard()) {
+  if (hasIrregularVerbAnswer(card)) {
+    return "Drei Verbformen";
+  }
+
   const sourceLabel = state.currentSetLanguageLabels?.sourceLabel || "";
   const targetLabel = state.currentSetLanguageLabels?.targetLabel || "";
 
@@ -922,8 +928,152 @@ function getInputAnswerLabelText() {
   return "Deine Antwort";
 }
 
+function getIrregularVerbForms(value) {
+  return window.LerndeckIrregularVerbs.parseForms(value);
+}
+
+function hasIrregularVerbAnswer(card) {
+  return Array.isArray(card?.irregularVerbAnswerGroups)
+    && card.irregularVerbAnswerGroups.length === window.LerndeckIrregularVerbs.FORM_LABELS.length;
+}
+
+function renderLearningTerm(element, value) {
+  const text = typeof value === "string" ? value.trim() : "";
+  const forms = getIrregularVerbForms(text);
+  element.replaceChildren();
+  element.classList.toggle("has-irregular-verb", Boolean(forms));
+
+  if (!forms) {
+    element.textContent = text || "\u00a0";
+    element.removeAttribute("aria-label");
+    return;
+  }
+
+  const term = document.createElement("span");
+  term.className = "irregular-verb-term";
+  term.setAttribute("aria-hidden", "true");
+
+  const primary = document.createElement("strong");
+  primary.className = "irregular-verb-term__primary";
+  primary.textContent = forms[0];
+
+  const secondary = document.createElement("span");
+  secondary.className = "irregular-verb-term__secondary";
+  for (const index of [1, 2]) {
+    const form = document.createElement("span");
+    form.className = "irregular-verb-term__form";
+    const label = document.createElement("small");
+    label.textContent = window.LerndeckIrregularVerbs.FORM_LABELS[index];
+    const formValue = document.createElement("span");
+    formValue.textContent = forms[index];
+    form.append(label, formValue);
+    secondary.append(form);
+  }
+
+  term.append(primary, secondary);
+  element.append(term);
+  element.setAttribute(
+    "aria-label",
+    window.LerndeckIrregularVerbs.FORM_LABELS
+      .map((label, index) => `${label}: ${forms[index]}`)
+      .join(", "),
+  );
+}
+
+function formatLearningTermInline(value) {
+  const text = typeof value === "string" ? value.trim() : "";
+  const forms = getIrregularVerbForms(text);
+  return forms ? forms.join(" · ") : text;
+}
+
 function buildInputPromptDetail(card) {
   return "";
+}
+
+function getInputVerbFields() {
+  return Array.from(elements.inputVerbAnswerInputs || []);
+}
+
+function configureInputAnswerFields(card) {
+  const usesVerbFields = hasIrregularVerbAnswer(card);
+  elements.inputAnswerField.hidden = usesVerbFields;
+  elements.inputVerbAnswerFields.hidden = !usesVerbFields;
+  elements.inputAnswerRow.classList.toggle("has-irregular-verb", usesVerbFields);
+  if (usesVerbFields) {
+    elements.inputAnswerLabel.removeAttribute("for");
+  } else {
+    elements.inputAnswerLabel.setAttribute("for", "input-answer-field");
+  }
+  return usesVerbFields;
+}
+
+function clearInputAnswerFields() {
+  elements.inputAnswerField.value = "";
+  for (const input of getInputVerbFields()) {
+    input.value = "";
+    const field = input.closest(".input-stage__verb-field");
+    field?.removeAttribute("data-evaluation");
+  }
+}
+
+function getInputAnswerValues(card) {
+  return hasIrregularVerbAnswer(card)
+    ? getInputVerbFields().map((input) => input.value)
+    : [elements.inputAnswerField.value];
+}
+
+function restoreInputAnswerValues(card, evaluation) {
+  if (hasIrregularVerbAnswer(card)) {
+    const values = Array.isArray(evaluation?.rawInputs) ? evaluation.rawInputs : [];
+    getInputVerbFields().forEach((input, index) => {
+      input.value = values[index] || "";
+    });
+    return;
+  }
+
+  elements.inputAnswerField.value = evaluation?.rawInput || "";
+}
+
+function updateInputFieldEvaluation(card, evaluation) {
+  if (!hasIrregularVerbAnswer(card)) {
+    return;
+  }
+
+  const fieldEvaluations = Array.isArray(evaluation?.fieldEvaluations)
+    ? evaluation.fieldEvaluations
+    : [];
+  getInputVerbFields().forEach((input, index) => {
+    const field = input.closest(".input-stage__verb-field");
+    const status = fieldEvaluations[index]?.status;
+    if (field && ["correct", "almost", "wrong"].includes(status)) {
+      field.dataset.evaluation = status;
+    } else {
+      field?.removeAttribute("data-evaluation");
+    }
+  });
+}
+
+function setInputAnswerFieldsLocked(card, isLocked) {
+  const inputs = hasIrregularVerbAnswer(card)
+    ? getInputVerbFields()
+    : [elements.inputAnswerField];
+  for (const input of inputs) {
+    input.disabled = isLocked;
+    input.readOnly = isLocked;
+  }
+}
+
+function focusFirstInputAnswerField(card) {
+  const inputs = hasIrregularVerbAnswer(card)
+    ? getInputVerbFields()
+    : [elements.inputAnswerField];
+  const target = inputs.find((input) => !input.disabled && !input.value.trim())
+    || inputs.find((input) => !input.disabled);
+  target?.focus();
+}
+
+function formatInputEvaluationValue(evaluation) {
+  return evaluation?.rawInput?.trim() || "Leer";
 }
 
 function getInputFeedbackTone(status) {
@@ -1187,7 +1337,7 @@ function renderInputEvaluation(session = state.inputSession) {
       : feedbackTone === "correct"
         ? "Richtig"
         : "Falsch";
-  elements.inputFeedbackInput.textContent = evaluation.rawInput?.trim() || "Leer";
+  elements.inputFeedbackInput.textContent = formatInputEvaluationValue(evaluation);
   elements.inputFeedbackCorrectRow.hidden = feedbackTone === "correct" || correctionRequired;
   elements.inputFeedbackCorrect.textContent = evaluation.bestAnswer || "—";
 }
@@ -1195,13 +1345,13 @@ function renderInputEvaluation(session = state.inputSession) {
 function renderInputCompletionState() {
   const scorePercent = getInputSessionScorePercent();
   elements.inputPromptKicker.textContent = "";
-  elements.inputPromptWord.textContent = "Fertig";
+  renderLearningTerm(elements.inputPromptWord, "Fertig");
   elements.inputPromptDetail.textContent = scorePercent === null
     ? "Keine Karten im Durchgang. Enter startet einen neuen Durchgang."
     : `${state.inputSession.totalPoints} von ${getInputSessionMaxPoints(state.inputSession)} Punkten · ${scorePercent} % · Enter startet neu.`;
   elements.inputAnswerForm.hidden = true;
   elements.inputAnswerLabel.hidden = false;
-  elements.inputAnswerField.hidden = false;
+  configureInputAnswerFields(null);
   elements.inputCheckButton.hidden = false;
   if (elements.inputAnswerRow instanceof HTMLElement) {
     delete elements.inputAnswerRow.dataset.state;
@@ -1240,19 +1390,19 @@ function renderInputSession() {
   }
 
   elements.inputPromptKicker.textContent = "";
-  elements.inputPromptWord.textContent = card.sourceText;
+  renderLearningTerm(elements.inputPromptWord, card.sourceText);
   elements.inputPromptDetail.textContent = buildInputPromptDetail(card);
   elements.inputAnswerForm.hidden = false;
   elements.inputAnswerLabel.hidden = false;
-  elements.inputAnswerField.hidden = false;
-  elements.inputAnswerLabel.textContent = getInputAnswerLabelText();
+  const usesVerbFields = configureInputAnswerFields(card);
+  elements.inputAnswerLabel.textContent = getInputAnswerLabelText(card);
   if (!evaluation && session.attemptCountForCurrentCard === 0) {
-    elements.inputAnswerField.value = "";
-  } else if (hasLockedFeedback && evaluation && elements.inputAnswerField.value !== evaluation.rawInput) {
-    elements.inputAnswerField.value = evaluation.rawInput;
+    clearInputAnswerFields();
+  } else if (hasLockedFeedback && evaluation) {
+    restoreInputAnswerValues(card, evaluation);
   }
-  elements.inputAnswerField.disabled = hasLockedFeedback;
-  elements.inputAnswerField.readOnly = hasLockedFeedback;
+  setInputAnswerFieldsLocked(card, hasLockedFeedback);
+  updateInputFieldEvaluation(card, evaluation);
   elements.inputCheckButton.hidden = hasLockedFeedback;
   elements.inputCheckButton.disabled = hasLockedFeedback;
   elements.inputAnswerRow.dataset.state = correctionRequired ? "rewrite" : "";
@@ -1263,19 +1413,20 @@ function renderInputSession() {
   renderInputEvaluation(session);
 
   if (!hasLockedFeedback) {
-    const shouldFocusInput = document.activeElement !== elements.inputAnswerField;
+    const currentInputs = usesVerbFields ? getInputVerbFields() : [elements.inputAnswerField];
+    const shouldFocusInput = !currentInputs.includes(document.activeElement);
     if (shouldFocusInput) {
-      elements.inputAnswerField.focus();
+      focusFirstInputAnswerField(card);
     }
   }
 
   elements.inputStatusMessage.textContent = evaluation
     ? correctionRequired
-      ? `Erste Eingabe als Fehler gewertet. ${evaluation.rawInput?.trim() || "Leere Eingabe"} war noch nicht korrekt. Gib jetzt die richtige Lösung ein.`
+      ? `Erste Eingabe als Fehler gewertet. ${formatInputEvaluationValue(evaluation)} war noch nicht korrekt. Gib jetzt die richtige Lösung ein.`
       : correctionCompleted
         ? `Korrektur geschafft. Die erste Eingabe bleibt als Fehler gewertet. ${getInputAdvanceDelay("correct") === 0 ? "Nächste Karte wird direkt geladen." : `Nächste Karte in ${formatInputAdvanceDelay(getInputAdvanceDelay("correct"))}.`}`
-        : `${getInputStatusLabel(evaluation.status)}. Eingabe ${evaluation.rawInput?.trim() || "leer"}.${getInputFeedbackTone(evaluation.status) === "wrong" ? ` Richtige Lösung ${evaluation.bestAnswer || "unbekannt"}.` : ""} ${getInputAdvanceDelay(getInputFeedbackTone(evaluation.status)) === 0 ? "Nächste Karte wird direkt geladen." : `Nächste Karte in ${formatInputAdvanceDelay(getInputAdvanceDelay(getInputFeedbackTone(evaluation.status)))}.`}`
-    : `Karte ${session.currentIndex + 1} von ${session.cards.length}. ${card.sourceText}.`;
+        : `${getInputStatusLabel(evaluation.status)}. Eingabe ${formatInputEvaluationValue(evaluation)}.${getInputFeedbackTone(evaluation.status) === "wrong" ? ` Richtige Lösung ${evaluation.bestAnswer || "unbekannt"}.` : ""} ${getInputAdvanceDelay(getInputFeedbackTone(evaluation.status)) === 0 ? "Nächste Karte wird direkt geladen." : `Nächste Karte in ${formatInputAdvanceDelay(getInputAdvanceDelay(getInputFeedbackTone(evaluation.status)))}.`}`
+    : `Karte ${session.currentIndex + 1} von ${session.cards.length}. ${formatLearningTermInline(card.sourceText)}.`;
 }
 
 async function finishInputSession() {
@@ -1315,9 +1466,9 @@ async function startInputSet(
   );
   setStudentAppMode(APP_MODES.INPUT);
   resetInputLearningState();
-  elements.inputAnswerField.value = "";
+  clearInputAnswerFields();
   elements.inputPromptKicker.textContent = "";
-  elements.inputPromptWord.textContent = "Lädt";
+  renderLearningTerm(elements.inputPromptWord, "Lädt");
   elements.inputPromptDetail.textContent = "Set wird geöffnet.";
   elements.inputAnswerForm.hidden = true;
   renderInputEvaluation(null);
@@ -3923,11 +4074,26 @@ function handleInputAnswerSubmit(event) {
     return;
   }
 
-  const rawInput = elements.inputAnswerField.value;
-  const evaluation = evaluateInputAnswer(rawInput, card.answers);
+  const rawValues = getInputAnswerValues(card);
+  const evaluation = hasIrregularVerbAnswer(card)
+    ? window.LerndeckIrregularVerbs.evaluateInputs(
+        rawValues,
+        card.irregularVerbAnswerGroups,
+        evaluateInputAnswer,
+      )
+    : evaluateInputAnswer(rawValues[0], card.answers);
+  const rawInput = rawValues.map((value) => value.trim() || "—").join(" · ");
   state.inputSession = applyInputEvaluationToSession(state.inputSession, evaluation, rawInput);
   if (isInputCorrectionRequired(state.inputSession) && evaluation.status !== "correct") {
-    elements.inputAnswerField.value = "";
+    if (hasIrregularVerbAnswer(card)) {
+      getInputVerbFields().forEach((input, index) => {
+        if (evaluation.fieldEvaluations?.[index]?.status !== "correct") {
+          input.value = "";
+        }
+      });
+    } else {
+      elements.inputAnswerField.value = "";
+    }
   }
   renderInputSession();
   scheduleInputAdvance(evaluation);
@@ -3956,7 +4122,7 @@ async function handleInputAdvance() {
   }
 
   state.inputSession = advanceInputSession(state.inputSession);
-  elements.inputAnswerField.value = "";
+  clearInputAnswerFields();
   renderInputSession();
 }
 
@@ -7542,6 +7708,14 @@ function buildCardData(card) {
   const sourceAlternatives = sourceAnswers.slice(1);
   const targetText = answers[0] || rawTargetText;
   const targetAlternatives = answers.slice(1);
+  const irregularVerbAnswerGroups = window.LerndeckIrregularVerbs.buildAnswerGroups(
+    targetText,
+    targetAlternatives,
+  );
+  const sourceIrregularVerbAnswerGroups = window.LerndeckIrregularVerbs.buildAnswerGroups(
+    sourceText,
+    sourceAlternatives,
+  );
   const exampleIsAnswerOnly = isAnswerOnlyExample(
     exampleText,
     [rawTargetText, ...acceptedAnswers, ...answers],
@@ -7555,6 +7729,7 @@ function buildCardData(card) {
     targetText: sourceText,
     targetAlternatives: sourceAlternatives,
     answers: sourceAnswers,
+    irregularVerbAnswerGroups: sourceIrregularVerbAnswerGroups,
     backContext: !sourceExampleText || sourceExampleIsAnswerOnly
       ? null
       : buildBackContextData({
@@ -7574,6 +7749,7 @@ function buildCardData(card) {
     targetText,
     targetAlternatives,
     answers,
+    irregularVerbAnswerGroups,
     backContext: exampleIsAnswerOnly
       ? null
       : buildBackContextData({
@@ -7790,9 +7966,10 @@ function buildHintData({
     acceptedAnswers,
     preferAcceptedAnswers,
   });
+  const displayReplacement = formatLearningTermInline(replacement);
 
   for (const candidate of candidates) {
-    const hintData = splitHintText(exampleText, candidate, replacement);
+    const hintData = splitHintText(exampleText, candidate, displayReplacement);
 
     if (hintData) {
       return hintData;
@@ -7830,12 +8007,13 @@ function buildBackContextData({ exampleText, targetText, acceptedAnswers }) {
 function buildHintCandidates({ targetText, acceptedAnswers, preferAcceptedAnswers }) {
   const candidates = [];
   const seen = new Set();
+  const irregularVerbForms = getIrregularVerbForms(targetText) || [];
   const bareInfinitive = targetText.toLowerCase().startsWith("to ")
     ? targetText.slice(3).trim()
     : "";
   const orderedValues = preferAcceptedAnswers
-    ? [...acceptedAnswers, bareInfinitive, targetText]
-    : [targetText, ...acceptedAnswers, bareInfinitive];
+    ? [...acceptedAnswers, targetText, ...irregularVerbForms, bareInfinitive]
+    : [targetText, ...irregularVerbForms, ...acceptedAnswers, bareInfinitive];
 
   for (const value of orderedValues) {
     const normalizedValue = typeof value === "string" ? value.trim() : "";
@@ -7916,7 +8094,9 @@ function shouldHandleInputEnterShortcut(event) {
   }
 
   const interactiveTarget = event.target.closest("button, a, input, select, textarea, [role=\"button\"]");
-  return !interactiveTarget || interactiveTarget === elements.inputAnswerField;
+  return !interactiveTarget
+    || interactiveTarget === elements.inputAnswerField
+    || getInputVerbFields().includes(interactiveTarget);
 }
 
 function handleWindowKeydown(event) {
@@ -9733,21 +9913,25 @@ function updateProgressState({ hidden, label = "", value = 0 }) {
 }
 
 function renderFlashcardAnswer(wordElement, alternativesElement, primaryText, alternatives = []) {
-  wordElement.textContent = primaryText || "\u00a0";
+  renderLearningTerm(wordElement, primaryText);
 
   const visibleAlternatives = Array.isArray(alternatives)
     ? alternatives.filter((answer) => typeof answer === "string" && answer.trim())
     : [];
 
-  alternativesElement.textContent = visibleAlternatives.length > 0
-    ? `(${visibleAlternatives.join(" · ")})`
+  const formattedAlternatives = visibleAlternatives.map(formatLearningTermInline);
+  const alternativeSeparator = visibleAlternatives.some((answer) => getIrregularVerbForms(answer))
+    ? " / "
+    : " · ";
+  alternativesElement.textContent = formattedAlternatives.length > 0
+    ? `(${formattedAlternatives.join(alternativeSeparator)})`
     : "";
   alternativesElement.hidden = visibleAlternatives.length === 0;
 
   if (visibleAlternatives.length > 0) {
     alternativesElement.setAttribute(
       "aria-label",
-      `Weitere gültige Antworten: ${visibleAlternatives.join(", ")}`,
+      `Weitere gültige Antworten: ${formattedAlternatives.join(", ")}`,
     );
   } else {
     alternativesElement.removeAttribute("aria-label");
@@ -9804,7 +9988,7 @@ function renderBackContext(contextData) {
   if (contextData.matchText) {
     const accent = document.createElement("span");
     accent.className = "flashcard__context-accent";
-    accent.textContent = contextData.matchText;
+    accent.textContent = formatLearningTermInline(contextData.matchText);
     elements.backHint.append(accent);
   }
 
@@ -9975,20 +10159,22 @@ function getCardLabel() {
       return `${getAccessibleTargetAnswer()}. Nach links fuer die naechste Karte. Nach rechts fuer die vorige Karte.`;
     }
 
-    return `${state.currentCard.sourceText}. Tippen zum Aufdecken.`;
+    return `${formatLearningTermInline(state.currentCard.sourceText)}. Tippen zum Aufdecken.`;
   }
 
   if (state.isFlipped) {
     return `${getAccessibleTargetAnswer()}.`;
   }
 
-  return `${state.currentCard.sourceText}. Tippen zum Aufdecken.`;
+  return `${formatLearningTermInline(state.currentCard.sourceText)}. Tippen zum Aufdecken.`;
 }
 
 function getAccessibleTargetAnswer() {
   const alternatives = state.currentCard?.targetAlternatives || [];
 
-  return alternatives.length > 0
-    ? `${state.currentCard.targetText}. Weitere gültige Antworten: ${alternatives.join(", ")}`
-    : state.currentCard?.targetText || "Antwort nicht verfügbar";
+  const targetText = formatLearningTermInline(state.currentCard?.targetText);
+  const formattedAlternatives = alternatives.map(formatLearningTermInline);
+  return formattedAlternatives.length > 0
+    ? `${targetText}. Weitere gültige Antworten: ${formattedAlternatives.join(", ")}`
+    : targetText || "Antwort nicht verfügbar";
 }

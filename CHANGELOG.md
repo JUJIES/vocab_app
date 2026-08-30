@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Karten mit genau drei durch Leerzeichen und Bindestriche getrennten Verbformen werden automatisch als unregelmäßige Verben dargestellt: Der Infinitiv bleibt die ruhige Hauptform, Simple Past und Past Participle erscheinen separat; im Eingabemodus werden alle drei Formen in eigenen Feldern geprüft, während der Editor weiterhin nur eine kompakte Zeile speichert.
 - Dialoge und große Ansichtswechsel folgen jetzt in Schüler- und Lehrkraft-App einem gemeinsamen Motion-System: weiches Ein- und Ausblenden, ruhige Schrittwechsel, animierte Tabs und Editoransichten sowie eine stark verkürzte Reduced-Motion-Variante ersetzen harte UI-Sprünge.
 - Geräte-Tag und Abmelden in der Schülerübersicht als gemeinsame 36-Pixel-Aktionsleiste ausgerichtet; identische Boxhöhe, Typografie und unverrückte Icon-Mitte beseitigen den schiefen Eindruck im iPad-Querformat.
 - Rückseiten mit mehreren gültigen Begriffen beruhigt: Der erste Begriff bleibt die klare Hauptantwort, Alternativen stehen dezent geklammert darunter, Semikola werden nur noch als Variantentrenner verstanden und jede Variante wird im Eingabemodus einzeln akzeptiert; identische Antwortwiederholungen im Beispielbereich entfallen.
