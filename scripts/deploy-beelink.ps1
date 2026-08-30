@@ -200,7 +200,11 @@ $PreviousWorkingDirectory = [string]$ServiceXml.service.workingdirectory
 
 Set-ServiceEnvironmentValue -Document $ServiceXml -Name 'PUBLIC_BASE_URL' -Value $PublicBaseUrl
 Set-ServiceEnvironmentValue -Document $ServiceXml -Name 'OPENAI_IMPORT_MODEL' -Value $ImportModel
-$ServiceXml.service.workingdirectory.InnerText = [string]$ReleasePath
+$WorkingDirectoryNode = $ServiceXml.SelectSingleNode('/service/workingdirectory')
+if ($null -eq $WorkingDirectoryNode) {
+  throw 'Service configuration has no /service/workingdirectory element.'
+}
+$WorkingDirectoryNode.InnerText = [string]$ReleasePath
 
 Write-Host 'Provisioning the predefined teacher accounts...'
 Invoke-Native -FilePath 'node.exe' -Arguments @('scripts/provision-teachers.js', "--data-dir=$DataPath") -WorkingDirectory $ReleasePath
