@@ -24,10 +24,10 @@ Healthcheck: `http://127.0.0.1:6000/health`
 - Öffentliche URL: `https://lerndeck.jujies.app`
 - App-Dienst: `BeelinkApp-Lerndeck`
 - Tunnel-Dienst: `BeelinkTunnel-Lerndeck`
-- Aktiver dokumentierter Release: Git-Commit `8c8e1cf`
+- Aktiver dokumentierter Release: Git-Commit `922a6f1`
 - Runtime: `_runtime\Lerndeck`
 
-Der Montag-MVP mit Lehrkraftkonten und Set-Editor ist ein neuer Release-Kandidat und erst nach erfolgreichem Cutover der aktive Stand. Die Zeile mit der aktiven Commit-ID danach aktualisieren.
+Der Montag-MVP mit Lehrkraftkonten, privater Set-Bibliothek, Editor und multimodalem Import wurde am 30. August 2026 aktiviert. Lokaler und öffentlicher Healthcheck, öffentlicher Lehrkraftlogin, private Julius-Setliste, Set-Code-Auflösung, Logout sowie ein nicht persistierter KI-Import wurden nach dem Cutover erfolgreich geprüft.
 
 ## Einmalige Vorbereitung des MVP-Releases
 
