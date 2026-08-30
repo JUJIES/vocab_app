@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Leerer Schülerlogin gekürzt und das Schlüssel-Icon unabhängig von der Höhe des Tablet-Hinweises sauber im PIN-Feld zentriert.
+- Leerer Schülerlogin gekürzt und das Schlüssel-Icon unabhängig von der Höhe des Tablet-Hinweises sauber im PIN-Feld zentriert; eine neue PWA-Shell-Version verteilt die Korrektur auch an bestehende Installationen.
 - Beelink-Release `922a6f1` mit sechs Lehrkraftkonten, fünf migrierten Julius-Sets und funktionsfähigem OpenAI-Import auf `https://lerndeck.jujies.app` aktiviert und öffentlich abgenommen.
 - Beelink-Aktivierung adressiert das Arbeitsverzeichnis explizit als XML-Element und setzt dessen Text, statt sich auf PowerShell-Eigenschaftsadaption zu verlassen.
 - Neue unveränderliche Releases erhalten expliziten Lese-/Ausführungszugriff für das `LocalService`-Dienstkonto; ein fehlgeschlagener Start stellt die vorherige Dienstkonfiguration wieder her, bevor der Fehler weitergereicht wird.

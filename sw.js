@@ -1,9 +1,9 @@
-const CACHE_NAME = "lerndeck-shell-v92";
+const CACHE_NAME = "lerndeck-shell-v93";
 const APP_SHELL_URLS = [
   "/",
   "/index.html",
-  "/styles.css?v=2026-04-18-2148-input-banner-spacing",
-  "/app.js?v=2026-08-29-set-codes-correction",
+  "/styles.css?v=2026-08-30-student-login-alignment",
+  "/app.js?v=2026-08-30-student-login-alignment",
   "/manifest.webmanifest",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
