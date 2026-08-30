@@ -309,11 +309,14 @@
               <span>Zurück</span>
             </button>
           </div>
-          <label id="set-import-dropzone" class="set-import-dropzone" for="set-import-files">
-            <span>Datei auswählen oder ablegen</span>
-            <small>Bild, PDF, DOCX, PPTX, TXT, MD oder CSV</small>
+          <div id="set-import-dropzone" class="set-import-dropzone">
+            <div id="set-import-preview-list" class="set-import-preview-list" aria-live="polite" hidden></div>
+            <button id="set-import-file-picker" class="set-import-file-picker" type="button">
+              <span id="set-import-picker-title">Datei auswählen oder ablegen</span>
+              <small id="set-import-picker-types">Bild, PDF, DOCX, PPTX, TXT, MD oder CSV</small>
+            </button>
             <small class="set-import-dropzone__privacy">Verarbeitung über OpenAI · keine Speicherung in Lerndeck</small>
-          </label>
+          </div>
           <input id="set-import-files" type="file" multiple hidden accept=".txt,.md,.csv,.tsv,.jpg,.jpeg,.png,.webp,.gif,.pdf,.docx,.pptx" />
           <textarea id="set-import-text" class="set-editor-textarea" rows="5" aria-label="Text einfügen" placeholder="Text oder Vokabelliste einfügen …"></textarea>
           <label class="set-import-instruction-field" for="set-import-instruction">

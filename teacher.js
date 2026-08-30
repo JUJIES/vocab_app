@@ -35,6 +35,7 @@ const state = {
   editorImportMode: "replace",
   editorImportReturnView: "choice",
   editorFiles: [],
+  editorFilePreviewUrls: [],
   editorCards: [],
   editorMetadata: {
     sourceLanguage: "de",
@@ -125,6 +126,9 @@ const elements = {
   addCardButton: document.getElementById("add-card-button"),
   setImportSection: document.getElementById("set-import-section"),
   setImportDropzone: document.getElementById("set-import-dropzone"),
+  setImportFilePicker: document.getElementById("set-import-file-picker"),
+  setImportPickerTitle: document.getElementById("set-import-picker-title"),
+  setImportPreviewList: document.getElementById("set-import-preview-list"),
   setImportFiles: document.getElementById("set-import-files"),
   setImportText: document.getElementById("set-import-text"),
   setImportInstruction: document.getElementById("set-import-instruction"),
@@ -167,8 +171,10 @@ function bindEvents() {
   elements.setEditorForm.addEventListener("submit", handleSaveSet);
   elements.setEditorForm.addEventListener("input", scheduleEditorDraftSave);
   elements.addCardButton.addEventListener("click", () => addEditorCard());
+  elements.setImportFilePicker.addEventListener("click", () => elements.setImportFiles.click());
   elements.setImportFiles.addEventListener("change", () => {
-    setEditorFiles(Array.from(elements.setImportFiles.files || []));
+    setEditorFiles(Array.from(elements.setImportFiles.files || []), { append: true });
+    elements.setImportFiles.value = "";
   });
   elements.createImportDraftButton.addEventListener("click", handleCreateImportDraft);
 
@@ -187,7 +193,7 @@ function bindEvents() {
   }
 
   elements.setImportDropzone.addEventListener("drop", (event) => {
-    setEditorFiles(Array.from(event.dataTransfer?.files || []));
+    setEditorFiles(Array.from(event.dataTransfer?.files || []), { append: true });
   });
 
   for (const trigger of elements.closeShareTriggers) {
@@ -1561,7 +1567,7 @@ async function closeSetEditor({ skipDraftSave = false } = {}) {
   }
   elements.setEditorOverlay.hidden = true;
   elements.setEditorFeedback.textContent = "";
-  elements.setImportFeedback.textContent = "";
+  resetSetImportInputs();
   if (elements.shareOverlay.hidden && elements.passwordOverlay.hidden) {
     document.body.classList.remove("has-modal-open");
   }
@@ -1742,13 +1748,117 @@ function createEditorInput(labelText, value, onInput, { compact = false } = {}) 
   return label;
 }
 
-function setEditorFiles(files) {
-  state.editorFiles = files.slice(0, 4);
+function setEditorFiles(files, { append = false } = {}) {
+  const candidates = append ? [...state.editorFiles, ...files] : files;
+  const uniqueFiles = [];
+  const seenFiles = new Set();
+  for (const file of candidates) {
+    if (!(file instanceof File)) {
+      continue;
+    }
+    const identity = [file.name, file.size, file.type, file.lastModified].join(":");
+    if (seenFiles.has(identity)) {
+      continue;
+    }
+    seenFiles.add(identity);
+    uniqueFiles.push(file);
+  }
+
+  state.editorFiles = uniqueFiles.slice(0, 4);
+  renderEditorFilePreviews();
   elements.setImportFileSummary.textContent = state.editorFiles.length
-    ? `${state.editorFiles.length} Datei${state.editorFiles.length === 1 ? "" : "en"} ausgewählt`
+    ? `${state.editorFiles.length} Datei${state.editorFiles.length === 1 ? "" : "en"} ausgewählt${uniqueFiles.length > 4 ? " · maximal 4" : ""}`
     : state.importConfigured
       ? ""
       : "KI-Import braucht OPENAI_API_KEY";
+}
+
+function renderEditorFilePreviews() {
+  for (const previewUrl of state.editorFilePreviewUrls) {
+    URL.revokeObjectURL(previewUrl);
+  }
+  state.editorFilePreviewUrls = [];
+  elements.setImportPreviewList.replaceChildren();
+
+  const hasFiles = state.editorFiles.length > 0;
+  elements.setImportDropzone.classList.toggle("has-files", hasFiles);
+  elements.setImportPreviewList.hidden = !hasFiles;
+  elements.setImportFilePicker.disabled = state.editorFiles.length >= 4;
+  elements.setImportPickerTitle.textContent = hasFiles
+    ? state.editorFiles.length >= 4
+      ? "Maximal 4 Dateien ausgewählt"
+      : "Weitere Datei hinzufügen"
+    : "Datei auswählen oder ablegen";
+
+  state.editorFiles.forEach((file, index) => {
+    const card = document.createElement("article");
+    card.className = "set-import-preview-card";
+
+    const visual = document.createElement("div");
+    visual.className = "set-import-preview-card__visual";
+    if (file.type.startsWith("image/")) {
+      const previewUrl = URL.createObjectURL(file);
+      state.editorFilePreviewUrls.push(previewUrl);
+      const image = document.createElement("img");
+      image.className = "set-import-preview-card__image";
+      image.src = previewUrl;
+      image.alt = `Vorschau ${file.name}`;
+      visual.append(image);
+    } else {
+      const typeLabel = getImportFileTypeLabel(file);
+      const icon = document.createElement("span");
+      icon.className = "set-import-preview-card__file-icon";
+      icon.dataset.fileType = typeLabel;
+      icon.textContent = typeLabel;
+      icon.setAttribute("aria-label", `${typeLabel}-Datei`);
+      visual.append(icon);
+    }
+
+    const copy = document.createElement("div");
+    copy.className = "set-import-preview-card__copy";
+    const name = document.createElement("strong");
+    name.className = "set-import-preview-card__name";
+    name.textContent = file.name;
+    name.title = file.name;
+    const size = document.createElement("small");
+    size.className = "set-import-preview-card__size";
+    size.textContent = formatImportFileSize(file.size);
+    copy.append(name, size);
+
+    const remove = document.createElement("button");
+    remove.className = "set-import-preview-card__remove";
+    remove.type = "button";
+    remove.title = `${file.name} entfernen`;
+    remove.setAttribute("aria-label", `${file.name} entfernen`);
+    remove.append(createButtonIcon(REMOVE_ICON_PATH));
+    remove.addEventListener("click", () => {
+      setEditorFiles(state.editorFiles.filter((_entry, fileIndex) => fileIndex !== index));
+    });
+
+    card.append(visual, copy, remove);
+    elements.setImportPreviewList.append(card);
+  });
+}
+
+function getImportFileTypeLabel(file) {
+  const extension = file.name.split(".").pop()?.trim().toUpperCase() || "";
+  if (["PDF", "DOCX", "PPTX", "TXT", "MD", "CSV", "TSV"].includes(extension)) {
+    return extension;
+  }
+  if (file.type === "application/pdf") {
+    return "PDF";
+  }
+  return "DATEI";
+}
+
+function formatImportFileSize(bytes) {
+  if (!Number.isFinite(bytes) || bytes < 1) {
+    return "0 KB";
+  }
+  if (bytes < 1024 * 1024) {
+    return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  }
+  return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} MB`;
 }
 
 async function handleCreateImportDraft() {

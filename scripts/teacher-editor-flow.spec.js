@@ -65,6 +65,27 @@ test("teacher editor separates creation, manual editing and automatic additions"
   await expect(page.locator("#set-import-section")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Material hinzufügen" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Zurück" })).toBeVisible();
+  await page.locator("#set-import-files").setInputFiles([
+    {
+      name: "buchseite.png",
+      mimeType: "image/png",
+      buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64"),
+    },
+    {
+      name: "lektion.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from("pdf-preview-fixture"),
+    },
+  ]);
+  await expect(page.getByRole("img", { name: "Vorschau buchseite.png" })).toBeVisible();
+  await expect(page.getByLabel("PDF-Datei")).toBeVisible();
+  await expect(page.getByText("buchseite.png", { exact: true })).toBeVisible();
+  await expect(page.getByText("lektion.pdf", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Weitere Datei hinzufügen" })).toBeVisible();
+  await page.getByRole("button", { name: "lektion.pdf entfernen" }).click();
+  await expect(page.getByText("lektion.pdf", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "buchseite.png entfernen" }).click();
+  await expect(page.getByRole("button", { name: "Datei auswählen oder ablegen" })).toBeVisible();
   await page.getByRole("button", { name: "Zurück" }).click();
   await expect(page.locator("#set-editor-choice")).toBeVisible();
 
