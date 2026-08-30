@@ -6,6 +6,7 @@ const STATUS_CONNECTED_ICON_PATH = "./assets/icons/status-connected.svg";
 const STATUS_DISCONNECTED_ICON_PATH = "./assets/icons/status-disconnected.svg";
 const PENCIL_ICON_PATH = "./assets/icons/pencil.svg";
 const EXTERNAL_LINK_ICON_PATH = "./assets/icons/external-link.svg";
+const DELETE_ICON_PATH = "./assets/icons/trash-2.svg";
 const REMOVE_ICON_PATH = "./assets/icons/x.svg";
 const BROKEN_LINK_ICON_PATH = "./assets/icons/broken-link.svg";
 const TIMEOUT_ICON_PATH = "./assets/icons/timeout.svg";
@@ -19,6 +20,7 @@ const state = {
   setPanels: {},
   publicOrigin: "",
   activeSet: null,
+  pendingDeleteSet: null,
   activeShareUrl: "",
   feedbackTimeoutId: null,
   authReady: false,
@@ -103,6 +105,12 @@ const elements = {
   shareFeedback: document.getElementById("share-feedback"),
   shareCloseButton: document.getElementById("share-close-button"),
   closeShareTriggers: document.querySelectorAll("[data-close-share]"),
+  deleteSetOverlay: document.getElementById("delete-set-overlay"),
+  deleteSetCopy: document.getElementById("delete-set-copy"),
+  deleteSetFeedback: document.getElementById("delete-set-feedback"),
+  deleteSetCancel: document.getElementById("delete-set-cancel"),
+  deleteSetConfirm: document.getElementById("delete-set-confirm"),
+  closeDeleteSetTriggers: document.querySelectorAll("[data-close-delete-set]"),
   createSetButton: document.getElementById("create-set-button"),
   setEditorOverlay: document.getElementById("set-editor-overlay"),
   setEditorPanel: document.getElementById("set-editor-panel"),
@@ -157,6 +165,8 @@ function bindEvents() {
   elements.passwordDialogCancel.addEventListener("click", closePasswordDialog);
   elements.copyLinkButton.addEventListener("click", handleCopyLink);
   elements.shareCloseButton.addEventListener("click", closeShareOverlay);
+  elements.deleteSetCancel.addEventListener("click", closeDeleteSetDialog);
+  elements.deleteSetConfirm.addEventListener("click", handleDeleteSet);
   elements.createSetButton.addEventListener("click", openNewSetEditor);
   elements.setEditorClose.addEventListener("click", () => {
     void closeSetEditor();
@@ -202,6 +212,10 @@ function bindEvents() {
     trigger.addEventListener("click", closeShareOverlay);
   }
 
+  for (const trigger of elements.closeDeleteSetTriggers) {
+    trigger.addEventListener("click", closeDeleteSetDialog);
+  }
+
   for (const trigger of elements.closePasswordTriggers) {
     trigger.addEventListener("click", closePasswordDialog);
   }
@@ -221,6 +235,11 @@ function bindEvents() {
 
       if (!elements.settingsMenu.hidden) {
         closeTeacherSettingsMenu();
+        return;
+      }
+
+      if (!elements.deleteSetOverlay.hidden) {
+        closeDeleteSetDialog();
         return;
       }
 
@@ -649,6 +668,19 @@ function createSetRow(setEntry) {
     actions.append(shareAction);
   }
 
+  if (setEntry.editable) {
+    const deleteAction = document.createElement("button");
+    deleteAction.className = "teacher-set-row__delete";
+    deleteAction.type = "button";
+    deleteAction.setAttribute("aria-label", `Set ${setEntry.title} löschen`);
+    deleteAction.title = "Löschen";
+    deleteAction.append(createButtonIcon(DELETE_ICON_PATH));
+    deleteAction.addEventListener("click", () => {
+      openDeleteSetDialog(setEntry);
+    });
+    actions.append(deleteAction);
+  }
+
   row.append(copy, actions);
   return row;
 }
@@ -1027,6 +1059,7 @@ function createTeacherRequestError(response, fallbackMessage) {
 
 function showTeacherAuth(feedback = "") {
   closeShareOverlay();
+  closeDeleteSetDialog();
   closeSetEditor();
   closePasswordDialog();
   closeTeacherSettingsMenu();
@@ -1085,7 +1118,7 @@ function closePasswordDialog() {
   elements.passwordOverlay.hidden = true;
   elements.passwordForm.reset();
   elements.passwordFeedback.textContent = "";
-  if (elements.shareOverlay.hidden && elements.setEditorOverlay.hidden) {
+  if (elements.shareOverlay.hidden && elements.deleteSetOverlay.hidden && elements.setEditorOverlay.hidden) {
     document.body.classList.remove("has-modal-open");
   }
 }
@@ -1114,8 +1147,69 @@ function closeShareOverlay() {
   elements.shareOverlay.hidden = true;
   elements.sharePath.hidden = true;
   elements.shareFeedback.textContent = "";
-  if (elements.setEditorOverlay.hidden && elements.passwordOverlay.hidden) {
+  if (elements.setEditorOverlay.hidden && elements.passwordOverlay.hidden && elements.deleteSetOverlay.hidden) {
     document.body.classList.remove("has-modal-open");
+  }
+}
+
+function openDeleteSetDialog(setEntry) {
+  state.pendingDeleteSet = setEntry;
+  elements.deleteSetCopy.textContent = `„${setEntry.title}“ wirklich löschen?`;
+  elements.deleteSetFeedback.textContent = "";
+  elements.deleteSetCancel.disabled = false;
+  elements.deleteSetConfirm.disabled = false;
+  elements.deleteSetOverlay.hidden = false;
+  document.body.classList.add("has-modal-open");
+  requestAnimationFrame(() => elements.deleteSetCancel.focus());
+}
+
+function closeDeleteSetDialog() {
+  elements.deleteSetOverlay.hidden = true;
+  elements.deleteSetFeedback.textContent = "";
+  elements.deleteSetCancel.disabled = false;
+  elements.deleteSetConfirm.disabled = false;
+  state.pendingDeleteSet = null;
+  if (elements.shareOverlay.hidden && elements.passwordOverlay.hidden && elements.setEditorOverlay.hidden) {
+    document.body.classList.remove("has-modal-open");
+  }
+}
+
+async function handleDeleteSet() {
+  const setEntry = state.pendingDeleteSet;
+  if (!setEntry) {
+    return;
+  }
+
+  elements.deleteSetCancel.disabled = true;
+  elements.deleteSetConfirm.disabled = true;
+  elements.deleteSetFeedback.textContent = "Wird gelöscht …";
+
+  try {
+    const response = await requestJson(`/api/teacher/sets/${encodeURIComponent(setEntry.id)}`, {
+      method: "DELETE",
+      auth: "teacher",
+    });
+    if (!response.ok) {
+      throw createTeacherRequestError(response, "Set konnte nicht gelöscht werden.");
+    }
+
+    state.sets = state.sets.filter((entry) => entry.id !== setEntry.id);
+    renderSetList();
+    closeDeleteSetDialog();
+    try {
+      await reloadTeacherData();
+    } catch (reloadError) {
+      console.error("Unable to refresh sets after deletion:", reloadError);
+    }
+  } catch (error) {
+    if (error?.requiresAuth) {
+      showTeacherAuth(error.message);
+      return;
+    }
+    console.error("Unable to delete set:", error);
+    elements.deleteSetFeedback.textContent = error.message || "Set konnte nicht gelöscht werden.";
+    elements.deleteSetCancel.disabled = false;
+    elements.deleteSetConfirm.disabled = false;
   }
 }
 
@@ -1586,7 +1680,7 @@ async function closeSetEditor({ skipDraftSave = false } = {}) {
   elements.setEditorOverlay.hidden = true;
   elements.setEditorFeedback.textContent = "";
   resetSetImportInputs();
-  if (elements.shareOverlay.hidden && elements.passwordOverlay.hidden) {
+  if (elements.shareOverlay.hidden && elements.passwordOverlay.hidden && elements.deleteSetOverlay.hidden) {
     document.body.classList.remove("has-modal-open");
   }
   if (state.editorSetStatus === "draft" && state.editorSetId) {

@@ -4,9 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Lerndeck – Lehrerbereich</title>
-    <link rel="stylesheet" href="./teacher.css?v=2026-08-30-centered-import-action" />
+    <link rel="stylesheet" href="./teacher.css?v=2026-08-30-set-delete" />
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
-    <script src="./teacher.js?v=2026-08-30-centered-import-action" defer></script>
+    <script src="./teacher.js?v=2026-08-30-set-delete" defer></script>
   </head>
   <body>
     <main id="teacher-auth-panel" class="teacher-auth">
@@ -226,6 +226,29 @@
         </div>
 
         <p id="share-feedback" class="share-panel__feedback" aria-live="polite"></p>
+      </section>
+    </div>
+
+    <div id="delete-set-overlay" class="share-overlay" hidden>
+      <div class="share-overlay__backdrop" data-close-delete-set></div>
+      <section
+        class="delete-set-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="delete-set-title"
+        aria-describedby="delete-set-copy"
+      >
+        <p class="share-panel__kicker">Lernset</p>
+        <h2 id="delete-set-title" class="delete-set-panel__title">Set löschen?</h2>
+        <p id="delete-set-copy" class="delete-set-panel__copy"></p>
+        <p id="delete-set-feedback" class="teacher-auth__feedback" aria-live="polite"></p>
+        <div class="delete-set-panel__actions">
+          <button id="delete-set-cancel" class="teacher-button teacher-button--secondary" type="button">Abbrechen</button>
+          <button id="delete-set-confirm" class="teacher-button teacher-button--danger" type="button">
+            <img class="teacher-button__icon" src="./assets/icons/trash-2.svg" alt="" decoding="async" />
+            <span>Löschen</span>
+          </button>
+        </div>
       </section>
     </div>
 

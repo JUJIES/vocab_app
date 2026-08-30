@@ -33,7 +33,7 @@ async function importClearList(page, text) {
   await expect(page.locator("#set-editor-form")).toBeVisible();
 }
 
-test("teacher editor separates creation, manual editing and automatic additions", async ({ page }) => {
+test("teacher editor separates creation, manual editing and automatic additions", async ({ page, request }) => {
   test.skip(!TEACHER_PASSWORD, "TEACHER_PASSWORD fehlt für den Editor-Flow-Test.");
   await login(page);
   const importPurposes = [];
@@ -160,6 +160,7 @@ test("teacher editor separates creation, manual editing and automatic additions"
   await expect(page.locator(".set-card-editor-row")).toHaveCount(2);
   await page.getByRole("button", { name: "Set veröffentlichen" }).click();
   await expect(page.locator("#share-overlay")).toBeVisible();
+  const publishedShareCode = (await page.locator("#share-code").textContent()).trim();
   await page.locator("#share-close-button").click();
   const publishedSet = page.locator(".teacher-set-row").filter({ hasText: "Tiere auf Englisch" });
   await expect(publishedSet.getByText("Entwurf", { exact: true })).toHaveCount(0);
@@ -176,4 +177,27 @@ test("teacher editor separates creation, manual editing and automatic additions"
   await expect(page.locator("#set-title-input")).toHaveValue(originalTitle);
   await expect(page.locator(".set-card-editor-row")).toHaveCount(originalCardCount + 2);
   expect(importPurposes).toEqual(["append_cards", "create_set", "append_cards"]);
+
+  await page.locator("#set-editor-close").click();
+  const publishedSetAfterEdit = page.locator(".teacher-set-row").filter({ hasText: "Tiere auf Englisch" });
+  const deletePublishedSet = publishedSetAfterEdit.getByRole("button", { name: "Set Tiere auf Englisch löschen" });
+  await expect(deletePublishedSet).toBeVisible();
+  await deletePublishedSet.click();
+  await expect(page.getByRole("dialog", { name: "Set löschen?" })).toBeVisible();
+  await expect(page.locator("#delete-set-copy")).toHaveText("„Tiere auf Englisch“ wirklich löschen?");
+  await page.locator("#delete-set-cancel").click();
+  await expect(page.locator("#delete-set-overlay")).toBeHidden();
+  await expect(publishedSetAfterEdit).toBeVisible();
+
+  await deletePublishedSet.click();
+  await page.locator("#delete-set-confirm").click();
+  await expect(publishedSetAfterEdit).toHaveCount(0);
+  const deletedCodeResponse = await request.get(`/api/set-codes/${publishedShareCode}`);
+  expect(deletedCodeResponse.status()).toBe(404);
+
+  const savedDraft = page.locator(".teacher-set-row").filter({ hasText: "Manueller Entwurf bleibt erhalten" });
+  await savedDraft.getByRole("button", { name: "Set Manueller Entwurf bleibt erhalten löschen" }).click();
+  await page.locator("#delete-set-confirm").click();
+  await expect(savedDraft).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: /^Entwürfe/ })).toHaveCount(0);
 });

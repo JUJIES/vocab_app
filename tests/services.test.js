@@ -200,6 +200,40 @@ test("publishing a draft keeps its identity and creates its first share code", a
   });
 });
 
+test("teachers can delete their own sets and drafts without touching another account", async () => {
+  await withTempDirectory(async (directory) => {
+    const service = new SetService({ dataDir: directory });
+    const published = await service.createSet("julius", {
+      title: "Zum Löschen",
+      cards: [{ front: "Hund", back: "dog" }],
+    });
+    const draft = await service.createDraft("julius", {
+      title: "Entwurf löschen",
+      cards: [{ front: "Katze", back: "" }],
+    });
+
+    await assert.rejects(
+      () => service.deleteOwnedSet("jessi-s", published.id),
+      (error) => error.code === "SET_NOT_FOUND" && error.status === 404,
+    );
+    assert.equal((await service.resolveShareCode(published.shareCode)).id, published.id);
+
+    const deletedPublished = await service.deleteOwnedSet("julius", published.id);
+    assert.equal(deletedPublished.status, "archived");
+    assert.equal(await service.resolveShareCode(published.shareCode), null);
+    assert.equal(await service.findPublishedSetByPath(published.path), null);
+    assert.equal(await service.getOwnedSet("julius", published.id), null);
+
+    const deletedDraft = await service.deleteOwnedSet("julius", draft.id);
+    assert.equal(deletedDraft.status, "archived");
+    assert.deepEqual(await service.listOwnedSets("julius"), []);
+    await assert.rejects(
+      () => service.deleteOwnedSet("julius", draft.id),
+      (error) => error.code === "SET_NOT_FOUND" && error.status === 404,
+    );
+  });
+});
+
 test("legacy sets migrate once into Julius' private sets without changing learning paths", async () => {
   await withTempDirectory(async (directory) => {
     const service = new SetService({ dataDir: directory });
@@ -249,6 +283,11 @@ test("legacy sets migrate once into Julius' private sets without changing learni
     assert.deepEqual(secondMigration, { added: 0, total: 1 });
     assert.equal(afterRestart.title, "Food Basics – Julius");
     assert.equal(afterRestart.path, seed.path);
+
+    await service.deleteOwnedSet("julius", seed.id);
+    const migrationAfterDeletion = await service.ensureOwnedSeedSets("julius", [seed]);
+    assert.deepEqual(migrationAfterDeletion, { added: 0, total: 1 });
+    assert.deepEqual(await service.listOwnedSets("julius"), []);
   });
 });
 

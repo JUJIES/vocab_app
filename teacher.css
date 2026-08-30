@@ -217,6 +217,7 @@ body.has-modal-open {
 .teacher-header,
 .teacher-section,
 .share-panel,
+.delete-set-panel,
 .password-panel {
   background:
     radial-gradient(circle at 82% 42%, rgba(71, 82, 113, 0.18), transparent 26%),
@@ -932,7 +933,8 @@ body.has-modal-open {
 }
 
 .teacher-set-row__edit,
-.teacher-set-row__share {
+.teacher-set-row__share,
+.teacher-set-row__delete {
   width: 2.25rem;
   height: 2.25rem;
   padding: 0;
@@ -956,6 +958,7 @@ body.has-modal-open {
 .teacher-set-row__actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.4rem;
 }
 
@@ -964,6 +967,24 @@ body.has-modal-open {
 .teacher-set-row__share:hover,
 .teacher-set-row__share:focus-visible {
   background: rgba(214, 224, 246, 0.12);
+}
+
+.teacher-set-row__delete {
+  color: rgba(244, 164, 164, 0.9);
+}
+
+.teacher-set-row__delete:hover,
+.teacher-set-row__delete:focus-visible {
+  opacity: 1;
+  transform: translateY(-1px);
+  background: rgba(232, 108, 108, 0.12);
+  color: rgba(255, 202, 202, 0.98);
+}
+
+.teacher-set-row__delete .teacher-button__icon {
+  width: 1.05rem;
+  height: 1.05rem;
+  filter: brightness(0) saturate(100%) invert(75%) sepia(27%) saturate(997%) hue-rotate(309deg) brightness(105%) contrast(101%);
 }
 
 .set-editor-panel {
@@ -1823,6 +1844,38 @@ body.has-modal-open {
   font-size: 0.9rem;
 }
 
+.delete-set-panel {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 28rem);
+  padding: clamp(1.25rem, 4vw, 1.7rem);
+  display: grid;
+  gap: 0.9rem;
+  border: 1px solid rgba(214, 224, 246, 0.08);
+}
+
+.delete-set-panel__title {
+  margin: 0;
+  color: var(--heading-text);
+  font-size: clamp(1.55rem, 5vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+}
+
+.delete-set-panel__copy {
+  margin: 0;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.delete-set-panel__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  margin-top: 0.15rem;
+}
+
 @media (max-width: 720px) {
   .set-import-preview-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1830,10 +1883,6 @@ body.has-modal-open {
 
   .teacher-set-row {
     grid-template-columns: 1fr;
-  }
-
-  .teacher-set-row__share {
-    justify-self: end;
   }
 
   .teacher-set-row__tablet {
@@ -1875,6 +1924,11 @@ body.has-modal-open {
 
   .share-panel__actions {
     justify-content: center;
+  }
+
+  .delete-set-panel__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .set-editor-grid,
@@ -1951,7 +2005,8 @@ body.has-modal-open {
   .teacher-set-row__toggle,
   .teacher-set-row__toggle-chevron,
   .teacher-set-row__tablets-panel,
-  .teacher-set-row__share {
+  .teacher-set-row__share,
+  .teacher-set-row__delete {
     transition: none;
   }
 }

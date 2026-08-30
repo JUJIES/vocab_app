@@ -307,6 +307,36 @@ app.put("/api/teacher/sets/:setId", async (request, response) => {
   }
 });
 
+app.delete("/api/teacher/sets/:setId", async (request, response) => {
+  const sessionResult = requireTeacherSession(request);
+  if (!sessionResult.ok) {
+    response.status(sessionResult.status).json({ error: sessionResult.error });
+    return;
+  }
+
+  try {
+    const deletedSet = await setService.deleteOwnedSet(sessionResult.teacherId, request.params.setId);
+    let tabletCleanupComplete = true;
+    let tabletsUpdated = 0;
+
+    try {
+      tabletsUpdated = await removeSetReferencesFromTablets(deletedSet.path);
+    } catch (cleanupError) {
+      tabletCleanupComplete = false;
+      console.error("Unable to remove deleted set from tablets:", cleanupError);
+    }
+
+    response.json({
+      success: true,
+      set: deletedSet,
+      tabletsUpdated,
+      tabletCleanupComplete,
+    });
+  } catch (error) {
+    handleApiError(response, error, "Set konnte nicht gelöscht werden.");
+  }
+});
+
 app.post("/api/teacher/import-draft", async (request, response) => {
   const sessionResult = requireTeacherSession(request);
   if (!sessionResult.ok) {
@@ -2303,6 +2333,41 @@ function getTabletsForSet(store, setPath) {
         subscribedAt: subscription?.subscribedAt || null,
       };
     });
+}
+
+async function removeSetReferencesFromTablets(setPath) {
+  const normalizedSetPath = normalizeSetPath(setPath);
+  if (!normalizedSetPath) {
+    return 0;
+  }
+
+  const store = await readTabletStore();
+  let tabletsUpdated = 0;
+
+  for (const tablet of store.tablets) {
+    const subscriptions = normalizeTabletSubscriptions(tablet);
+    const learningProgress = normalizeTabletLearningProgress(tablet);
+    const nextSubscriptions = subscriptions.filter((entry) => entry.setPath !== normalizedSetPath);
+    const nextLearningProgress = learningProgress.filter((entry) => entry.setPath !== normalizedSetPath);
+
+    if (
+      nextSubscriptions.length === subscriptions.length
+      && nextLearningProgress.length === learningProgress.length
+    ) {
+      continue;
+    }
+
+    tablet.subscriptions = nextSubscriptions;
+    tablet.learningProgress = nextLearningProgress;
+    tablet.updatedAt = new Date().toISOString();
+    tabletsUpdated += 1;
+  }
+
+  if (tabletsUpdated > 0) {
+    await writeTabletStore(store);
+  }
+
+  return tabletsUpdated;
 }
 
 function getPublicOrigin(request) {

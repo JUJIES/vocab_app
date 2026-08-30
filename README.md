@@ -10,7 +10,7 @@ Einsatzbereit sind:
 - einmalige Tablet-Kopplung mit Geräte-PIN und dauerhafte, widerrufbare Sitzung
 - sechs vorbereitete Lehrkraftkonten: Julius, Jessi S., Jessi B., Jörg, Aksana und Matti
 - direkt nutzbare Lehrkraftkonten mit einmaligem Startpasswort und eigenem Passwortwechsel im Zahnrad-Menü
-- ausschließlich private Sets pro Lehrkraft mit Erstellen, Bearbeiten und stabilem Set-Code; es gibt im MVP keine Vorlagen oder zwischen Lehrkräften geteilten Bibliotheken
+- ausschließlich private Sets pro Lehrkraft mit Erstellen, Bearbeiten, Löschen und stabilem Set-Code; es gibt im MVP keine Vorlagen oder zwischen Lehrkräften geteilten Bibliotheken
 - automatisch gespeicherte Set-Entwürfe: erster sinnvoller Inhalt und fertige Importentwürfe werden sofort gesichert, bleiben nach einem Reload unter `Entwürfe (n)` wiederauffindbar und werden erst beim Veröffentlichen per Code oder QR für Tablets erreichbar
 - Schnellimport aus klaren Textlisten sowie KI-Entwürfe aus Freitext, TXT, MD, CSV, Bildern, PDF, DOCX und PPTX; beim automatischen Erstentwurf schlägt die KI auch Titel, Fach, Beschreibung, Sprachen und Seitenbezeichnungen vor, eine optionale Importnotiz grenzt Auswahl, Umfang und Abfragerichtung ein
 - Schülerübernahme per Code, QR oder Link; der Set-Inhalt wird nicht auf das Tablet kopiert
@@ -28,6 +28,7 @@ Bewusst vertagt sind persönliche Schülerkonten, Dino-Lernpässe, Schulen/Grupp
 4. Ein Code fügt nur den stabilen Set-Pfad zum Tablet hinzu. Beim nächsten Öffnen oder Neuladen kommt die aktuelle Revision vom Server; ein laufender Durchgang wird nicht mitten in einer Karte umgebaut.
 5. Lernstände bleiben am Tablet. Unveränderte Karten behalten bei einer Set-Bearbeitung ihre Karten-ID; nur inhaltlich geänderte Karten erhalten eine neue ID.
 6. Importmaterial erzeugt immer nur einen bearbeitbaren Entwurf. Eine optionale Importnotiz wie `nur Lektion 1, Deutsch → Englisch` steuert Auswahl und Richtung. Originaldateien werden nicht gespeichert. Modellantworten werden serverseitig gegen dasselbe Set-Datenmodell validiert.
+7. Das Löschen eines Entwurfs oder veröffentlichten Sets entfernt ihn sofort aus dem Lehrerbereich. Veröffentlichte Codes und Pfade sind danach nicht mehr auflösbar; Tablet-Verknüpfungen und zugehörige Lernstände werden bereinigt. Intern bleibt der Datensatz archiviert, damit ein versehentliches Löschen im Runtime-Speicher grundsätzlich wiederherstellbar bleibt.
 
 Runtime-Daten liegen ausschließlich in `DATA_DIR` und dürfen bei Deployments nicht ersetzt werden. JSON-Schreibvorgänge laufen serialisiert und über atomare Dateiersetzung. Das ist für den einzelnen Beelink-Prozess bewusst einfach; bei mehreren Serverinstanzen muss die Store-Schicht später durch eine gemeinsame Datenbank ersetzt werden.
 
