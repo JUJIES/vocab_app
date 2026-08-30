@@ -23,11 +23,11 @@
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./styles.css?v=2026-08-30-student-empty-state" />
+    <link rel="stylesheet" href="./styles.css?v=2026-08-30-answer-variants" />
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
     <script src="./pwa.js?v=2026-08-30-installable-app-v1" defer></script>
-    <script src="./app.js?v=2026-08-30-student-empty-state" defer></script>
+    <script src="./app.js?v=2026-08-30-answer-variants" defer></script>
   </head>
   <body>
     <main class="app-shell">
@@ -180,7 +180,14 @@
                     id="front-content"
                     class="flashcard__content"
                   >
-                    <span id="front-word" class="flashcard__word">&nbsp;</span>
+                    <span class="flashcard__answer">
+                      <span id="front-word" class="flashcard__word">&nbsp;</span>
+                      <span
+                        id="front-alternatives"
+                        class="flashcard__alternatives"
+                        hidden
+                      ></span>
+                    </span>
                     <span class="flashcard__hint-shell" aria-live="polite">
                       <span id="front-hint" class="flashcard__hint"></span>
                     </span>
@@ -264,8 +271,20 @@
                   </span>
 
                   <span class="flashcard__content">
-                    <span id="back-word" class="flashcard__word">&nbsp;</span>
-                    <span class="flashcard__hint-shell flashcard__hint-shell--back" aria-live="polite">
+                    <span class="flashcard__answer">
+                      <span id="back-word" class="flashcard__word">&nbsp;</span>
+                      <span
+                        id="back-alternatives"
+                        class="flashcard__alternatives"
+                        hidden
+                      ></span>
+                    </span>
+                    <span
+                      id="back-hint-shell"
+                      class="flashcard__hint-shell flashcard__hint-shell--back"
+                      aria-live="polite"
+                      hidden
+                    >
                       <span id="back-hint" class="flashcard__hint flashcard__hint--back"></span>
                     </span>
                   </span>

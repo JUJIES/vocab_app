@@ -1,11 +1,11 @@
-const CACHE_NAME = "lerndeck-shell-v95";
+const CACHE_NAME = "lerndeck-shell-v96";
 const APP_SHELL_URLS = [
   "/",
   "/index.html",
   "/teacher",
   "/teacher.html",
-  "/styles.css?v=2026-08-30-student-empty-state",
-  "/app.js?v=2026-08-30-student-empty-state",
+  "/styles.css?v=2026-08-30-answer-variants",
+  "/app.js?v=2026-08-30-answer-variants",
   "/teacher.css?v=2026-08-30-set-delete",
   "/teacher.js?v=2026-08-30-set-delete",
   "/pwa.js?v=2026-08-30-installable-app-v1",

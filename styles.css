@@ -6537,6 +6537,13 @@ button.student-screen__device-card {
   justify-content: space-between;
 }
 
+.flashcard__answer {
+  display: grid;
+  justify-items: center;
+  gap: clamp(0.55rem, 1.2vw, 0.85rem);
+  width: 100%;
+}
+
 .flashcard__word {
   display: block;
   font-size: clamp(3rem, 10vw, 7.4rem);
@@ -6548,6 +6555,21 @@ button.student-screen__device-card {
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   transform: translateZ(0);
+}
+
+.flashcard__alternatives {
+  max-width: min(100%, 42rem);
+  color: rgba(206, 216, 208, 0.72);
+  font-size: clamp(1.02rem, 2.15vw, 1.48rem);
+  line-height: 1.45;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.flashcard__alternatives[hidden] {
+  display: none;
 }
 
 .flashcard__word--mode {
@@ -6582,6 +6604,10 @@ button.student-screen__device-card {
 
 .flashcard__hint-shell--back {
   min-height: 4.8rem;
+}
+
+.flashcard__hint-shell--back[hidden] {
+  display: none;
 }
 
 .flashcard__hint {

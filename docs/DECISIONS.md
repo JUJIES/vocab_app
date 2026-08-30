@@ -18,6 +18,7 @@
 - **Quelltreue mit gezielter Ergänzung:** Kartenbegriffe müssen im hochgeladenen Material vorkommen. Vorhandene Begriffspaare haben Vorrang. Eine Übersetzung oder kurze Definition darf das Modell nur ergänzen, wenn die Importnotiz dies verlangt; neue Quellbegriffe, Beispiele und Sachinformationen bleiben ausgeschlossen. Dichte Buchseiten werden als Originalbild übertragen.
 - **Ein Prozess, atomare JSON-Stores:** Für den einzelnen Beelink-Prozess sind serialisierte, atomar ersetzte Runtime-JSON-Dateien die kleinste wartbare Lösung. Mehrere App-Instanzen benötigen später eine gemeinsame Datenbank/Repository-Implementierung.
 - **Korrektur zuerst:** Im Eingabemodus müssen falsche Antworten korrekt wiederholt werden. Erweiterte Lernalgorithmen kommen nach dem Feldtest.
+- **Eine Hauptantwort, mehrere gleichwertige Varianten:** Die erste Rückseitenantwort ist der große Hauptbegriff. Weitere `acceptedAnswers` erscheinen auf der aufgedeckten Karte klein und geklammert mit ruhigen Mittelpunkt-Trennern; ein identischer Fallback-„Beispielsatz“ wird nicht wiederholt. Im Eingabemodus genügt jede Variante einzeln. Semikola in älteren oder manuell eingegebenen Antworten werden beim Lernen als Variantentrenner interpretiert, damit bestehende Sets ohne Datenmigration korrekt funktionieren. Neue KI-Importe liefern stattdessen eine einzelne Hauptantwort in `back` und getrennte Array-Einträge in `acceptedAnswers`.
 
 ## Bewusst vertagt
 

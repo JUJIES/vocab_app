@@ -449,6 +449,8 @@ test("an import instruction deliberately routes a clear list through AI", async 
   assert.match(prompt, /Alle ausgewählten Begriffe oder Wendungen müssen im Material vorkommen/);
   assert.match(prompt, /darfst du diese knapp und fachlich korrekt ergänzen/);
   assert.match(prompt, /Lautschrift, Grammatikcodes, Lernstufen/);
+  assert.match(prompt, /back enthält genau eine bevorzugte Hauptantwort/);
+  assert.match(prompt, /jede weitere klar gleichwertige Variante.*eigenen Array-Eintrag/);
 });
 
 test("image, DOCX and PDF inputs use the expected Responses API content types", async () => {

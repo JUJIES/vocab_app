@@ -383,8 +383,11 @@ const elements = {
   cardAction: document.getElementById("card-action"),
   cardSecondaryAction: document.getElementById("card-secondary-action"),
   frontWord: document.getElementById("front-word"),
+  frontAlternatives: document.getElementById("front-alternatives"),
   frontHint: document.getElementById("front-hint"),
   backWord: document.getElementById("back-word"),
+  backAlternatives: document.getElementById("back-alternatives"),
+  backHintShell: document.getElementById("back-hint-shell"),
   backHint: document.getElementById("back-hint"),
   statusMessage: document.getElementById("status-message"),
   inputProgressShell: document.getElementById("input-progress-shell"),
@@ -7054,7 +7057,7 @@ function buildCards(data) {
 
 function buildCardData(card) {
   const sourceText = card?.source?.text?.trim();
-  const targetText = card?.target?.text?.trim();
+  const rawTargetText = card?.target?.text?.trim();
   const audioSource = normalizeAudioPath(card?.audio?.source);
   const audioTarget = normalizeAudioPath(card?.audio?.target);
   const flashcardHintData = card?.hintData?.flashcard;
@@ -7064,9 +7067,9 @@ function buildCardData(card) {
 
   if (
     typeof sourceText !== "string" ||
-    typeof targetText !== "string" ||
+    typeof rawTargetText !== "string" ||
     sourceText === "" ||
-    targetText === ""
+    rawTargetText === ""
   ) {
     throw new Error("First card is missing source.text or target.text.");
   }
@@ -7095,30 +7098,40 @@ function buildCardData(card) {
         .map((answer) => answer.trim())
         .filter(Boolean)
     : [];
-  const answers = buildAcceptedAnswerList(targetText, acceptedAnswers);
+  const answers = buildAcceptedAnswerList(rawTargetText, acceptedAnswers);
+  const targetText = answers[0] || rawTargetText;
+  const targetAlternatives = answers.slice(1);
+  const exampleIsAnswerOnly = isAnswerOnlyExample(
+    exampleText,
+    [rawTargetText, ...acceptedAnswers, ...answers],
+  );
+  const hintExampleText = exampleIsAnswerOnly ? targetText : exampleText;
 
   return {
     id: card?.id?.trim() || sourceText,
     sourceText,
     targetText,
+    targetAlternatives,
     answers,
-    backContext: buildBackContextData({
-      exampleText,
-      targetText,
-      acceptedAnswers,
-    }),
+    backContext: exampleIsAnswerOnly
+      ? null
+      : buildBackContextData({
+          exampleText,
+          targetText,
+          acceptedAnswers: targetAlternatives,
+        }),
     hints: [
       buildHintData({
-        exampleText,
+        exampleText: hintExampleText,
         targetText,
-        acceptedAnswers,
+        acceptedAnswers: targetAlternatives,
         replacement: maskedWord,
         preferAcceptedAnswers: false,
       }),
       buildHintData({
-        exampleText,
+        exampleText: hintExampleText,
         targetText,
-        acceptedAnswers,
+        acceptedAnswers: targetAlternatives,
         replacement: firstLetterHint,
         preferAcceptedAnswers: true,
       }),
@@ -7133,7 +7146,7 @@ function buildAcceptedAnswerList(targetText, acceptedAnswers = []) {
   const seen = new Set();
   const answers = [];
 
-  for (const value of values) {
+  for (const value of values.flatMap((value) => splitAnswerVariants(value))) {
     const normalizedValue = normalizeInputAnswerValue(value);
 
     if (!normalizedValue || seen.has(normalizedValue)) {
@@ -7145,6 +7158,25 @@ function buildAcceptedAnswerList(targetText, acceptedAnswers = []) {
   }
 
   return answers;
+}
+
+function splitAnswerVariants(value) {
+  if (typeof value !== "string") {
+    return [];
+  }
+
+  return value
+    .split(";")
+    .map((answer) => answer.trim())
+    .filter(Boolean);
+}
+
+function isAnswerOnlyExample(exampleText, answers) {
+  const normalizedExample = normalizeInputAnswerValue(exampleText);
+
+  return Boolean(normalizedExample) && answers.some((answer) => (
+    normalizeInputAnswerValue(answer) === normalizedExample
+  ));
 }
 
 function normalizeInputAnswerValue(value) {
@@ -8381,10 +8413,10 @@ function renderLoadingState() {
     "progress-cycle-even",
     "progress-cycle-odd",
   );
-  elements.frontWord.textContent = "\u00a0";
-  elements.backWord.textContent = "\u00a0";
+  renderFlashcardAnswer(elements.frontWord, elements.frontAlternatives, "\u00a0");
+  renderFlashcardAnswer(elements.backWord, elements.backAlternatives, "\u00a0");
   elements.frontHint.textContent = "";
-  elements.backHint.textContent = "";
+  renderBackContext(null);
   elements.frontHint.classList.remove("is-summary");
   elements.frontHint.classList.remove("is-visible");
   elements.statusMessage.textContent = "Lade Set.";
@@ -8435,9 +8467,9 @@ function renderRoundSummaryState() {
     "progress-cycle-odd",
   );
   elements.cardAction.classList.add("is-continue");
-  elements.frontWord.textContent = "Runde fertig";
-  elements.backWord.textContent = "Runde fertig";
-  elements.backHint.textContent = "";
+  renderFlashcardAnswer(elements.frontWord, elements.frontAlternatives, "Runde fertig");
+  renderFlashcardAnswer(elements.backWord, elements.backAlternatives, "Runde fertig");
+  renderBackContext(null);
   renderRoundSummary();
   elements.frontHint.classList.add("is-summary", "is-visible");
   elements.statusMessage.textContent = getRoundSummaryStatusMessage();
@@ -8492,9 +8524,11 @@ function renderStarReviewIntroState(cards) {
     "progress-cycle-odd",
   );
   elements.cardAction.classList.add("is-continue");
+  renderFlashcardAnswer(elements.frontWord, elements.frontAlternatives, "");
+  renderFlashcardAnswer(elements.backWord, elements.backAlternatives, "");
   renderStarModeWord(elements.frontWord);
   renderStarModeWord(elements.backWord);
-  elements.backHint.textContent = "";
+  renderBackContext(null);
   renderStarReviewIntroSummary(cards.length);
   elements.frontHint.classList.add("is-summary", "is-visible");
   elements.statusMessage.textContent = getStarReviewIntroStatusMessage(cards.length);
@@ -8561,9 +8595,9 @@ function renderCompletionState() {
     "progress-cycle-odd",
   );
   elements.cardAction.classList.add("is-restart");
-  elements.frontWord.textContent = "Fertig";
-  elements.backWord.textContent = "Fertig";
-  elements.backHint.textContent = "";
+  renderFlashcardAnswer(elements.frontWord, elements.frontAlternatives, "Fertig");
+  renderFlashcardAnswer(elements.backWord, elements.backAlternatives, "Fertig");
+  renderBackContext(null);
   renderCompletionSummary();
   elements.frontHint.classList.add("is-summary");
   elements.frontHint.classList.add("is-visible");
@@ -8619,9 +8653,9 @@ function renderViewReviewPromptState(cards) {
     "progress-cycle-odd",
   );
   elements.cardAction.classList.add("is-continue");
-  elements.frontWord.textContent = "Sichten fertig";
-  elements.backWord.textContent = "Sichten fertig";
-  elements.backHint.textContent = "";
+  renderFlashcardAnswer(elements.frontWord, elements.frontAlternatives, "Sichten fertig");
+  renderFlashcardAnswer(elements.backWord, elements.backAlternatives, "Sichten fertig");
+  renderBackContext(null);
   renderViewReviewSummary(cards.length);
   elements.frontHint.classList.add("is-summary", "is-visible");
   elements.statusMessage.textContent = getViewReviewStatusMessage();
@@ -8648,6 +8682,7 @@ function renderCard() {
   const {
     sourceText,
     targetText,
+    targetAlternatives,
     hints,
     backContext,
   } = state.currentCard;
@@ -8679,8 +8714,13 @@ function renderCard() {
   updateFaceVisibility(state.isFlipped);
   elements.frontContent.classList.toggle("has-hint", Boolean(currentHint) && !state.isFlipped);
 
-  elements.frontWord.textContent = sourceText;
-  elements.backWord.textContent = targetText;
+  renderFlashcardAnswer(elements.frontWord, elements.frontAlternatives, sourceText);
+  renderFlashcardAnswer(
+    elements.backWord,
+    elements.backAlternatives,
+    targetText,
+    targetAlternatives,
+  );
   renderHint(currentHint);
   renderBackContext(backContext);
   elements.frontHint.classList.remove("is-summary");
@@ -8752,10 +8792,10 @@ function renderErrorState(message) {
     "progress-cycle-even",
     "progress-cycle-odd",
   );
-  elements.frontWord.textContent = "Fehler";
-  elements.backWord.textContent = "Fehler";
+  renderFlashcardAnswer(elements.frontWord, elements.frontAlternatives, "Fehler");
+  renderFlashcardAnswer(elements.backWord, elements.backAlternatives, "Fehler");
   elements.frontHint.textContent = message;
-  elements.backHint.textContent = "";
+  renderBackContext(null);
   elements.frontHint.classList.remove("is-summary");
   elements.frontHint.classList.add("is-visible");
   elements.statusMessage.textContent = message;
@@ -9212,6 +9252,28 @@ function updateProgressState({ hidden, label = "", value = 0 }) {
   updateProgressFillAnimation(elements.progressFill, value);
 }
 
+function renderFlashcardAnswer(wordElement, alternativesElement, primaryText, alternatives = []) {
+  wordElement.textContent = primaryText || "\u00a0";
+
+  const visibleAlternatives = Array.isArray(alternatives)
+    ? alternatives.filter((answer) => typeof answer === "string" && answer.trim())
+    : [];
+
+  alternativesElement.textContent = visibleAlternatives.length > 0
+    ? `(${visibleAlternatives.join(" · ")})`
+    : "";
+  alternativesElement.hidden = visibleAlternatives.length === 0;
+
+  if (visibleAlternatives.length > 0) {
+    alternativesElement.setAttribute(
+      "aria-label",
+      `Weitere gültige Antworten: ${visibleAlternatives.join(", ")}`,
+    );
+  } else {
+    alternativesElement.removeAttribute("aria-label");
+  }
+}
+
 function getRoundProgressPercent() {
   if (!state.cards.length) {
     return 0;
@@ -9248,6 +9310,7 @@ function renderHint(hintData) {
 
 function renderBackContext(contextData) {
   elements.backHint.replaceChildren();
+  elements.backHintShell.hidden = !contextData;
 
   if (!contextData) {
     elements.backHint.removeAttribute("aria-label");
@@ -9429,15 +9492,23 @@ function getCardLabel() {
 
   if (isViewLearningMode()) {
     if (state.isFlipped) {
-      return `${state.currentCard.targetText}. Nach links fuer die naechste Karte. Nach rechts fuer die vorige Karte.`;
+      return `${getAccessibleTargetAnswer()}. Nach links fuer die naechste Karte. Nach rechts fuer die vorige Karte.`;
     }
 
     return `${state.currentCard.sourceText}. Tippen zum Aufdecken.`;
   }
 
   if (state.isFlipped) {
-    return `${state.currentCard.targetText}.`;
+    return `${getAccessibleTargetAnswer()}.`;
   }
 
   return `${state.currentCard.sourceText}. Tippen zum Aufdecken.`;
+}
+
+function getAccessibleTargetAnswer() {
+  const alternatives = state.currentCard?.targetAlternatives || [];
+
+  return alternatives.length > 0
+    ? `${state.currentCard.targetText}. Weitere gültige Antworten: ${alternatives.join(", ")}`
+    : state.currentCard?.targetText || "Antwort nicht verfügbar";
 }
