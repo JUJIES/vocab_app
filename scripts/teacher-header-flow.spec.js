@@ -24,6 +24,12 @@ async function login(page) {
   await page.getByRole("textbox", { name: "Passwort" }).fill(TEACHER_PASSWORD);
   await page.getByRole("button", { name: "Anmelden" }).click();
   await expect(page.locator("#teacher-shell")).toBeVisible();
+
+  const requiredPasswordDialog = page.getByRole("dialog", { name: "Passwort ändern" });
+  if (await requiredPasswordDialog.isVisible()) {
+    await requiredPasswordDialog.getByRole("button", { name: "Abbrechen" }).click();
+    await expect(requiredPasswordDialog).toBeHidden();
+  }
 }
 
 for (const viewport of [
