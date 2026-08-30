@@ -129,6 +129,12 @@ for (const viewport of VIEWPORTS) {
     expect(boxes.header.x).toBeGreaterThanOrEqual(0);
     expect(boxes.header.x + boxes.header.width).toBeLessThanOrEqual(viewport.width + 1);
     expect(boxes.actions.width).toBeLessThan(240);
+    expect(boxes.pill.height).toBeGreaterThanOrEqual(35);
+    expect(Math.abs(boxes.pill.height - boxes.logout.height)).toBeLessThan(1);
+    expect(Math.abs(
+      (boxes.pill.y + boxes.pill.height / 2)
+      - (boxes.logout.y + boxes.logout.height / 2),
+    )).toBeLessThan(1);
 
     if (viewport.width > 620) {
       expect(boxes.actions.x).toBeGreaterThanOrEqual(boxes.title.x + boxes.title.width);

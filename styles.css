@@ -2992,12 +2992,49 @@ button.student-screen__device-card {
 }
 
 .app-shell[data-app-mode="home"] .student-screen__home-logout {
+  height: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0 0.58rem 0 0.5rem;
+  border-radius: var(--radius-pill);
+  align-items: center;
   white-space: nowrap;
+  line-height: 1;
+  transform: none;
+}
+
+.app-shell[data-app-mode="home"] .student-screen__home-actions {
+  --student-home-control-height: 2.25rem;
+  min-height: var(--student-home-control-height);
+  gap: 0.28rem;
+}
+
+.app-shell[data-app-mode="home"] .student-screen__home-context {
+  height: var(--student-home-control-height);
+}
+
+.app-shell[data-app-mode="home"] .device-pill--home-meta {
+  height: var(--student-home-control-height);
+  min-height: var(--student-home-control-height);
+  box-sizing: border-box;
+  padding: 0 0.62rem 0 0.54rem;
+  font-size: 0.82rem;
+  line-height: 1;
+}
+
+.app-shell[data-app-mode="home"] .student-screen__home-divider--actions {
+  height: 1rem;
+  margin-inline: 0.16rem;
+  align-self: center;
+}
+
+.app-shell[data-app-mode="home"] .student-screen__home-logout > span:not(.student-screen__action-icon) {
+  line-height: 1;
 }
 
 .app-shell[data-app-mode="home"] .student-screen__action--secondary .student-screen__action-icon {
   width: 0.84rem;
   height: 0.84rem;
+  transform: none;
 }
 
 @media (max-width: 560px) {
