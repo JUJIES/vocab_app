@@ -34,16 +34,21 @@ test("Monday MVP: teacher draft, stable code, tablet subscription and correction
     });
     expect(importResponse.ok()).toBeTruthy();
     const draft = (await importResponse.json()).draft;
+    const localizedDraft = {
+      ...draft,
+      sourceLabel: "Deutsch",
+      targetLabel: "Englisch",
+    };
 
     const createResponse = await request.post("/api/teacher/sets", {
-      data: { ...draft, title: "MVP Smoke Tiere" },
+      data: { ...localizedDraft, title: "MVP Smoke Tiere" },
     });
     expect(createResponse.ok()).toBeTruthy();
     const createdSet = (await createResponse.json()).set;
     expect(createdSet.shareCode).toMatch(/^[A-HJ-NP-Z2-9]{6}$/);
 
     const updateResponse = await request.put(`/api/teacher/sets/${createdSet.id}`, {
-      data: { ...draft, title: "MVP Smoke Tiere live" },
+      data: { ...localizedDraft, title: "MVP Smoke Tiere live" },
     });
     expect(updateResponse.ok()).toBeTruthy();
     const updatedSet = (await updateResponse.json()).set;
@@ -62,10 +67,30 @@ test("Monday MVP: teacher draft, stable code, tablet subscription and correction
     const setCard = page.getByRole("button", { name: /MVP Smoke Tiere live/ });
     await expect(setCard).toBeVisible();
     await setCard.click();
+    await page.getByRole("button", { name: "Üben starten" }).click();
+    await expect(page.locator("#launch-direction-modal")).toBeVisible();
+    await page.locator('[data-learning-direction-group="launch"] [data-learning-direction="target-source"]').click();
+    await expect(page.locator("#front-word")).toHaveText("dog");
+    await page.locator("#student-home-link").click();
+    await expect(setCard).toBeVisible();
+
+    await setCard.click();
     await page.getByRole("button", { name: /Eingabe 00/ }).click();
     await page.getByRole("button", { name: "Eingabe starten" }).click();
+    await expect(page.locator("#launch-direction-modal")).toBeVisible();
+    await expect(page.locator('[data-learning-direction-group="launch"]')).toContainText("Deutsch → Englisch");
+    await expect(page.locator('[data-learning-direction-group="launch"]')).toContainText("Englisch → Deutsch");
+    await page.locator('[data-learning-direction-group="launch"] [data-learning-direction="source-target"]').click();
 
     const answer = page.getByPlaceholder("Antwort eingeben");
+    const prompt = page.locator("#input-prompt-word");
+    await expect(prompt).toHaveText("Hund");
+    await page.locator("#input-settings-button").click();
+    await page.locator('[data-learning-direction-group="input"] [data-learning-direction="target-source"]').click();
+    await expect(prompt).toHaveText("dog");
+    await page.locator("#input-settings-button").click();
+    await page.locator('[data-learning-direction-group="input"] [data-learning-direction="source-target"]').click();
+    await expect(prompt).toHaveText("Hund");
     await answer.fill("falsch");
     await page.getByRole("button", { name: "Antwort prüfen" }).click();
     await expect(page.getByText("Noch nicht korrekt", { exact: true })).toBeVisible();

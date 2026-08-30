@@ -364,6 +364,10 @@ const elements = {
   launchModeStart: document.getElementById("launch-mode-start"),
   launchModeStartStage: document.getElementById("launch-mode-start-stage"),
   launchModeClose: document.getElementById("launch-mode-close"),
+  launchDirectionModal: document.getElementById("launch-direction-modal"),
+  launchDirectionPanel: document.getElementById("launch-direction-panel"),
+  launchDirectionBack: document.getElementById("launch-direction-back"),
+  launchDirectionClose: document.getElementById("launch-direction-close"),
   addSetModal: document.getElementById("add-set-modal"),
   addSetClose: document.getElementById("add-set-close"),
   addSetBody: document.getElementById("add-set-body"),
@@ -505,6 +509,9 @@ function bindEvents() {
   elements.launchModeStart.addEventListener("click", handleLaunchModeStart);
   elements.launchModeClose.addEventListener("click", closeLaunchModeModal);
   elements.launchModeModal.addEventListener("click", handleLaunchModeOverlayClick);
+  elements.launchDirectionBack.addEventListener("click", returnToLaunchModeModal);
+  elements.launchDirectionClose.addEventListener("click", closeLaunchModeModal);
+  elements.launchDirectionModal.addEventListener("click", handleLaunchDirectionOverlayClick);
   elements.inputAnswerForm.addEventListener("submit", handleInputAnswerSubmit);
   elements.addSetClose.addEventListener("click", closeAddSetModal);
   elements.addSetModal.addEventListener("click", handleAddSetModalOverlayClick);
@@ -847,7 +854,7 @@ function getSubscriptionDirectionMetadata(subscription) {
 }
 
 function isDirectionConfigurableMode(modeKey) {
-  return modeKey === "view" || modeKey === "practice";
+  return modeKey === "view" || modeKey === "practice" || modeKey === "write";
 }
 
 function syncLearningDirectionGroup(groupName, selectedDirection, labels) {
@@ -1037,6 +1044,7 @@ function syncInputSettingsControls() {
   elements.inputSettingsButton.setAttribute("aria-expanded", String(isOpen));
   elements.inputSettingsButton.setAttribute("aria-label", isOpen ? "Einstellungen schließen" : "Einstellungen öffnen");
   elements.inputSettingsPopover?.setAttribute("aria-hidden", String(!isOpen));
+  syncLearningDirectionGroup("input", state.activeLearningDirection, state.currentSetLanguageLabels);
 
   if (elements.inputCorrectionToggle instanceof HTMLInputElement) {
     elements.inputCorrectionToggle.checked = state.inputCorrectionModeEnabled;
@@ -1287,6 +1295,7 @@ async function startInputSet(
   setPath,
   setUrl = new URL(setPath, getAppBaseUrl()).href,
   learningModeKey = "write",
+  learningDirection = "",
 ) {
   state.currentSetPath = setPath;
   state.currentSetUrl = setUrl;
@@ -1295,7 +1304,15 @@ async function startInputSet(
   state.baseCards = [];
   state.allCards = [];
   state.activeLearningModeKey = normalizeLearningModeKey(learningModeKey);
-  persistActiveLearningSession(setPath, state.activeLearningModeKey, APP_MODES.INPUT);
+  state.activeLearningDirection = parseLearningDirection(learningDirection)
+    || loadPreferredLearningDirection(setPath)
+    || LEARNING_DIRECTIONS.SOURCE_TARGET;
+  persistActiveLearningSession(
+    setPath,
+    state.activeLearningModeKey,
+    APP_MODES.INPUT,
+    state.activeLearningDirection,
+  );
   setStudentAppMode(APP_MODES.INPUT);
   resetInputLearningState();
   elements.inputAnswerField.value = "";
@@ -1309,8 +1326,19 @@ async function startInputSet(
   try {
     const data = await loadSet(setUrl);
     state.currentSetLanguageLabels = resolveSetLanguageLabels(data);
+    if (!parseLearningDirection(learningDirection) && !loadPreferredLearningDirection(setPath)) {
+      state.activeLearningDirection = normalizeLearningDirection(data?.set?.defaultDirections?.flashcard);
+      persistPreferredLearningDirection(setPath, state.activeLearningDirection);
+      persistActiveLearningSession(
+        setPath,
+        state.activeLearningModeKey,
+        APP_MODES.INPUT,
+        state.activeLearningDirection,
+      );
+    }
     state.baseCards = buildCards(data);
-    state.allCards = [...state.baseCards];
+    state.allCards = orientLearningCards(state.baseCards, state.activeLearningDirection);
+    syncInputSettingsControls();
     resetInputLearningState(state.allCards);
     renderInputSession();
   } catch (error) {
@@ -3656,6 +3684,29 @@ function handleLearningDirectionSelect(event) {
       state.pendingLaunchDirection,
       getSubscriptionDirectionMetadata(getPendingLaunchSubscription()),
     );
+    void startPendingLaunchMode();
+    return;
+  }
+
+  if (groupName === "input") {
+    if (state.baseCards.length === 0 || nextDirection === state.activeLearningDirection) {
+      closeInputSettingsMenu();
+      return;
+    }
+
+    state.activeLearningDirection = nextDirection;
+    persistPreferredLearningDirection(state.currentSetPath, nextDirection);
+    persistActiveLearningSession(
+      state.currentSetPath,
+      state.activeLearningModeKey,
+      APP_MODES.INPUT,
+      nextDirection,
+    );
+    state.allCards = orientLearningCards(state.baseCards, nextDirection);
+    closeInputSettingsMenu();
+    resetInputLearningState(state.allCards);
+    renderInputSession();
+    elements.inputStatusMessage.textContent = `${getLearningDirectionLabel(nextDirection)}. Durchgang neu gestartet.`;
     return;
   }
 
@@ -6000,19 +6051,6 @@ function renderLaunchModeModal({
   elements.launchModeDescription.textContent = "Lernmodus waehlen.";
   renderLaunchModeDistribution();
   renderLaunchModeCards(subscription, { forceRebuild: forceRebuildCards });
-  const showDirection = isDirectionConfigurableMode(state.pendingLaunchModeKey);
-  elements.launchModeDirection.hidden = !showDirection;
-  if (showDirection) {
-    setLearningModeAccentVariables(
-      elements.launchModeDirection,
-      getLearningModeDefinition(state.pendingLaunchModeKey),
-    );
-    syncLearningDirectionGroup(
-      "launch",
-      state.pendingLaunchDirection,
-      getSubscriptionDirectionMetadata(subscription),
-    );
-  }
   renderLaunchModeDetail(subscription, { previousModeKey, forceInstant: forceInstantDetail });
   updateLaunchModeActionButton({ previousModeKey, forceInstant: forceInstantDetail });
 }
@@ -6037,6 +6075,34 @@ function openLaunchModeModal(setPath) {
   elements.launchModePanel.focus();
 }
 
+function openLaunchDirectionModal() {
+  const subscription = getPendingLaunchSubscription();
+  const selectedMode = getLearningModeDefinition(state.pendingLaunchModeKey);
+
+  if (!subscription || !selectedMode.isAvailable || !isDirectionConfigurableMode(selectedMode.key)) {
+    return;
+  }
+
+  setLearningModeAccentVariables(elements.launchDirectionPanel, selectedMode);
+  setLearningModeAccentVariables(elements.launchModeDirection, selectedMode);
+  syncLearningDirectionGroup(
+    "launch",
+    state.pendingLaunchDirection,
+    getSubscriptionDirectionMetadata(subscription),
+  );
+  elements.launchModeModal.hidden = true;
+  elements.launchDirectionModal.hidden = false;
+  elements.launchDirectionModal.scrollTop = 0;
+  elements.launchDirectionPanel.focus();
+}
+
+function returnToLaunchModeModal() {
+  elements.launchDirectionModal.hidden = true;
+  elements.launchModeModal.hidden = false;
+  elements.launchModeModal.scrollTop = 0;
+  elements.launchModePanel.focus();
+}
+
 function closeLaunchModeModal() {
   const restoreScrollY = state.launchModeScrollY;
   finishLaunchModeDetailTransition();
@@ -6055,12 +6121,19 @@ function closeLaunchModeModal() {
   elements.launchModeDetailStage.replaceChildren();
   elements.launchModeStartStage.replaceChildren();
   elements.launchModeModal.hidden = true;
+  elements.launchDirectionModal.hidden = true;
   document.body.classList.remove("launch-mode-modal-open");
   window.scrollTo(0, restoreScrollY);
 }
 
 function handleLaunchModeOverlayClick(event) {
   if (event.target === elements.launchModeModal) {
+    closeLaunchModeModal();
+  }
+}
+
+function handleLaunchDirectionOverlayClick(event) {
+  if (event.target === elements.launchDirectionModal) {
     closeLaunchModeModal();
   }
 }
@@ -6077,6 +6150,25 @@ async function handleLaunchModeStart() {
     return;
   }
 
+  if (isDirectionConfigurableMode(selectedMode.key)) {
+    openLaunchDirectionModal();
+    return;
+  }
+
+  await startPendingLaunchMode();
+}
+
+async function startPendingLaunchMode() {
+  if (!state.pendingLaunchSetPath) {
+    closeLaunchModeModal();
+    return;
+  }
+
+  const selectedMode = getLearningModeDefinition(state.pendingLaunchModeKey);
+  if (!selectedMode.isAvailable) {
+    return;
+  }
+
   const setPath = state.pendingLaunchSetPath;
   const selectedModeKey = state.pendingLaunchModeKey;
   const selectedDirection = state.pendingLaunchDirection;
@@ -6088,7 +6180,12 @@ async function handleLaunchModeStart() {
   state.requestedSetUrl = new URL(setPath, getAppBaseUrl()).href;
   window.history.replaceState({}, "", buildCanonicalStudentSetUrl(setPath));
   if (selectedModeKey === "write") {
-    await startInputSet(setPath, new URL(setPath, getAppBaseUrl()).href, selectedModeKey);
+    await startInputSet(
+      setPath,
+      new URL(setPath, getAppBaseUrl()).href,
+      selectedModeKey,
+      selectedDirection,
+    );
     return;
   }
 
@@ -6284,7 +6381,7 @@ async function resumeActiveLearningSession(setPath) {
   state.requestedSetUrl = setUrl;
 
   if (activeSession.appMode === APP_MODES.INPUT || activeSession.modeKey === "write") {
-    await startInputSet(setPath, setUrl, activeSession.modeKey);
+    await startInputSet(setPath, setUrl, activeSession.modeKey, activeSession.direction);
     return true;
   }
 
@@ -7820,6 +7917,12 @@ function handleWindowKeydown(event) {
   if (elements.addSetModal && !elements.addSetModal.hidden && event.key === "Escape") {
     event.preventDefault();
     closeAddSetModal();
+    return;
+  }
+
+  if (elements.launchDirectionModal && !elements.launchDirectionModal.hidden && event.key === "Escape") {
+    event.preventDefault();
+    returnToLaunchModeModal();
     return;
   }
 

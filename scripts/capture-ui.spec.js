@@ -139,6 +139,7 @@ test("08 student flashcard front", async ({ page }) => {
   });
   await page.locator(".student-screen__library-action").first().click();
   await page.locator("#launch-mode-start").click();
+  await page.locator('[data-learning-direction-group="launch"] [data-learning-direction="source-target"]').click();
   await expect(page.locator("#flashcard")).toBeVisible();
   await expect(page.locator("#front-word")).not.toHaveText("");
   await capture(page, SCREENSHOTS[7]);
@@ -151,6 +152,7 @@ test("09 student flashcard back", async ({ page }) => {
   });
   await page.locator(".student-screen__library-action").first().click();
   await page.locator("#launch-mode-start").click();
+  await page.locator('[data-learning-direction-group="launch"] [data-learning-direction="source-target"]').click();
   await expect(page.locator("#flashcard")).toBeVisible();
   await page.locator("#flashcard").click();
   await expect(page.locator("#flashcard")).toHaveClass(/is-flipped/);

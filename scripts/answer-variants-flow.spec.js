@@ -91,6 +91,8 @@ async function openMode(page, modeKey) {
   await expect(page.locator("#launch-mode-modal")).toBeVisible();
   await page.locator(`button.launch-mode-modal__mode-card[data-mode-key="${modeKey}"]`).click();
   await page.locator("#launch-mode-start").click();
+  await expect(page.locator("#launch-direction-modal")).toBeVisible();
+  await page.locator('[data-learning-direction-group="launch"] [data-learning-direction="source-target"]').click();
 }
 
 test("answer side shows one primary term and calm alternatives without duplicate context", async ({ page }) => {

@@ -317,6 +317,7 @@ async function openFirstSet(page) {
   const startButton = page.locator(".student-screen__library-card").first();
   await startButton.click();
   await page.locator("#launch-mode-start").click();
+  await page.locator('[data-learning-direction-group="launch"] [data-learning-direction="source-target"]').click();
 }
 
 async function selectTabletOption(page, tabletId) {

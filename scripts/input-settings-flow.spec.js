@@ -64,6 +64,8 @@ async function prepareInputMode(page) {
   ));
 
   await page.locator("#launch-mode-start").click();
+  await expect(page.locator("#launch-direction-modal")).toBeVisible();
+  await page.locator('[data-learning-direction-group="launch"] [data-learning-direction="source-target"]').click();
   const setResponse = await setResponsePromise;
   const setData = await setResponse.json();
 
@@ -111,6 +113,16 @@ test("input settings apply immediately during correction flow", async ({ page })
 
   await settingsButton.click();
   await expect(settingsButton).toHaveAttribute("aria-expanded", "true");
+  await expect(popover).toHaveAttribute("aria-hidden", "false");
+  await expect(page.locator('[data-learning-direction-group="input"] [data-learning-direction="source-target"]')).toContainText("→");
+  await page.locator('[data-learning-direction-group="input"] [data-learning-direction="target-source"]').click();
+  await expect(promptWord).toHaveText(firstCard.target.text.trim());
+
+  await settingsButton.click();
+  await page.locator('[data-learning-direction-group="input"] [data-learning-direction="source-target"]').click();
+  await expect(promptWord).toHaveText(firstCard.source.text.trim());
+
+  await settingsButton.click();
   await expect(popover).toHaveAttribute("aria-hidden", "false");
 
   await setSwitchValue(page, "#input-correction-toggle", true);
