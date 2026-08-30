@@ -34,6 +34,7 @@ const state = {
   currentSetBaseUrl: "",
   currentSetLanguageLabels: null,
   subscriptions: [],
+  baseCards: [],
   allCards: [],
   setStorageKey: "",
   starStates: {},
@@ -88,12 +89,15 @@ const state = {
   pendingLaunchSetPath: "",
   pendingLaunchSetTitle: "",
   pendingLaunchModeKey: "practice",
+  pendingLaunchDirection: "source-target",
   launchModeScrollY: 0,
   launchModeDetailRenderedModeKey: "",
   launchModeDetailTransitionTimerId: null,
   launchModeActionRenderedModeKey: "",
   launchModeActionTransitionTimerId: null,
   activeLearningModeKey: "practice",
+  activeLearningDirection: "source-target",
+  flashcardSettingsOpen: false,
   addSetModalView: "choice",
   studentSetModalMode: "",
   activeStudentSetPath: "",
@@ -135,8 +139,9 @@ const DEVICE_STORAGE_KEY = "dino-vocab-device-id-v1";
 const SESSION_UNLOCK_KEY = "dino-vocab-session-unlocked-v1";
 const TABLET_SESSION_STORAGE_KEY = "dino-vocab-tablet-session-v1";
 const ACTIVE_LEARNING_SESSION_STORAGE_KEY = "dino-vocab-active-learning-session-v1";
+const LEARNING_DIRECTION_STORAGE_KEY = "dino-vocab-learning-directions-v1";
 const TABLET_SET_COLOR_STORAGE_KEY = "dino-vocab-tablet-set-colors-v1";
-const LOCAL_SET_METADATA_ASSET_VERSION = "2026-04-08-0234-local-subject-fallback";
+const LOCAL_SET_METADATA_ASSET_VERSION = "2026-08-30-student-direction-v1";
 const ACCESS_PIN_COOLDOWN_STEPS_MS = [
   30 * 1000,
   60 * 1000,
@@ -172,6 +177,10 @@ const LEARNING_MODE_KEYS = Object.freeze([
   "test",
 ]);
 const DEFAULT_LEARNING_MODE_KEY = "practice";
+const LEARNING_DIRECTIONS = Object.freeze({
+  SOURCE_TARGET: "source-target",
+  TARGET_SOURCE: "target-source",
+});
 const LEARNING_MODES = Object.freeze([
   {
     key: "view",
@@ -351,6 +360,7 @@ const elements = {
   launchModeModes: document.getElementById("launch-mode-modes"),
   launchModeDetail: document.querySelector(".launch-mode-modal__detail"),
   launchModeDetailStage: document.getElementById("launch-mode-detail-stage"),
+  launchModeDirection: document.getElementById("launch-mode-direction"),
   launchModeStart: document.getElementById("launch-mode-start"),
   launchModeStartStage: document.getElementById("launch-mode-start-stage"),
   launchModeClose: document.getElementById("launch-mode-close"),
@@ -370,6 +380,10 @@ const elements = {
   progressLabel: document.getElementById("progress-label"),
   progressFill: document.getElementById("progress-fill"),
   flashcardMenuLogout: document.getElementById("flashcard-menu-logout"),
+  flashcardSettingsShell: document.getElementById("flashcard-settings-shell"),
+  flashcardSettingsButton: document.getElementById("flashcard-settings-button"),
+  flashcardSettingsPopover: document.getElementById("flashcard-settings-popover"),
+  learningDirectionButtons: document.querySelectorAll("[data-learning-direction]"),
   knownCounts: document.querySelectorAll("[data-known-count]"),
   unknownCounts: document.querySelectorAll("[data-unknown-count]"),
   starButtons: document.querySelectorAll("[data-star-button]"),
@@ -478,6 +492,10 @@ function bindEvents() {
   elements.studentHomeLink.addEventListener("click", handleReturnToStudentHome);
   elements.inputHomeLink.addEventListener("click", handleReturnToStudentHome);
   elements.flashcardMenuLogout.addEventListener("click", handleFlashcardMenuLogout);
+  elements.flashcardSettingsButton.addEventListener("click", handleFlashcardSettingsToggle);
+  for (const directionButton of elements.learningDirectionButtons) {
+    directionButton.addEventListener("click", handleLearningDirectionSelect);
+  }
   elements.inputMenuLogout.addEventListener("click", handleInputMenuLogout);
   elements.inputSettingsButton.addEventListener("click", handleInputSettingsToggle);
   elements.inputCorrectionToggle?.addEventListener("change", handleInputCorrectionToggleChange);
@@ -528,12 +546,26 @@ async function startFlashcardSet(
   setPath,
   setUrl = new URL(setPath, getAppBaseUrl()).href,
   learningModeKey = DEFAULT_LEARNING_MODE_KEY,
+  learningDirection = "",
 ) {
   state.currentSetPath = setPath;
   state.currentSetUrl = setUrl;
   state.currentSetBaseUrl = new URL("./", setUrl).href;
+  state.currentSetLanguageLabels = null;
+  state.baseCards = [];
+  state.allCards = [];
+  state.flashcardSettingsOpen = false;
+  syncFlashcardSettingsControls();
   state.activeLearningModeKey = normalizeLearningModeKey(learningModeKey);
-  persistActiveLearningSession(setPath, state.activeLearningModeKey, APP_MODES.FLASHCARD);
+  state.activeLearningDirection = parseLearningDirection(learningDirection)
+    || loadPreferredLearningDirection(setPath)
+    || LEARNING_DIRECTIONS.SOURCE_TARGET;
+  persistActiveLearningSession(
+    setPath,
+    state.activeLearningModeKey,
+    APP_MODES.FLASHCARD,
+    state.activeLearningDirection,
+  );
   setStudentAppMode(APP_MODES.FLASHCARD);
   renderLoadingState();
 
@@ -545,12 +577,25 @@ async function startFlashcardSet(
       throw new Error("Tablet ist nicht angemeldet.");
     }
 
+    state.currentSetLanguageLabels = resolveSetLanguageLabels(data);
+    if (!parseLearningDirection(learningDirection) && !loadPreferredLearningDirection(setPath)) {
+      state.activeLearningDirection = normalizeLearningDirection(data?.set?.defaultDirections?.flashcard);
+      persistPreferredLearningDirection(setPath, state.activeLearningDirection);
+      persistActiveLearningSession(
+        setPath,
+        state.activeLearningModeKey,
+        APP_MODES.FLASHCARD,
+        state.activeLearningDirection,
+      );
+    }
     state.setStorageKey = getSetStorageKey(data);
     state.starStates = await loadServerLearningProgress(tabletId, setPath, state.setStorageKey);
-    state.allCards = buildCards(data);
+    state.baseCards = buildCards(data);
+    state.allCards = orientLearningCards(state.baseCards, state.activeLearningDirection);
     state.hasStartedStarReview = false;
     state.knownCount = 0;
     state.unknownCount = 0;
+    syncFlashcardSettingsControls();
     startRound(state.allCards, 1);
   } catch (error) {
     if (error && (error.message === "TABLET_DECOUPLED" || error.message === "TABLET_AUTH_REQUIRED")) {
@@ -720,9 +765,132 @@ function formatInputLanguageLabel(code) {
 
 function resolveSetLanguageLabels(data) {
   return {
-    sourceLabel: formatInputLanguageLabel(data?.set?.languages?.source),
-    targetLabel: formatInputLanguageLabel(data?.set?.languages?.target),
+    sourceLabel: typeof data?.set?.labels?.source === "string" && data.set.labels.source.trim()
+      ? data.set.labels.source.trim()
+      : formatInputLanguageLabel(data?.set?.languages?.source),
+    targetLabel: typeof data?.set?.labels?.target === "string" && data.set.labels.target.trim()
+      ? data.set.labels.target.trim()
+      : formatInputLanguageLabel(data?.set?.languages?.target),
   };
+}
+
+function parseLearningDirection(value) {
+  const normalizedValue = typeof value === "string"
+    ? value.trim().toLowerCase().replaceAll("_", "-").replaceAll("-to-", "-")
+    : "";
+
+  if (normalizedValue === LEARNING_DIRECTIONS.TARGET_SOURCE) {
+    return LEARNING_DIRECTIONS.TARGET_SOURCE;
+  }
+
+  if (normalizedValue === LEARNING_DIRECTIONS.SOURCE_TARGET) {
+    return LEARNING_DIRECTIONS.SOURCE_TARGET;
+  }
+
+  return "";
+}
+
+function normalizeLearningDirection(value) {
+  return parseLearningDirection(value) || LEARNING_DIRECTIONS.SOURCE_TARGET;
+}
+
+function loadLearningDirectionPreferences() {
+  try {
+    const parsed = JSON.parse(loadPersistentStorageItem(LEARNING_DIRECTION_STORAGE_KEY) || "{}");
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch (error) {
+    console.error("Unable to load learning direction preferences:", error);
+    return {};
+  }
+}
+
+function loadPreferredLearningDirection(setPath) {
+  const normalizedSetPath = normalizeSetPath(setPath);
+  return normalizedSetPath
+    ? parseLearningDirection(loadLearningDirectionPreferences()[normalizedSetPath])
+    : "";
+}
+
+function persistPreferredLearningDirection(setPath, direction) {
+  const normalizedSetPath = normalizeSetPath(setPath);
+  const normalizedDirection = parseLearningDirection(direction);
+
+  if (!normalizedSetPath || !normalizedDirection) {
+    return;
+  }
+
+  persistPersistentStorageItem(LEARNING_DIRECTION_STORAGE_KEY, JSON.stringify({
+    ...loadLearningDirectionPreferences(),
+    [normalizedSetPath]: normalizedDirection,
+  }));
+}
+
+function getLearningDirectionLabels(labels = state.currentSetLanguageLabels) {
+  return {
+    sourceLabel: labels?.sourceLabel || "Vorderseite",
+    targetLabel: labels?.targetLabel || "Rückseite",
+  };
+}
+
+function getLearningDirectionLabel(direction, labels = state.currentSetLanguageLabels) {
+  const resolvedLabels = getLearningDirectionLabels(labels);
+  return normalizeLearningDirection(direction) === LEARNING_DIRECTIONS.TARGET_SOURCE
+    ? `${resolvedLabels.targetLabel} → ${resolvedLabels.sourceLabel}`
+    : `${resolvedLabels.sourceLabel} → ${resolvedLabels.targetLabel}`;
+}
+
+function getSubscriptionDirectionMetadata(subscription) {
+  return {
+    sourceLabel: typeof subscription?.sourceLabel === "string" ? subscription.sourceLabel.trim() : "",
+    targetLabel: typeof subscription?.targetLabel === "string" ? subscription.targetLabel.trim() : "",
+  };
+}
+
+function isDirectionConfigurableMode(modeKey) {
+  return modeKey === "view" || modeKey === "practice";
+}
+
+function syncLearningDirectionGroup(groupName, selectedDirection, labels) {
+  const group = document.querySelector(`[data-learning-direction-group="${groupName}"]`);
+
+  if (!(group instanceof HTMLElement)) {
+    return;
+  }
+
+  for (const button of group.querySelectorAll("[data-learning-direction]")) {
+    const direction = normalizeLearningDirection(button.dataset.learningDirection);
+    const isSelected = direction === normalizeLearningDirection(selectedDirection);
+    button.textContent = getLearningDirectionLabel(direction, labels);
+    button.classList.toggle("is-selected", isSelected);
+    button.setAttribute("aria-pressed", String(isSelected));
+  }
+}
+
+function syncFlashcardSettingsControls() {
+  const isOpen = state.flashcardSettingsOpen;
+  const isReady = state.baseCards.length > 0;
+  elements.flashcardSettingsShell?.setAttribute("data-open", String(isOpen));
+  elements.flashcardSettingsButton?.setAttribute("aria-expanded", String(isOpen));
+  elements.flashcardSettingsButton?.setAttribute("aria-label", isOpen ? "Einstellungen schließen" : "Einstellungen öffnen");
+  if (elements.flashcardSettingsButton instanceof HTMLButtonElement) {
+    elements.flashcardSettingsButton.disabled = !isReady;
+  }
+  elements.flashcardSettingsPopover?.setAttribute("aria-hidden", String(!isOpen));
+  syncLearningDirectionGroup("flashcard", state.activeLearningDirection, state.currentSetLanguageLabels);
+}
+
+function closeFlashcardSettingsMenu() {
+  if (!state.flashcardSettingsOpen) {
+    return;
+  }
+
+  state.flashcardSettingsOpen = false;
+  syncFlashcardSettingsControls();
+}
+
+function toggleFlashcardSettingsMenu() {
+  state.flashcardSettingsOpen = !state.flashcardSettingsOpen;
+  syncFlashcardSettingsControls();
 }
 
 function getInputDirectionLabel() {
@@ -1124,6 +1292,8 @@ async function startInputSet(
   state.currentSetUrl = setUrl;
   state.currentSetBaseUrl = new URL("./", setUrl).href;
   state.currentSetLanguageLabels = null;
+  state.baseCards = [];
+  state.allCards = [];
   state.activeLearningModeKey = normalizeLearningModeKey(learningModeKey);
   persistActiveLearningSession(setPath, state.activeLearningModeKey, APP_MODES.INPUT);
   setStudentAppMode(APP_MODES.INPUT);
@@ -1139,7 +1309,8 @@ async function startInputSet(
   try {
     const data = await loadSet(setUrl);
     state.currentSetLanguageLabels = resolveSetLanguageLabels(data);
-    state.allCards = buildCards(data);
+    state.baseCards = buildCards(data);
+    state.allCards = [...state.baseCards];
     resetInputLearningState(state.allCards);
     renderInputSession();
   } catch (error) {
@@ -1276,12 +1447,16 @@ async function loadLocalSetMetadata(setPath) {
         const setMeta = data?.set && typeof data.set === "object" ? data.set : null;
         const languages = setMeta?.languages && typeof setMeta.languages === "object" ? setMeta.languages : null;
         const subject = resolveLocalSetSubject(setMeta?.subject, languages);
+        const languageLabels = resolveSetLanguageLabels(data);
 
         return {
           title: typeof setMeta?.title === "string" ? setMeta.title.trim() : "",
           subject,
           description: typeof setMeta?.description === "string" ? setMeta.description.trim() : "",
           cardCount: Array.isArray(data?.cards) ? data.cards.length : null,
+          sourceLabel: languageLabels.sourceLabel,
+          targetLabel: languageLabels.targetLabel,
+          defaultDirection: normalizeLearningDirection(setMeta?.defaultDirections?.flashcard),
         };
       } catch (error) {
         console.error("Unable to load local set metadata:", error);
@@ -1405,6 +1580,10 @@ function setStudentAppMode(mode) {
   if (mode !== APP_MODES.INPUT) {
     clearInputAdvanceTimeout();
     closeInputSettingsMenu();
+  }
+
+  if (mode !== APP_MODES.FLASHCARD) {
+    closeFlashcardSettingsMenu();
   }
 
   state.appMode = mode;
@@ -2711,6 +2890,7 @@ function handleDocumentClick(event) {
   }
 
   closeInputSettingsMenu();
+  closeFlashcardSettingsMenu();
 
   if (
     event.target.closest(".student-screen__library-menu")
@@ -3455,6 +3635,53 @@ function handleFlashcardMenuLogout() {
   executeStudentScreenAction("clear-local-tablet");
 }
 
+function handleFlashcardSettingsToggle(event) {
+  event.preventDefault();
+  toggleFlashcardSettingsMenu();
+}
+
+function handleLearningDirectionSelect(event) {
+  const button = event.currentTarget;
+  const nextDirection = parseLearningDirection(button?.dataset?.learningDirection);
+  const groupName = button?.closest("[data-learning-direction-group]")?.dataset?.learningDirectionGroup;
+
+  if (!nextDirection) {
+    return;
+  }
+
+  if (groupName === "launch") {
+    state.pendingLaunchDirection = nextDirection;
+    syncLearningDirectionGroup(
+      "launch",
+      state.pendingLaunchDirection,
+      getSubscriptionDirectionMetadata(getPendingLaunchSubscription()),
+    );
+    return;
+  }
+
+  if (
+    groupName !== "flashcard"
+    || state.baseCards.length === 0
+    || nextDirection === state.activeLearningDirection
+  ) {
+    closeFlashcardSettingsMenu();
+    return;
+  }
+
+  state.activeLearningDirection = nextDirection;
+  persistPreferredLearningDirection(state.currentSetPath, nextDirection);
+  persistActiveLearningSession(
+    state.currentSetPath,
+    state.activeLearningModeKey,
+    APP_MODES.FLASHCARD,
+    nextDirection,
+  );
+  state.allCards = orientLearningCards(state.baseCards, nextDirection);
+  closeFlashcardSettingsMenu();
+  restartLearningSession();
+  elements.statusMessage.textContent = `${getLearningDirectionLabel(nextDirection)}. Runde neu gestartet.`;
+}
+
 function handleInputSettingsToggle(event) {
   event.preventDefault();
   toggleInputSettingsMenu();
@@ -3601,6 +3828,8 @@ async function handleReturnToStudentHome() {
   state.currentSetUrl = "";
   state.currentSetBaseUrl = "";
   state.currentSetLanguageLabels = null;
+  state.baseCards = [];
+  state.allCards = [];
   resetInputLearningState();
 
   const nextUrl = new URL(window.location.href);
@@ -5771,6 +6000,19 @@ function renderLaunchModeModal({
   elements.launchModeDescription.textContent = "Lernmodus waehlen.";
   renderLaunchModeDistribution();
   renderLaunchModeCards(subscription, { forceRebuild: forceRebuildCards });
+  const showDirection = isDirectionConfigurableMode(state.pendingLaunchModeKey);
+  elements.launchModeDirection.hidden = !showDirection;
+  if (showDirection) {
+    setLearningModeAccentVariables(
+      elements.launchModeDirection,
+      getLearningModeDefinition(state.pendingLaunchModeKey),
+    );
+    syncLearningDirectionGroup(
+      "launch",
+      state.pendingLaunchDirection,
+      getSubscriptionDirectionMetadata(subscription),
+    );
+  }
   renderLaunchModeDetail(subscription, { previousModeKey, forceInstant: forceInstantDetail });
   updateLaunchModeActionButton({ previousModeKey, forceInstant: forceInstantDetail });
 }
@@ -5780,6 +6022,9 @@ function openLaunchModeModal(setPath) {
   state.pendingLaunchSetPath = setPath;
   state.pendingLaunchSetTitle = subscription?.title || setPath;
   state.pendingLaunchModeKey = getDefaultLaunchModeKey(subscription);
+  state.pendingLaunchDirection = loadPreferredLearningDirection(setPath)
+    || parseLearningDirection(subscription?.defaultDirection)
+    || LEARNING_DIRECTIONS.SOURCE_TARGET;
   state.launchModeScrollY = window.scrollY || window.pageYOffset || 0;
   renderLaunchModeModal({
     forceRebuildCards: true,
@@ -5799,6 +6044,7 @@ function closeLaunchModeModal() {
   state.pendingLaunchSetPath = "";
   state.pendingLaunchSetTitle = "";
   state.pendingLaunchModeKey = DEFAULT_LEARNING_MODE_KEY;
+  state.pendingLaunchDirection = LEARNING_DIRECTIONS.SOURCE_TARGET;
   state.launchModeScrollY = 0;
   state.launchModeDetailRenderedModeKey = "";
   state.launchModeActionRenderedModeKey = "";
@@ -5833,6 +6079,10 @@ async function handleLaunchModeStart() {
 
   const setPath = state.pendingLaunchSetPath;
   const selectedModeKey = state.pendingLaunchModeKey;
+  const selectedDirection = state.pendingLaunchDirection;
+  if (isDirectionConfigurableMode(selectedModeKey)) {
+    persistPreferredLearningDirection(setPath, selectedDirection);
+  }
   closeLaunchModeModal();
   state.requestedSetPath = setPath;
   state.requestedSetUrl = new URL(setPath, getAppBaseUrl()).href;
@@ -5842,7 +6092,12 @@ async function handleLaunchModeStart() {
     return;
   }
 
-  await startFlashcardSet(setPath, new URL(setPath, getAppBaseUrl()).href, selectedModeKey);
+  await startFlashcardSet(
+    setPath,
+    new URL(setPath, getAppBaseUrl()).href,
+    selectedModeKey,
+    selectedDirection,
+  );
 }
 
 async function handleRemoveSubscribedSet(setPath) {
@@ -5977,6 +6232,7 @@ function loadActiveLearningSession() {
       setPath,
       modeKey: normalizeLearningModeKey(parsed?.modeKey),
       appMode: parsed?.appMode === APP_MODES.INPUT ? APP_MODES.INPUT : APP_MODES.FLASHCARD,
+      direction: normalizeLearningDirection(parsed?.direction),
     };
   } catch (error) {
     console.error("Unable to load active learning session:", error);
@@ -5984,7 +6240,7 @@ function loadActiveLearningSession() {
   }
 }
 
-function persistActiveLearningSession(setPath, modeKey, appMode) {
+function persistActiveLearningSession(setPath, modeKey, appMode, direction = LEARNING_DIRECTIONS.SOURCE_TARGET) {
   const normalizedSetPath = normalizeSetPath(setPath);
 
   if (!normalizedSetPath) {
@@ -5996,6 +6252,7 @@ function persistActiveLearningSession(setPath, modeKey, appMode) {
     setPath: normalizedSetPath,
     modeKey: normalizeLearningModeKey(modeKey),
     appMode: appMode === APP_MODES.INPUT ? APP_MODES.INPUT : APP_MODES.FLASHCARD,
+    direction: normalizeLearningDirection(direction),
   }));
 }
 
@@ -6031,7 +6288,7 @@ async function resumeActiveLearningSession(setPath) {
     return true;
   }
 
-  await startFlashcardSet(setPath, setUrl, activeSession.modeKey);
+  await startFlashcardSet(setPath, setUrl, activeSession.modeKey, activeSession.direction);
   return true;
 }
 
@@ -6110,12 +6367,23 @@ async function mergeLocalSetMetadataIntoSubscriptions(subscriptions) {
       ? subscription.description.trim()
       : localMetadata.description;
     const nextCardCount = Number.isFinite(subscription?.cardCount) ? subscription.cardCount : localMetadata.cardCount;
+    const nextSourceLabel = typeof subscription?.sourceLabel === "string" && subscription.sourceLabel.trim()
+      ? subscription.sourceLabel.trim()
+      : localMetadata.sourceLabel;
+    const nextTargetLabel = typeof subscription?.targetLabel === "string" && subscription.targetLabel.trim()
+      ? subscription.targetLabel.trim()
+      : localMetadata.targetLabel;
+    const nextDefaultDirection = parseLearningDirection(subscription?.defaultDirection)
+      || localMetadata.defaultDirection;
 
     if (
       nextTitle === subscription?.title
       && nextSubject === subscription?.subject
       && nextDescription === subscription?.description
       && nextCardCount === subscription?.cardCount
+      && nextSourceLabel === subscription?.sourceLabel
+      && nextTargetLabel === subscription?.targetLabel
+      && nextDefaultDirection === subscription?.defaultDirection
     ) {
       return subscription;
     }
@@ -6126,6 +6394,9 @@ async function mergeLocalSetMetadataIntoSubscriptions(subscriptions) {
       subject: nextSubject,
       description: nextDescription,
       cardCount: nextCardCount,
+      sourceLabel: nextSourceLabel,
+      targetLabel: nextTargetLabel,
+      defaultDirection: nextDefaultDirection,
     };
   }));
 }
@@ -6942,6 +7213,8 @@ async function handleDecoupledTabletState(tabletId) {
   state.currentSetUrl = "";
   state.currentSetBaseUrl = "";
   state.currentSetLanguageLabels = null;
+  state.baseCards = [];
+  state.allCards = [];
   state.setStorageKey = "";
   state.starStates = {};
   state.learningProgressSavePending = false;
@@ -6965,6 +7238,8 @@ async function handleExpiredTabletSession(tabletId, feedback = "Sitzung abgelauf
   state.currentSetUrl = "";
   state.currentSetBaseUrl = "";
   state.currentSetLanguageLabels = null;
+  state.baseCards = [];
+  state.allCards = [];
   state.learningProgressSavePending = false;
   clearActiveLearningSession();
   clearStudentSessionUnlock();
@@ -7055,8 +7330,43 @@ function buildCards(data) {
   return data.cards.map((card) => buildCardData(card));
 }
 
+function orientLearningCards(cards, direction) {
+  const useReverse = normalizeLearningDirection(direction) === LEARNING_DIRECTIONS.TARGET_SOURCE;
+  return cards.map((card) => useReverse && card.reverse ? {
+    ...card.reverse,
+    reverse: card,
+  } : card);
+}
+
+function buildGeneratedHintReplacement(answer, revealFirstLetter) {
+  let firstLetterRevealed = false;
+
+  return Array.from(answer).map((character) => {
+    if (!/[\p{L}\p{N}]/u.test(character)) {
+      return character;
+    }
+
+    if (revealFirstLetter && !firstLetterRevealed) {
+      firstLetterRevealed = true;
+      return character;
+    }
+
+    return "_";
+  }).join("");
+}
+
+function buildAnswerOnlyHints(answer) {
+  return [false, true].map((revealFirstLetter) => buildHintData({
+    exampleText: answer,
+    targetText: answer,
+    acceptedAnswers: [],
+    replacement: buildGeneratedHintReplacement(answer, revealFirstLetter),
+    preferAcceptedAnswers: false,
+  }));
+}
+
 function buildCardData(card) {
-  const sourceText = card?.source?.text?.trim();
+  const rawSourceText = card?.source?.text?.trim();
   const rawTargetText = card?.target?.text?.trim();
   const audioSource = normalizeAudioPath(card?.audio?.source);
   const audioTarget = normalizeAudioPath(card?.audio?.target);
@@ -7066,9 +7376,9 @@ function buildCardData(card) {
   const firstLetterHint = flashcardHintData?.firstLetterHint?.trim();
 
   if (
-    typeof sourceText !== "string" ||
+    typeof rawSourceText !== "string" ||
     typeof rawTargetText !== "string" ||
-    sourceText === "" ||
+    rawSourceText === "" ||
     rawTargetText === ""
   ) {
     throw new Error("First card is missing source.text or target.text.");
@@ -7087,6 +7397,7 @@ function buildCardData(card) {
 
   const example = card?.examples?.find((entry) => entry?.id === exampleId);
   const exampleText = example?.target?.trim();
+  const sourceExampleText = example?.source?.trim();
 
   if (!exampleText) {
     throw new Error("First card is missing the example referenced by hintData.flashcard.");
@@ -7099,6 +7410,9 @@ function buildCardData(card) {
         .filter(Boolean)
     : [];
   const answers = buildAcceptedAnswerList(rawTargetText, acceptedAnswers);
+  const sourceAnswers = buildAcceptedAnswerList(rawSourceText);
+  const sourceText = sourceAnswers[0] || rawSourceText;
+  const sourceAlternatives = sourceAnswers.slice(1);
   const targetText = answers[0] || rawTargetText;
   const targetAlternatives = answers.slice(1);
   const exampleIsAnswerOnly = isAnswerOnlyExample(
@@ -7106,10 +7420,30 @@ function buildCardData(card) {
     [rawTargetText, ...acceptedAnswers, ...answers],
   );
   const hintExampleText = exampleIsAnswerOnly ? targetText : exampleText;
+  const sourceExampleIsAnswerOnly = isAnswerOnlyExample(sourceExampleText, sourceAnswers);
+  const reverseCard = {
+    id: card?.id?.trim() || sourceText,
+    sourceText: targetText,
+    sourceAlternatives: targetAlternatives,
+    targetText: sourceText,
+    targetAlternatives: sourceAlternatives,
+    answers: sourceAnswers,
+    backContext: !sourceExampleText || sourceExampleIsAnswerOnly
+      ? null
+      : buildBackContextData({
+          exampleText: sourceExampleText,
+          targetText: sourceText,
+          acceptedAnswers: sourceAlternatives,
+        }),
+    hints: buildAnswerOnlyHints(sourceText),
+    audioSource: audioTarget,
+    audioTarget: audioSource,
+  };
 
   return {
     id: card?.id?.trim() || sourceText,
     sourceText,
+    sourceAlternatives,
     targetText,
     targetAlternatives,
     answers,
@@ -7138,6 +7472,7 @@ function buildCardData(card) {
     ],
     audioSource,
     audioTarget,
+    reverse: reverseCard,
   };
 }
 
@@ -7458,6 +7793,12 @@ function shouldHandleInputEnterShortcut(event) {
 }
 
 function handleWindowKeydown(event) {
+  if (state.flashcardSettingsOpen && event.key === "Escape") {
+    event.preventDefault();
+    closeFlashcardSettingsMenu();
+    return;
+  }
+
   if (state.inputSettingsOpen && event.key === "Escape") {
     event.preventDefault();
     closeInputSettingsMenu();
@@ -8681,6 +9022,7 @@ function renderViewReviewPromptState(cards) {
 function renderCard() {
   const {
     sourceText,
+    sourceAlternatives,
     targetText,
     targetAlternatives,
     hints,
@@ -8714,7 +9056,12 @@ function renderCard() {
   updateFaceVisibility(state.isFlipped);
   elements.frontContent.classList.toggle("has-hint", Boolean(currentHint) && !state.isFlipped);
 
-  renderFlashcardAnswer(elements.frontWord, elements.frontAlternatives, sourceText);
+  renderFlashcardAnswer(
+    elements.frontWord,
+    elements.frontAlternatives,
+    sourceText,
+    sourceAlternatives,
+  );
   renderFlashcardAnswer(
     elements.backWord,
     elements.backAlternatives,

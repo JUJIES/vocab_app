@@ -15,8 +15,11 @@
       return;
     }
 
-    navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch((error) => {
-      console.error("Unable to register service worker:", error);
+    navigator.serviceWorker.register("/sw.js", {
+      scope: "/",
+      updateViaCache: "none",
+    }).then((registration) => registration.update()).catch((error) => {
+      console.error("Unable to register or update service worker:", error);
     });
   });
 })();

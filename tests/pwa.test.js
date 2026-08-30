@@ -61,6 +61,16 @@ test("PWA metadata points each surface at the correct manifest and opaque icons"
   }
 });
 
+test("PWA control files bypass intermediary caches and service worker updates bypass HTTP caches", () => {
+  const pwaScript = readText("pwa.js");
+  const serverSource = readText("server.js");
+
+  assert.match(pwaScript, /updateViaCache:\s*"none"/);
+  assert.match(pwaScript, /registration\.update\(\)/);
+  assert.match(serverSource, /"\/sw\.js"/);
+  assert.match(serverSource, /no-store, no-cache, must-revalidate/);
+});
+
 function readJson(filePath) {
   return JSON.parse(readText(filePath));
 }

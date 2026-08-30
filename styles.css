@@ -3738,20 +3738,20 @@ button.student-screen__device-card {
   transform: translateY(1px);
 }
 
+.input-stage__settings-button:disabled {
+  opacity: 0.34;
+  cursor: default;
+}
+
 .input-stage__settings-icon {
-  width: 1.18rem;
-  height: 1.18rem;
+  width: 1.06rem;
+  height: 1.06rem;
   display: block;
   flex: 0 0 auto;
 }
 
-.app-shell[data-app-mode="input"] .input-stage__settings-icon {
-  width: 1.06rem;
-  height: 1.06rem;
-}
-
-.app-shell[data-app-mode="input"] .input-stage__settings-icon path,
-.app-shell[data-app-mode="input"] .input-stage__settings-icon circle {
+.input-stage__settings-icon path,
+.input-stage__settings-icon circle {
   stroke-width: 1.55;
 }
 
@@ -3792,6 +3792,78 @@ button.student-screen__device-card {
     transform 240ms cubic-bezier(0.22, 0.86, 0.24, 1),
     visibility 0s linear 0s;
   visibility: visible;
+}
+
+.card-stage__topbar-context .input-stage__settings-popover {
+  right: calc((var(--learning-topbar-button-size) + var(--flashcard-topbar-side-gap)) * -1);
+}
+
+.input-stage__menu-context .input-stage__settings-popover {
+  right: calc((var(--learning-topbar-button-size) + var(--input-topbar-side-gap)) * -1);
+}
+
+.learning-direction-popover {
+  width: min(20rem, calc(100vw - (var(--learning-stage-inline) * 2)));
+}
+
+.learning-direction-control {
+  display: grid;
+  gap: 0.72rem;
+}
+
+.learning-direction-control__label {
+  margin: 0;
+  color: rgba(217, 226, 242, 0.72);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.045em;
+}
+
+.learning-direction-control__choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.learning-direction-control__choice {
+  min-width: 0;
+  min-height: 3rem;
+  padding: 0.62rem 0.72rem;
+  border: 1px solid rgba(214, 224, 246, 0.1);
+  border-radius: 0.92rem;
+  background: rgba(214, 224, 246, 0.035);
+  color: rgba(218, 227, 243, 0.68);
+  box-shadow: none;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 750;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+  transition: color 160ms ease, border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.learning-direction-control__choice:hover,
+.learning-direction-control__choice:focus-visible {
+  color: rgba(246, 249, 255, 0.96);
+  border-color: rgba(214, 224, 246, 0.22);
+  background: rgba(214, 224, 246, 0.075);
+}
+
+.learning-direction-control__choice:focus-visible {
+  outline: 2px solid rgba(164, 190, 234, 0.64);
+  outline-offset: 2px;
+}
+
+.learning-direction-control__choice:active {
+  transform: translateY(1px);
+}
+
+.learning-direction-control__choice.is-selected {
+  border-color: rgba(var(--mode-accent-rgb, 223, 232, 255), 0.42);
+  background: rgba(var(--mode-accent-rgb, 223, 232, 255), 0.13);
+  color: rgba(247, 250, 255, 0.98);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
 }
 
 .input-stage__settings-group {
@@ -4908,6 +4980,27 @@ button.student-screen__device-card {
   margin: 0 auto;
 }
 
+.launch-mode-modal__direction {
+  display: grid;
+  grid-template-columns: auto minmax(18rem, 28rem);
+  align-items: center;
+  justify-content: end;
+  gap: 0.8rem 1rem;
+  margin-top: -0.25rem;
+}
+
+.launch-mode-modal__direction[hidden] {
+  display: none;
+}
+
+.launch-mode-modal__direction .learning-direction-control__label {
+  text-align: right;
+}
+
+.launch-mode-modal__direction .learning-direction-control__choice {
+  min-height: 2.85rem;
+}
+
 .launch-mode-modal__mode-card {
   width: 100%;
   min-height: 7.4rem;
@@ -5591,6 +5684,17 @@ button.student-screen__device-card {
   .launch-mode-modal__modes {
     grid-template-columns: 1fr;
     width: 100%;
+  }
+
+  .launch-mode-modal__direction {
+    grid-template-columns: 1fr;
+    justify-content: stretch;
+    gap: 0.55rem;
+    margin-top: 0;
+  }
+
+  .launch-mode-modal__direction .learning-direction-control__label {
+    text-align: left;
   }
 
   .launch-mode-modal__mode-main {

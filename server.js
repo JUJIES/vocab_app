@@ -1274,6 +1274,7 @@ app.post("/api/tablets/:tabletId/decouple", async (request, response) => {
 });
 
 app.get("/teacher", (_request, response) => {
+  setPwaControlFileCacheHeaders(response);
   response.sendFile(path.join(ROOT_DIR, "teacher.html"));
 });
 
@@ -1331,7 +1332,26 @@ const PUBLIC_ROOT_FILES = new Map([
   ["/example-set-improved.json", "example-set-improved.json"],
 ]);
 
+const PWA_CONTROL_FILE_PATHS = new Set([
+  "/",
+  "/index.html",
+  "/teacher.html",
+  "/manifest.webmanifest",
+  "/teacher.webmanifest",
+  "/pwa.js",
+  "/sw.js",
+]);
+
+function setPwaControlFileCacheHeaders(response) {
+  response.set("Cache-Control", "no-store, no-cache, must-revalidate");
+  response.set("Pragma", "no-cache");
+  response.set("Expires", "0");
+}
+
 app.get([...PUBLIC_ROOT_FILES.keys()], (request, response) => {
+  if (PWA_CONTROL_FILE_PATHS.has(request.path)) {
+    setPwaControlFileCacheHeaders(response);
+  }
   response.sendFile(path.join(ROOT_DIR, PUBLIC_ROOT_FILES.get(request.path)));
 });
 

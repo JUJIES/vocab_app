@@ -23,11 +23,11 @@
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@300;400&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="./styles.css?v=2026-08-30-student-header-actions" />
+    <link rel="stylesheet" href="./styles.css?v=2026-08-30-student-direction-v1" />
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
-    <script src="./pwa.js?v=2026-08-30-installable-app-v1" defer></script>
-    <script src="./app.js?v=2026-08-30-student-header-actions" defer></script>
+    <script src="./pwa.js?v=2026-08-30-pwa-update-v2" defer></script>
+    <script src="./app.js?v=2026-08-30-student-direction-v1" defer></script>
   </head>
   <body>
     <main class="app-shell">
@@ -121,6 +121,62 @@
           </div>
 
           <div class="card-stage__topbar-context">
+            <div id="flashcard-settings-shell" class="input-stage__settings">
+              <button
+                id="flashcard-settings-button"
+                class="input-stage__settings-button"
+                type="button"
+                aria-label="Einstellungen öffnen"
+                aria-expanded="false"
+                aria-controls="flashcard-settings-popover"
+              >
+                <svg
+                  class="input-stage__settings-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="3"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+
+              <section
+                id="flashcard-settings-popover"
+                class="input-stage__settings-popover learning-direction-popover"
+                aria-label="Abfragerichtung"
+                aria-hidden="true"
+              >
+                <div class="learning-direction-control">
+                  <p class="learning-direction-control__label">Was kommt zuerst?</p>
+                  <div
+                    class="learning-direction-control__choices"
+                    role="group"
+                    aria-label="Abfragerichtung wählen"
+                    data-learning-direction-group="flashcard"
+                  >
+                    <button class="learning-direction-control__choice" type="button" data-learning-direction="source-target"></button>
+                    <button class="learning-direction-control__choice" type="button" data-learning-direction="target-source"></button>
+                  </div>
+                </div>
+              </section>
+            </div>
+
             <button
               id="flashcard-menu-logout"
               class="student-screen__action student-screen__action--secondary student-screen__home-logout card-stage__menu-logout"
@@ -668,6 +724,19 @@
           </div>
 
           <div id="launch-mode-modes" class="launch-mode-modal__modes"></div>
+
+          <section id="launch-mode-direction" class="launch-mode-modal__direction" aria-label="Abfragerichtung">
+            <p class="learning-direction-control__label">Was kommt zuerst?</p>
+            <div
+              class="learning-direction-control__choices"
+              role="group"
+              aria-label="Abfragerichtung wählen"
+              data-learning-direction-group="launch"
+            >
+              <button class="learning-direction-control__choice" type="button" data-learning-direction="source-target"></button>
+              <button class="learning-direction-control__choice" type="button" data-learning-direction="target-source"></button>
+            </div>
+          </section>
 
           <section class="launch-mode-modal__detail" aria-live="polite">
             <div class="launch-mode-modal__detail-copy">
