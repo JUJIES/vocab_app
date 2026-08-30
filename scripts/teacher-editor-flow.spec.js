@@ -61,6 +61,8 @@ test("teacher editor separates creation, manual editing and automatic additions"
 
   await page.getByRole("button", { name: /Aus Material erstellen/ }).click();
   await expect(page.locator("#set-import-section")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Material hinzufügen" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Zurück" })).toBeVisible();
   await page.getByRole("button", { name: "Zurück" }).click();
   await expect(page.locator("#set-editor-choice")).toBeVisible();
 
