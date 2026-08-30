@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Beelink-Aktivierung setzt den XML-Text des Dienst-Arbeitsverzeichnisses jetzt korrekt, statt den XML-Knoten zu ersetzen.
 - Einzelne Lehrkraftpasswörter lassen sich nun gezielt zurücksetzen, ohne die übrigen Konten zu verändern; bestehende Sitzungen des betroffenen Kontos werden widerrufen.
 - Falsche Zuweisungsmetapher aus der Lehrer-Setliste entfernt: eine kompakte Tablet-Zahl zeigt nun, auf wie vielen Geräten das Set hinzugefügt wurde; Details heißen klar „Vom Tablet entfernen“.
 - Lehrkraft-Einrichtungscodes durch einmalig provisionierte Startpasswörter ersetzt; erster Login öffnet den Passwortwechsel, der später über ein neues Zahnrad-Menü erreichbar bleibt und alle alten Sitzungen rotiert.

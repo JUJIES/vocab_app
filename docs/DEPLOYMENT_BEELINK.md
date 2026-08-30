@@ -47,19 +47,19 @@ Den API-Key über die Dienstkonfiguration oder eine geschützte Runtime-Umgebung
 Auf dem Beelink liegen zwei wiederverwendbare Deployment-Helfer im geschützten Dienstordner. Der Key wird über Standard Input übertragen, damit er weder in der Shell-History noch in Prozessargumenten steht:
 
 ```powershell
-pbpaste | ssh beelink powershell.exe -NoProfile -NonInteractive -File "C:\ProgramData\Beelink\Services\lerndeck\set-beelink-openai-key.ps1"
+pbpaste | ssh beelink powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File C:/ProgramData/Beelink/Services/lerndeck/set-beelink-openai-key.ps1
 ```
 
 Nach Review, Commit und Push bereitet der folgende Aufruf einen unveränderlichen Release vor, installiert ausschließlich Produktionsabhängigkeiten, führt Checks, Tests, Audit und einen isolierten Healthcheck auf Port `6100` aus, ändert aber noch keinen laufenden Dienst:
 
 ```powershell
-ssh beelink powershell.exe -NoProfile -NonInteractive -File "C:\ProgramData\Beelink\Services\lerndeck\deploy-beelink.ps1" -Commit <vollständige-commit-id>
+ssh beelink powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File C:/ProgramData/Beelink/Services/lerndeck/deploy-beelink.ps1 -Commit <vollständige-commit-id>
 ```
 
 Erst der erneute Aufruf mit `-Activate` sichert die Runtime, provisioniert fehlende Lehrkraftkonten, stellt den Dienst auf den geprüften Release um und rollt bei einem fehlgeschlagenen Healthcheck automatisch auf den vorherigen Releasepfad zurück:
 
 ```powershell
-ssh beelink powershell.exe -NoProfile -NonInteractive -File "C:\ProgramData\Beelink\Services\lerndeck\deploy-beelink.ps1" -Commit <vollständige-commit-id> -Activate
+ssh beelink powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File C:/ProgramData/Beelink/Services/lerndeck/deploy-beelink.ps1 -Commit <vollständige-commit-id> -Activate
 ```
 
 Im neuen Release mit dem produktiven `DATA_DIR` einmal ausführen:
