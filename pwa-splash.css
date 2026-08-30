@@ -1,0 +1,130 @@
+.pwa-splash {
+  display: none;
+}
+
+html.is-pwa-standalone,
+html.is-pwa-standalone body {
+  min-height: 100%;
+}
+
+html.is-pwa-standalone.pwa-splash-pending body {
+  overflow: hidden;
+}
+
+html.is-pwa-standalone .pwa-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding:
+    max(1.5rem, env(safe-area-inset-top))
+    max(1.5rem, env(safe-area-inset-right))
+    max(1.5rem, env(safe-area-inset-bottom))
+    max(1.5rem, env(safe-area-inset-left));
+  background:
+    radial-gradient(circle at 18% 18%, rgba(68, 83, 114, 0.18), transparent 30%),
+    radial-gradient(circle at 82% 44%, rgba(64, 78, 106, 0.24), transparent 32%),
+    linear-gradient(180deg, #171e2b 0%, #141b28 100%);
+  color: #e6eaf0;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 540ms cubic-bezier(0.22, 0.82, 0.24, 1),
+    visibility 0s linear 540ms;
+  animation: pwa-splash-hard-timeout 420ms ease 5s forwards;
+}
+
+html.is-pwa-standalone .pwa-splash.is-leaving {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.pwa-splash__content {
+  display: grid;
+  justify-items: center;
+  gap: clamp(1.35rem, 4vw, 1.8rem);
+  width: min(100%, 32rem);
+  transform: translateY(-0.75rem);
+  animation: pwa-splash-content-in 680ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.pwa-splash__brand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(0.52rem, 1.8vw, 0.8rem);
+  max-width: 100%;
+  color: #e6eaf0;
+  font-family: "Manrope", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: clamp(2.65rem, 9vw, 5rem);
+  font-weight: 800;
+  letter-spacing: -0.075em;
+  line-height: 0.9;
+  white-space: nowrap;
+}
+
+.pwa-splash__icon {
+  width: 0.86em;
+  height: 0.86em;
+  display: block;
+  flex: 0 0 auto;
+  transform: translateY(0.035em);
+}
+
+.pwa-splash__name {
+  display: block;
+}
+
+.pwa-splash__spinner {
+  width: 1.65rem;
+  height: 1.65rem;
+  border: 2px solid rgba(214, 224, 246, 0.12);
+  border-top-color: rgba(223, 232, 255, 0.82);
+  border-right-color: rgba(139, 171, 216, 0.38);
+  border-radius: 50%;
+  box-shadow: 0 0 18px rgba(151, 180, 224, 0.08);
+  animation: pwa-splash-spin 900ms linear infinite;
+}
+
+@keyframes pwa-splash-content-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.15rem) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(-0.75rem) scale(1);
+  }
+}
+
+@keyframes pwa-splash-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pwa-splash-hard-timeout {
+  to {
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.is-pwa-standalone .pwa-splash {
+    transition-duration: 180ms;
+  }
+
+  .pwa-splash__content {
+    animation: none;
+  }
+
+  .pwa-splash__spinner {
+    animation-duration: 1600ms;
+  }
+}

@@ -13,12 +13,28 @@
     <link rel="apple-touch-icon" sizes="167x167" href="./icons/apple-touch-icon-167.png?v=2026-08-30-app-icon-v1" />
     <link rel="apple-touch-icon" sizes="152x152" href="./icons/apple-touch-icon-152.png?v=2026-08-30-app-icon-v1" />
     <link rel="icon" type="image/png" sizes="32x32" href="./icons/favicon-32.png?v=2026-08-30-app-icon-v1" />
+    <script>
+      if (window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true) {
+        document.documentElement.classList.add("is-pwa-standalone", "pwa-splash-pending");
+      }
+    </script>
+    <link rel="stylesheet" href="./pwa-splash.css?v=2026-08-30-pwa-splash-v1" />
     <link rel="stylesheet" href="./teacher.css?v=2026-08-30-set-delete" />
-    <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
-    <script src="./pwa.js?v=2026-08-30-pwa-update-v2" defer></script>
-    <script src="./teacher.js?v=2026-08-30-set-delete" defer></script>
+    <script src="./pwa.js?v=2026-08-30-pwa-splash-v3" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js" defer></script>
+    <script src="./teacher.js?v=2026-08-30-pwa-splash-v1" defer></script>
   </head>
   <body>
+    <div class="pwa-splash" role="status" aria-label="Lerndeck wird geladen">
+      <div class="pwa-splash__content">
+        <div class="pwa-splash__brand" aria-hidden="true">
+          <img class="pwa-splash__icon" src="./assets/icons/lerndeck-stack.svg" alt="" decoding="sync" fetchpriority="high" />
+          <span class="pwa-splash__name">Lerndeck</span>
+        </div>
+        <span class="pwa-splash__spinner" aria-hidden="true"></span>
+      </div>
+    </div>
+
     <main id="teacher-auth-panel" class="teacher-auth">
       <div class="teacher-auth__shell">
         <div class="teacher-auth__brand" aria-label="Lerndeck">

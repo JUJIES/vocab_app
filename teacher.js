@@ -149,7 +149,7 @@ const elements = {
 
 document.addEventListener("DOMContentLoaded", () => {
   bindEvents();
-  initializeTeacherApp();
+  void initializeTeacherApp().finally(() => window.LerndeckPwa?.ready());
 });
 
 function bindEvents() {
