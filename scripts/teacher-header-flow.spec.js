@@ -46,11 +46,22 @@ for (const viewport of [
     await expect(page.locator("#teacher-account-status")).toContainText(/Angemeldet als\s+Julius/);
 
     const headerBox = await page.locator(".teacher-header").boundingBox();
+    const accountBox = await page.locator("#teacher-account-status").boundingBox();
+    const accountLabelBox = await page.locator(".teacher-account-status__label").boundingBox();
+    const accountNameBox = await page.locator(".teacher-account-status__name").boundingBox();
     const setIconBox = await page.locator("#teacher-shell-icon").boundingBox();
     const setTabBox = await page.locator('[data-teacher-tab="sets"]').boundingBox();
     const tabletTabBox = await page.locator('[data-teacher-tab="tablets"]').boundingBox();
     expect(headerBox.x).toBeGreaterThanOrEqual(0);
     expect(headerBox.x + headerBox.width).toBeLessThanOrEqual(viewport.width + 1);
+    expect(Math.abs(
+      (accountBox.y + accountBox.height / 2)
+      - (accountLabelBox.y + accountLabelBox.height / 2),
+    )).toBeLessThan(1.5);
+    expect(Math.abs(
+      (accountBox.y + accountBox.height / 2)
+      - (accountNameBox.y + accountNameBox.height / 2),
+    )).toBeLessThan(1.5);
     expect(Math.abs(setTabBox.width - tabletTabBox.width)).toBeLessThan(1.5);
     expect(Math.abs(setTabBox.height - tabletTabBox.height)).toBeLessThan(1.5);
 

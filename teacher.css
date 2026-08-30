@@ -272,7 +272,7 @@ body.has-modal-open {
   min-height: 2.55rem;
   padding: 0.55rem 0.82rem;
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
   gap: 0.35rem;
   border: 1px solid rgba(214, 224, 246, 0.07);
   border-radius: var(--radius-pill);
@@ -285,12 +285,14 @@ body.has-modal-open {
   color: rgba(158, 171, 194, 0.76);
   font-size: 0.74rem;
   font-weight: 650;
+  line-height: 1;
 }
 
 .teacher-account-status__name {
   color: rgba(238, 243, 252, 0.96);
   font-size: 0.82rem;
   font-weight: 800;
+  line-height: 1;
 }
 
 .teacher-settings {

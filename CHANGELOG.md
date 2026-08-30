@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Account-Tag im Lehrer-Header richtet Label und Namen jetzt mit gemeinsamer Zeilenhöhe exakt an der vertikalen Mitte aus.
 - Lehrer-Header als einheitliches System überarbeitet: Account-Tag statt Namens-Kicker, Abmelden im Einstellungsmenü, optisch normalisierte Bereichssymbole und symmetrische segmentierte Tabs.
 - „Weiterlernen“ zeigt ohne eingerichtetes Tablet keinen funktionslosen PIN-Login mehr, sondern einen kompakten Empty State mit direktem Einstieg in die vorhandene Tablet-Einrichtung.
 - Leerer Schülerlogin gekürzt und das Schlüssel-Icon unabhängig von der Höhe des Tablet-Hinweises sauber im PIN-Feld zentriert; eine neue PWA-Shell-Version verteilt die Korrektur auch an bestehende Installationen.
