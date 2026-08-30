@@ -3,6 +3,7 @@
 ## Unreleased
 
 - KI-Lernbilder als persistenter Hintergrundworkflow umgesetzt: sechs Begriffe pro 3×2-Sheet, Fortschritt im Editor und in der Setliste, kompakte Hover-/Fokusvorschau pro Karte, einzelne Neugenerierung mit erhaltener Variantenhistorie, sichere immutable Medienroute sowie ruhige didaktische Einblendung in `Sichten`, `Üben` und `Eingabe`.
+- Release `8fe6bcf` mit PWA-Shell `v104` auf dem Beelink aktiviert; vorhandener OpenAI-Dienstschlüssel erkannt, Runtime vor dem Cutover gesichert und öffentlicher Health-/Cachecheck bestanden.
 - Karten mit genau drei durch Leerzeichen und Bindestriche getrennten Verbformen werden automatisch als unregelmäßige Verben dargestellt: Der Infinitiv bleibt die ruhige Hauptform, Simple Past und Past Participle erscheinen separat; im Eingabemodus werden alle drei Formen in eigenen Feldern geprüft, während der Editor weiterhin nur eine kompakte Zeile speichert.
 - Dialoge und große Ansichtswechsel folgen jetzt in Schüler- und Lehrkraft-App einem gemeinsamen Motion-System: weiches Ein- und Ausblenden, ruhige Schrittwechsel, animierte Tabs und Editoransichten sowie eine stark verkürzte Reduced-Motion-Variante ersetzen harte UI-Sprünge.
 - Geräte-Tag und Abmelden in der Schülerübersicht als gemeinsame 36-Pixel-Aktionsleiste ausgerichtet; identische Boxhöhe, Typografie und unverrückte Icon-Mitte beseitigen den schiefen Eindruck im iPad-Querformat.
