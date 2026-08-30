@@ -17,7 +17,7 @@ Lerndeck ist ein schnelles, ruhiges Lernwerkzeug für Unterrichtstablets. Kinder
 - sechs persönliche Lehrkraftkonten mit einmaliger Aktivierung
 - Lehrerbereich für Editor, Import, Set-Freigabe und Tablet-Verwaltung
 - Textimport ohne KI sowie multimodaler KI-Entwurf mit optionaler Importnotiz und anschließender Prüfung
-- installierbare PWA
+- getrennt installierbare PWA-Einstiege für Schüler (`/`) und Lehrkräfte (`/teacher`) mit gemeinsamer Runtime
 
 Der Modus `Testen`, Schülerkonten, Lernpässe, Gruppen/Schulen und Tauri sind noch nicht Teil des einsatzbereiten MVP.
 
@@ -34,6 +34,7 @@ Der Modus `Testen`, Schülerkonten, Lernpässe, Gruppen/Schulen und Tauri sind n
 - Importbegriffe müssen im Material vorkommen. Sichtbare Begriffspaare werden übernommen und von Lautschrift sowie Buchcodes bereinigt. Nur wenn die Importnotiz es verlangt, ergänzt das Modell für vorhandene Begriffe eine knappe Übersetzung oder Definition.
 - Der Schülerbereich bleibt auf Lernen und wenige klare Aktionen reduziert.
 - Lehrerfunktionen sind per individuellem Passwort geschützt und gehören in `/teacher`.
+- Installationen verändern keine Produktidentität: Relution verteilt nur den Schüler-Weblink, Mac-Web-Apps starten direkt im Lehrerbereich, und beide verwenden weiterhin die serverseitigen Sitzungen und Datenflüsse.
 
 ## Nächste sinnvolle Produktphase
 

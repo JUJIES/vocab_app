@@ -113,7 +113,7 @@ Vor dem Cutover eine datenschutzkonforme Sicherung des gesamten Runtime-Ordners 
 
 ## PWA und Relution
 
-Safari unter der öffentlichen HTTPS-Adresse bleibt der vollständige, unabhängige Zugangsweg. Relution verteilt optional nur einen Webclip beziehungsweise die PWA-URL `https://lerndeck.jujies.app`; es injiziert keine Geräteidentität und ist keine Laufzeitabhängigkeit. So kann ein Unterrichtstest auch ohne erneute IT-Aktion beginnen.
+Safari unter der öffentlichen HTTPS-Adresse bleibt der vollständige, unabhängige Zugangsweg. Die Schüler-PWA verwendet ID und Start-URL `/`; die Lehrkraft-PWA startet unter `/teacher`. Relution verteilt ausschließlich den Schüler-Weblink `https://lerndeck.jujies.app/` im Full-Screen-Modus und verwendet `https://lerndeck.jujies.app/icons/relution-webclip-512.png` als vorbereitetes Icon. Es injiziert keine Geräteidentität und ist keine Laufzeitabhängigkeit. Die vollständigen Mac- und Relution-Schritte stehen in [INSTALLATION.md](INSTALLATION.md).
 
 ## Abnahme nach Cutover
 

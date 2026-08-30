@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Schüler- und Lehrkraftbereich als getrennt installierbare PWA-Einstiege mit gemeinsamem Service Worker eingerichtet; neues textfreies Drei-Schichten-App-Icon samt Apple-, Maskable- und Relution-Varianten ergänzt und den bereichstreuen Offline-Fallback abgesichert.
 - Account-Tag im Lehrer-Header richtet Label und Namen jetzt mit gemeinsamer Zeilenhöhe exakt an der vertikalen Mitte aus.
 - Lehrer-Header als einheitliches System überarbeitet: Account-Tag statt Namens-Kicker, Abmelden im Einstellungsmenü, optisch normalisierte Bereichssymbole und symmetrische segmentierte Tabs.
 - „Weiterlernen“ zeigt ohne eingerichtetes Tablet keinen funktionslosen PIN-Login mehr, sondern einen kompakten Empty State mit direktem Einstieg in die vorhandene Tablet-Einrichtung.

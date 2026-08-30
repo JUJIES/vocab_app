@@ -1,14 +1,25 @@
-const CACHE_NAME = "lerndeck-shell-v94";
+const CACHE_NAME = "lerndeck-shell-v95";
 const APP_SHELL_URLS = [
   "/",
   "/index.html",
+  "/teacher",
+  "/teacher.html",
   "/styles.css?v=2026-08-30-student-empty-state",
   "/app.js?v=2026-08-30-student-empty-state",
+  "/teacher.css?v=2026-08-30-set-delete",
+  "/teacher.js?v=2026-08-30-set-delete",
+  "/pwa.js?v=2026-08-30-installable-app-v1",
   "/manifest.webmanifest",
-  "/icons/icon-192.png",
-  "/icons/icon-512.png",
-  "/icons/icon-512-maskable.png",
-  "/icons/apple-touch-icon.png",
+  "/teacher.webmanifest",
+  "/assets/icons/lerndeck-stack.svg",
+  "/icons/favicon-32.png?v=2026-08-30-app-icon-v1",
+  "/icons/icon-192.png?v=2026-08-30-app-icon-v1",
+  "/icons/icon-512.png?v=2026-08-30-app-icon-v1",
+  "/icons/icon-512-maskable.png?v=2026-08-30-app-icon-v1",
+  "/icons/icon-1024.png?v=2026-08-30-app-icon-v1",
+  "/icons/apple-touch-icon.png?v=2026-08-30-app-icon-v1",
+  "/icons/apple-touch-icon-167.png?v=2026-08-30-app-icon-v1",
+  "/icons/apple-touch-icon-152.png?v=2026-08-30-app-icon-v1",
 ];
 
 self.addEventListener("install", (event) => {
@@ -38,6 +49,10 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
   if (url.pathname.startsWith("/api/")) {
     return;
   }
@@ -46,7 +61,10 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request).catch(async () => {
         const cache = await caches.open(CACHE_NAME);
-        return cache.match("/index.html");
+        const fallbackPath = url.pathname === "/teacher" || url.pathname === "/teacher.html"
+          ? "/teacher.html"
+          : "/index.html";
+        return cache.match(fallbackPath);
       }),
     );
     return;

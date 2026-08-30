@@ -16,7 +16,7 @@ Einsatzbereit sind:
 - Schülerübernahme per Code, QR oder Link; der Set-Inhalt wird nicht auf das Tablet kopiert
 - Modi `Sichten`, `Üben` und `Eingabe`; falsche Eingaben müssen im Korrekturmodus richtig wiederholt werden
 - Lernstand pro Tablet, Set und Lernmodus
-- Browserbetrieb unter Safari, Chrome und Desktop-Browsern; die PWA ist nur eine Komfortschicht
+- installierbare Schüler-PWA für iPads/Relution und eigener Lehrkraft-Startpunkt für Mac-Web-Apps; der Browserzugang bleibt vollständig erhalten
 
 Bewusst vertagt sind persönliche Schülerkonten, Dino-Lernpässe, Schulen/Gruppen, Set-Zuweisungsverwaltung, Tauri und der Modus `Testen`.
 
@@ -78,4 +78,4 @@ Der Test erstellt ein Set und mutiert ein Tablet; niemals gegen echte Unterricht
 
 ## Betrieb
 
-Die verbindlichen Beelink-Schritte stehen in [docs/DEPLOYMENT_BEELINK.md](docs/DEPLOYMENT_BEELINK.md). Produktentscheidungen und vertagte Komponenten stehen in [docs/DECISIONS.md](docs/DECISIONS.md). Der geplante, noch nicht implementierte KI-Bildworkflow ist in [docs/VISUAL_VOCABULARY_PLAN.md](docs/VISUAL_VOCABULARY_PLAN.md) festgehalten. Der Lehrerbereich ist unter `/teacher`, die Schüler-App unter `/` erreichbar.
+Die verbindlichen Beelink-Schritte stehen in [docs/DEPLOYMENT_BEELINK.md](docs/DEPLOYMENT_BEELINK.md). Die Installation auf Macs und die Verteilung per Relution beschreibt [docs/INSTALLATION.md](docs/INSTALLATION.md). Produktentscheidungen und vertagte Komponenten stehen in [docs/DECISIONS.md](docs/DECISIONS.md). Der geplante, noch nicht implementierte KI-Bildworkflow ist in [docs/VISUAL_VOCABULARY_PLAN.md](docs/VISUAL_VOCABULARY_PLAN.md) festgehalten. Der Lehrerbereich ist unter `/teacher`, die Schüler-App unter `/` erreichbar.

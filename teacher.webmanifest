@@ -1,9 +1,9 @@
 {
-  "name": "Lerndeck",
+  "name": "Lerndeck Lehrkraft",
   "short_name": "Lerndeck",
-  "description": "Lernsets auf dem Schul-iPad sichten, üben und schreiben.",
-  "id": "/",
-  "start_url": "/",
+  "description": "Lernsets erstellen, bearbeiten und mit Tablets teilen.",
+  "id": "/teacher",
+  "start_url": "/teacher",
   "scope": "/",
   "display": "standalone",
   "background_color": "#081329",

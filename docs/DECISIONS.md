@@ -3,6 +3,7 @@
 ## 2026-08-29 – Montag-MVP
 
 - **Web zuerst:** Schüler- und Lehrerbereich funktionieren vollständig im Browser. PWA/Relution sind Komfort und Verteilung, keine Voraussetzung. Tauri ist vertagt.
+- **Zwei PWA-Einstiege, eine Runtime:** Die Schüler-App installiert mit ID und Start-URL `/`; die Lehrkraft-App mit `/teacher`. So landen Mac-Lehrkräfte und per Relution verteilte Schüler-iPads direkt im passenden Bereich, ohne getrennte Datenmodelle, Builds oder Serverdienste. Beide verwenden dieselbe Iconfamilie und denselben Service Worker; dessen Offline-Navigation fällt bereichstreu auf die jeweilige Shell zurück.
 - **Geräte statt Schülerkonten:** Im Unterricht sind die 29 bekannten Tabletprofile die Identität. Lernstände gehören zum Tablet. Schüler registrieren sich nicht persönlich.
 - **Teilen statt Zuweisen:** Lehrkräfte teilen ein Set über stabilen sechsstelligen Code oder QR-Link; das Tablet fügt es selbst hinzu. Der Lehrerbereich zeigt deshalb nur kompakt `0 Tablets`, `1 Tablet` oder `n Tablets` und bei Bedarf die Gerätenamen. Er behauptet keine Zuweisung durch die Lehrkraft. Schulen, Gruppen und ein Admin-UI sind vertagt.
 - **Startpasswort statt Einrichtungscode:** Die sechs vorbereiteten Lehrkraftkonten erhalten beim Provisionieren ein zufälliges Startpasswort. Die erste Anmeldung führt direkt zum Passwortwechsel; später ist er im Zahnrad-Menü erreichbar. Der Wechsel verlangt das aktuelle Passwort, beendet alle alten Sitzungen und setzt eine neue. Sets bleiben im Editor nur für ihren Eigentümer sichtbar.
