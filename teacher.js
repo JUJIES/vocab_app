@@ -501,15 +501,31 @@ function renderSetList() {
   }
 
   elements.emptyState.hidden = true;
-  elements.setsMeta.textContent = state.sets.length === 1
-    ? "1 Set"
-    : `${state.sets.length} Sets`;
-  elements.setList.append(createSetGroup(state.sets));
+  const drafts = state.sets.filter((setEntry) => setEntry.status === "draft");
+  const publishedSets = state.sets.filter((setEntry) => setEntry.status !== "draft");
+  const publishedCopy = `${publishedSets.length} Set${publishedSets.length === 1 ? "" : "s"}`;
+  const draftCopy = drafts.length === 1 ? "1 Entwurf" : `${drafts.length} Entwürfe`;
+  elements.setsMeta.textContent = drafts.length ? `${publishedCopy} · ${draftCopy}` : publishedCopy;
+
+  if (drafts.length > 0) {
+    elements.setList.append(createSetGroup(drafts, `Entwürfe (${drafts.length})`));
+    if (publishedSets.length > 0) {
+      elements.setList.append(createSetGroup(publishedSets, "Veröffentlichte Sets"));
+    }
+    return;
+  }
+  elements.setList.append(createSetGroup(publishedSets));
 }
 
-function createSetGroup(sets) {
+function createSetGroup(sets, titleText = "") {
   const group = document.createElement("section");
   group.className = "teacher-set-group";
+  if (titleText) {
+    const title = document.createElement("h3");
+    title.className = "teacher-set-group__title";
+    title.textContent = titleText;
+    group.append(title);
+  }
   const list = document.createElement("div");
   list.className = "teacher-set-group__list";
   list.setAttribute("role", "list");
@@ -1891,6 +1907,12 @@ async function handleCreateImportDraft() {
     const wasAppended = state.editorImportMode === "append";
     resetSetImportInputs();
     showSetEditorView("manual");
+    if (state.editorSetStatus === "draft") {
+      const draftSaved = await persistEditorDraft({ immediate: true });
+      if (!draftSaved) {
+        return;
+      }
+    }
     elements.setEditorFeedback.textContent = response.data?.importMethod === "openai"
       ? `${importedCardCount} Karte${importedCardCount === 1 ? "" : "n"} automatisch ${wasAppended ? "hinzugefügt" : "erstellt"}. Bitte kurz prüfen.`
       : `${importedCardCount} Karte${importedCardCount === 1 ? "" : "n"} ${wasAppended ? "hinzugefügt" : "übernommen"}. Bitte kurz prüfen.`;
@@ -2001,6 +2023,12 @@ function scheduleEditorDraftSave() {
   if (state.editorAutosaveTimerId) {
     window.clearTimeout(state.editorAutosaveTimerId);
   }
+  const { payload } = buildEditorDraftPayload();
+  if (!state.editorSetId && !state.editorAutosavePromise && hasMeaningfulEditorDraft(payload)) {
+    state.editorAutosaveTimerId = null;
+    void persistEditorDraft();
+    return;
+  }
   state.editorAutosaveTimerId = window.setTimeout(() => {
     state.editorAutosaveTimerId = null;
     void persistEditorDraft();
@@ -2076,6 +2104,7 @@ async function persistEditorDraft({ immediate = false } = {}) {
   }
 
   const saveVersion = state.editorDraftVersion;
+  const keepalive = JSON.stringify(payload).length <= 60_000;
   const path = state.editorSetId
     ? `/api/teacher/set-drafts/${encodeURIComponent(state.editorSetId)}`
     : "/api/teacher/set-drafts";
@@ -2087,6 +2116,7 @@ async function persistEditorDraft({ immediate = false } = {}) {
         method: state.editorSetId ? "PUT" : "POST",
         auth: "teacher",
         body: payload,
+        keepalive,
       });
       if (!response.ok) {
         throw createTeacherRequestError(response, "Entwurf konnte nicht gespeichert werden.");
@@ -2355,6 +2385,7 @@ async function requestJson(path, options = {}) {
     headers,
     credentials: "same-origin",
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    keepalive: Boolean(options.keepalive),
   });
 
   const data = await response.json().catch(() => ({}));

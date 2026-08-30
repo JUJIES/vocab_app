@@ -17,6 +17,14 @@ async function login(page) {
   await page.getByRole("textbox", { name: "Passwort" }).fill(TEACHER_PASSWORD);
   await page.getByRole("button", { name: "Anmelden" }).click();
   await expect(page.locator("#teacher-shell")).toBeVisible();
+  await dismissPasswordOverlay(page);
+}
+
+async function dismissPasswordOverlay(page) {
+  const passwordOverlay = page.locator("#password-overlay");
+  if (await passwordOverlay.isVisible()) {
+    await passwordOverlay.getByRole("button", { name: "Schließen" }).click();
+  }
 }
 
 async function importClearList(page, text) {
@@ -111,6 +119,7 @@ test("teacher editor separates creation, manual editing and automatic additions"
   await page.locator("#set-editor-close").click();
   const preservedDraft = page.locator(".teacher-set-row").filter({ hasText: "Manueller Entwurf bleibt erhalten" });
   await expect(preservedDraft).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Entwürfe (1)" })).toBeVisible();
   await expect(preservedDraft.getByText("Entwurf", { exact: true })).toBeVisible();
   await expect(preservedDraft.getByRole("button", { name: /teilen/i })).toHaveCount(0);
   await preservedDraft.getByRole("button", { name: /bearbeiten/i }).click();
@@ -130,6 +139,15 @@ test("teacher editor separates creation, manual editing and automatic additions"
   await expect(page.locator("#set-target-label-input")).toHaveValue("Englisch");
   await expect(page.locator("#set-import-section")).toBeHidden();
 
+  await page.reload({ waitUntil: "networkidle" });
+  await expect(page.locator("#teacher-shell")).toBeVisible();
+  await dismissPasswordOverlay(page);
+  await expect(page.getByRole("heading", { name: "Entwürfe (2)" })).toBeVisible();
+  const reloadedDraft = page.locator(".teacher-set-row").filter({ hasText: "Tiere auf Englisch" });
+  await expect(reloadedDraft.getByText("Entwurf", { exact: true })).toBeVisible();
+  await reloadedDraft.getByRole("button", { name: /bearbeiten/i }).click();
+  await expect(page.locator("#set-title-input")).toHaveValue("Tiere auf Englisch");
+  await expect(page.locator(".set-card-editor-row")).toHaveCount(2);
   await page.getByRole("button", { name: "Set veröffentlichen" }).click();
   await expect(page.locator("#share-overlay")).toBeVisible();
   await page.locator("#share-close-button").click();
