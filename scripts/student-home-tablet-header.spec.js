@@ -104,6 +104,7 @@ for (const viewport of VIEWPORTS) {
       context: ".student-screen__home-context",
       divider: ".student-screen__home-divider--actions",
       header: ".student-screen__header",
+      label: ".device-pill--home-meta .device-pill__label",
       logout: ".student-screen__home-actions .student-screen__home-logout",
       pill: ".device-pill--home-meta",
       title: "#student-screen-title",
@@ -131,6 +132,10 @@ for (const viewport of VIEWPORTS) {
     expect(boxes.actions.width).toBeLessThan(240);
     expect(boxes.pill.height).toBeGreaterThanOrEqual(35);
     expect(Math.abs(boxes.pill.height - boxes.logout.height)).toBeLessThan(1);
+    expect(boxes.label.x).toBeGreaterThan(boxes.pill.x);
+    expect(boxes.label.x + boxes.label.width).toBeLessThan(boxes.pill.x + boxes.pill.width - 8);
+    expect(Math.abs((boxes.pill.x + boxes.pill.width) - boxes.divider.x)).toBeLessThan(1);
+    expect(Math.abs(boxes.divider.height - boxes.logout.height)).toBeLessThan(1);
     expect(Math.abs(
       (boxes.pill.y + boxes.pill.height / 2)
       - (boxes.logout.y + boxes.logout.height / 2),
