@@ -2527,7 +2527,7 @@ function renderAccessState({
 
     const loginTabletPicker = createTabletDropdownPicker("tabletId", resolvedLoginTabletId, {
       tablets: loginTablets,
-      emptyStateText: "Noch kein Tablet eingerichtet. Nutze stattdessen „Neu einrichten“.",
+      emptyStateText: "Kein Tablet eingerichtet",
       disabled: hasBoundAccessSession,
       locked: hasBoundAccessSession,
     });

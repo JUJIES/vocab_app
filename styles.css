@@ -734,7 +734,7 @@ select {
 .student-screen__access-login-row {
   display: grid;
   grid-template-columns: minmax(8.6rem, 11rem) minmax(0, 1fr);
-  align-items: stretch;
+  align-items: start;
   gap: 0.6rem;
 }
 
@@ -1034,6 +1034,8 @@ select {
 .student-screen__pin-input-shell {
   position: relative;
   width: 100%;
+  min-height: 3.2rem;
+  align-self: start;
 }
 
 .student-screen__pin-input-shell .student-screen__input {
