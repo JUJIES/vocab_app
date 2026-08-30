@@ -81,13 +81,6 @@ async function setSliderValue(page, selector, value) {
   }, value);
 }
 
-async function setSwitchValue(page, selector, checked) {
-  await page.locator(selector).evaluate((element, nextChecked) => {
-    element.checked = Boolean(nextChecked);
-    element.dispatchEvent(new Event("change", { bubbles: true }));
-  }, checked);
-}
-
 async function selectDelayType(page, delayType) {
   const selector = delayType === "wrong"
     ? "#input-delay-type-wrong"
@@ -95,7 +88,7 @@ async function selectDelayType(page, delayType) {
   await page.locator(selector).click();
 }
 
-test("input settings apply immediately during correction flow", async ({ page }) => {
+test("input settings apply immediately during mandatory correction flow", async ({ page }) => {
   const setData = await prepareInputMode(page);
 
   expect(Array.isArray(setData.cards)).toBeTruthy();
@@ -125,7 +118,6 @@ test("input settings apply immediately during correction flow", async ({ page })
   await settingsButton.click();
   await expect(popover).toHaveAttribute("aria-hidden", "false");
 
-  await setSwitchValue(page, "#input-correction-toggle", true);
   await selectDelayType(page, "correct");
   await setSliderValue(page, "#input-delay-slider", 0);
   await selectDelayType(page, "wrong");
@@ -140,11 +132,10 @@ test("input settings apply immediately during correction flow", async ({ page })
   await page.mouse.click(16, 16);
   await expect(settingsButton).toHaveAttribute("aria-expanded", "false");
 
-  await settingsButton.click();
-  await setSwitchValue(page, "#input-correction-toggle", false);
+  await answerField.fill(firstCard.target.text.trim());
+  await page.locator("#input-answer-form").press("Enter");
   await expect(promptWord).toHaveText(secondCard.source.text.trim(), { timeout: 3000 });
 
-  await setSwitchValue(page, "#input-correction-toggle", true);
   await answerField.fill("nochmal falsch");
   await page.locator("#input-answer-form").press("Enter");
   await expect(feedbackTitle).toHaveText("Noch nicht korrekt");
