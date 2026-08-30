@@ -72,6 +72,24 @@ function Get-ServiceEnvironmentValue {
   return [string]$node.value
 }
 
+function Grant-ServiceReadAccess {
+  param(
+    [Parameter(Mandatory = $true)][string]$Path
+  )
+
+  $acl = Get-Acl -LiteralPath $Path
+  $localService = [System.Security.Principal.SecurityIdentifier]::new('S-1-5-19')
+  $rule = [System.Security.AccessControl.FileSystemAccessRule]::new(
+    $localService,
+    [System.Security.AccessControl.FileSystemRights]::ReadAndExecute,
+    [System.Security.AccessControl.InheritanceFlags]'ContainerInherit, ObjectInherit',
+    [System.Security.AccessControl.PropagationFlags]::None,
+    [System.Security.AccessControl.AccessControlType]::Allow
+  )
+  $acl.SetAccessRule($rule)
+  Set-Acl -LiteralPath $Path -AclObject $acl
+}
+
 function Wait-ForHealth {
   param(
     [Parameter(Mandatory = $true)][string]$Uri,
@@ -135,6 +153,7 @@ Write-Host 'Installing production dependencies and running release gates...'
 Invoke-Native -FilePath 'npm.cmd' -Arguments @('ci', '--omit=dev') -WorkingDirectory $ReleasePath
 Invoke-Native -FilePath 'npm.cmd' -Arguments @('run', 'verify') -WorkingDirectory $ReleasePath
 Invoke-Native -FilePath 'npm.cmd' -Arguments @('audit', '--omit=dev') -WorkingDirectory $ReleasePath
+Grant-ServiceReadAccess -Path $ReleasePath
 
 $CandidateRoot = Join-Path $RuntimeRoot 'preflight'
 $CandidateData = Join-Path $CandidateRoot "$ShortCommit-data"
@@ -217,9 +236,10 @@ try {
   Write-Host "Runtime backup: $DataBackup"
   Write-Host "Service backup: $ServiceBackup"
 } catch {
-  Write-Error "Activation failed; restoring previous release $PreviousWorkingDirectory."
+  $ActivationError = $_
+  Write-Warning "Activation failed; restoring previous release $PreviousWorkingDirectory."
   Copy-Item -LiteralPath $ServiceBackup -Destination $ServiceConfig -Force
   Restart-Service -Name $ServiceName -Force
   [void](Wait-ForHealth -Uri 'http://127.0.0.1:6000/health' -Attempts 40)
-  throw
+  throw $ActivationError
 }
