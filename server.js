@@ -290,6 +290,7 @@ app.post("/api/teacher/import-draft", async (request, response) => {
       text: request.body?.text,
       instruction: request.body?.instruction,
       files: request.body?.files,
+      purpose: request.body?.purpose,
     });
     response.json(result);
   } catch (error) {

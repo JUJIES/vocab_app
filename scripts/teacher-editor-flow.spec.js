@@ -28,6 +28,31 @@ async function importClearList(page, text) {
 test("teacher editor separates creation, manual editing and automatic additions", async ({ page }) => {
   test.skip(!TEACHER_PASSWORD, "TEACHER_PASSWORD fehlt für den Editor-Flow-Test.");
   await login(page);
+  const importPurposes = [];
+  await page.route("**/api/teacher/import-draft", async (route) => {
+    const requestBody = route.request().postDataJSON();
+    importPurposes.push(requestBody.purpose);
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        importMethod: requestBody.purpose === "create_set" ? "openai" : "structured_text",
+        draft: {
+          title: "Tiere auf Englisch",
+          subject: "Englisch",
+          description: "Grundwortschatz zu Tieren",
+          sourceLanguage: "de",
+          targetLanguage: "en",
+          sourceLabel: "Deutsch",
+          targetLabel: "Englisch",
+          cards: [
+            { front: "Hund", back: "dog", acceptedAnswers: ["dog"] },
+            { front: "Katze", back: "cat", acceptedAnswers: ["cat"] },
+          ],
+        },
+      }),
+    });
+  });
 
   await page.getByRole("button", { name: "Neues Set" }).click();
   await expect(page.locator("#set-editor-choice")).toBeVisible();
@@ -64,6 +89,11 @@ test("teacher editor separates creation, manual editing and automatic additions"
   await expect(page.locator("#set-import-section")).toBeVisible();
   await importClearList(page, "Sonne; sun\nMond; moon");
   await expect(page.locator(".set-card-editor-row")).toHaveCount(2);
+  await expect(page.locator("#set-title-input")).toHaveValue("Tiere auf Englisch");
+  await expect(page.locator("#set-subject-input")).toHaveValue("Englisch");
+  await expect(page.locator("#set-description-input")).toHaveValue("Grundwortschatz zu Tieren");
+  await expect(page.locator("#set-source-label-input")).toHaveValue("Deutsch");
+  await expect(page.locator("#set-target-label-input")).toHaveValue("Englisch");
   await expect(page.locator("#set-import-section")).toBeHidden();
 
   await page.locator("#set-editor-close").click();
@@ -78,4 +108,5 @@ test("teacher editor separates creation, manual editing and automatic additions"
   await importClearList(page, "neu; new\nmehr; more");
   await expect(page.locator("#set-title-input")).toHaveValue(originalTitle);
   await expect(page.locator(".set-card-editor-row")).toHaveCount(originalCardCount + 2);
+  expect(importPurposes).toEqual(["append_cards", "create_set", "append_cards"]);
 });

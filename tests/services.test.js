@@ -209,6 +209,110 @@ test("clear two-column text imports without an AI request", () => {
   ]);
 });
 
+test("a new set enriches even a clear two-column list with AI metadata", async () => {
+  let request;
+  const service = new ImportService({
+    client: {
+      responses: {
+        create: async (value) => {
+          request = value;
+          return {
+            model: "gpt-5.6-terra",
+            output_text: JSON.stringify({
+              title: "Tiere auf Englisch",
+              subject: "Englisch",
+              description: "Grundwortschatz zu Haustieren und Vögeln",
+              sourceLanguage: "de",
+              targetLanguage: "en",
+              sourceLabel: "Deutsch",
+              targetLabel: "Englisch",
+              cards: [
+                { front: "Hund", back: "dog", acceptedAnswers: ["dog"] },
+              ],
+            }),
+          };
+        },
+      },
+    },
+  });
+
+  const result = await service.createDraft({
+    teacherId: "julius",
+    text: "Hund; dog\nKatze; cat",
+    instruction: "",
+    files: [],
+    purpose: "create_set",
+  });
+
+  assert.equal(result.importMethod, "openai");
+  assert.deepEqual(
+    {
+      title: result.draft.title,
+      subject: result.draft.subject,
+      description: result.draft.description,
+      sourceLanguage: result.draft.sourceLanguage,
+      targetLanguage: result.draft.targetLanguage,
+      sourceLabel: result.draft.sourceLabel,
+      targetLabel: result.draft.targetLabel,
+    },
+    {
+      title: "Tiere auf Englisch",
+      subject: "Englisch",
+      description: "Grundwortschatz zu Haustieren und Vögeln",
+      sourceLanguage: "de",
+      targetLanguage: "en",
+      sourceLabel: "Deutsch",
+      targetLabel: "Englisch",
+    },
+  );
+  assert.match(request.input[0].content[0].text, /passende Set-Metadaten/);
+  assert.match(request.input[0].content[0].text, /Vermeide generische Titel/);
+  assert.deepEqual(result.draft.cards.map(({ front, back }) => ({ front, back })), [
+    { front: "Hund", back: "dog" },
+    { front: "Katze", back: "cat" },
+  ]);
+});
+
+test("a new clear list still works with neutral metadata when AI is unavailable", async () => {
+  const service = new ImportService({ apiKey: "" });
+  const result = await service.createDraft({
+    teacherId: "julius",
+    text: "Hund; dog\nKatze; cat",
+    instruction: "",
+    files: [],
+    purpose: "create_set",
+  });
+
+  assert.equal(result.importMethod, "structured_text");
+  assert.equal(result.draft.title, "Neues Lernset");
+  assert.equal(result.draft.cards.length, 2);
+});
+
+test("appending a clear list remains deterministic and does not require AI", async () => {
+  let aiRequests = 0;
+  const service = new ImportService({
+    client: {
+      responses: {
+        create: async () => {
+          aiRequests += 1;
+          throw new Error("AI should not be called");
+        },
+      },
+    },
+  });
+
+  const result = await service.createDraft({
+    teacherId: "julius",
+    text: "Hund; dog\nKatze; cat",
+    instruction: "",
+    files: [],
+    purpose: "append_cards",
+  });
+
+  assert.equal(result.importMethod, "structured_text");
+  assert.equal(aiRequests, 0);
+});
+
 test("an import instruction deliberately routes a clear list through AI", async () => {
   let request;
   const service = new ImportService({

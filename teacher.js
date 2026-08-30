@@ -1704,7 +1704,12 @@ async function handleCreateImportDraft() {
     const response = await requestJson("/api/teacher/import-draft", {
       method: "POST",
       auth: "teacher",
-      body: { text, instruction, files },
+      body: {
+        text,
+        instruction,
+        files,
+        purpose: state.editorImportMode === "replace" ? "create_set" : "append_cards",
+      },
     });
     if (!response.ok) {
       throw createTeacherRequestError(response, "Material konnte nicht verarbeitet werden.");
