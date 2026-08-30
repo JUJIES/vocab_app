@@ -61,6 +61,7 @@ const elements = {
   shellIcon: document.getElementById("teacher-shell-icon"),
   shellTitle: document.getElementById("teacher-shell-title"),
   shellMessage: document.getElementById("teacher-shell-message"),
+  accountStatus: document.getElementById("teacher-account-status"),
   profileName: document.getElementById("teacher-profile-name"),
   logoutButton: document.getElementById("teacher-logout-button"),
   settingsButton: document.getElementById("teacher-settings-button"),
@@ -999,7 +1000,9 @@ function showTeacherShell() {
   elements.authPanel.hidden = true;
   elements.shell.hidden = false;
   elements.authFeedback.textContent = "";
-  elements.profileName.textContent = state.currentTeacher?.displayName || "Lehrkraft";
+  const displayName = state.currentTeacher?.displayName || "Lehrkraft";
+  elements.profileName.textContent = displayName;
+  elements.accountStatus.setAttribute("aria-label", `Angemeldet als ${displayName}`);
   closeTeacherSettingsMenu();
   closeTabletActionMenus();
 }

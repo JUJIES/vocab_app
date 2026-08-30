@@ -242,20 +242,23 @@ body.has-modal-open {
 .teacher-header__title-row {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.72rem;
 }
 
 .teacher-header__brand-icon {
-  width: clamp(2rem, 3.4vw, 2.75rem);
-  height: clamp(2rem, 3.4vw, 2.75rem);
+  width: clamp(2.65rem, 4vw, 2.9rem);
+  height: clamp(2.65rem, 4vw, 2.9rem);
   flex: 0 0 auto;
+  padding: 0.16rem;
+  border: 1px solid rgba(214, 224, 246, 0.07);
+  border-radius: 0.82rem;
+  background: rgba(214, 224, 246, 0.045);
   object-fit: contain;
-  transform: translateY(0.08em);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
 }
 
 .teacher-header__brand-icon[data-section-icon="tablets"] {
-  width: clamp(2.55rem, 4vw, 3.25rem);
-  height: clamp(2.55rem, 4vw, 3.25rem);
+  padding: 0.4rem;
   filter: brightness(0) saturate(100%) invert(66%) sepia(17%) saturate(787%) hue-rotate(177deg) brightness(94%) contrast(91%);
 }
 
@@ -263,6 +266,31 @@ body.has-modal-open {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.teacher-account-status {
+  min-height: 2.55rem;
+  padding: 0.55rem 0.82rem;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  border: 1px solid rgba(214, 224, 246, 0.07);
+  border-radius: var(--radius-pill);
+  background: rgba(214, 224, 246, 0.045);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  white-space: nowrap;
+}
+
+.teacher-account-status__label {
+  color: rgba(158, 171, 194, 0.76);
+  font-size: 0.74rem;
+  font-weight: 650;
+}
+
+.teacher-account-status__name {
+  color: rgba(238, 243, 252, 0.96);
+  font-size: 0.82rem;
+  font-weight: 800;
 }
 
 .teacher-settings {
@@ -284,7 +312,7 @@ body.has-modal-open {
   z-index: 20;
   top: calc(100% + 0.45rem);
   right: 0;
-  min-width: 11.5rem;
+  min-width: 12.5rem;
   padding: 0.4rem;
   border: 1px solid var(--line);
   border-radius: 0.85rem;
@@ -298,12 +326,32 @@ body.has-modal-open {
   padding: 0.65rem 0.75rem;
   border: 0;
   border-radius: 0.65rem;
+  display: flex;
+  align-items: center;
+  gap: 0.58rem;
   background: transparent;
   color: var(--text);
   font-size: 0.86rem;
   font-weight: 700;
   text-align: left;
   cursor: pointer;
+}
+
+.teacher-settings__item-icon {
+  width: 1rem;
+  height: 1rem;
+  display: block;
+  flex: 0 0 auto;
+  object-fit: contain;
+  filter: brightness(0) saturate(100%) invert(76%) sepia(11%) saturate(449%) hue-rotate(184deg) brightness(91%) contrast(88%);
+}
+
+.teacher-settings__item--danger {
+  color: rgba(244, 183, 179, 0.96);
+}
+
+.teacher-settings__item--danger .teacher-settings__item-icon {
+  filter: brightness(0) saturate(100%) invert(73%) sepia(18%) saturate(737%) hue-rotate(315deg) brightness(103%) contrast(91%);
 }
 
 .teacher-settings__item:hover,
@@ -343,18 +391,24 @@ body.has-modal-open {
 }
 
 .teacher-tabs {
-  display: inline-flex;
-  gap: 0.55rem;
-  flex-wrap: wrap;
+  width: fit-content;
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(7.5rem, 1fr));
+  gap: 0.2rem;
+  padding: 0.22rem;
+  border: 1px solid rgba(214, 224, 246, 0.07);
+  border-radius: var(--radius-pill);
+  background: rgba(13, 19, 30, 0.2);
 }
 
 .teacher-tab-button {
   min-height: 2.55rem;
-  padding: 0.65rem 1rem;
+  padding: 0.62rem 0.92rem;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.48rem;
-  border: 1px solid rgba(214, 224, 246, 0.08);
+  border: 0;
   border-radius: 999px;
   background: rgba(214, 224, 246, 0.06);
   color: var(--text-muted);
@@ -369,12 +423,20 @@ body.has-modal-open {
 }
 
 .teacher-tab-button__icon {
-  width: 0.95rem;
-  height: 0.95rem;
+  width: 1rem;
+  height: 1rem;
   display: block;
   flex: 0 0 auto;
   object-fit: contain;
   filter: brightness(0) saturate(100%) invert(67%) sepia(11%) saturate(599%) hue-rotate(185deg) brightness(94%) contrast(88%);
+}
+
+.teacher-tab-button[data-teacher-tab="sets"] .teacher-tab-button__icon {
+  transform: scale(1.14);
+}
+
+.teacher-tab-button[data-teacher-tab="tablets"] .teacher-tab-button__icon {
+  transform: scale(0.9);
 }
 
 .teacher-tab-button[aria-selected="true"] .teacher-tab-button__icon {
@@ -1599,14 +1661,16 @@ body.has-modal-open {
 
   .teacher-header__actions {
     width: 100%;
+    justify-content: flex-end;
   }
 
   .teacher-settings__toggle {
     width: 2.55rem;
   }
 
-  .teacher-header__actions > #teacher-logout-button {
-    width: auto;
+  .teacher-tabs {
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .share-panel__close {

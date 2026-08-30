@@ -4,9 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Lerndeck – Lehrerbereich</title>
-    <link rel="stylesheet" href="./teacher.css?v=2026-08-29-import-spacing" />
+    <link rel="stylesheet" href="./teacher.css?v=2026-08-30-unified-header" />
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
-    <script src="./teacher.js?v=2026-08-29-import-note" defer></script>
+    <script src="./teacher.js?v=2026-08-30-unified-header" defer></script>
   </head>
   <body>
     <main id="teacher-auth-panel" class="teacher-auth">
@@ -57,14 +57,17 @@
     <main id="teacher-shell" class="teacher-app" hidden>
       <header class="teacher-header">
         <div class="teacher-header__topline">
-          <div>
-            <p id="teacher-profile-name" class="teacher-header__kicker">Lehrkraft</p>
+          <div class="teacher-header__identity">
             <div class="teacher-header__title-row">
               <img id="teacher-shell-icon" class="teacher-header__brand-icon" src="./assets/icons/lerndeck-stack.svg" alt="" decoding="async" data-section-icon="sets" />
               <h1 id="teacher-shell-title" class="teacher-header__title">Lernsets</h1>
             </div>
           </div>
           <div class="teacher-header__actions">
+            <div id="teacher-account-status" class="teacher-account-status">
+              <span class="teacher-account-status__label">Angemeldet als</span>
+              <strong id="teacher-profile-name" class="teacher-account-status__name">Lehrkraft</strong>
+            </div>
             <div class="teacher-settings">
               <button
                 id="teacher-settings-button"
@@ -78,14 +81,15 @@
               </button>
               <div id="teacher-settings-menu" class="teacher-settings__menu" role="menu" hidden>
                 <button id="change-password-menu-button" class="teacher-settings__item" type="button" role="menuitem">
-                  Passwort ändern
+                  <img class="teacher-settings__item-icon" src="./assets/icons/password-svgrepo-com.svg" alt="" decoding="async" />
+                  <span>Passwort ändern</span>
+                </button>
+                <button id="teacher-logout-button" class="teacher-settings__item teacher-settings__item--danger" type="button" role="menuitem">
+                  <img class="teacher-settings__item-icon" src="./assets/icons/logout.svg" alt="" decoding="async" />
+                  <span>Abmelden</span>
                 </button>
               </div>
             </div>
-            <button id="teacher-logout-button" class="teacher-button teacher-button--secondary" type="button">
-              <img class="teacher-button__icon" src="./assets/icons/logout.svg" alt="" decoding="async" />
-              <span>Abmelden</span>
-            </button>
           </div>
         </div>
         <p id="teacher-shell-message" class="teacher-header__message">
