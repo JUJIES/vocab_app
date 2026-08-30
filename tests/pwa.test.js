@@ -38,6 +38,8 @@ test("PWA metadata points each surface at the correct manifest and opaque icons"
   assert.match(teacherHtml, /apple-touch-icon-167\.png/);
   for (const html of [studentHtml, teacherHtml]) {
     assert.match(html, /pwa-splash\.css\?v=/);
+    assert.match(html, /ui-motion\.css\?v=/);
+    assert.match(html, /ui-motion\.js\?v=/);
     assert.match(html, /class="pwa-splash"/);
     assert.match(html, /lerndeck-stack\.svg/);
     assert.match(html, /display-mode: standalone/);
@@ -45,6 +47,8 @@ test("PWA metadata points each surface at the correct manifest and opaque icons"
   assert.match(serviceWorker, /"\/teacher\.html"/);
   assert.match(serviceWorker, /url\.pathname === "\/teacher"/);
   assert.match(serviceWorker, /pwa-splash\.css\?v=/);
+  assert.match(serviceWorker, /ui-motion\.css\?v=/);
+  assert.match(serviceWorker, /ui-motion\.js\?v=/);
 
   const expectedPngs = new Map([
     ["icons/favicon-32.png", 32],
@@ -79,6 +83,23 @@ test("PWA control files bypass intermediary caches and service worker updates by
   assert.match(serverSource, /"\/sw\.js"/);
   assert.match(serverSource, /"\/pwa-splash\.css"/);
   assert.match(serverSource, /no-store, no-cache, must-revalidate/);
+});
+
+test("student and teacher dialogs share one accessible motion system", () => {
+  const studentHtml = readText("index.html");
+  const teacherHtml = readText("teacher.html");
+  const motionCss = readText("ui-motion.css");
+  const motionScript = readText("ui-motion.js");
+
+  for (const html of [studentHtml, teacherHtml]) {
+    assert.match(html, /data-ui-motion="dialog"/);
+    assert.match(html, /data-ui-motion-panel/);
+  }
+  assert.match(motionCss, /prefers-reduced-motion:\s*reduce/);
+  assert.match(motionCss, /ui-motion-leaving/);
+  assert.match(motionScript, /element\.hidden = true/);
+  assert.match(motionScript, /element\.setAttribute\("aria-hidden", "true"\)/);
+  assert.match(motionScript, /focus\.focus\(\{ preventScroll: true \}\)/);
 });
 
 function readJson(filePath) {

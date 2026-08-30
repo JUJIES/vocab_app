@@ -1323,6 +1323,8 @@ const PUBLIC_ROOT_FILES = new Map([
   ["/teacher.css", "teacher.css"],
   ["/teacher.js", "teacher.js"],
   ["/pwa-splash.css", "pwa-splash.css"],
+  ["/ui-motion.css", "ui-motion.css"],
+  ["/ui-motion.js", "ui-motion.js"],
   ["/manifest.webmanifest", "manifest.webmanifest"],
   ["/teacher.webmanifest", "teacher.webmanifest"],
   ["/pwa.js", "pwa.js"],

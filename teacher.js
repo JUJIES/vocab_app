@@ -558,6 +558,7 @@ function createSetGroup(sets, titleText = "") {
 }
 
 function setActiveTeacherTab(nextTab) {
+  const previousTab = state.activeTab;
   state.activeTab = nextTab === "tablets" ? "tablets" : "sets";
   updateTeacherShellCopy();
 
@@ -571,6 +572,9 @@ function setActiveTeacherTab(nextTab) {
     const isActive = panel.dataset.teacherPanel === state.activeTab;
     panel.hidden = !isActive;
     panel.setAttribute("aria-hidden", isActive ? "false" : "true");
+    if (isActive && previousTab !== state.activeTab) {
+      window.LerndeckUiMotion.revealSurface(panel);
+    }
   }
 }
 
@@ -1004,7 +1008,7 @@ function createMenuDot() {
 }
 
 function toggleTabletActionMenu(shell, button, menu) {
-  const shouldOpen = menu.hidden;
+  const shouldOpen = menu.hidden || menu.classList.contains("ui-motion-popover-leaving");
   closeTabletActionMenus();
 
   if (!shouldOpen) {
@@ -1013,7 +1017,7 @@ function toggleTabletActionMenu(shell, button, menu) {
 
   shell.classList.add("is-open");
   button.setAttribute("aria-expanded", "true");
-  menu.hidden = false;
+  window.LerndeckUiMotion.revealPopover(menu);
 }
 
 function closeTabletActionMenus() {
@@ -1030,7 +1034,7 @@ function closeTabletActionMenus() {
     }
 
     if (menu instanceof HTMLElement) {
-      menu.hidden = true;
+      window.LerndeckUiMotion.hidePopover(menu);
     }
   }
 }
@@ -1068,6 +1072,7 @@ function showTeacherAuth(feedback = "") {
   state.currentTeacher = null;
   elements.authPanel.hidden = false;
   elements.shell.hidden = true;
+  window.LerndeckUiMotion.revealSurface(elements.authPanel);
   elements.authFeedback.textContent = feedback;
   elements.authPasswordInput.value = "";
   requestAnimationFrame(() => {
@@ -1083,6 +1088,7 @@ function showTeacherShell() {
   state.authReady = true;
   elements.authPanel.hidden = true;
   elements.shell.hidden = false;
+  window.LerndeckUiMotion.revealSurface(elements.shell);
   elements.authFeedback.textContent = "";
   const displayName = state.currentTeacher?.displayName || "Lehrkraft";
   elements.profileName.textContent = displayName;
@@ -1092,35 +1098,48 @@ function showTeacherShell() {
 }
 
 function toggleTeacherSettingsMenu() {
-  const shouldOpen = elements.settingsMenu.hidden;
-  elements.settingsMenu.hidden = !shouldOpen;
+  const shouldOpen = elements.settingsMenu.hidden
+    || elements.settingsMenu.classList.contains("ui-motion-popover-leaving");
   elements.settingsButton.setAttribute("aria-expanded", shouldOpen ? "true" : "false");
   if (shouldOpen) {
+    window.LerndeckUiMotion.revealPopover(elements.settingsMenu);
     requestAnimationFrame(() => elements.changePasswordMenuButton.focus());
+  } else {
+    window.LerndeckUiMotion.hidePopover(elements.settingsMenu);
   }
 }
 
 function closeTeacherSettingsMenu() {
-  elements.settingsMenu.hidden = true;
+  window.LerndeckUiMotion.hidePopover(elements.settingsMenu);
   elements.settingsButton.setAttribute("aria-expanded", "false");
+}
+
+function syncTeacherModalLock() {
+  const hasOpenModal = [
+    elements.passwordOverlay,
+    elements.shareOverlay,
+    elements.deleteSetOverlay,
+    elements.setEditorOverlay,
+  ].some((overlay) => !overlay.hidden);
+  document.body.classList.toggle("has-modal-open", hasOpenModal);
 }
 
 function openPasswordDialog() {
   closeTeacherSettingsMenu();
   elements.passwordForm.reset();
   elements.passwordFeedback.textContent = "";
-  elements.passwordOverlay.hidden = false;
-  document.body.classList.add("has-modal-open");
-  requestAnimationFrame(() => elements.currentPasswordInput.focus());
+  window.LerndeckUiMotion.show(elements.passwordOverlay, { focus: elements.currentPasswordInput });
+  syncTeacherModalLock();
 }
 
 function closePasswordDialog() {
-  elements.passwordOverlay.hidden = true;
-  elements.passwordForm.reset();
-  elements.passwordFeedback.textContent = "";
-  if (elements.shareOverlay.hidden && elements.deleteSetOverlay.hidden && elements.setEditorOverlay.hidden) {
-    document.body.classList.remove("has-modal-open");
-  }
+  window.LerndeckUiMotion.hide(elements.passwordOverlay, {
+    after: () => {
+      elements.passwordForm.reset();
+      elements.passwordFeedback.textContent = "";
+      syncTeacherModalLock();
+    },
+  });
 }
 
 async function openShareOverlay(setEntry) {
@@ -1131,8 +1150,8 @@ async function openShareOverlay(setEntry) {
   elements.sharePath.hidden = !setEntry.shareCode;
   elements.shareLink.value = state.activeShareUrl;
   elements.shareFeedback.textContent = "";
-  elements.shareOverlay.hidden = false;
-  document.body.classList.add("has-modal-open");
+  window.LerndeckUiMotion.show(elements.shareOverlay);
+  syncTeacherModalLock();
 
   try {
     await renderShareQr(state.activeShareUrl);
@@ -1144,12 +1163,13 @@ async function openShareOverlay(setEntry) {
 }
 
 function closeShareOverlay() {
-  elements.shareOverlay.hidden = true;
-  elements.sharePath.hidden = true;
-  elements.shareFeedback.textContent = "";
-  if (elements.setEditorOverlay.hidden && elements.passwordOverlay.hidden && elements.deleteSetOverlay.hidden) {
-    document.body.classList.remove("has-modal-open");
-  }
+  window.LerndeckUiMotion.hide(elements.shareOverlay, {
+    after: () => {
+      elements.sharePath.hidden = true;
+      elements.shareFeedback.textContent = "";
+      syncTeacherModalLock();
+    },
+  });
 }
 
 function openDeleteSetDialog(setEntry) {
@@ -1158,20 +1178,20 @@ function openDeleteSetDialog(setEntry) {
   elements.deleteSetFeedback.textContent = "";
   elements.deleteSetCancel.disabled = false;
   elements.deleteSetConfirm.disabled = false;
-  elements.deleteSetOverlay.hidden = false;
-  document.body.classList.add("has-modal-open");
-  requestAnimationFrame(() => elements.deleteSetCancel.focus());
+  window.LerndeckUiMotion.show(elements.deleteSetOverlay, { focus: elements.deleteSetCancel });
+  syncTeacherModalLock();
 }
 
 function closeDeleteSetDialog() {
-  elements.deleteSetOverlay.hidden = true;
-  elements.deleteSetFeedback.textContent = "";
-  elements.deleteSetCancel.disabled = false;
-  elements.deleteSetConfirm.disabled = false;
+  window.LerndeckUiMotion.hide(elements.deleteSetOverlay, {
+    after: () => {
+      elements.deleteSetFeedback.textContent = "";
+      elements.deleteSetCancel.disabled = false;
+      elements.deleteSetConfirm.disabled = false;
+      syncTeacherModalLock();
+    },
+  });
   state.pendingDeleteSet = null;
-  if (elements.shareOverlay.hidden && elements.passwordOverlay.hidden && elements.setEditorOverlay.hidden) {
-    document.body.classList.remove("has-modal-open");
-  }
 }
 
 async function handleDeleteSet() {
@@ -1621,8 +1641,8 @@ function openNewSetEditor() {
   elements.setTargetLabelInput.value = "Übersetzung oder Definition";
   elements.setEditorFeedback.textContent = "";
   resetSetImportInputs();
-  elements.setEditorOverlay.hidden = false;
-  document.body.classList.add("has-modal-open");
+  window.LerndeckUiMotion.show(elements.setEditorOverlay);
+  syncTeacherModalLock();
   showSetEditorView("choice");
 }
 
@@ -1658,8 +1678,8 @@ async function openEditSetEditor(setEntry) {
       state.editorCards.push(createEmptyEditorCard());
     }
     renderEditorCards();
-    elements.setEditorOverlay.hidden = false;
-    document.body.classList.add("has-modal-open");
+    window.LerndeckUiMotion.show(elements.setEditorOverlay);
+    syncTeacherModalLock();
     showSetEditorView("manual");
   } catch (error) {
     if (error?.requiresAuth) {
@@ -1677,12 +1697,13 @@ async function closeSetEditor({ skipDraftSave = false } = {}) {
       return;
     }
   }
-  elements.setEditorOverlay.hidden = true;
-  elements.setEditorFeedback.textContent = "";
-  resetSetImportInputs();
-  if (elements.shareOverlay.hidden && elements.passwordOverlay.hidden && elements.deleteSetOverlay.hidden) {
-    document.body.classList.remove("has-modal-open");
-  }
+  window.LerndeckUiMotion.hide(elements.setEditorOverlay, {
+    after: () => {
+      elements.setEditorFeedback.textContent = "";
+      resetSetImportInputs();
+      syncTeacherModalLock();
+    },
+  });
   if (state.editorSetStatus === "draft" && state.editorSetId) {
     try {
       await reloadTeacherData();
@@ -1716,6 +1737,12 @@ function showSetEditorView(view) {
   elements.setEditorChoice.hidden = nextView !== "choice";
   elements.setEditorForm.hidden = nextView !== "manual";
   elements.setImportSection.hidden = nextView !== "import";
+  const activeView = nextView === "choice"
+    ? elements.setEditorChoice
+    : nextView === "import"
+      ? elements.setImportSection
+      : elements.setEditorForm;
+  window.LerndeckUiMotion.revealSurface(activeView);
 
   requestAnimationFrame(() => {
     if (nextView === "choice") {

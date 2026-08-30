@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Dialoge und große Ansichtswechsel folgen jetzt in Schüler- und Lehrkraft-App einem gemeinsamen Motion-System: weiches Ein- und Ausblenden, ruhige Schrittwechsel, animierte Tabs und Editoransichten sowie eine stark verkürzte Reduced-Motion-Variante ersetzen harte UI-Sprünge.
 - Geräte-Tag und Abmelden in der Schülerübersicht als gemeinsame 36-Pixel-Aktionsleiste ausgerichtet; identische Boxhöhe, Typografie und unverrückte Icon-Mitte beseitigen den schiefen Eindruck im iPad-Querformat.
 - Rückseiten mit mehreren gültigen Begriffen beruhigt: Der erste Begriff bleibt die klare Hauptantwort, Alternativen stehen dezent geklammert darunter, Semikola werden nur noch als Variantentrenner verstanden und jede Variante wird im Eingabemodus einzeln akzeptiert; identische Antwortwiederholungen im Beispielbereich entfallen.
 - Schüler- und Lehrkraftbereich als getrennt installierbare PWA-Einstiege mit gemeinsamem Service Worker eingerichtet; neues textfreies Drei-Schichten-App-Icon samt Apple-, Maskable- und Relution-Varianten ergänzt und den bereichstreuen Offline-Fallback abgesichert.

@@ -1,0 +1,101 @@
+:root {
+  --ui-motion-fast: 180ms;
+  --ui-motion-medium: 240ms;
+  --ui-motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[data-ui-motion="dialog"] {
+  opacity: 1;
+  transition: opacity var(--ui-motion-fast) ease;
+}
+
+[data-ui-motion="dialog"] [data-ui-motion-panel] {
+  animation: none;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transform-origin: center;
+  transition:
+    opacity var(--ui-motion-fast) ease,
+    transform var(--ui-motion-medium) var(--ui-motion-ease);
+  will-change: opacity, transform;
+}
+
+[data-ui-motion="dialog"].ui-motion-entering,
+[data-ui-motion="dialog"].ui-motion-leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+[data-ui-motion="dialog"].ui-motion-entering [data-ui-motion-panel] {
+  opacity: 0;
+  transform: translateY(12px) scale(0.985);
+}
+
+[data-ui-motion="dialog"].ui-motion-leaving [data-ui-motion-panel] {
+  opacity: 0;
+  transform: translateY(7px) scale(0.992);
+}
+
+.ui-motion-surface-entering {
+  animation: ui-motion-surface-enter var(--ui-motion-medium) var(--ui-motion-ease) both;
+}
+
+.ui-motion-popover-entering {
+  animation: ui-motion-popover-enter var(--ui-motion-fast) var(--ui-motion-ease) both;
+  transform-origin: top right;
+}
+
+.ui-motion-popover-leaving {
+  animation: ui-motion-popover-leave var(--ui-motion-fast) ease both;
+  pointer-events: none;
+  transform-origin: top right;
+}
+
+@keyframes ui-motion-surface-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ui-motion-popover-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes ui-motion-popover-leave {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-3px) scale(0.99);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-ui-motion="dialog"],
+  [data-ui-motion="dialog"] [data-ui-motion-panel] {
+    transition-duration: 0.01ms !important;
+  }
+
+  .ui-motion-surface-entering,
+  .ui-motion-popover-entering,
+  .ui-motion-popover-leaving {
+    animation-duration: 0.01ms !important;
+  }
+}

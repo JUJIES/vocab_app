@@ -1605,6 +1605,7 @@ function getAppBaseUrl() {
 }
 
 function setStudentAppMode(mode) {
+  const previousMode = state.appMode;
   if (mode !== APP_MODES.INPUT) {
     clearInputAdvanceTimeout();
     closeInputSettingsMenu();
@@ -1625,6 +1626,14 @@ function setStudentAppMode(mode) {
   elements.studentScreen.hidden = mode === APP_MODES.FLASHCARD || mode === APP_MODES.INPUT;
   elements.cardStage.hidden = mode !== APP_MODES.FLASHCARD;
   elements.inputStage.hidden = mode !== APP_MODES.INPUT;
+  if (previousMode !== mode) {
+    const activeSurface = mode === APP_MODES.FLASHCARD
+      ? elements.cardStage
+      : mode === APP_MODES.INPUT
+        ? elements.inputStage
+        : elements.studentScreen;
+    window.LerndeckUiMotion.revealSurface(activeSurface);
+  }
   updateStudentShareBlock();
 }
 
@@ -1734,9 +1743,14 @@ function updateStudentShareBlock() {
   const shouldRenderQr = isVisible && (!inAccessMode || isModalOpen);
 
   if (inAccessMode) {
-    elements.studentShareBlock.hidden = !isModalOpen;
-    elements.studentShareBlock.setAttribute("aria-hidden", isModalOpen ? "false" : "true");
-    document.body.classList.toggle("student-share-modal-open", isModalOpen);
+    if (isModalOpen && !window.LerndeckUiMotion.isVisible(elements.studentShareBlock)) {
+      window.LerndeckUiMotion.show(elements.studentShareBlock);
+      document.body.classList.add("student-share-modal-open");
+    } else if (!isModalOpen && !elements.studentShareBlock.hidden) {
+      window.LerndeckUiMotion.hide(elements.studentShareBlock, {
+        after: () => document.body.classList.remove("student-share-modal-open"),
+      });
+    }
   } else {
     elements.studentShareBlock.hidden = !isVisible;
     elements.studentShareBlock.setAttribute("aria-hidden", isVisible ? "false" : "true");
@@ -2887,16 +2901,19 @@ function renderAccessState({
 function openAddSetModal(initialView = "choice") {
   state.addSetModalView = initialView;
   document.body.classList.add("add-set-modal-open");
-  elements.addSetModal.hidden = false;
+  window.LerndeckUiMotion.show(elements.addSetModal);
   renderAddSetModalView();
 }
 
 function closeAddSetModal() {
   state.addSetModalView = "choice";
   delete elements.addSetModal.dataset.view;
-  document.body.classList.remove("add-set-modal-open");
-  elements.addSetModal.hidden = true;
-  elements.addSetBody.replaceChildren();
+  window.LerndeckUiMotion.hide(elements.addSetModal, {
+    after: () => {
+      elements.addSetBody.replaceChildren();
+      document.body.classList.remove("add-set-modal-open");
+    },
+  });
   void stopAddSetScanner();
 }
 
@@ -3266,7 +3283,7 @@ function openStudentSetShareModal(subscription) {
   state.activeStudentSetShareUrl = buildStudentShareUrlForSetPath(subscription.setPath);
   renderStudentSetModalBody();
   elements.studentSetModal.dataset.mode = state.studentSetModalMode;
-  elements.studentSetModal.hidden = false;
+  window.LerndeckUiMotion.show(elements.studentSetModal);
 }
 
 function openStudentSetConfirmModal(subscription) {
@@ -3278,7 +3295,7 @@ function openStudentSetConfirmModal(subscription) {
   state.activeStudentSetShareUrl = "";
   renderStudentSetModalBody();
   elements.studentSetModal.dataset.mode = state.studentSetModalMode;
-  elements.studentSetModal.hidden = false;
+  window.LerndeckUiMotion.show(elements.studentSetModal);
 }
 
 function closeStudentSetModal() {
@@ -3293,8 +3310,9 @@ function closeStudentSetModal() {
   elements.studentSetModal.removeAttribute("aria-labelledby");
   elements.studentSetModal.removeAttribute("aria-describedby");
   delete elements.studentSetModal.dataset.mode;
-  elements.studentSetModal.hidden = true;
-  elements.studentSetModalBody.replaceChildren();
+  window.LerndeckUiMotion.hide(elements.studentSetModal, {
+    after: () => elements.studentSetModalBody.replaceChildren(),
+  });
 }
 
 function renderStudentSetModalBody() {
@@ -6071,8 +6089,7 @@ function openLaunchModeModal(setPath) {
   document.body.classList.add("launch-mode-modal-open");
   window.scrollTo(0, 0);
   elements.launchModeModal.scrollTop = 0;
-  elements.launchModeModal.hidden = false;
-  elements.launchModePanel.focus();
+  window.LerndeckUiMotion.show(elements.launchModeModal, { focus: elements.launchModePanel });
 }
 
 function openLaunchDirectionModal() {
@@ -6090,17 +6107,26 @@ function openLaunchDirectionModal() {
     state.pendingLaunchDirection,
     getSubscriptionDirectionMetadata(subscription),
   );
-  elements.launchModeModal.hidden = true;
-  elements.launchDirectionModal.hidden = false;
   elements.launchDirectionModal.scrollTop = 0;
-  elements.launchDirectionPanel.focus();
+  window.LerndeckUiMotion.swap(elements.launchModeModal, elements.launchDirectionModal, {
+    focus: elements.launchDirectionPanel,
+  });
 }
 
 function returnToLaunchModeModal() {
-  elements.launchDirectionModal.hidden = true;
-  elements.launchModeModal.hidden = false;
   elements.launchModeModal.scrollTop = 0;
-  elements.launchModePanel.focus();
+  window.LerndeckUiMotion.swap(elements.launchDirectionModal, elements.launchModeModal, {
+    focus: elements.launchModePanel,
+  });
+}
+
+function clearLaunchModeModalContent() {
+  elements.launchModeDistributionBar.replaceChildren(elements.launchModeDistributionIndicator);
+  elements.launchModeDistributionLegend.replaceChildren();
+  elements.launchModeModes.replaceChildren();
+  delete elements.launchModeModes.dataset.setPath;
+  elements.launchModeDetailStage.replaceChildren();
+  elements.launchModeStartStage.replaceChildren();
 }
 
 function closeLaunchModeModal() {
@@ -6114,16 +6140,20 @@ function closeLaunchModeModal() {
   state.launchModeScrollY = 0;
   state.launchModeDetailRenderedModeKey = "";
   state.launchModeActionRenderedModeKey = "";
-  elements.launchModeDistributionBar.replaceChildren(elements.launchModeDistributionIndicator);
-  elements.launchModeDistributionLegend.replaceChildren();
-  elements.launchModeModes.replaceChildren();
-  delete elements.launchModeModes.dataset.setPath;
-  elements.launchModeDetailStage.replaceChildren();
-  elements.launchModeStartStage.replaceChildren();
-  elements.launchModeModal.hidden = true;
-  elements.launchDirectionModal.hidden = true;
-  document.body.classList.remove("launch-mode-modal-open");
-  window.scrollTo(0, restoreScrollY);
+  const activeModal = window.LerndeckUiMotion.isVisible(elements.launchDirectionModal)
+    ? elements.launchDirectionModal
+    : elements.launchModeModal;
+  const inactiveModal = activeModal === elements.launchModeModal
+    ? elements.launchDirectionModal
+    : elements.launchModeModal;
+  window.LerndeckUiMotion.hide(inactiveModal);
+  window.LerndeckUiMotion.hide(activeModal, {
+    after: () => {
+      clearLaunchModeModalContent();
+      document.body.classList.remove("launch-mode-modal-open");
+      window.scrollTo(0, restoreScrollY);
+    },
+  });
 }
 
 function handleLaunchModeOverlayClick(event) {

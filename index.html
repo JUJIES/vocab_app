@@ -30,10 +30,12 @@
     </script>
     <link rel="stylesheet" href="./pwa-splash.css?v=2026-08-30-pwa-splash-v1" />
     <link rel="stylesheet" href="./styles.css?v=2026-08-30-direction-step-v1" />
+    <link rel="stylesheet" href="./ui-motion.css?v=2026-08-30-ui-motion-v1" />
     <script src="./pwa.js?v=2026-08-30-pwa-splash-v3" defer></script>
+    <script src="./ui-motion.js?v=2026-08-30-ui-motion-v1" defer></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js" defer></script>
-    <script src="./app.js?v=2026-08-30-direction-step-v1" defer></script>
+    <script src="./app.js?v=2026-08-30-ui-motion-v1" defer></script>
   </head>
   <body>
     <div class="pwa-splash" role="status" aria-label="Lerndeck wird geladen">
@@ -79,10 +81,11 @@
           class="student-share"
           aria-label="Zugang"
           aria-describedby="student-share-description"
+          data-ui-motion="dialog"
           hidden
         >
           <div class="student-share__backdrop share-dialog__backdrop" data-close-share></div>
-          <div class="student-share__modal share-dialog__panel">
+          <div class="student-share__modal share-dialog__panel" data-ui-motion-panel>
             <button
               class="share-dialog__close"
               type="button"
@@ -708,9 +711,10 @@
         aria-modal="true"
         aria-labelledby="launch-mode-title"
         aria-describedby="launch-mode-description"
+        data-ui-motion="dialog"
         hidden
       >
-        <div class="launch-mode-modal__panel" tabindex="-1">
+        <div class="launch-mode-modal__panel" data-ui-motion-panel tabindex="-1">
           <div class="launch-mode-modal__header">
             <div class="launch-mode-modal__header-copy">
               <p class="launch-mode-modal__kicker">Lernmodus</p>
@@ -782,9 +786,10 @@
         role="dialog"
         aria-modal="true"
         aria-labelledby="launch-direction-title"
+        data-ui-motion="dialog"
         hidden
       >
-        <div id="launch-direction-panel" class="launch-direction-modal__panel" tabindex="-1">
+        <div id="launch-direction-panel" class="launch-direction-modal__panel" data-ui-motion-panel tabindex="-1">
           <button
             id="launch-direction-back"
             class="launch-direction-modal__back"
@@ -828,9 +833,10 @@
         role="dialog"
         aria-modal="true"
         aria-labelledby="add-set-title"
+        data-ui-motion="dialog"
         hidden
       >
-        <div class="add-set-modal__panel">
+        <div class="add-set-modal__panel" data-ui-motion-panel>
           <button
             id="add-set-close"
             class="add-set-modal__close"
@@ -849,10 +855,11 @@
         class="student-set-modal"
         role="dialog"
         aria-modal="true"
+        data-ui-motion="dialog"
         hidden
       >
         <div class="student-set-modal__backdrop share-dialog__backdrop"></div>
-        <div class="student-set-panel share-dialog__panel">
+        <div class="student-set-panel share-dialog__panel" data-ui-motion-panel>
           <button
             id="student-set-modal-close"
             class="student-set-panel__close share-dialog__close"
