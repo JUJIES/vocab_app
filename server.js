@@ -10,6 +10,7 @@ const path = require("path");
 const { ImportService } = require("./lib/import-service");
 const { SetService } = require("./lib/set-service");
 const { TeacherService } = require("./lib/teacher-service");
+const { VisualService } = require("./lib/visual-service");
 
 const app = express();
 app.set("trust proxy", true);
@@ -69,6 +70,7 @@ const teacherService = new TeacherService({
 });
 const setService = new SetService({ dataDir: DATA_DIR });
 const importService = new ImportService();
+const visualService = new VisualService({ dataDir: DATA_DIR, setService });
 
 app.use("/api/teacher/import-draft", express.json({ limit: "18mb" }));
 app.use(express.json({ limit: "1mb" }));
@@ -219,6 +221,7 @@ app.get("/api/sets", async (request, response) => {
         id: sessionResult.teacherId,
       },
       importConfigured: importService.isConfigured(),
+      visualConfigured: visualService.isConfigured(),
     });
   } catch (error) {
     console.error("Unable to load set index:", error);
@@ -244,6 +247,87 @@ app.get("/api/teacher/sets/:setId", async (request, response) => {
     response.json({ set: setEntry });
   } catch (error) {
     handleApiError(response, error, "Set konnte nicht geladen werden.");
+  }
+});
+
+app.get("/api/teacher/visual-jobs", async (request, response) => {
+  const sessionResult = requireTeacherSession(request);
+  if (!sessionResult.ok) {
+    response.status(sessionResult.status).json({ error: sessionResult.error });
+    return;
+  }
+  try {
+    response.json({ jobs: await visualService.listJobs(sessionResult.teacherId) });
+  } catch (error) {
+    handleApiError(response, error, "Bildstatus konnte nicht geladen werden.");
+  }
+});
+
+app.get("/api/teacher/sets/:setId/visual-assets", async (request, response) => {
+  const sessionResult = requireTeacherSession(request);
+  if (!sessionResult.ok) {
+    response.status(sessionResult.status).json({ error: sessionResult.error });
+    return;
+  }
+  try {
+    const [assets, jobs] = await Promise.all([
+      visualService.listAssets(sessionResult.teacherId, request.params.setId),
+      visualService.listJobs(sessionResult.teacherId, { setId: request.params.setId }),
+    ]);
+    response.json({ assets, jobs });
+  } catch (error) {
+    handleApiError(response, error, "Bilder konnten nicht geladen werden.");
+  }
+});
+
+app.post("/api/teacher/sets/:setId/visual-jobs", async (request, response) => {
+  const sessionResult = requireTeacherSession(request);
+  if (!sessionResult.ok) {
+    response.status(sessionResult.status).json({ error: sessionResult.error });
+    return;
+  }
+  try {
+    const job = await visualService.startMissingVisuals(sessionResult.teacherId, request.params.setId);
+    response.status(202).json({ success: true, job });
+  } catch (error) {
+    handleApiError(response, error, "Bilderstellung konnte nicht gestartet werden.");
+  }
+});
+
+app.post("/api/teacher/sets/:setId/cards/:cardId/visual-regenerations", async (request, response) => {
+  const sessionResult = requireTeacherSession(request);
+  if (!sessionResult.ok) {
+    response.status(sessionResult.status).json({ error: sessionResult.error });
+    return;
+  }
+  try {
+    const job = await visualService.startCardRegeneration(
+      sessionResult.teacherId,
+      request.params.setId,
+      request.params.cardId,
+    );
+    response.status(202).json({ success: true, job });
+  } catch (error) {
+    handleApiError(response, error, "Bild konnte nicht neu erstellt werden.");
+  }
+});
+
+app.put("/api/teacher/sets/:setId/cards/:cardId/visual", async (request, response) => {
+  const sessionResult = requireTeacherSession(request);
+  if (!sessionResult.ok) {
+    response.status(sessionResult.status).json({ error: sessionResult.error });
+    return;
+  }
+  try {
+    const result = await visualService.selectAsset(
+      sessionResult.teacherId,
+      request.params.setId,
+      request.params.cardId,
+      request.body?.assetId,
+    );
+    response.json({ success: true, set: result.set });
+  } catch (error) {
+    handleApiError(response, error, "Bild konnte nicht ausgewählt werden.");
   }
 });
 
@@ -1278,6 +1362,30 @@ app.get("/teacher", (_request, response) => {
   response.sendFile(path.join(ROOT_DIR, "teacher.html"));
 });
 
+app.get("/media/visuals/:assetFile", async (request, response, next) => {
+  const match = String(request.params.assetFile || "").match(/^([a-z0-9][a-z0-9_-]{0,127})\.webp$/i);
+  if (!match) {
+    next();
+    return;
+  }
+  try {
+    const assetPath = await visualService.getAssetFile(match[1]);
+    if (!assetPath) {
+      response.status(404).end();
+      return;
+    }
+    response.set("Cache-Control", "public, max-age=31536000, immutable");
+    response.type("image/webp").sendFile(assetPath);
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      response.status(404).end();
+      return;
+    }
+    console.error("Unable to serve visual asset:", error);
+    response.status(500).end();
+  }
+});
+
 app.get("/sets/user/:setId.json", async (request, response) => {
   try {
     const setEntry = await setService.findPublishedSetById(request.params.setId);
@@ -1369,6 +1477,7 @@ for (const publicDirectory of ["assets", "audio", "icons", "sets"]) {
 const shouldStartLocalHttps = !process.env.RENDER && fs.existsSync(HTTPS_KEY_PATH) && fs.existsSync(HTTPS_CERT_PATH);
 
 async function startServers() {
+  await visualService.recoverInterruptedJobs();
   const migration = await migrateLegacySetsToJulius();
   if (migration.added > 0) {
     console.log(`${migration.added} vorhandene Lernsets Julius zugeordnet.`);

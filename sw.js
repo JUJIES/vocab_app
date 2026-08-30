@@ -1,14 +1,14 @@
-const CACHE_NAME = "lerndeck-shell-v103";
+const CACHE_NAME = "lerndeck-shell-v104";
 const APP_SHELL_URLS = [
   "/",
   "/index.html",
   "/teacher",
   "/teacher.html",
   "/pwa-splash.css?v=2026-08-30-pwa-splash-v1",
-  "/styles.css?v=2026-08-30-irregular-verbs-v1",
-  "/app.js?v=2026-08-30-irregular-verbs-v1",
-  "/teacher.css?v=2026-08-30-set-delete",
-  "/teacher.js?v=2026-08-30-ui-motion-v1",
+  "/styles.css?v=2026-08-30-learning-visuals-v1",
+  "/app.js?v=2026-08-30-learning-visuals-v1",
+  "/teacher.css?v=2026-08-30-learning-visuals-v1",
+  "/teacher.js?v=2026-08-30-learning-visuals-v1",
   "/ui-motion.css?v=2026-08-30-ui-motion-v1",
   "/ui-motion.js?v=2026-08-30-ui-motion-v1",
   "/irregular-verbs.js?v=2026-08-30-irregular-verbs-v1",
@@ -16,6 +16,7 @@ const APP_SHELL_URLS = [
   "/manifest.webmanifest",
   "/teacher.webmanifest",
   "/assets/icons/lerndeck-stack.svg",
+  "/assets/icons/image-plus.svg",
   "/icons/favicon-32.png?v=2026-08-30-app-icon-v1",
   "/icons/icon-192.png?v=2026-08-30-app-icon-v1",
   "/icons/icon-512.png?v=2026-08-30-app-icon-v1",

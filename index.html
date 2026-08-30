@@ -29,14 +29,14 @@
       }
     </script>
     <link rel="stylesheet" href="./pwa-splash.css?v=2026-08-30-pwa-splash-v1" />
-    <link rel="stylesheet" href="./styles.css?v=2026-08-30-irregular-verbs-v1" />
+    <link rel="stylesheet" href="./styles.css?v=2026-08-30-learning-visuals-v1" />
     <link rel="stylesheet" href="./ui-motion.css?v=2026-08-30-ui-motion-v1" />
     <script src="./pwa.js?v=2026-08-30-pwa-splash-v3" defer></script>
     <script src="./ui-motion.js?v=2026-08-30-ui-motion-v1" defer></script>
     <script src="./irregular-verbs.js?v=2026-08-30-irregular-verbs-v1" defer></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js" defer></script>
-    <script src="./app.js?v=2026-08-30-irregular-verbs-v1" defer></script>
+    <script src="./app.js?v=2026-08-30-learning-visuals-v1" defer></script>
   </head>
   <body>
     <div class="pwa-splash" role="status" aria-label="Lerndeck wird geladen">
@@ -256,6 +256,7 @@
                     id="front-content"
                     class="flashcard__content"
                   >
+                    <img id="front-visual" class="flashcard__visual" alt="" hidden />
                     <span class="flashcard__answer">
                       <span id="front-word" class="flashcard__word">&nbsp;</span>
                       <span
@@ -347,6 +348,7 @@
                   </span>
 
                   <span class="flashcard__content">
+                    <img id="back-visual" class="flashcard__visual" alt="" hidden />
                     <span class="flashcard__answer">
                       <span id="back-word" class="flashcard__word">&nbsp;</span>
                       <span
@@ -615,6 +617,7 @@
           <article class="input-stage__card">
             <section class="input-stage__prompt-pane" aria-live="polite">
               <p id="input-prompt-kicker" class="input-stage__prompt-kicker">Eingabe</p>
+              <img id="input-prompt-visual" class="input-stage__prompt-visual" alt="" hidden />
               <h2 id="input-prompt-word" class="input-stage__prompt-word">Lädt</h2>
               <p id="input-prompt-detail" class="input-stage__prompt-detail">Set wird geöffnet.</p>
             </section>

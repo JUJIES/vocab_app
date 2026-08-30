@@ -13,6 +13,7 @@ Einsatzbereit sind:
 - ausschließlich private Sets pro Lehrkraft mit Erstellen, Bearbeiten, Löschen und stabilem Set-Code; es gibt im MVP keine Vorlagen oder zwischen Lehrkräften geteilten Bibliotheken
 - automatisch gespeicherte Set-Entwürfe: erster sinnvoller Inhalt und fertige Importentwürfe werden sofort gesichert, bleiben nach einem Reload unter `Entwürfe (n)` wiederauffindbar und werden erst beim Veröffentlichen per Code oder QR für Tablets erreichbar
 - Schnellimport aus klaren Textlisten sowie KI-Entwürfe aus Freitext, TXT, MD, CSV, Bildern, PDF, DOCX und PPTX; beim automatischen Erstentwurf schlägt die KI auch Titel, Fach, Beschreibung, Sprachen und Seitenbezeichnungen vor, eine optionale Importnotiz grenzt Auswahl, Umfang und Abfragerichtung ein
+- KI-Lernbilder für veröffentlichte Sets: sechs Motive pro Sheet, sichtbarer Hintergrundfortschritt, kompakte Vorschau im Karteneditor, einzelne Neugenerierung mit erhaltener Variantenhistorie und didaktisch gestufte Anzeige in allen drei Lernmodi
 - Schülerübernahme per Code, QR oder Link; der Set-Inhalt wird nicht auf das Tablet kopiert
 - Modi `Sichten`, `Üben` und `Eingabe`; falsche Eingaben müssen im Korrekturmodus richtig wiederholt werden
 - Lernstand pro Tablet, Set und Lernmodus
@@ -29,6 +30,7 @@ Bewusst vertagt sind persönliche Schülerkonten, Dino-Lernpässe, Schulen/Grupp
 5. Lernstände bleiben am Tablet. Unveränderte Karten behalten bei einer Set-Bearbeitung ihre Karten-ID; nur inhaltlich geänderte Karten erhalten eine neue ID.
 6. Importmaterial erzeugt immer nur einen bearbeitbaren Entwurf. Eine optionale Importnotiz wie `nur Lektion 1, Deutsch → Englisch` steuert Auswahl und Richtung. Originaldateien werden nicht gespeichert. Modellantworten werden serverseitig gegen dasselbe Set-Datenmodell validiert.
 7. Das Löschen eines Entwurfs oder veröffentlichten Sets entfernt ihn sofort aus dem Lehrerbereich. Veröffentlichte Codes und Pfade sind danach nicht mehr auflösbar; Tablet-Verknüpfungen und zugehörige Lernstände werden bereinigt. Intern bleibt der Datensatz archiviert, damit ein versehentliches Löschen im Runtime-Speicher grundsätzlich wiederherstellbar bleibt.
+8. Lernbilder sind eigene persistente Assets. Eine Karte referenziert nur ihre aktive Variante; ältere Generierungen bleiben für direkten Rückwechsel und die spätere Bibliothek erhalten. Inhaltsänderungen lösen die bestehende neue Karten-ID aus und entkoppeln damit veraltete Bilder.
 
 Runtime-Daten liegen ausschließlich in `DATA_DIR` und dürfen bei Deployments nicht ersetzt werden. JSON-Schreibvorgänge laufen serialisiert und über atomare Dateiersetzung. Das ist für den einzelnen Beelink-Prozess bewusst einfach; bei mehreren Serverinstanzen muss die Store-Schicht später durch eine gemeinsame Datenbank ersetzt werden.
 
@@ -53,8 +55,9 @@ Bilder und Screenshots werden für kleine Buchschrift in Originalauflösung visu
 Wichtige Umgebungsvariablen:
 
 - `DATA_DIR`: persistenter Runtime-Ordner, im Betrieb zwingend außerhalb des Releases
-- `OPENAI_API_KEY`: serverseitiger Key für KI-Import; ohne ihn funktionieren manuelle Sets und klare Textlisten weiter
+- `OPENAI_API_KEY`: serverseitiger Key für KI-Import und Bildgenerierung; ohne ihn funktionieren manuelle Sets und klare Textlisten weiter
 - `OPENAI_IMPORT_MODEL`: optional, Standard `gpt-5.6-terra`
+- `OPENAI_IMAGE_MODEL`: optional, Standard `gpt-image-2`
 - `PUBLIC_BASE_URL`: öffentliche HTTPS-Basis für erzeugte QR-Links
 - `PORT` und `HOST`: Standard `3000` und `0.0.0.0`
 
@@ -78,4 +81,4 @@ Der Test erstellt ein Set und mutiert ein Tablet; niemals gegen echte Unterricht
 
 ## Betrieb
 
-Die verbindlichen Beelink-Schritte stehen in [docs/DEPLOYMENT_BEELINK.md](docs/DEPLOYMENT_BEELINK.md). Die Installation auf Macs und die Verteilung per Relution beschreibt [docs/INSTALLATION.md](docs/INSTALLATION.md). Produktentscheidungen und vertagte Komponenten stehen in [docs/DECISIONS.md](docs/DECISIONS.md). Der geplante, noch nicht implementierte KI-Bildworkflow ist in [docs/VISUAL_VOCABULARY_PLAN.md](docs/VISUAL_VOCABULARY_PLAN.md) festgehalten. Der Lehrerbereich ist unter `/teacher`, die Schüler-App unter `/` erreichbar.
+Die verbindlichen Beelink-Schritte stehen in [docs/DEPLOYMENT_BEELINK.md](docs/DEPLOYMENT_BEELINK.md). Die Installation auf Macs und die Verteilung per Relution beschreibt [docs/INSTALLATION.md](docs/INSTALLATION.md). Produktentscheidungen und vertagte Komponenten stehen in [docs/DECISIONS.md](docs/DECISIONS.md). Datenfluss und didaktische Regeln der Bildgenerierung sind in [docs/VISUAL_VOCABULARY_PLAN.md](docs/VISUAL_VOCABULARY_PLAN.md) festgehalten. Der Lehrerbereich ist unter `/teacher`, die Schüler-App unter `/` erreichbar.

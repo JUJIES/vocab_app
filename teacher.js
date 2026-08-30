@@ -8,6 +8,7 @@ const PENCIL_ICON_PATH = "./assets/icons/pencil.svg";
 const EXTERNAL_LINK_ICON_PATH = "./assets/icons/external-link.svg";
 const DELETE_ICON_PATH = "./assets/icons/trash-2.svg";
 const REMOVE_ICON_PATH = "./assets/icons/x.svg";
+const IMAGE_PLUS_ICON_PATH = "./assets/icons/image-plus.svg";
 const BROKEN_LINK_ICON_PATH = "./assets/icons/broken-link.svg";
 const TIMEOUT_ICON_PATH = "./assets/icons/timeout.svg";
 const PASSWORD_ICON_PATH = "./assets/icons/password-svgrepo-com.svg";
@@ -27,6 +28,10 @@ const state = {
   teacherAccounts: [],
   currentTeacher: null,
   importConfigured: false,
+  visualConfigured: false,
+  visualJobs: [],
+  visualAssetsByCard: {},
+  visualPollTimerId: null,
   editorSetId: "",
   editorSetStatus: "draft",
   editorDraftVersion: 0,
@@ -132,6 +137,8 @@ const elements = {
   setCardList: document.getElementById("set-card-editor-list"),
   setCardCount: document.getElementById("set-card-count"),
   addCardButton: document.getElementById("add-card-button"),
+  generateVisualsButton: document.getElementById("generate-visuals-button"),
+  visualJobStatus: document.getElementById("visual-job-status"),
   setImportSection: document.getElementById("set-import-section"),
   setImportDropzone: document.getElementById("set-import-dropzone"),
   setImportFilePicker: document.getElementById("set-import-file-picker"),
@@ -153,6 +160,11 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function bindEvents() {
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest(".set-card-visual")) {
+      closeEditorVisualPopovers();
+    }
+  });
   elements.authForm.addEventListener("submit", handleTeacherAuthSubmit);
   elements.authAccountSelect.addEventListener("change", () => {
     elements.authFeedback.textContent = "";
@@ -183,6 +195,7 @@ function bindEvents() {
   elements.setSourceLabelInput.addEventListener("input", updateEditorCardSideLabels);
   elements.setTargetLabelInput.addEventListener("input", updateEditorCardSideLabels);
   elements.addCardButton.addEventListener("click", () => addEditorCard());
+  elements.generateVisualsButton.addEventListener("click", handleGenerateMissingVisuals);
   elements.setImportFilePicker.addEventListener("click", () => elements.setImportFiles.click());
   elements.setImportFiles.addEventListener("change", () => {
     setEditorFiles(Array.from(elements.setImportFiles.files || []), { append: true });
@@ -333,6 +346,7 @@ async function loadSetIndex() {
   }
 
   state.importConfigured = Boolean(response.data?.importConfigured);
+  state.visualConfigured = Boolean(response.data?.visualConfigured);
   if (response.data?.teacher?.id) {
     const publicAccount = state.teacherAccounts.find((account) => account.id === response.data.teacher.id);
     state.currentTeacher = { ...state.currentTeacher, ...publicAccount, ...response.data.teacher };
@@ -364,15 +378,48 @@ async function loadTabletDirectory() {
 }
 
 async function reloadTeacherData() {
-  const [sets, tablets] = await Promise.all([
+  const [sets, tablets, visualJobs] = await Promise.all([
     loadSetIndex(),
     loadTabletDirectory(),
+    loadVisualJobs(),
   ]);
 
   state.sets = sets;
   state.tablets = tablets;
+  state.visualJobs = visualJobs;
   renderSetList();
   renderTabletList();
+  scheduleVisualJobPolling();
+}
+
+async function loadVisualJobs() {
+  const response = await requestJson("/api/teacher/visual-jobs", { auth: "teacher" });
+  if (!response.ok) {
+    throw createTeacherRequestError(response, "Bildstatus konnte nicht geladen werden.");
+  }
+  return Array.isArray(response.data?.jobs) ? response.data.jobs.map(normalizeVisualJob).filter(Boolean) : [];
+}
+
+function normalizeVisualJob(job) {
+  const id = typeof job?.id === "string" ? job.id.trim() : "";
+  const setId = typeof job?.setId === "string" ? job.setId.trim() : "";
+  if (!id || !setId) {
+    return null;
+  }
+  return {
+    id,
+    setId,
+    type: job.type === "single" ? "single" : "sheet",
+    status: typeof job.status === "string" ? job.status : "failed",
+    totalCards: Math.max(0, Math.trunc(Number(job.totalCards) || 0)),
+    totalSheets: Math.max(0, Math.trunc(Number(job.totalSheets) || 0)),
+    completedSheets: Math.max(0, Math.trunc(Number(job.completedSheets) || 0)),
+    activeSheet: Math.max(0, Math.trunc(Number(job.activeSheet) || 0)),
+    attachedCount: Math.max(0, Math.trunc(Number(job.attachedCount) || 0)),
+    skippedCount: Math.max(0, Math.trunc(Number(job.skippedCount) || 0)),
+    error: typeof job.error === "string" ? job.error.trim() : "",
+    createdAt: typeof job.createdAt === "string" ? job.createdAt : "",
+  };
 }
 
 async function loadProtectedTeacherData() {
@@ -624,6 +671,13 @@ function createSetRow(setEntry) {
     draftBadge.className = "set-draft-badge";
     draftBadge.textContent = "Entwurf";
     titleLine.append(draftBadge);
+  }
+  const visualJob = getLatestVisualJob(setEntry.id);
+  if (isVisualJobActive(visualJob)) {
+    const jobBadge = document.createElement("span");
+    jobBadge.className = "teacher-set-row__visual-job";
+    jobBadge.append(createVisualSpinner(), document.createTextNode(formatVisualJobProgress(visualJob)));
+    titleLine.append(jobBadge);
   }
 
   const meta = document.createElement("p");
@@ -1631,6 +1685,7 @@ function openNewSetEditor() {
   resetEditorDraftState({ status: "draft" });
   state.editorSetId = "";
   state.editorCards = [];
+  state.visualAssetsByCard = {};
   state.editorMetadata = { sourceLanguage: "de", targetLanguage: "en" };
   elements.setEditorTitle.textContent = "Neues Set";
   updateEditorStatusUi();
@@ -1658,6 +1713,7 @@ async function openEditSetEditor(setEntry) {
     const editableSet = response.data?.set;
     resetEditorDraftState({ status: editableSet.status });
     state.editorSetId = editableSet.id;
+    state.visualAssetsByCard = {};
     state.editorCards = Array.isArray(editableSet.cards)
       ? editableSet.cards.map(normalizeEditorCard).filter(Boolean)
       : [];
@@ -1681,6 +1737,9 @@ async function openEditSetEditor(setEntry) {
     window.LerndeckUiMotion.show(elements.setEditorOverlay);
     syncTeacherModalLock();
     showSetEditorView("manual");
+    if (editableSet.status === "published") {
+      await refreshEditorVisualWorkspace();
+    }
   } catch (error) {
     if (error?.requiresAuth) {
       showTeacherAuth(error.message);
@@ -1728,6 +1787,7 @@ function updateEditorStatusUi() {
   const isDraft = state.editorSetStatus === "draft";
   elements.setEditorStatus.hidden = !isDraft;
   elements.saveSetButton.textContent = isDraft ? "Set veröffentlichen" : "Änderungen speichern";
+  renderVisualControls();
 }
 
 function showSetEditorView(view) {
@@ -1797,6 +1857,7 @@ function createEmptyEditorCard() {
     back: "",
     initialBack: "",
     acceptedAnswers: [],
+    visual: null,
   };
 }
 
@@ -1813,6 +1874,22 @@ function normalizeEditorCard(card) {
     acceptedAnswers: Array.isArray(card.acceptedAnswers)
       ? card.acceptedAnswers.filter((answer) => typeof answer === "string" && answer.trim())
       : [],
+    visual: normalizeEditorVisual(card.visual),
+  };
+}
+
+function normalizeEditorVisual(visual) {
+  const assetId = typeof visual?.assetId === "string" ? visual.assetId.trim() : "";
+  const url = typeof visual?.url === "string" ? visual.url.trim() : "";
+  if (!assetId || !url) {
+    return null;
+  }
+  return {
+    assetId,
+    url,
+    alt: typeof visual.alt === "string" ? visual.alt.trim() : "",
+    width: Math.max(1, Math.trunc(Number(visual.width) || 512)),
+    height: Math.max(1, Math.trunc(Number(visual.height) || 512)),
   };
 }
 
@@ -1833,7 +1910,7 @@ function renderEditorCards() {
   const columns = document.createElement("div");
   columns.className = "set-card-editor-columns";
   columns.setAttribute("aria-hidden", "true");
-  for (const [side, labelText] of [["", ""], ["front", sideLabels.front], ["back", sideLabels.back], ["", ""]]) {
+  for (const [side, labelText] of [["", ""], ["front", sideLabels.front], ["back", sideLabels.back], ["", "Bild"], ["", ""]]) {
     const label = document.createElement("span");
     label.textContent = labelText;
     if (side) {
@@ -1857,6 +1934,7 @@ function renderEditorCards() {
     const back = createEditorInput(sideLabels.back, card.back, (value) => {
       card.back = value;
     }, { compact: true, side: "back" });
+    const visual = createEditorVisualControl(card, index);
 
     const remove = document.createElement("button");
     remove.className = "set-card-editor-row__remove";
@@ -1873,9 +1951,298 @@ function renderEditorCards() {
       scheduleEditorDraftSave();
     });
 
-    row.append(number, front, back, remove);
+    row.append(number, front, back, visual, remove);
     elements.setCardList.append(row);
   });
+  renderVisualControls();
+}
+
+function createEditorVisualControl(card, index) {
+  const shell = document.createElement("div");
+  shell.className = "set-card-visual";
+  const history = Array.isArray(state.visualAssetsByCard[card.id]) ? state.visualAssetsByCard[card.id] : [];
+  const activeAsset = card.visual
+    ? history.find((asset) => asset.id === card.visual.assetId) || { id: card.visual.assetId, ...card.visual }
+    : null;
+  const trigger = document.createElement("button");
+  trigger.className = "set-card-visual__trigger";
+  trigger.type = "button";
+  trigger.disabled = !card.id || state.editorSetStatus !== "published";
+  trigger.setAttribute("aria-label", activeAsset ? `Bild zu Karte ${index + 1} ansehen` : `Bild zu Karte ${index + 1} erstellen`);
+  trigger.setAttribute("aria-expanded", "false");
+  if (activeAsset?.url) {
+    const thumbnail = document.createElement("img");
+    thumbnail.src = activeAsset.url;
+    thumbnail.alt = "";
+    thumbnail.loading = "lazy";
+    trigger.classList.add("has-image");
+    trigger.append(thumbnail);
+  } else {
+    trigger.append(createButtonIcon(IMAGE_PLUS_ICON_PATH));
+  }
+  trigger.addEventListener("click", () => {
+    const nextOpen = !shell.classList.contains("is-open");
+    closeEditorVisualPopovers(shell);
+    shell.classList.toggle("is-open", nextOpen);
+    trigger.setAttribute("aria-expanded", String(nextOpen));
+  });
+  shell.append(trigger);
+
+  if (card.id && state.editorSetStatus === "published") {
+    const popover = document.createElement("section");
+    popover.className = "set-card-visual__popover";
+    popover.setAttribute("aria-label", `Lernbild für Karte ${index + 1}`);
+    if (activeAsset?.url) {
+      const preview = document.createElement("img");
+      preview.className = "set-card-visual__preview";
+      preview.src = activeAsset.url;
+      preview.alt = activeAsset.alt || `Lernbild zu ${card.front}`;
+      popover.append(preview);
+    } else {
+      const empty = document.createElement("p");
+      empty.className = "set-card-visual__empty";
+      empty.textContent = "Noch kein Bild";
+      popover.append(empty);
+    }
+
+    if (history.length > 1) {
+      const historyRow = document.createElement("div");
+      historyRow.className = "set-card-visual__history";
+      history.slice(0, 5).forEach((asset) => {
+        const choice = document.createElement("button");
+        choice.type = "button";
+        choice.className = "set-card-visual__history-choice";
+        choice.classList.toggle("is-current", asset.id === card.visual?.assetId);
+        choice.setAttribute("aria-label", asset.id === card.visual?.assetId ? "Aktuelles Bild" : "Dieses Bild verwenden");
+        const image = document.createElement("img");
+        image.src = asset.url;
+        image.alt = "";
+        image.loading = "lazy";
+        choice.append(image);
+        choice.addEventListener("click", () => void handleSelectVisualAsset(card, asset));
+        historyRow.append(choice);
+      });
+      popover.append(historyRow);
+    }
+
+    const regenerate = document.createElement("button");
+    regenerate.type = "button";
+    regenerate.className = "set-card-visual__regenerate";
+    regenerate.disabled = isVisualJobActive(getLatestVisualJob(state.editorSetId));
+    regenerate.append(createButtonIcon(IMAGE_PLUS_ICON_PATH), document.createTextNode(activeAsset ? "Neu erstellen" : "Bild erstellen"));
+    regenerate.addEventListener("click", () => void handleRegenerateCardVisual(card));
+    popover.append(regenerate);
+    shell.append(popover);
+  }
+  return shell;
+}
+
+function closeEditorVisualPopovers(except = null) {
+  for (const shell of elements.setCardList.querySelectorAll(".set-card-visual.is-open")) {
+    if (shell === except) {
+      continue;
+    }
+    shell.classList.remove("is-open");
+    shell.querySelector(".set-card-visual__trigger")?.setAttribute("aria-expanded", "false");
+  }
+}
+
+function getLatestVisualJob(setId) {
+  return state.visualJobs.find((job) => job.setId === setId) || null;
+}
+
+function isVisualJobActive(job) {
+  return Boolean(job && ["queued", "generating", "applying"].includes(job.status));
+}
+
+function createVisualSpinner() {
+  const spinner = document.createElement("span");
+  spinner.className = "visual-job-spinner";
+  spinner.setAttribute("aria-hidden", "true");
+  return spinner;
+}
+
+function formatVisualJobProgress(job) {
+  if (job?.type === "single") {
+    return "Bild wird erstellt";
+  }
+  const sheet = Math.min(Math.max(job?.activeSheet || job?.completedSheets || 1, 1), Math.max(job?.totalSheets || 1, 1));
+  return `Sheet ${sheet}/${Math.max(job?.totalSheets || 1, 1)}`;
+}
+
+function renderVisualControls() {
+  if (!elements.generateVisualsButton || !elements.visualJobStatus) {
+    return;
+  }
+  const isPublished = state.editorSetStatus === "published" && Boolean(state.editorSetId);
+  const job = isPublished ? getLatestVisualJob(state.editorSetId) : null;
+  const active = isVisualJobActive(job);
+  const missingCount = state.editorCards.filter((card) => card.id && !card.visual).length;
+  elements.generateVisualsButton.hidden = !isPublished || (missingCount === 0 && !active);
+  elements.generateVisualsButton.disabled = !state.visualConfigured || active || missingCount === 0;
+  elements.generateVisualsButton.querySelector("span").textContent = active
+    ? formatVisualJobProgress(job)
+    : missingCount > 0
+      ? `Bilder erstellen (${missingCount})`
+      : "Bilder erstellt";
+
+  elements.visualJobStatus.replaceChildren();
+  if (active) {
+    elements.visualJobStatus.hidden = false;
+    elements.visualJobStatus.className = "visual-job-status is-active";
+    elements.visualJobStatus.append(
+      createVisualSpinner(),
+      document.createTextNode(`${formatVisualJobProgress(job)} · Du kannst weiterarbeiten.`),
+    );
+  } else if (job?.status === "failed") {
+    elements.visualJobStatus.hidden = false;
+    elements.visualJobStatus.className = "visual-job-status is-error";
+    elements.visualJobStatus.textContent = job.error || "Bilder konnten nicht erstellt werden.";
+  } else if (job?.status === "completed" && job.skippedCount > 0) {
+    elements.visualJobStatus.hidden = false;
+    elements.visualJobStatus.className = "visual-job-status";
+    elements.visualJobStatus.textContent = `${job.attachedCount} Bilder zugeordnet · ${job.skippedCount} geänderte Karten übersprungen.`;
+  } else {
+    elements.visualJobStatus.hidden = true;
+  }
+}
+
+async function refreshEditorVisualWorkspace() {
+  if (!state.editorSetId || state.editorSetStatus !== "published") {
+    return;
+  }
+  try {
+    const [workspaceResponse, setResponse] = await Promise.all([
+      requestJson(`/api/teacher/sets/${encodeURIComponent(state.editorSetId)}/visual-assets`, { auth: "teacher" }),
+      requestJson(`/api/teacher/sets/${encodeURIComponent(state.editorSetId)}`, { auth: "teacher" }),
+    ]);
+    if (!workspaceResponse.ok || !setResponse.ok) {
+      throw createTeacherRequestError(
+        !workspaceResponse.ok ? workspaceResponse : setResponse,
+        "Bilder konnten nicht geladen werden.",
+      );
+    }
+    const assetsByCard = {};
+    for (const asset of Array.isArray(workspaceResponse.data?.assets) ? workspaceResponse.data.assets : []) {
+      if (!asset?.cardId || !asset?.id || !asset?.url) {
+        continue;
+      }
+      (assetsByCard[asset.cardId] ||= []).push(asset);
+    }
+    state.visualAssetsByCard = assetsByCard;
+    const setJobs = Array.isArray(workspaceResponse.data?.jobs)
+      ? workspaceResponse.data.jobs.map(normalizeVisualJob).filter(Boolean)
+      : [];
+    state.visualJobs = [
+      ...setJobs,
+      ...state.visualJobs.filter((job) => job.setId !== state.editorSetId),
+    ];
+    const serverCards = new Map((setResponse.data?.set?.cards || []).map((card) => [card.id, card]));
+    for (const card of state.editorCards) {
+      const serverCard = serverCards.get(card.id);
+      card.visual = normalizeEditorVisual(serverCard?.visual);
+    }
+    renderEditorCards();
+    scheduleVisualJobPolling();
+  } catch (error) {
+    console.error("Unable to refresh visual workspace:", error);
+    renderVisualControls();
+  }
+}
+
+async function handleGenerateMissingVisuals() {
+  if (!state.editorSetId) {
+    return;
+  }
+  elements.generateVisualsButton.disabled = true;
+  try {
+    const response = await requestJson(`/api/teacher/sets/${encodeURIComponent(state.editorSetId)}/visual-jobs`, {
+      auth: "teacher",
+      method: "POST",
+    });
+    if (!response.ok) {
+      throw createTeacherRequestError(response, "Bilderstellung konnte nicht gestartet werden.");
+    }
+    const job = normalizeVisualJob(response.data?.job);
+    if (job) {
+      state.visualJobs = [job, ...state.visualJobs.filter((entry) => entry.setId !== job.setId)];
+    }
+    renderVisualControls();
+    renderSetList();
+    scheduleVisualJobPolling();
+  } catch (error) {
+    elements.setEditorFeedback.textContent = error.message || "Bilderstellung konnte nicht gestartet werden.";
+    renderVisualControls();
+  }
+}
+
+async function handleRegenerateCardVisual(card) {
+  if (!state.editorSetId || !card?.id) {
+    return;
+  }
+  try {
+    const response = await requestJson(
+      `/api/teacher/sets/${encodeURIComponent(state.editorSetId)}/cards/${encodeURIComponent(card.id)}/visual-regenerations`,
+      { auth: "teacher", method: "POST" },
+    );
+    if (!response.ok) {
+      throw createTeacherRequestError(response, "Bild konnte nicht erstellt werden.");
+    }
+    const job = normalizeVisualJob(response.data?.job);
+    if (job) {
+      state.visualJobs = [job, ...state.visualJobs.filter((entry) => entry.setId !== job.setId)];
+    }
+    closeEditorVisualPopovers();
+    renderEditorCards();
+    scheduleVisualJobPolling();
+  } catch (error) {
+    elements.setEditorFeedback.textContent = error.message || "Bild konnte nicht erstellt werden.";
+  }
+}
+
+async function handleSelectVisualAsset(card, asset) {
+  try {
+    const response = await requestJson(
+      `/api/teacher/sets/${encodeURIComponent(state.editorSetId)}/cards/${encodeURIComponent(card.id)}/visual`,
+      { auth: "teacher", method: "PUT", body: { assetId: asset.id } },
+    );
+    if (!response.ok) {
+      throw createTeacherRequestError(response, "Bild konnte nicht ausgewählt werden.");
+    }
+    card.visual = normalizeEditorVisual({ assetId: asset.id, ...asset });
+    renderEditorCards();
+  } catch (error) {
+    elements.setEditorFeedback.textContent = error.message || "Bild konnte nicht ausgewählt werden.";
+  }
+}
+
+function scheduleVisualJobPolling() {
+  if (state.visualPollTimerId) {
+    window.clearTimeout(state.visualPollTimerId);
+    state.visualPollTimerId = null;
+  }
+  if (!state.visualJobs.some(isVisualJobActive)) {
+    return;
+  }
+  state.visualPollTimerId = window.setTimeout(() => void pollVisualJobs(), 1500);
+}
+
+async function pollVisualJobs() {
+  state.visualPollTimerId = null;
+  const previousActiveBySet = new Set(state.visualJobs.filter(isVisualJobActive).map((job) => job.setId));
+  try {
+    state.visualJobs = await loadVisualJobs();
+    renderSetList();
+    renderVisualControls();
+    const editorJob = getLatestVisualJob(state.editorSetId);
+    if (state.editorSetId && previousActiveBySet.has(state.editorSetId) && !isVisualJobActive(editorJob)) {
+      await refreshEditorVisualWorkspace();
+    }
+  } catch (error) {
+    console.error("Unable to poll visual jobs:", error);
+  } finally {
+    scheduleVisualJobPolling();
+  }
 }
 
 function getEditorCardSideLabels() {

@@ -401,9 +401,11 @@ const elements = {
   cardAction: document.getElementById("card-action"),
   cardSecondaryAction: document.getElementById("card-secondary-action"),
   frontWord: document.getElementById("front-word"),
+  frontVisual: document.getElementById("front-visual"),
   frontAlternatives: document.getElementById("front-alternatives"),
   frontHint: document.getElementById("front-hint"),
   backWord: document.getElementById("back-word"),
+  backVisual: document.getElementById("back-visual"),
   backAlternatives: document.getElementById("back-alternatives"),
   backHintShell: document.getElementById("back-hint-shell"),
   backHint: document.getElementById("back-hint"),
@@ -423,6 +425,7 @@ const elements = {
   inputDelaySlider: document.getElementById("input-delay-slider"),
   inputDelayValue: document.getElementById("input-delay-value"),
   inputPromptWord: document.getElementById("input-prompt-word"),
+  inputPromptVisual: document.getElementById("input-prompt-visual"),
   inputPromptKicker: document.getElementById("input-prompt-kicker"),
   inputPromptDetail: document.getElementById("input-prompt-detail"),
   inputAnswerForm: document.getElementById("input-answer-form"),
@@ -1343,6 +1346,7 @@ function renderInputEvaluation(session = state.inputSession) {
 }
 
 function renderInputCompletionState() {
+  renderInputVisual(null, false);
   const scorePercent = getInputSessionScorePercent();
   elements.inputPromptKicker.textContent = "";
   renderLearningTerm(elements.inputPromptWord, "Fertig");
@@ -1391,6 +1395,7 @@ function renderInputSession() {
 
   elements.inputPromptKicker.textContent = "";
   renderLearningTerm(elements.inputPromptWord, card.sourceText);
+  renderInputVisual(card, Boolean(evaluation) && !correctionRequired);
   elements.inputPromptDetail.textContent = buildInputPromptDetail(card);
   elements.inputAnswerForm.hidden = false;
   elements.inputAnswerLabel.hidden = false;
@@ -1469,6 +1474,7 @@ async function startInputSet(
   clearInputAnswerFields();
   elements.inputPromptKicker.textContent = "";
   renderLearningTerm(elements.inputPromptWord, "Lädt");
+  renderInputVisual(null, false);
   elements.inputPromptDetail.textContent = "Set wird geöffnet.";
   elements.inputAnswerForm.hidden = true;
   renderInputEvaluation(null);
@@ -7740,6 +7746,7 @@ function buildCardData(card) {
     hints: buildAnswerOnlyHints(sourceText),
     audioSource: audioTarget,
     audioTarget: audioSource,
+    visual: normalizeLearningVisual(card?.visual),
   };
 
   return {
@@ -7775,7 +7782,25 @@ function buildCardData(card) {
     ],
     audioSource,
     audioTarget,
+    visual: normalizeLearningVisual(card?.visual),
     reverse: reverseCard,
+  };
+}
+
+function normalizeLearningVisual(value) {
+  const url = typeof value?.url === "string" ? value.url.trim() : "";
+  if (!url) {
+    return null;
+  }
+  let resolvedUrl = url;
+  try {
+    resolvedUrl = new URL(url, getAppBaseUrl()).href;
+  } catch (_error) {
+    return null;
+  }
+  return {
+    url: resolvedUrl,
+    alt: typeof value.alt === "string" ? value.alt.trim() : "",
   };
 }
 
@@ -9381,6 +9406,7 @@ function renderCard() {
     targetText,
     targetAlternatives,
   );
+  renderFlashcardVisuals(state.currentCard);
   renderHint(currentHint);
   renderBackContext(backContext);
   elements.frontHint.classList.remove("is-summary");
@@ -9913,6 +9939,7 @@ function updateProgressState({ hidden, label = "", value = 0 }) {
 }
 
 function renderFlashcardAnswer(wordElement, alternativesElement, primaryText, alternatives = []) {
+  hideFlashcardVisuals();
   renderLearningTerm(wordElement, primaryText);
 
   const visibleAlternatives = Array.isArray(alternatives)
@@ -9935,6 +9962,48 @@ function renderFlashcardAnswer(wordElement, alternativesElement, primaryText, al
     );
   } else {
     alternativesElement.removeAttribute("aria-label");
+  }
+}
+
+function hideFlashcardVisuals() {
+  for (const image of [elements.frontVisual, elements.backVisual]) {
+    image.hidden = true;
+    image.removeAttribute("src");
+    image.alt = "";
+    image.closest(".flashcard__content")?.classList.remove("has-visual");
+  }
+}
+
+function renderFlashcardVisuals(card) {
+  const visual = card?.visual;
+  if (!visual?.url) {
+    hideFlashcardVisuals();
+    return;
+  }
+  const showFront = isViewLearningMode();
+  const showBack = isViewLearningMode() || state.isFlipped;
+  for (const [image, visible] of [[elements.frontVisual, showFront], [elements.backVisual, showBack]]) {
+    image.hidden = !visible;
+    image.alt = visible ? (visual.alt || "Lernbild") : "";
+    if (visible) {
+      image.src = visual.url;
+    } else {
+      image.removeAttribute("src");
+    }
+    image.closest(".flashcard__content")?.classList.toggle("has-visual", visible);
+  }
+}
+
+function renderInputVisual(card, visible) {
+  const visual = card?.visual;
+  const shouldShow = Boolean(visible && visual?.url);
+  elements.inputPromptVisual.hidden = !shouldShow;
+  elements.inputPromptVisual.alt = shouldShow ? (visual.alt || "Lernbild") : "";
+  elements.inputPromptVisual.closest(".input-stage__prompt-pane")?.classList.toggle("has-visual", shouldShow);
+  if (shouldShow) {
+    elements.inputPromptVisual.src = visual.url;
+  } else {
+    elements.inputPromptVisual.removeAttribute("src");
   }
 }
 
