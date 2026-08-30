@@ -147,6 +147,59 @@ test("teacher sets stay private while public codes remain resolvable", async () 
   });
 });
 
+test("teacher drafts persist incomplete work but stay unavailable to tablets", async () => {
+  await withTempDirectory(async (directory) => {
+    const service = new SetService({ dataDir: directory });
+    const draft = await service.createDraft("julius", {
+      title: "",
+      subject: "Englisch",
+      cards: [{ front: "Hund", back: "" }],
+    });
+
+    assert.equal(draft.status, "draft");
+    assert.equal(draft.title, "");
+    assert.equal(draft.shareCode, "");
+    assert.equal(draft.cards[0].front, "Hund");
+    assert.equal(draft.cards[0].back, "");
+    assert.equal((await service.listOwnedSets("julius"))[0].title, "Unbenanntes Set");
+    assert.equal(await service.findPublishedSetById(draft.id), null);
+    assert.equal(await service.resolveShareCode(draft.shareCode), null);
+  });
+});
+
+test("publishing a draft keeps its identity and creates its first share code", async () => {
+  await withTempDirectory(async (directory) => {
+    const service = new SetService({ dataDir: directory });
+    const createdDraft = await service.createDraft("julius", {
+      title: "Tiere",
+      cards: [{ front: "Hund", back: "" }],
+    });
+    const updatedDraft = await service.updateDraft("julius", createdDraft.id, {
+      title: "Tiere auf Englisch",
+      cards: [{ id: createdDraft.cards[0].id, front: "Hund", back: "dog" }],
+    });
+    const published = await service.updateSet("julius", createdDraft.id, {
+      title: "Tiere auf Englisch",
+      cards: updatedDraft.cards,
+    });
+
+    assert.equal(updatedDraft.id, createdDraft.id);
+    assert.equal(updatedDraft.cards[0].id, createdDraft.cards[0].id);
+    assert.equal(published.id, createdDraft.id);
+    assert.equal(published.path, createdDraft.path);
+    assert.equal(published.status, "published");
+    assert.match(published.shareCode, /^[A-HJ-NP-Z2-9]{6}$/);
+    assert.equal((await service.resolveShareCode(published.shareCode)).id, published.id);
+    await assert.rejects(
+      () => service.updateDraft("julius", published.id, {
+        title: "Darf nicht autospeichern",
+        cards: published.cards,
+      }),
+      (error) => error.code === "SET_NOT_DRAFT" && error.status === 409,
+    );
+  });
+});
+
 test("legacy sets migrate once into Julius' private sets without changing learning paths", async () => {
   await withTempDirectory(async (directory) => {
     const service = new SetService({ dataDir: directory });

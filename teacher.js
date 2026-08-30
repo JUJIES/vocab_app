@@ -26,6 +26,11 @@ const state = {
   currentTeacher: null,
   importConfigured: false,
   editorSetId: "",
+  editorSetStatus: "draft",
+  editorDraftVersion: 0,
+  editorSavedDraftVersion: 0,
+  editorAutosaveTimerId: null,
+  editorAutosavePromise: null,
   editorView: "choice",
   editorImportMode: "replace",
   editorImportReturnView: "choice",
@@ -101,12 +106,12 @@ const elements = {
   setEditorOverlay: document.getElementById("set-editor-overlay"),
   setEditorPanel: document.getElementById("set-editor-panel"),
   setEditorTitle: document.getElementById("set-editor-title"),
+  setEditorStatus: document.getElementById("set-editor-status"),
   setEditorChoice: document.getElementById("set-editor-choice"),
   setEditorChooseManual: document.getElementById("set-editor-choose-manual"),
   setEditorChooseImport: document.getElementById("set-editor-choose-import"),
   setEditorClose: document.getElementById("set-editor-close"),
   setEditorCancel: document.getElementById("set-editor-cancel"),
-  closeSetEditorTriggers: document.querySelectorAll("[data-close-set-editor]"),
   setEditorForm: document.getElementById("set-editor-form"),
   setEditorFeedback: document.getElementById("set-editor-feedback"),
   saveSetButton: document.getElementById("save-set-button"),
@@ -149,13 +154,18 @@ function bindEvents() {
   elements.copyLinkButton.addEventListener("click", handleCopyLink);
   elements.shareCloseButton.addEventListener("click", closeShareOverlay);
   elements.createSetButton.addEventListener("click", openNewSetEditor);
-  elements.setEditorClose.addEventListener("click", closeSetEditor);
-  elements.setEditorCancel.addEventListener("click", closeSetEditor);
+  elements.setEditorClose.addEventListener("click", () => {
+    void closeSetEditor();
+  });
+  elements.setEditorCancel.addEventListener("click", () => {
+    void closeSetEditor();
+  });
   elements.setEditorChooseManual.addEventListener("click", openManualSetEditor);
   elements.setEditorChooseImport.addEventListener("click", openInitialSetImport);
   elements.setOpenImportButton.addEventListener("click", openAppendSetImport);
   elements.setImportBack.addEventListener("click", returnFromSetImport);
   elements.setEditorForm.addEventListener("submit", handleSaveSet);
+  elements.setEditorForm.addEventListener("input", scheduleEditorDraftSave);
   elements.addCardButton.addEventListener("click", () => addEditorCard());
   elements.setImportFiles.addEventListener("change", () => {
     setEditorFiles(Array.from(elements.setImportFiles.files || []));
@@ -182,10 +192,6 @@ function bindEvents() {
 
   for (const trigger of elements.closeShareTriggers) {
     trigger.addEventListener("click", closeShareOverlay);
-  }
-
-  for (const trigger of elements.closeSetEditorTriggers) {
-    trigger.addEventListener("click", closeSetEditor);
   }
 
   for (const trigger of elements.closePasswordTriggers) {
@@ -216,7 +222,7 @@ function bindEvents() {
       }
 
       if (!elements.setEditorOverlay.hidden) {
-        closeSetEditor();
+        void closeSetEditor();
         return;
       }
 
@@ -381,6 +387,7 @@ function normalizeSetEntry(entry) {
   const shareCode = typeof entry?.shareCode === "string" ? entry.shareCode.trim().toUpperCase() : "";
   const subject = typeof entry?.subject === "string" ? entry.subject.trim() : "";
   const category = typeof entry?.category === "string" ? entry.category.trim() : "";
+  const status = entry?.status === "draft" ? "draft" : "published";
   const tablets = Array.isArray(entry?.tablets)
     ? entry.tablets
         .map((tablet) => normalizeTabletEntry(tablet))
@@ -399,6 +406,7 @@ function normalizeSetEntry(entry) {
     shareCode,
     subject,
     category,
+    status,
     editable: Boolean(entry?.editable),
     cardCount: Number.isFinite(entry?.cardCount) ? Math.max(0, Math.trunc(entry.cardCount)) : 0,
     updatedAt: typeof entry?.updatedAt === "string" ? entry.updatedAt.trim() : "",
@@ -561,13 +569,30 @@ function createSetRow(setEntry) {
   title.className = "teacher-set-row__title";
   title.textContent = setEntry.title;
 
+  const titleLine = document.createElement("div");
+  titleLine.className = "teacher-set-row__title-line";
+  titleLine.append(title);
+  if (setEntry.status === "draft") {
+    const draftBadge = document.createElement("span");
+    draftBadge.className = "set-draft-badge";
+    draftBadge.textContent = "Entwurf";
+    titleLine.append(draftBadge);
+  }
+
   const meta = document.createElement("p");
   meta.className = "teacher-set-row__meta";
-  meta.textContent = [setEntry.subject, setEntry.cardCount ? `${setEntry.cardCount} Karten` : "", setEntry.description]
+  meta.textContent = [
+    setEntry.subject,
+    `${setEntry.cardCount} Karte${setEntry.cardCount === 1 ? "" : "n"}`,
+    setEntry.description,
+  ]
     .filter(Boolean)
     .join(" · ") || "Lernset";
 
-  copy.append(title, meta, createTabletUsageBlock(setEntry));
+  copy.append(titleLine, meta);
+  if (setEntry.status !== "draft") {
+    copy.append(createTabletUsageBlock(setEntry));
+  }
 
   const actions = document.createElement("div");
   actions.className = "teacher-set-row__actions";
@@ -585,18 +610,20 @@ function createSetRow(setEntry) {
     actions.append(editAction);
   }
 
-  const shareAction = document.createElement("button");
-  shareAction.className = "teacher-set-row__share";
-  shareAction.type = "button";
-  shareAction.setAttribute("aria-label", `Set ${setEntry.title} teilen`);
-  shareAction.title = "Teilen";
-  shareAction.append(
-    createButtonIcon(EXTERNAL_LINK_ICON_PATH),
-  );
-  shareAction.addEventListener("click", () => {
-    openShareOverlay(setEntry);
-  });
-  actions.append(shareAction);
+  if (setEntry.status !== "draft") {
+    const shareAction = document.createElement("button");
+    shareAction.className = "teacher-set-row__share";
+    shareAction.type = "button";
+    shareAction.setAttribute("aria-label", `Set ${setEntry.title} teilen`);
+    shareAction.title = "Teilen";
+    shareAction.append(
+      createButtonIcon(EXTERNAL_LINK_ICON_PATH),
+    );
+    shareAction.addEventListener("click", () => {
+      openShareOverlay(setEntry);
+    });
+    actions.append(shareAction);
+  }
 
   row.append(copy, actions);
   return row;
@@ -1463,10 +1490,12 @@ async function handleDecoupleTablet(tablet) {
 }
 
 function openNewSetEditor() {
+  resetEditorDraftState({ status: "draft" });
   state.editorSetId = "";
   state.editorCards = [];
   state.editorMetadata = { sourceLanguage: "de", targetLanguage: "en" };
   elements.setEditorTitle.textContent = "Neues Set";
+  updateEditorStatusUi();
   elements.setTitleInput.value = "";
   elements.setSubjectInput.value = "";
   elements.setDescriptionInput.value = "";
@@ -1489,6 +1518,7 @@ async function openEditSetEditor(setEntry) {
     }
 
     const editableSet = response.data?.set;
+    resetEditorDraftState({ status: editableSet.status });
     state.editorSetId = editableSet.id;
     state.editorCards = Array.isArray(editableSet.cards)
       ? editableSet.cards.map(normalizeEditorCard).filter(Boolean)
@@ -1497,7 +1527,8 @@ async function openEditSetEditor(setEntry) {
       sourceLanguage: editableSet.sourceLanguage || "de",
       targetLanguage: editableSet.targetLanguage || "en",
     };
-    elements.setEditorTitle.textContent = "Set bearbeiten";
+    elements.setEditorTitle.textContent = editableSet.status === "draft" ? "Entwurf bearbeiten" : "Set bearbeiten";
+    updateEditorStatusUi();
     elements.setTitleInput.value = editableSet.title || "";
     elements.setSubjectInput.value = editableSet.subject || "";
     elements.setDescriptionInput.value = editableSet.description || "";
@@ -1521,13 +1552,43 @@ async function openEditSetEditor(setEntry) {
   }
 }
 
-function closeSetEditor() {
+async function closeSetEditor({ skipDraftSave = false } = {}) {
+  if (!skipDraftSave && state.editorSetStatus === "draft") {
+    const saved = await persistEditorDraft({ immediate: true });
+    if (!saved) {
+      return;
+    }
+  }
   elements.setEditorOverlay.hidden = true;
   elements.setEditorFeedback.textContent = "";
   elements.setImportFeedback.textContent = "";
   if (elements.shareOverlay.hidden && elements.passwordOverlay.hidden) {
     document.body.classList.remove("has-modal-open");
   }
+  if (state.editorSetStatus === "draft" && state.editorSetId) {
+    try {
+      await reloadTeacherData();
+    } catch (error) {
+      console.error("Unable to refresh drafts:", error);
+    }
+  }
+}
+
+function resetEditorDraftState({ status = "draft" } = {}) {
+  if (state.editorAutosaveTimerId) {
+    window.clearTimeout(state.editorAutosaveTimerId);
+  }
+  state.editorSetStatus = status === "draft" ? "draft" : "published";
+  state.editorDraftVersion = 0;
+  state.editorSavedDraftVersion = 0;
+  state.editorAutosaveTimerId = null;
+  state.editorAutosavePromise = null;
+}
+
+function updateEditorStatusUi() {
+  const isDraft = state.editorSetStatus === "draft";
+  elements.setEditorStatus.hidden = !isDraft;
+  elements.saveSetButton.textContent = isDraft ? "Set veröffentlichen" : "Änderungen speichern";
 }
 
 function showSetEditorView(view) {
@@ -1660,6 +1721,7 @@ function renderEditorCards() {
         state.editorCards.push(createEmptyEditorCard());
       }
       renderEditorCards();
+      scheduleEditorDraftSave();
     });
 
     row.append(number, front, back, remove);
@@ -1779,6 +1841,7 @@ function applyImportDraft(draft) {
   }
 
   renderEditorCards();
+  scheduleEditorDraftSave();
   return importedCards.length;
 }
 
@@ -1820,6 +1883,147 @@ function inferImportFileType(file) {
   }[extension] || "application/octet-stream";
 }
 
+function scheduleEditorDraftSave() {
+  if (state.editorSetStatus !== "draft") {
+    return;
+  }
+  state.editorDraftVersion += 1;
+  if (state.editorAutosaveTimerId) {
+    window.clearTimeout(state.editorAutosaveTimerId);
+  }
+  state.editorAutosaveTimerId = window.setTimeout(() => {
+    state.editorAutosaveTimerId = null;
+    void persistEditorDraft();
+  }, 700);
+}
+
+function buildEditorDraftPayload() {
+  const cardRefs = [];
+  const cards = [];
+  for (const card of state.editorCards) {
+    const front = card.front.trim();
+    const back = card.back.trim();
+    if (!front && !back) {
+      continue;
+    }
+    cardRefs.push(card);
+    cards.push({
+      id: card.id,
+      front,
+      back,
+      acceptedAnswers: [
+        back,
+        ...card.acceptedAnswers.map((answer) => answer.trim()).filter(Boolean),
+      ].filter(Boolean),
+    });
+  }
+
+  return {
+    cardRefs,
+    payload: {
+      title: elements.setTitleInput.value,
+      subject: elements.setSubjectInput.value,
+      description: elements.setDescriptionInput.value,
+      sourceLabel: elements.setSourceLabelInput.value,
+      targetLabel: elements.setTargetLabelInput.value,
+      sourceLanguage: state.editorMetadata.sourceLanguage,
+      targetLanguage: state.editorMetadata.targetLanguage,
+      cards,
+    },
+  };
+}
+
+function hasMeaningfulEditorDraft(payload) {
+  return Boolean(
+    payload.title.trim()
+    || payload.subject.trim()
+    || payload.description.trim()
+    || payload.cards.length > 0
+  );
+}
+
+async function persistEditorDraft({ immediate = false } = {}) {
+  if (state.editorSetStatus !== "draft") {
+    return true;
+  }
+  if (state.editorAutosaveTimerId) {
+    window.clearTimeout(state.editorAutosaveTimerId);
+    state.editorAutosaveTimerId = null;
+  }
+  if (state.editorAutosavePromise) {
+    const previousSaveSucceeded = await state.editorAutosavePromise;
+    if (!previousSaveSucceeded && immediate) {
+      return false;
+    }
+  }
+  if (state.editorSavedDraftVersion >= state.editorDraftVersion) {
+    return true;
+  }
+
+  const { payload, cardRefs } = buildEditorDraftPayload();
+  if (!hasMeaningfulEditorDraft(payload)) {
+    return true;
+  }
+
+  const saveVersion = state.editorDraftVersion;
+  const path = state.editorSetId
+    ? `/api/teacher/set-drafts/${encodeURIComponent(state.editorSetId)}`
+    : "/api/teacher/set-drafts";
+  elements.setEditorFeedback.textContent = "Entwurf wird gespeichert …";
+
+  const saveOperation = (async () => {
+    try {
+      const response = await requestJson(path, {
+        method: state.editorSetId ? "PUT" : "POST",
+        auth: "teacher",
+        body: payload,
+      });
+      if (!response.ok) {
+        throw createTeacherRequestError(response, "Entwurf konnte nicht gespeichert werden.");
+      }
+
+      const savedSet = response.data?.set;
+      state.editorSetId = typeof savedSet?.id === "string" ? savedSet.id : state.editorSetId;
+      state.editorSetStatus = savedSet?.status === "draft" ? "draft" : state.editorSetStatus;
+      const savedCards = Array.isArray(savedSet?.cards) ? savedSet.cards : [];
+      cardRefs.forEach((card, index) => {
+        if (!card.id && typeof savedCards[index]?.id === "string") {
+          card.id = savedCards[index].id;
+        }
+      });
+      state.editorSavedDraftVersion = Math.max(state.editorSavedDraftVersion, saveVersion);
+      elements.setEditorTitle.textContent = "Entwurf bearbeiten";
+      updateEditorStatusUi();
+      elements.setEditorFeedback.textContent = "Entwurf gespeichert";
+      return true;
+    } catch (error) {
+      if (error?.requiresAuth) {
+        showTeacherAuth(error.message);
+        return false;
+      }
+      console.error("Unable to autosave set draft:", error);
+      elements.setEditorFeedback.textContent = error.message || "Entwurf konnte nicht gespeichert werden.";
+      return false;
+    }
+  })();
+
+  state.editorAutosavePromise = saveOperation;
+  const succeeded = await saveOperation;
+  if (state.editorAutosavePromise === saveOperation) {
+    state.editorAutosavePromise = null;
+  }
+  if (succeeded && state.editorDraftVersion > state.editorSavedDraftVersion && !immediate) {
+    state.editorAutosaveTimerId = window.setTimeout(() => {
+      state.editorAutosaveTimerId = null;
+      void persistEditorDraft();
+    }, 250);
+  }
+  if (immediate && succeeded && state.editorDraftVersion > state.editorSavedDraftVersion) {
+    return persistEditorDraft({ immediate: true });
+  }
+  return succeeded;
+}
+
 async function handleSaveSet(event) {
   event.preventDefault();
   const preparedCards = state.editorCards.map((card) => ({
@@ -1850,6 +2054,13 @@ async function handleSaveSet(event) {
     return;
   }
 
+  if (state.editorSetStatus === "draft") {
+    const draftSaved = await persistEditorDraft({ immediate: true });
+    if (!draftSaved) {
+      return;
+    }
+  }
+
   const payload = {
     title: elements.setTitleInput.value,
     subject: elements.setSubjectInput.value,
@@ -1875,9 +2086,13 @@ async function handleSaveSet(event) {
     if (!response.ok) {
       throw createTeacherRequestError(response, "Set konnte nicht gespeichert werden.");
     }
-    await reloadTeacherData();
-    closeSetEditor();
     const savedSet = normalizeSetEntry(response.data?.set);
+    state.editorSetId = savedSet?.id || state.editorSetId;
+    state.editorSetStatus = "published";
+    state.editorSavedDraftVersion = state.editorDraftVersion;
+    updateEditorStatusUi();
+    await reloadTeacherData();
+    await closeSetEditor({ skipDraftSave: true });
     if (savedSet) {
       await openShareOverlay(savedSet);
     }

@@ -544,6 +544,27 @@ body.has-modal-open {
   min-width: 0;
 }
 
+.teacher-set-row__title-line,
+.set-editor-panel__kicker-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.set-draft-badge {
+  padding: 0.18rem 0.48rem;
+  border: 1px solid rgba(158, 184, 224, 0.17);
+  border-radius: var(--radius-pill);
+  background: rgba(116, 145, 190, 0.1);
+  color: rgba(190, 208, 236, 0.86);
+  font-size: 0.67rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
 .teacher-set-row__title {
   margin: 0;
   color: var(--heading-text);

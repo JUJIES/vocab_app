@@ -11,6 +11,7 @@ Einsatzbereit sind:
 - sechs vorbereitete Lehrkraftkonten: Julius, Jessi S., Jessi B., Jörg, Aksana und Matti
 - direkt nutzbare Lehrkraftkonten mit einmaligem Startpasswort und eigenem Passwortwechsel im Zahnrad-Menü
 - ausschließlich private Sets pro Lehrkraft mit Erstellen, Bearbeiten und stabilem Set-Code; es gibt im MVP keine Vorlagen oder zwischen Lehrkräften geteilten Bibliotheken
+- automatisch gespeicherte Set-Entwürfe: unvollständige Arbeit bleibt erhalten, ist als Entwurf markiert und wird erst beim Veröffentlichen per Code oder QR für Tablets erreichbar
 - Schnellimport aus klaren Textlisten sowie KI-Entwürfe aus Freitext, TXT, MD, CSV, Bildern, PDF, DOCX und PPTX; beim automatischen Erstentwurf schlägt die KI auch Titel, Fach, Beschreibung, Sprachen und Seitenbezeichnungen vor, eine optionale Importnotiz grenzt Auswahl, Umfang und Abfragerichtung ein
 - Schülerübernahme per Code, QR oder Link; der Set-Inhalt wird nicht auf das Tablet kopiert
 - Modi `Sichten`, `Üben` und `Eingabe`; falsche Eingaben müssen im Korrekturmodus richtig wiederholt werden

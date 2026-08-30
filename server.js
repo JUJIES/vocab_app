@@ -262,6 +262,36 @@ app.post("/api/teacher/sets", async (request, response) => {
   }
 });
 
+app.post("/api/teacher/set-drafts", async (request, response) => {
+  const sessionResult = requireTeacherSession(request);
+  if (!sessionResult.ok) {
+    response.status(sessionResult.status).json({ error: sessionResult.error });
+    return;
+  }
+
+  try {
+    const setEntry = await setService.createDraft(sessionResult.teacherId, request.body);
+    response.status(201).json({ success: true, set: setEntry });
+  } catch (error) {
+    handleApiError(response, error, "Entwurf konnte nicht gespeichert werden.");
+  }
+});
+
+app.put("/api/teacher/set-drafts/:setId", async (request, response) => {
+  const sessionResult = requireTeacherSession(request);
+  if (!sessionResult.ok) {
+    response.status(sessionResult.status).json({ error: sessionResult.error });
+    return;
+  }
+
+  try {
+    const setEntry = await setService.updateDraft(sessionResult.teacherId, request.params.setId, request.body);
+    response.json({ success: true, set: setEntry });
+  } catch (error) {
+    handleApiError(response, error, "Entwurf konnte nicht gespeichert werden.");
+  }
+});
+
 app.put("/api/teacher/sets/:setId", async (request, response) => {
   const sessionResult = requireTeacherSession(request);
   if (!sessionResult.ok) {

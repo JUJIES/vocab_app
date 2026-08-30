@@ -58,6 +58,8 @@ test("teacher editor separates creation, manual editing and automatic additions"
   await expect(page.locator("#set-editor-choice")).toBeVisible();
   await expect(page.locator("#set-editor-form")).toBeHidden();
   await expect(page.locator("#set-import-section")).toBeHidden();
+  await page.locator("#set-editor-overlay > .share-overlay__backdrop").click({ position: { x: 8, y: 8 } });
+  await expect(page.locator("#set-editor-overlay")).toBeVisible();
 
   await page.getByRole("button", { name: /Aus Material erstellen/ }).click();
   await expect(page.locator("#set-import-section")).toBeVisible();
@@ -86,6 +88,15 @@ test("teacher editor separates creation, manual editing and automatic additions"
   await expect(page.locator("#set-import-section")).toBeHidden();
 
   await page.locator("#set-editor-close").click();
+  const preservedDraft = page.locator(".teacher-set-row").filter({ hasText: "Manueller Entwurf bleibt erhalten" });
+  await expect(preservedDraft).toBeVisible();
+  await expect(preservedDraft.getByText("Entwurf", { exact: true })).toBeVisible();
+  await expect(preservedDraft.getByRole("button", { name: /teilen/i })).toHaveCount(0);
+  await preservedDraft.getByRole("button", { name: /bearbeiten/i }).click();
+  await expect(page.locator("#set-title-input")).toHaveValue("Manueller Entwurf bleibt erhalten");
+  await expect(page.locator(".set-card-editor-row")).toHaveCount(3);
+  await page.locator("#set-editor-close").click();
+
   await page.getByRole("button", { name: "Neues Set" }).click();
   await page.getByRole("button", { name: /Aus Material erstellen/ }).click();
   await expect(page.locator("#set-import-section")).toBeVisible();
@@ -98,8 +109,13 @@ test("teacher editor separates creation, manual editing and automatic additions"
   await expect(page.locator("#set-target-label-input")).toHaveValue("Englisch");
   await expect(page.locator("#set-import-section")).toBeHidden();
 
-  await page.locator("#set-editor-close").click();
-  await page.getByRole("button", { name: /bearbeiten$/i }).first().click();
+  await page.getByRole("button", { name: "Set veröffentlichen" }).click();
+  await expect(page.locator("#share-overlay")).toBeVisible();
+  await page.locator("#share-close-button").click();
+  const publishedSet = page.locator(".teacher-set-row").filter({ hasText: "Tiere auf Englisch" });
+  await expect(publishedSet.getByText("Entwurf", { exact: true })).toHaveCount(0);
+  await expect(publishedSet.getByRole("button", { name: /teilen/i })).toBeVisible();
+  await publishedSet.getByRole("button", { name: /bearbeiten/i }).click();
   await expect(page.locator("#set-editor-form")).toBeVisible();
   await expect(page.locator("#set-editor-choice")).toBeHidden();
   await expect(page.locator("#set-import-section")).toBeHidden();

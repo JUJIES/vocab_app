@@ -266,7 +266,7 @@
     </div>
 
     <div id="set-editor-overlay" class="share-overlay" hidden>
-      <div class="share-overlay__backdrop" data-close-set-editor></div>
+      <div class="share-overlay__backdrop"></div>
       <section
         id="set-editor-panel"
         class="set-editor-panel"
@@ -276,7 +276,10 @@
       >
         <header class="set-editor-panel__header">
           <div>
-            <p class="share-panel__kicker">Lernset</p>
+            <div class="set-editor-panel__kicker-row">
+              <p class="share-panel__kicker">Lernset</p>
+              <span id="set-editor-status" class="set-draft-badge" hidden>Entwurf</span>
+            </div>
             <h2 id="set-editor-title" class="share-panel__title">Neues Set</h2>
           </div>
           <button id="set-editor-close" class="share-panel__close" type="button" aria-label="Schließen">
@@ -373,8 +376,8 @@
 
           <p id="set-editor-feedback" class="teacher-auth__feedback" aria-live="polite"></p>
           <div class="set-editor-actions">
-            <button id="set-editor-cancel" class="teacher-button teacher-button--secondary" type="button">Abbrechen</button>
-            <button id="save-set-button" class="teacher-button" type="submit">Set speichern</button>
+            <button id="set-editor-cancel" class="teacher-button teacher-button--secondary" type="button">Schließen</button>
+            <button id="save-set-button" class="teacher-button" type="submit">Set veröffentlichen</button>
           </div>
         </form>
       </section>
