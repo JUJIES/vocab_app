@@ -1429,6 +1429,11 @@ body.has-modal-open {
   font-weight: 750;
 }
 
+.set-card-editor-columns > span:nth-child(2),
+.set-card-editor-columns > span:nth-child(3) {
+  text-align: center;
+}
+
 .set-card-editor-row {
   align-items: center;
   padding: 0.6rem 0.75rem;

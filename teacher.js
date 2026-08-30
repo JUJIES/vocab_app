@@ -170,6 +170,8 @@ function bindEvents() {
   elements.setImportBack.addEventListener("click", returnFromSetImport);
   elements.setEditorForm.addEventListener("submit", handleSaveSet);
   elements.setEditorForm.addEventListener("input", scheduleEditorDraftSave);
+  elements.setSourceLabelInput.addEventListener("input", updateEditorCardSideLabels);
+  elements.setTargetLabelInput.addEventListener("input", updateEditorCardSideLabels);
   elements.addCardButton.addEventListener("click", () => addEditorCard());
   elements.setImportFilePicker.addEventListener("click", () => elements.setImportFiles.click());
   elements.setImportFiles.addEventListener("change", () => {
@@ -1705,13 +1707,17 @@ function addEditorCard(card = createEmptyEditorCard()) {
 function renderEditorCards() {
   elements.setCardList.replaceChildren();
   elements.setCardCount.textContent = `${state.editorCards.length} Karte${state.editorCards.length === 1 ? "" : "n"}`;
+  const sideLabels = getEditorCardSideLabels();
 
   const columns = document.createElement("div");
   columns.className = "set-card-editor-columns";
   columns.setAttribute("aria-hidden", "true");
-  for (const labelText of ["", "Vorderseite", "Rückseite", ""]) {
+  for (const [side, labelText] of [["", ""], ["front", sideLabels.front], ["back", sideLabels.back], ["", ""]]) {
     const label = document.createElement("span");
     label.textContent = labelText;
+    if (side) {
+      label.dataset.cardSideLabel = side;
+    }
     columns.append(label);
   }
   elements.setCardList.append(columns);
@@ -1724,12 +1730,12 @@ function renderEditorCards() {
     number.className = "set-card-editor-row__number";
     number.textContent = String(index + 1);
 
-    const front = createEditorInput("Vorderseite", card.front, (value) => {
+    const front = createEditorInput(sideLabels.front, card.front, (value) => {
       card.front = value;
-    }, { compact: true });
-    const back = createEditorInput("Rückseite", card.back, (value) => {
+    }, { compact: true, side: "front" });
+    const back = createEditorInput(sideLabels.back, card.back, (value) => {
       card.back = value;
-    }, { compact: true });
+    }, { compact: true, side: "back" });
 
     const remove = document.createElement("button");
     remove.className = "set-card-editor-row__remove";
@@ -1751,11 +1757,30 @@ function renderEditorCards() {
   });
 }
 
-function createEditorInput(labelText, value, onInput, { compact = false } = {}) {
+function getEditorCardSideLabels() {
+  return {
+    front: elements.setSourceLabelInput.value.trim() || "Vorderseite",
+    back: elements.setTargetLabelInput.value.trim() || "Rückseite",
+  };
+}
+
+function updateEditorCardSideLabels() {
+  const sideLabels = getEditorCardSideLabels();
+  for (const side of ["front", "back"]) {
+    for (const label of elements.setCardList.querySelectorAll(`[data-card-side-label="${side}"]`)) {
+      label.textContent = sideLabels[side];
+    }
+  }
+}
+
+function createEditorInput(labelText, value, onInput, { compact = false, side = "" } = {}) {
   const label = document.createElement("label");
   label.className = compact ? "set-editor-field set-editor-field--card" : "set-editor-field";
   const labelCopy = document.createElement("span");
   labelCopy.textContent = labelText;
+  if (side) {
+    labelCopy.dataset.cardSideLabel = side;
+  }
   const input = document.createElement("input");
   input.type = "text";
   input.value = value;

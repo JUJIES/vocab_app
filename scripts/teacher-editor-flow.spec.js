@@ -137,6 +137,13 @@ test("teacher editor separates creation, manual editing and automatic additions"
   await expect(page.locator("#set-description-input")).toHaveValue("Grundwortschatz zu Tieren");
   await expect(page.locator("#set-source-label-input")).toHaveValue("Deutsch");
   await expect(page.locator("#set-target-label-input")).toHaveValue("Englisch");
+  const cardColumns = page.locator(".set-card-editor-columns > span");
+  await expect(cardColumns.nth(1)).toHaveText("Deutsch");
+  await expect(cardColumns.nth(2)).toHaveText("Englisch");
+  await page.locator("#set-source-label-input").fill("");
+  await expect(cardColumns.nth(1)).toHaveText("Vorderseite");
+  await page.locator("#set-source-label-input").fill("Deutsch");
+  await expect(cardColumns.nth(1)).toHaveText("Deutsch");
   await expect(page.locator("#set-import-section")).toBeHidden();
 
   await page.reload({ waitUntil: "networkidle" });
