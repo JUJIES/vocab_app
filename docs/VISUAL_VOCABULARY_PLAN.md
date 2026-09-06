@@ -27,7 +27,7 @@ Vor jedem Bildaufruf erzeugt ein Textmodell einen strukturierten Visual-Brief. E
 
 Die fachliche Planung nutzt `OPENAI_VISUAL_PLANNER_MODEL`, ersatzweise das bereits konfigurierte `OPENAI_IMPORT_MODEL` beziehungsweise `gpt-5.6-terra`, mit mittlerem Reasoning und strengem JSON-Schema. Die App verwendet danach die OpenAI Images API mit `gpt-image-2` (konfigurierbar über `OPENAI_IMAGE_MODEL`). Ein Sheet enthält sechs Motive in einem festen Raster:
 
-- Ausgabe: `1536 × 1024`, `quality: low`, WebP
+- Ausgabe: `1536 × 1024`, `quality: medium`, WebP; `medium` ist der Produktionsstandard für Sheet- und Einzelbilder, weil die zusätzliche Bildtreue bei Lernmotiven den moderaten Mehrpreis gegenüber `low` rechtfertigt
 - Raster: `3 × 2`
 - nominelle Kachel: `512 × 512`; davon werden rundherum 8 Pixel Sicherheitszone entfernt und die verbleibenden `496 × 496` einmalig auf `512 × 512` skaliert
 - Reihenfolge: links nach rechts, danach die zweite Zeile

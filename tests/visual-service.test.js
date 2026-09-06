@@ -281,6 +281,7 @@ test("sheet jobs persist reusable assets, attach them, regenerate one and retain
   const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), "lerndeck-visual-test-"));
   const setService = new SetService({ dataDir });
   const generatedSizes = [];
+  const generatedQualities = [];
   const generatedPrompts = [];
   const planningPrompts = [];
   const client = {
@@ -303,8 +304,9 @@ test("sheet jobs persist reusable assets, attach them, regenerate one and retain
       },
     },
     images: {
-      generate: async ({ size, prompt }) => {
+      generate: async ({ size, quality, prompt }) => {
         generatedSizes.push(size);
+        generatedQualities.push(quality);
         generatedPrompts.push(prompt);
         const [width, height] = size.split("x").map(Number);
         const image = await sharp({
@@ -335,6 +337,7 @@ test("sheet jobs persist reusable assets, attach them, regenerate one and retain
   const visualizedSet = await setService.getOwnedSet("julius", createdSet.id);
   assert.equal(visualizedSet.cards.filter((card) => card.visual?.url).length, 7);
   assert.deepEqual(generatedSizes, ["1536x1024", "1536x1024"]);
+  assert.deepEqual(generatedQualities, ["medium", "medium"]);
   assert.equal((await visualService.listAssets("julius", createdSet.id)).length, 7);
   const firstSheetAsset = (await visualService.listAssets("julius", createdSet.id))
     .find((asset) => asset.cardId === visualizedSet.cards[0].id);
@@ -370,6 +373,7 @@ test("sheet jobs persist reusable assets, attach them, regenerate one and retain
   assert.equal(history[0].visualBrief.intendedMeaning, "Exact meaning of term 1");
   assert.match(generatedPrompts.at(-1), /gelben Ball/);
   assert.deepEqual(generatedSizes, ["1536x1024", "1536x1024", "1536x1024", "1536x1024", "1024x1024"]);
+  assert.deepEqual(generatedQualities, ["medium", "medium", "medium", "medium", "medium"]);
   assert.equal(planningPrompts.length, 5);
 
   await visualService.selectAsset("julius", createdSet.id, card.id, originalAssetId);

@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- Neue Lernbilder werden für Sheets und Einzelvarianten nun in `medium` statt `low` erzeugt. Die höhere Produktionsqualität reduziert Detail-, Text- und Logikartefakte, während Visual-Planung und der deterministische Kachelbeschnitt unverändert bleiben.
 - Im Tafelraum-Einbettungsmodus rendert die Übungskarte Aufdecken und Wischen jetzt auf einer einzigen 2D-Compositor-Ebene. Dadurch bleibt ihr Inhalt auch beim Verschieben der skalierten Lerndeck-App stabil; das Set-Menü sowie Eingabe und Test bleiben unverändert, die normale Lerndeck-Ansicht behält ihre 3D-Kartenanimation.
 - Die Vorderseite der Übungskarte nutzt auf Desktop und Tablet den vorhandenen Raum harmonischer: Der Begriff rückt auf eine ruhige Achse nahe der Kartenmitte, die Tipp-Aktion sitzt höher in einer klaren unteren Zone und ein sichtbarer Hinweis verschiebt den Inhalt nur moderat. Kartenformat, Rückseite und schmale Mobilansicht bleiben stabil.
 - Die Richtungswahl fragt jetzt eindeutig `Wie möchtest du abgefragt werden?` und zeigt beide Sprachen kompakt als `Flagge → Flagge`. Links steht die sichtbare Frage, rechts die einzugebende Antwort; missverständliche einzelne Sprachnamen entfallen, während Screenreader die vollständige Aktion vorlesen.
