@@ -8182,17 +8182,15 @@ function buildCardData(card) {
         .map((answer) => answer.trim())
         .filter(Boolean)
     : [];
-  const targetDisplayAnswers = buildAcceptedAnswerList(rawTargetText);
   const answers = buildAcceptedAnswerList(rawTargetText, acceptedAnswers);
   const sourceAnswers = buildAcceptedAnswerList(rawSourceText);
   const sourceText = sourceAnswers[0] || rawSourceText;
   const sourceAlternatives = sourceAnswers.slice(1);
-  const targetText = targetDisplayAnswers[0] || rawTargetText;
-  const targetAlternatives = targetDisplayAnswers.slice(1);
-  const targetAcceptedAlternatives = answers.slice(1);
+  const targetText = answers[0] || rawTargetText;
+  const targetAlternatives = buildVisibleAnswerAlternatives(targetText, answers.slice(1));
   const irregularVerbAnswerGroups = window.LerndeckIrregularVerbs.buildAnswerGroups(
     targetText,
-    targetAcceptedAlternatives,
+    answers.slice(1),
   );
   const sourceIrregularVerbAnswerGroups = window.LerndeckIrregularVerbs.buildAnswerGroups(
     sourceText,
@@ -8238,20 +8236,20 @@ function buildCardData(card) {
       : buildBackContextData({
           exampleText,
           targetText,
-          acceptedAnswers: targetAcceptedAlternatives,
+          acceptedAnswers: answers.slice(1),
         }),
     hints: [
       buildHintData({
         exampleText: hintExampleText,
         targetText,
-        acceptedAnswers: targetAcceptedAlternatives,
+        acceptedAnswers: answers.slice(1),
         replacement: maskedWord,
         preferAcceptedAnswers: false,
       }),
       buildHintData({
         exampleText: hintExampleText,
         targetText,
-        acceptedAnswers: targetAcceptedAlternatives,
+        acceptedAnswers: answers.slice(1),
         replacement: firstLetterHint,
         preferAcceptedAnswers: true,
       }),
@@ -8297,6 +8295,28 @@ function buildAcceptedAnswerList(targetText, acceptedAnswers = []) {
   }
 
   return answers;
+}
+
+function buildVisibleAnswerAlternatives(primaryAnswer, acceptedAnswers = []) {
+  const seen = new Set([normalizeVisibleAnswerValue(primaryAnswer)]);
+  const alternatives = [];
+
+  for (const answer of acceptedAnswers) {
+    const normalizedAnswer = normalizeVisibleAnswerValue(answer);
+    if (!normalizedAnswer || seen.has(normalizedAnswer)) {
+      continue;
+    }
+    seen.add(normalizedAnswer);
+    alternatives.push(answer);
+  }
+
+  return alternatives;
+}
+
+function normalizeVisibleAnswerValue(value) {
+  return normalizeInputAnswerValue(value)
+    .replace(/\s*(?:\.{3}|…)\s*$/u, "")
+    .trim();
 }
 
 function splitAnswerVariants(value) {

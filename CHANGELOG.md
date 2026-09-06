@@ -1,6 +1,6 @@
 # Changelog
 
-- Akzeptierte Schreib- und Zeichensetzungsvarianten werden beim Üben nicht mehr als vermeintliche Synonyme unter dem Hauptbegriff wiederholt. Die Zusatzzeile zeigt nur noch bewusst per Semikolon gepflegte Alternativen; für die Eingabe bleiben alle hinterlegten Varianten gültig.
+- Akzeptierte Varianten, die sich nur durch ein abschließendes Auslassungszeichen unterscheiden, werden beim Üben nicht mehr als vermeintliche Synonyme unter dem Hauptbegriff wiederholt. Tatsächlich abweichende Alternativen bleiben in der ruhigen Zusatzzeile sichtbar, und für die Eingabe gelten weiterhin alle hinterlegten Varianten.
 
 ## Unreleased
 

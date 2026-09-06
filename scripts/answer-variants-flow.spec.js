@@ -42,12 +42,12 @@ function buildVariantSet() {
   };
 }
 
-async function prepareStudentHome(page) {
+async function prepareStudentHome(page, setData = buildVariantSet()) {
   await page.route("**/sets/*.json", async (route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify(buildVariantSet()),
+      body: JSON.stringify(setData),
     });
   });
 
@@ -125,6 +125,44 @@ test("answer side shows one primary term and calm alternatives without duplicate
 
   expect(layout.alternativesBelowWord).toBeTruthy();
   expect(layout.alternativesInsideCard).toBeTruthy();
+});
+
+test("accepted punctuation variants stay valid without repeating the primary answer", async ({ page }) => {
+  const setData = buildVariantSet();
+  setData.cards = [{
+    id: "depends-on",
+    source: { text: "Es hängt davon ab." },
+    target: { text: "It depends on" },
+    examples: [{
+      id: "answer",
+      source: "Es hängt davon ab.",
+      target: "It depends on",
+    }],
+    hintData: {
+      flashcard: {
+        exampleId: "answer",
+        maskedWord: "__ _______ __",
+        firstLetterHint: "I_ _______ __",
+      },
+    },
+    acceptedAnswers: ["It depends on", "It depends on ...", "It depends on …", "That depends on"],
+  }];
+
+  await prepareStudentHome(page, setData);
+  await openMode(page, "practice");
+  await page.locator("#flashcard").click();
+  await expect(page.locator("#back-word")).toHaveText("It depends on");
+  await expect(page.locator("#back-alternatives")).toHaveText("(That depends on)");
+  await expect(page.locator("#flashcard")).toHaveAttribute(
+    "aria-label",
+    /Weitere gültige Antworten: That depends on/,
+  );
+
+  await prepareStudentHome(page, setData);
+  await openMode(page, "write");
+  await page.locator("#input-answer-field").fill("It depends on ...");
+  await page.locator("#input-answer-form").press("Enter");
+  await expect(page.locator("#input-check-button")).toHaveText("Richtig");
 });
 
 test("every semicolon-delimited variant is a complete valid input answer", async ({ page }) => {
