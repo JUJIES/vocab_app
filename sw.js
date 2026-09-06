@@ -1,12 +1,12 @@
-const CACHE_NAME = "lerndeck-shell-v111";
+const CACHE_NAME = "lerndeck-shell-v114";
 const APP_SHELL_URLS = [
   "/",
   "/index.html",
   "/teacher",
   "/teacher.html",
   "/pwa-splash.css?v=2026-08-30-pwa-splash-v1",
-  "/styles.css?v=2026-09-06-learning-images-v1",
-  "/app.js?v=2026-09-06-learning-images-v1",
+  "/styles.css?v=2026-09-06-student-share-v1",
+  "/app.js?v=2026-09-06-student-share-v1",
   "/teacher.css?v=2026-09-06-semantic-visuals-v1",
   "/teacher.js?v=2026-09-06-semantic-visuals-v1",
   "/ui-motion.css?v=2026-08-30-ui-motion-v1",

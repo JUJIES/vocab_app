@@ -64,8 +64,9 @@ async function prepareInputMode(page) {
   ));
 
   await page.locator("#launch-mode-start").click();
-  await expect(page.locator("#launch-direction-modal")).toBeVisible();
+  await expect(page.locator("#launch-settings-modal")).toBeVisible();
   await page.locator('[data-learning-direction-group="launch"] [data-learning-direction="source-target"]').click();
+  await page.locator("#launch-settings-start").click();
   const setResponse = await setResponsePromise;
   const setData = await setResponse.json();
 

@@ -2067,39 +2067,6 @@ button.student-screen__device-card {
   border-bottom: 1px solid rgba(214, 224, 246, 0.1);
 }
 
-.student-screen__library-stat-band[aria-label="Lernstatus"] {
-  grid-template-columns: minmax(0, 1fr);
-  justify-items: center;
-  align-content: center;
-  gap: 0.22rem;
-  min-height: 4.05rem;
-  padding-inline: 0.45rem;
-  text-align: center;
-}
-
-.student-screen__library-stat-value {
-  color: rgba(244, 248, 255, 0.96);
-  font-size: 1.2rem;
-  line-height: 1.08;
-  font-weight: 780;
-  letter-spacing: -0.03em;
-}
-
-.student-screen__library-stat-value--ready {
-  color: rgba(214, 224, 246, 0.76);
-  font-size: 1.02rem;
-  font-weight: 680;
-  letter-spacing: -0.015em;
-  text-shadow: 0 0 10px rgba(214, 224, 246, 0.08);
-}
-
-.student-screen__library-stat-detail {
-  color: rgba(199, 211, 232, 0.64);
-  font-size: 0.78rem;
-  line-height: 1.22;
-  font-weight: 600;
-}
-
 .student-screen__library-stat-band-button {
   width: 3rem;
   min-width: 3rem;
@@ -3295,14 +3262,6 @@ button.student-screen__device-card {
   font-size: calc(0.76rem * var(--student-share-access-scale));
 }
 
-.student-set-modal .student-share__description-emphasis {
-  font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono",
-    "Courier New", monospace;
-  font-weight: 800;
-  color: rgba(242, 246, 255, 0.96);
-  letter-spacing: 0.01em;
-}
-
 .student-set-modal .student-share__qr-label {
   width: 100%;
   max-width: calc(11rem * var(--student-share-access-scale));
@@ -3317,6 +3276,38 @@ button.student-screen__device-card {
   line-height: 1.2;
   text-align: center;
   text-wrap: balance;
+}
+
+.student-share__set-code {
+  margin: 0;
+  padding: calc(0.38rem * var(--student-share-access-scale)) calc(0.65rem * var(--student-share-access-scale));
+  display: inline-flex;
+  align-items: center;
+  gap: calc(0.52rem * var(--student-share-access-scale));
+  border: 1px solid rgba(214, 224, 246, 0.1);
+  border-radius: 999px;
+  background: rgba(214, 224, 246, 0.06);
+}
+
+.student-share__set-code[hidden] {
+  display: none;
+}
+
+.student-share__set-code-label {
+  color: rgba(174, 188, 211, 0.72);
+  font-size: calc(0.58rem * var(--student-share-access-scale));
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.student-share__set-code-value {
+  color: rgba(244, 247, 255, 0.96);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+  font-size: calc(0.83rem * var(--student-share-access-scale));
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  line-height: 1;
 }
 
 .app-shell[data-app-mode="access"] .student-share__qr-shell,
@@ -5377,8 +5368,10 @@ button.student-screen__device-card {
   margin: 0 auto;
 }
 
-.launch-direction-modal__panel {
+.launch-settings-modal__panel {
   width: min(100%, 34rem);
+  max-height: min(90dvh, 46rem);
+  overflow-y: auto;
   display: grid;
   gap: 1.35rem;
   position: relative;
@@ -5393,11 +5386,11 @@ button.student-screen__device-card {
     0 28px 60px rgba(0, 0, 0, 0.34);
 }
 
-.launch-direction-modal__panel:focus {
+.launch-settings-modal__panel:focus {
   outline: none;
 }
 
-.launch-direction-modal__header {
+.launch-settings-modal__header {
   display: grid;
   justify-items: center;
   gap: 0.38rem;
@@ -5405,7 +5398,14 @@ button.student-screen__device-card {
   text-align: center;
 }
 
-.launch-direction-modal__title {
+.launch-settings-modal__title,
+.launch-settings-modal__description,
+.launch-settings-modal__group-title,
+.launch-settings-modal__group-description {
+  margin: 0;
+}
+
+.launch-settings-modal__title {
   margin: 0;
   color: var(--heading-text);
   font-size: clamp(1.75rem, 4vw, 2.3rem);
@@ -5414,7 +5414,13 @@ button.student-screen__device-card {
   letter-spacing: -0.04em;
 }
 
-.launch-direction-modal__back {
+.launch-settings-modal__description {
+  color: rgba(206, 217, 238, 0.7);
+  font-size: 0.96rem;
+  line-height: 1.4;
+}
+
+.launch-settings-modal__back {
   position: absolute;
   top: 1.25rem;
   left: 1.25rem;
@@ -5430,30 +5436,70 @@ button.student-screen__device-card {
   transition: color 180ms ease, transform 180ms ease;
 }
 
-.launch-direction-modal__back:hover,
-.launch-direction-modal__back:focus-visible {
+.launch-settings-modal__back:hover,
+.launch-settings-modal__back:focus-visible {
   color: rgba(244, 247, 255, 0.96);
   transform: translateX(-1px);
 }
 
-.launch-direction-modal__back:focus-visible {
+.launch-settings-modal__back:focus-visible {
   outline: 2px solid rgba(214, 224, 246, 0.2);
   outline-offset: 2px;
 }
 
-.launch-direction-modal__choices .learning-direction-control__choices {
+.launch-settings-modal__groups,
+.launch-settings-modal__additional {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.launch-settings-modal__additional[hidden] {
+  display: none;
+}
+
+.launch-settings-modal__group {
+  display: grid;
+  gap: 0.8rem;
+  padding: 1rem;
+  border: 1px solid rgba(214, 224, 246, 0.08);
+  border-radius: 1.15rem;
+  background: rgba(214, 224, 246, 0.025);
+}
+
+.launch-settings-modal__group-heading {
+  display: grid;
+  gap: 0.16rem;
+}
+
+.launch-settings-modal__group-title {
+  color: rgba(240, 245, 255, 0.94);
+  font-size: 0.94rem;
+  font-weight: 800;
+}
+
+.launch-settings-modal__group-description {
+  color: rgba(199, 212, 232, 0.62);
+  font-size: 0.8rem;
+}
+
+.launch-settings-modal__group .learning-direction-control__choices {
   gap: 0.75rem;
 }
 
-.launch-direction-modal__choices .learning-direction-control__choice {
+.launch-settings-modal__group .learning-direction-control__choice {
   min-height: 4.5rem;
   padding: 0.9rem 1rem;
   border-radius: 1.1rem;
   font-size: 1rem;
 }
 
+.launch-settings-modal__start {
+  flex: 0 0 auto;
+}
+
 .launch-mode-modal__mode-card {
   width: 100%;
+  min-width: 0;
   min-height: 7.4rem;
   display: grid;
   align-content: center;
@@ -5522,10 +5568,10 @@ button.student-screen__device-card {
 }
 
 .launch-mode-modal__mode-main {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.95rem;
+  min-width: 0;
+  display: grid;
+  justify-items: start;
+  gap: 0.7rem;
 }
 
 .launch-mode-modal__mode-leading {
@@ -5611,10 +5657,6 @@ button.student-screen__device-card {
 }
 
 .launch-mode-modal__mode-summary {
-  gap: 0.16rem;
-  flex: 0 0 auto;
-  padding-left: 0.56rem;
-  border-left: 1px solid rgba(214, 224, 246, 0.12);
   color: rgba(206, 217, 238, 0.74);
   font-size: 0.8rem;
   font-weight: 700;
@@ -5622,16 +5664,14 @@ button.student-screen__device-card {
 }
 
 .launch-mode-modal__summary-line {
-  grid-template-columns: 2.2ch auto;
+  grid-template-columns: max-content auto;
   align-items: baseline;
   gap: 0.28rem;
-  line-height: 1.05;
-  white-space: nowrap;
+  line-height: 1.35;
   text-align: left;
 }
 
 .launch-mode-modal__summary-value {
-  width: 2.2ch;
   color: rgba(240, 245, 255, 0.96);
   font-size: 1.02em;
   font-weight: 800;
@@ -5787,10 +5827,9 @@ button.student-screen__device-card {
 }
 
 .launch-mode-modal__test-count {
-  width: min(100%, 28rem);
+  width: 100%;
   display: grid;
   gap: 0.42rem;
-  margin-top: 0.18rem;
 }
 
 .launch-mode-modal__test-count-heading {
@@ -5800,15 +5839,16 @@ button.student-screen__device-card {
   gap: 0.8rem;
 }
 
-.launch-mode-modal__test-count-label,
-.launch-mode-modal__test-count-value {
-  color: rgba(218, 226, 240, 0.82);
-  font-size: 0.82rem;
-  font-weight: 760;
+.launch-mode-modal__test-count-label {
+  color: rgba(240, 245, 255, 0.94);
+  font-size: 0.94rem;
+  font-weight: 800;
 }
 
 .launch-mode-modal__test-count-value {
   color: rgba(210, 169, 108, 0.94);
+  font-size: 0.82rem;
+  font-weight: 760;
   font-variant-numeric: tabular-nums;
 }
 
@@ -6188,34 +6228,25 @@ button.student-screen__device-card {
     width: 100%;
   }
 
-  .launch-direction-modal__panel {
+  .launch-settings-modal__panel {
     width: min(100%, 34rem);
+    max-height: none;
     margin: 0 auto;
     padding: 1.35rem;
     border-radius: 1.55rem;
   }
 
-  .launch-direction-modal__header {
+  .launch-settings-modal__header {
     padding-top: 0.45rem;
   }
 
-  .launch-direction-modal__back {
+  .launch-settings-modal__back {
     top: 0.9rem;
     left: 0.9rem;
   }
 
-  .launch-direction-modal__choices .learning-direction-control__choice {
+  .launch-settings-modal__group .learning-direction-control__choice {
     min-height: 4rem;
-  }
-
-  .launch-mode-modal__mode-main {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .launch-mode-modal__mode-summary {
-    padding-left: 0;
-    border-left: 0;
   }
 
   .launch-mode-modal__detail {

@@ -314,6 +314,7 @@ async function openFirstSet(page) {
   await startButton.click();
   await page.locator("#launch-mode-start").click();
   await page.locator('[data-learning-direction-group="launch"] [data-learning-direction="source-target"]').click();
+  await page.locator("#launch-settings-start").click();
 }
 
 async function selectTabletOption(page, tabletId) {

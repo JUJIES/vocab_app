@@ -98,6 +98,7 @@ const state = {
   studentSetModalMode: "",
   activeStudentSetPath: "",
   activeStudentSetTitle: "",
+  activeStudentSetShareCode: "",
   activeStudentSetShareUrl: "",
   publicOrigin: "",
   activeTabletPairingId: "",
@@ -355,10 +356,15 @@ const elements = {
   launchModeStart: document.getElementById("launch-mode-start"),
   launchModeStartStage: document.getElementById("launch-mode-start-stage"),
   launchModeClose: document.getElementById("launch-mode-close"),
-  launchDirectionModal: document.getElementById("launch-direction-modal"),
-  launchDirectionPanel: document.getElementById("launch-direction-panel"),
-  launchDirectionBack: document.getElementById("launch-direction-back"),
-  launchDirectionClose: document.getElementById("launch-direction-close"),
+  launchSettingsModal: document.getElementById("launch-settings-modal"),
+  launchSettingsPanel: document.getElementById("launch-settings-panel"),
+  launchSettingsTitle: document.getElementById("launch-settings-title"),
+  launchSettingsDescription: document.getElementById("launch-settings-description"),
+  launchSettingsAdditional: document.getElementById("launch-settings-additional"),
+  launchSettingsStart: document.getElementById("launch-settings-start"),
+  launchSettingsStartLabel: document.getElementById("launch-settings-start-label"),
+  launchSettingsBack: document.getElementById("launch-settings-back"),
+  launchSettingsClose: document.getElementById("launch-settings-close"),
   addSetModal: document.getElementById("add-set-modal"),
   addSetClose: document.getElementById("add-set-close"),
   addSetBody: document.getElementById("add-set-body"),
@@ -507,9 +513,10 @@ function bindEvents() {
   elements.launchModeStart.addEventListener("click", handleLaunchModeStart);
   elements.launchModeClose.addEventListener("click", closeLaunchModeModal);
   elements.launchModeModal.addEventListener("click", handleLaunchModeOverlayClick);
-  elements.launchDirectionBack.addEventListener("click", returnToLaunchModeModal);
-  elements.launchDirectionClose.addEventListener("click", closeLaunchModeModal);
-  elements.launchDirectionModal.addEventListener("click", handleLaunchDirectionOverlayClick);
+  elements.launchSettingsBack.addEventListener("click", returnToLaunchModeModal);
+  elements.launchSettingsClose.addEventListener("click", closeLaunchModeModal);
+  elements.launchSettingsStart.addEventListener("click", startPendingLaunchMode);
+  elements.launchSettingsModal.addEventListener("click", handleLaunchSettingsOverlayClick);
   elements.inputAnswerForm.addEventListener("submit", handleInputAnswerSubmit);
   elements.testForm.addEventListener("submit", handleTestSubmit);
   elements.inputRevealAnswer.addEventListener("click", handleInputRevealAnswer);
@@ -3712,6 +3719,7 @@ function openStudentSetShareModal(subscription) {
   state.activeStudentSetTitle = subscription.title === subscription.setPath
     ? (subscription.id || "Deck")
     : subscription.title;
+  state.activeStudentSetShareCode = normalizeSetShareCode(subscription.shareCode);
   state.activeStudentSetShareUrl = buildStudentShareUrlForSetPath(subscription.setPath);
   renderStudentSetModalBody();
   elements.studentSetModal.dataset.mode = state.studentSetModalMode;
@@ -3724,6 +3732,7 @@ function openStudentSetConfirmModal(subscription) {
   state.activeStudentSetTitle = subscription.title === subscription.setPath
     ? (subscription.id || "Deck")
     : subscription.title;
+  state.activeStudentSetShareCode = "";
   state.activeStudentSetShareUrl = "";
   renderStudentSetModalBody();
   elements.studentSetModal.dataset.mode = state.studentSetModalMode;
@@ -3734,6 +3743,7 @@ function closeStudentSetModal() {
   state.studentSetModalMode = "";
   state.activeStudentSetPath = "";
   state.activeStudentSetTitle = "";
+  state.activeStudentSetShareCode = "";
   state.activeStudentSetShareUrl = "";
   if (studentSetShareCopyResetTimerId) {
     window.clearTimeout(studentSetShareCopyResetTimerId);
@@ -3758,20 +3768,6 @@ function renderStudentSetModalBody() {
     kicker.className = "student-share__kicker";
     kicker.textContent = "Link teilen";
 
-    const description = document.createElement("p");
-    description.className = "student-share__description";
-    description.id = "student-set-modal-description";
-    description.append(
-      document.createTextNode("Mit diesem Link kannst du "),
-      (() => {
-        const emphasis = document.createElement("span");
-        emphasis.className = "student-share__description-emphasis";
-        emphasis.textContent = state.activeStudentSetTitle || "Lerndeck";
-        return emphasis;
-      })(),
-      document.createTextNode(" schnell teilen."),
-    );
-
     const qrShell = document.createElement("div");
     qrShell.className = "student-share__qr-shell";
 
@@ -3788,6 +3784,19 @@ function renderStudentSetModalBody() {
     qrCanvas.width = 180;
     qrCanvas.height = 180;
     qrFrame.append(qrCanvas);
+
+    const code = document.createElement("p");
+    code.className = "student-share__set-code";
+    code.hidden = !state.activeStudentSetShareCode;
+
+    const codeLabel = document.createElement("span");
+    codeLabel.className = "student-share__set-code-label";
+    codeLabel.textContent = "Set-Code";
+
+    const codeValue = document.createElement("strong");
+    codeValue.className = "student-share__set-code-value";
+    codeValue.textContent = state.activeStudentSetShareCode;
+    code.append(codeLabel, codeValue);
 
     const linkRow = document.createElement("div");
     linkRow.className = "student-share__link-row";
@@ -3809,10 +3818,10 @@ function renderStudentSetModalBody() {
     });
 
     linkRow.append(copyButton);
-    qrShell.append(qrLabel, qrFrame, linkRow);
-    body.append(kicker, description, qrShell);
+    qrShell.append(qrLabel, qrFrame, code, linkRow);
+    body.append(kicker, qrShell);
     elements.studentSetModal.setAttribute("aria-labelledby", "student-set-modal-title");
-    elements.studentSetModal.setAttribute("aria-describedby", "student-set-modal-description");
+    elements.studentSetModal.removeAttribute("aria-describedby");
 
     scheduleQrRender(qrCanvas, state.activeStudentSetShareUrl, {
       foreground: "#1f1f1f",
@@ -4134,7 +4143,6 @@ function handleLearningDirectionSelect(event) {
       state.pendingLaunchDirection,
       getSubscriptionDirectionMetadata(getPendingLaunchSubscription()),
     );
-    void startPendingLaunchMode();
     return;
   }
 
@@ -5394,7 +5402,10 @@ function createStudentSetRow(subscription, {
 
   const stats = createStudentSetStats(subscription);
 
-  copy.append(description, meta, stats);
+  copy.append(description, meta);
+  if (stats) {
+    copy.append(stats);
+  }
   row.append(cover, copy);
 
   bindStudentLibraryPress(row, (event) => {
@@ -5406,20 +5417,6 @@ function createStudentSetRow(subscription, {
   });
 
   return row;
-}
-
-function getStudentSetProgressState(subscription) {
-  const practiceProgress = getSubscriptionLearningModeProgress(subscription, DEFAULT_LEARNING_MODE_KEY);
-  const roundCount = practiceProgress.completedRoundCount;
-  const lastRoundPercent = practiceProgress.lastRoundPercent;
-  const isCompleted = lastRoundPercent !== null && lastRoundPercent >= 100;
-
-  return {
-    value: isCompleted ? "done" : String(roundCount),
-    statusLabel: isCompleted
-      ? "Abgeschlossen"
-      : `${roundCount} ${roundCount === 1 ? "Durchgang" : "Durchgänge"}`,
-  };
 }
 
 function createStudentSetMenu(subscription, row) {
@@ -5555,39 +5552,7 @@ function createStudentSetStats(subscription) {
     return band;
   }
 
-  const progressState = getStudentSetProgressState(subscription);
-  const status = document.createElement("section");
-  status.className = "student-screen__library-stat-band";
-  status.setAttribute("aria-label", "Lernstatus");
-  status.dataset.libraryPressStop = "true";
-
-  const value = document.createElement("strong");
-  value.className = "student-screen__library-stat-value";
-
-  const detail = document.createElement("span");
-  detail.className = "student-screen__library-stat-detail";
-
-  const lastRoundPercent = practiceProgress.lastRoundPercent;
-
-  if (progressState.value === "done") {
-    value.textContent = "Abgeschlossen";
-    detail.textContent = lastRoundPercent !== null ? `${lastRoundPercent} % im letzten Durchgang` : "";
-  } else if (progressState.value === "0") {
-    value.textContent = "Bereit zum Starten";
-    value.classList.add("student-screen__library-stat-value--ready");
-    detail.textContent = "";
-  } else {
-    value.textContent = progressState.statusLabel;
-    detail.textContent = lastRoundPercent !== null ? `Zuletzt ${lastRoundPercent} %` : "";
-  }
-
-  status.append(value);
-
-  if (detail.textContent) {
-    status.append(detail);
-  }
-
-  return status;
+  return null;
 }
 
 function getStudentSetStatItems(subscription) {
@@ -6140,13 +6105,9 @@ function createLaunchModeSummaryLine(value, label) {
 function createLaunchModeSummary(progress) {
   const summary = document.createElement("span");
   summary.className = "launch-mode-modal__mode-summary";
-  const runsValue = String(progress.completedRoundCount).padStart(2, "0");
+  const runsValue = String(progress.completedRoundCount);
   const runsLabel = progress.completedRoundCount === 1 ? "Durchgang" : "Durchgänge";
-  const scoreValue = progress.averageScorePercent !== null ? String(Math.round(progress.averageScorePercent)) : "–";
-  summary.append(
-    createLaunchModeSummaryLine(runsValue, runsLabel),
-    createLaunchModeSummaryLine(scoreValue, "Ø Score"),
-  );
+  summary.append(createLaunchModeSummaryLine(runsValue, runsLabel));
   return summary;
 }
 
@@ -6468,9 +6429,6 @@ function createLaunchModeDetailContent(mode, progress, subscription) {
   meta.hidden = !meta.textContent;
 
   content.append(title, description, meta);
-  if (mode.key === "test") {
-    content.append(createTestCardCountControl(subscription));
-  }
   return content;
 }
 
@@ -6576,19 +6534,11 @@ function buildLaunchModeDetailMeta(mode, progress) {
     return "Noch nicht freigeschaltet";
   }
 
-  const segments = [];
-
-  if (progress.completedRoundCount > 0) {
-    segments.push(progress.completedRoundCount === 1 ? "1 Durchgang" : `${progress.completedRoundCount} Durchgänge`);
-  } else {
-    segments.push("Noch kein Durchgang");
+  if (progress.completedRoundCount === 0) {
+    return "Noch kein Durchgang";
   }
 
-  if (progress.averageScorePercent !== null) {
-    segments.push(`Ø ${Math.round(progress.averageScorePercent)} %`);
-  }
-
-  return segments.join(" · ");
+  return progress.completedRoundCount === 1 ? "1 Durchgang" : `${progress.completedRoundCount} Durchgänge`;
 }
 
 function renderLaunchModeModal({
@@ -6631,7 +6581,31 @@ function openLaunchModeModal(setPath) {
   window.LerndeckUiMotion.show(elements.launchModeModal, { focus: elements.launchModePanel });
 }
 
-function openLaunchDirectionModal() {
+function getLaunchSettingsTitle(modeKey) {
+  if (modeKey === "practice") return "Übungseinstellungen";
+  if (modeKey === "write") return "Eingabeeinstellungen";
+  if (modeKey === "test") return "Testeinstellungen";
+  return "Lerneinstellungen";
+}
+
+function renderLaunchSettings(subscription, selectedMode) {
+  elements.launchSettingsTitle.textContent = getLaunchSettingsTitle(selectedMode.key);
+  elements.launchSettingsDescription.textContent = selectedMode.key === "test"
+    ? "Wähle die Abfragerichtung und den Umfang."
+    : "Wähle die Abfragerichtung.";
+  elements.launchSettingsStartLabel.textContent = `${selectedMode.label} starten`;
+  elements.launchSettingsAdditional.replaceChildren();
+  elements.launchSettingsAdditional.hidden = selectedMode.key !== "test";
+  if (selectedMode.key === "test") {
+    const group = document.createElement("section");
+    group.className = "launch-settings-modal__group";
+    group.setAttribute("aria-label", "Testumfang");
+    group.append(createTestCardCountControl(subscription));
+    elements.launchSettingsAdditional.append(group);
+  }
+}
+
+function openLaunchSettingsModal() {
   const subscription = getPendingLaunchSubscription();
   const selectedMode = getLearningModeDefinition(state.pendingLaunchModeKey);
 
@@ -6639,22 +6613,25 @@ function openLaunchDirectionModal() {
     return;
   }
 
-  setLearningModeAccentVariables(elements.launchDirectionPanel, selectedMode);
+  renderLaunchSettings(subscription, selectedMode);
+  setLearningModeAccentVariables(elements.launchSettingsPanel, selectedMode);
   setLearningModeAccentVariables(elements.launchModeDirection, selectedMode);
+  setLearningModeAccentVariables(elements.launchSettingsStart, selectedMode);
+  setLearningModeAccentVariables(elements.launchSettingsStartLabel, selectedMode);
   syncLearningDirectionGroup(
     "launch",
     state.pendingLaunchDirection,
     getSubscriptionDirectionMetadata(subscription),
   );
-  elements.launchDirectionModal.scrollTop = 0;
-  window.LerndeckUiMotion.swap(elements.launchModeModal, elements.launchDirectionModal, {
-    focus: elements.launchDirectionPanel,
+  elements.launchSettingsModal.scrollTop = 0;
+  window.LerndeckUiMotion.swap(elements.launchModeModal, elements.launchSettingsModal, {
+    focus: elements.launchSettingsPanel,
   });
 }
 
 function returnToLaunchModeModal() {
   elements.launchModeModal.scrollTop = 0;
-  window.LerndeckUiMotion.swap(elements.launchDirectionModal, elements.launchModeModal, {
+  window.LerndeckUiMotion.swap(elements.launchSettingsModal, elements.launchModeModal, {
     focus: elements.launchModePanel,
   });
 }
@@ -6666,6 +6643,7 @@ function clearLaunchModeModalContent() {
   delete elements.launchModeModes.dataset.setPath;
   elements.launchModeDetailStage.replaceChildren();
   elements.launchModeStartStage.replaceChildren();
+  elements.launchSettingsAdditional.replaceChildren();
 }
 
 function closeLaunchModeModal() {
@@ -6680,11 +6658,11 @@ function closeLaunchModeModal() {
   state.launchModeScrollY = 0;
   state.launchModeDetailRenderedModeKey = "";
   state.launchModeActionRenderedModeKey = "";
-  const activeModal = window.LerndeckUiMotion.isVisible(elements.launchDirectionModal)
-    ? elements.launchDirectionModal
+  const activeModal = window.LerndeckUiMotion.isVisible(elements.launchSettingsModal)
+    ? elements.launchSettingsModal
     : elements.launchModeModal;
   const inactiveModal = activeModal === elements.launchModeModal
-    ? elements.launchDirectionModal
+    ? elements.launchSettingsModal
     : elements.launchModeModal;
   window.LerndeckUiMotion.hide(inactiveModal);
   window.LerndeckUiMotion.hide(activeModal, {
@@ -6702,8 +6680,8 @@ function handleLaunchModeOverlayClick(event) {
   }
 }
 
-function handleLaunchDirectionOverlayClick(event) {
-  if (event.target === elements.launchDirectionModal) {
+function handleLaunchSettingsOverlayClick(event) {
+  if (event.target === elements.launchSettingsModal) {
     closeLaunchModeModal();
   }
 }
@@ -6721,7 +6699,7 @@ async function handleLaunchModeStart() {
   }
 
   if (isDirectionConfigurableMode(selectedMode.key)) {
-    openLaunchDirectionModal();
+    openLaunchSettingsModal();
     return;
   }
 
@@ -8402,7 +8380,7 @@ function handleWindowKeydown(event) {
     return;
   }
 
-  if (elements.launchDirectionModal && !elements.launchDirectionModal.hidden && event.key === "Escape") {
+  if (elements.launchSettingsModal && !elements.launchSettingsModal.hidden && event.key === "Escape") {
     event.preventDefault();
     returnToLaunchModeModal();
     return;

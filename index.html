@@ -29,14 +29,14 @@
       }
     </script>
     <link rel="stylesheet" href="./pwa-splash.css?v=2026-08-30-pwa-splash-v1" />
-    <link rel="stylesheet" href="./styles.css?v=2026-09-06-learning-images-v1" />
+    <link rel="stylesheet" href="./styles.css?v=2026-09-06-student-share-v1" />
     <link rel="stylesheet" href="./ui-motion.css?v=2026-08-30-ui-motion-v1" />
     <script src="./pwa.js?v=2026-08-30-pwa-splash-v3" defer></script>
     <script src="./ui-motion.js?v=2026-08-30-ui-motion-v1" defer></script>
     <script src="./irregular-verbs.js?v=2026-08-30-irregular-verbs-v1" defer></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js" defer></script>
-    <script src="./app.js?v=2026-09-06-learning-images-v1" defer></script>
+    <script src="./app.js?v=2026-09-06-student-share-v1" defer></script>
   </head>
   <body>
     <div class="pwa-splash" role="status" aria-label="Lerndeck wird geladen">
@@ -845,18 +845,19 @@
       </div>
 
       <div
-        id="launch-direction-modal"
-        class="launch-mode-modal launch-direction-modal"
+        id="launch-settings-modal"
+        class="launch-mode-modal launch-settings-modal"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="launch-direction-title"
+        aria-labelledby="launch-settings-title"
+        aria-describedby="launch-settings-description"
         data-ui-motion="dialog"
         hidden
       >
-        <div id="launch-direction-panel" class="launch-direction-modal__panel" data-ui-motion-panel tabindex="-1">
+        <div id="launch-settings-panel" class="launch-settings-modal__panel" data-ui-motion-panel tabindex="-1">
           <button
-            id="launch-direction-back"
-            class="launch-direction-modal__back"
+            id="launch-settings-back"
+            class="launch-settings-modal__back"
             type="button"
             aria-label="Zurück zur Lernmodusauswahl"
           >
@@ -864,7 +865,7 @@
           </button>
 
           <button
-            id="launch-direction-close"
+            id="launch-settings-close"
             class="launch-mode-modal__close"
             type="button"
             aria-label="Schließen"
@@ -872,22 +873,41 @@
             <span class="material-symbols-outlined" aria-hidden="true">close</span>
           </button>
 
-          <header class="launch-direction-modal__header">
-            <p class="launch-mode-modal__kicker">Abfragerichtung</p>
-            <h2 id="launch-direction-title" class="launch-direction-modal__title">Was kommt zuerst?</h2>
+          <header class="launch-settings-modal__header">
+            <p class="launch-mode-modal__kicker">Einstellungen</p>
+            <h2 id="launch-settings-title" class="launch-settings-modal__title">Übungseinstellungen</h2>
+            <p id="launch-settings-description" class="launch-settings-modal__description">
+              Lege fest, wie du lernen möchtest.
+            </p>
           </header>
 
-          <section id="launch-mode-direction" class="launch-direction-modal__choices" aria-label="Abfragerichtung">
-            <div
-              class="learning-direction-control__choices"
-              role="group"
-              aria-label="Abfragerichtung wählen"
-              data-learning-direction-group="launch"
-            >
-              <button class="learning-direction-control__choice" type="button" data-learning-direction="source-target"></button>
-              <button class="learning-direction-control__choice" type="button" data-learning-direction="target-source"></button>
-            </div>
-          </section>
+          <div class="launch-settings-modal__groups">
+            <section id="launch-mode-direction" class="launch-settings-modal__group" aria-labelledby="launch-settings-direction-label">
+              <div class="launch-settings-modal__group-heading">
+                <h3 id="launch-settings-direction-label" class="launch-settings-modal__group-title">Abfragerichtung</h3>
+                <p class="launch-settings-modal__group-description">Was kommt zuerst?</p>
+              </div>
+              <div
+                class="learning-direction-control__choices"
+                role="group"
+                aria-label="Abfragerichtung wählen"
+                data-learning-direction-group="launch"
+              >
+                <button class="learning-direction-control__choice" type="button" data-learning-direction="source-target"></button>
+                <button class="learning-direction-control__choice" type="button" data-learning-direction="target-source"></button>
+              </div>
+            </section>
+
+            <div id="launch-settings-additional" class="launch-settings-modal__additional" hidden></div>
+          </div>
+
+          <button
+            id="launch-settings-start"
+            class="launch-mode-modal__action launch-mode-modal__action--primary launch-settings-modal__start"
+            type="button"
+          >
+            <span id="launch-settings-start-label" class="launch-mode-modal__action-content is-current">Üben starten</span>
+          </button>
         </div>
       </div>
 

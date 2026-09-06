@@ -68,19 +68,21 @@ test("Monday MVP: teacher draft, stable code, tablet subscription and correction
     await expect(setCard).toBeVisible();
     await setCard.click();
     await page.getByRole("button", { name: "Üben starten" }).click();
-    await expect(page.locator("#launch-direction-modal")).toBeVisible();
+    await expect(page.locator("#launch-settings-modal")).toBeVisible();
     await page.locator('[data-learning-direction-group="launch"] [data-learning-direction="target-source"]').click();
+    await page.locator("#launch-settings-start").click();
     await expect(page.locator("#front-word")).toHaveText("dog");
     await page.locator("#student-home-link").click();
     await expect(setCard).toBeVisible();
 
     await setCard.click();
-    await page.getByRole("button", { name: /Eingabe 00/ }).click();
+    await page.locator('.launch-mode-modal__mode-card[data-mode-key="write"]').click();
     await page.getByRole("button", { name: "Eingabe starten" }).click();
-    await expect(page.locator("#launch-direction-modal")).toBeVisible();
+    await expect(page.locator("#launch-settings-modal")).toBeVisible();
     await expect(page.locator('[data-learning-direction-group="launch"]')).toContainText("Deutsch → Englisch");
     await expect(page.locator('[data-learning-direction-group="launch"]')).toContainText("Englisch → Deutsch");
     await page.locator('[data-learning-direction-group="launch"] [data-learning-direction="source-target"]').click();
+    await page.locator("#launch-settings-start").click();
 
     const answer = page.getByPlaceholder("Antwort eingeben");
     const prompt = page.locator("#input-prompt-word");

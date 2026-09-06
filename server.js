@@ -616,6 +616,7 @@ app.get("/api/tablets/:tabletId/subscriptions", async (request, response) => {
             : "",
           description: typeof setEntry?.description === "string" ? setEntry.description.trim() : "",
           cardCount: Number.isFinite(setEntry?.cardCount) ? setEntry.cardCount : null,
+          shareCode: typeof setEntry?.shareCode === "string" ? setEntry.shareCode.trim().toUpperCase() : "",
           category: typeof setEntry?.category === "string" ? setEntry.category.trim() : "",
           completedRoundCount: Number.isFinite(progressEntry?.completedRoundCount)
             ? progressEntry.completedRoundCount

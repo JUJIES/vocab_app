@@ -92,10 +92,11 @@ async function openMode(page, modeKey, direction = "source-target") {
   await expect(page.locator("#launch-mode-modal")).toBeVisible();
   await page.locator(`button.launch-mode-modal__mode-card[data-mode-key="${modeKey}"]`).click();
   await page.locator("#launch-mode-start").click();
-  await expect(page.locator("#launch-direction-modal")).toBeVisible();
+  await expect(page.locator("#launch-settings-modal")).toBeVisible();
   await page.locator(
     `[data-learning-direction-group="launch"] [data-learning-direction="${direction}"]`,
   ).click();
+  await page.locator("#launch-settings-start").click();
 }
 
 test("irregular verb cards emphasize the infinitive and separate the other forms", async ({ page }) => {

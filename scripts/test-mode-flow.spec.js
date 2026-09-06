@@ -145,6 +145,11 @@ test("test mode uses a random-sized list and keeps wrong answers editable until 
   await expect(page.locator("[data-star-button]" )).toHaveCount(0);
 
   await page.locator('.launch-mode-modal__mode-card[data-mode-key="test"]').click();
+  await expect(page.locator(".launch-mode-modal__test-count-slider")).toHaveCount(0);
+  await page.locator("#launch-mode-start").click();
+  await expect(page.locator("#launch-settings-modal")).toBeVisible();
+  await expect(page.locator("#launch-settings-title")).toHaveText("Testeinstellungen");
+  await expect(page.locator('[data-learning-direction-group="launch"]')).toBeVisible();
   const countSlider = page.locator(".launch-mode-modal__test-count-slider");
   await expect(countSlider).toBeVisible();
   await expect(countSlider).toHaveAttribute("min", "5");
@@ -154,8 +159,9 @@ test("test mode uses a random-sized list and keeps wrong answers editable until 
   });
   await expect(page.locator(".launch-mode-modal__test-count-value")).toContainText("5 von");
 
-  await page.locator("#launch-mode-start").click();
   await page.locator('[data-learning-direction-group="launch"] [data-learning-direction="source-target"]').click();
+  await expect(page.locator("#launch-settings-modal")).toBeVisible();
+  await page.locator("#launch-settings-start").click();
 
   await expect(page.locator("#test-stage")).toBeVisible();
   await expect(page.locator("#test-table-body .test-stage__row")).toHaveCount(5);
