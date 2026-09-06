@@ -83,6 +83,11 @@ async function openScaledFrame(page, path, { expectEmbedMarker = true } = {}) {
   await page.setContent(`
     <style>
       body { margin: 0; background: #1b222c; }
+      #clip {
+        width: 970px;
+        height: 484px;
+        overflow: hidden;
+      }
       iframe {
         width: 1652px;
         height: 824px;
@@ -91,7 +96,7 @@ async function openScaledFrame(page, path, { expectEmbedMarker = true } = {}) {
         transform-origin: top left;
       }
     </style>
-    <iframe title="Lerndeck" src="${new URL(path, BASE_URL)}"></iframe>
+    <div id="clip"><iframe title="Lerndeck" src="${new URL(path, BASE_URL)}"></iframe></div>
   `);
   const frame = page.frameLocator('iframe[title="Lerndeck"]');
   if (expectEmbedMarker) {
@@ -111,18 +116,11 @@ async function startMode(frame, modeKey) {
   await frame.locator("#launch-settings-start").click();
 }
 
-async function countPreserved3dLayers(frame) {
-  return frame.locator("body").evaluate(() => Array.from(document.querySelectorAll("*")).filter(
-    (element) => getComputedStyle(element).transformStyle === "preserve-3d",
-  ).length);
-}
-
-test("all embedded learning modes stay on a flat compositor plane", async ({ page }, testInfo) => {
+test("embedded practice keeps its card size and scrolls when the frame becomes shorter", async ({ page }, testInfo) => {
   await installApiFixtures(page);
 
   let frame = await openScaledFrame(page, "/teacher?embed=tafelraum", { expectEmbedMarker: false });
   await expect(frame.locator(".teacher-set-row").first()).toBeVisible();
-  expect(await countPreserved3dLayers(frame)).toBe(0);
 
   frame = await openScaledFrame(
     page,
@@ -130,50 +128,42 @@ test("all embedded learning modes stay on a flat compositor plane", async ({ pag
   );
   await startMode(frame, "practice");
   await expect(frame.locator("#flashcard")).toBeVisible();
-  expect(await countPreserved3dLayers(frame)).toBe(0);
-
-  const frontState = await frame.locator("#front-face").evaluate((front) => ({
-    innerTransform: getComputedStyle(document.querySelector(".flashcard__inner")).transform,
-    innerTransformStyle: getComputedStyle(document.querySelector(".flashcard__inner")).transformStyle,
-    frontVisibility: getComputedStyle(front).visibility,
-    backVisibility: getComputedStyle(document.querySelector("#back-face")).visibility,
+  await expect(frame.locator(".flashcard__inner")).toHaveCSS("transform-style", "preserve-3d");
+  const fullHeight = await frame.locator("#flashcard").evaluate((card) => ({
+    cardWidth: card.getBoundingClientRect().width,
+    innerHeight: window.innerHeight,
   }));
-  expect(frontState).toEqual({
-    innerTransform: "none",
-    innerTransformStyle: "flat",
-    frontVisibility: "visible",
-    backVisibility: "hidden",
+
+  await page.locator('iframe[title="Lerndeck"]').evaluate((iframe) => {
+    iframe.style.transform = "translateY(-180px) scale(0.587)";
   });
+  const moved = await frame.locator("#flashcard").evaluate((card) => ({
+    cardWidth: card.getBoundingClientRect().width,
+    innerHeight: window.innerHeight,
+  }));
+  expect(moved).toEqual(fullHeight);
 
-  await frame.locator("#flashcard").click();
-  await expect(frame.locator("#flashcard")).toHaveClass(/is-flipped/);
-  await expect(frame.locator("#front-face")).toHaveCSS("visibility", "hidden");
-  await expect(frame.locator("#back-face")).toHaveCSS("visibility", "visible");
-
-  const cardBounds = await frame.locator("#flashcard").boundingBox();
-  if (!cardBounds) throw new Error("Flashcard bounds unavailable");
-  const startX = cardBounds.x + cardBounds.width / 2;
-  const startY = cardBounds.y + cardBounds.height / 2;
-  await page.mouse.move(startX, startY);
-  await page.mouse.down();
-  await page.mouse.move(startX + 80, startY + 12, { steps: 4 });
-  const swipeTransform = await frame.locator("#flashcard-motion").evaluate(
-    (element) => getComputedStyle(element).transform,
-  );
-  expect(swipeTransform).toMatch(/^matrix\(/);
-  expect(swipeTransform).not.toContain("matrix3d");
-  await page.screenshot({ path: testInfo.outputPath("tafelraum-practice-swipe.png") });
-  await page.mouse.up();
+  await page.locator('iframe[title="Lerndeck"]').evaluate((iframe) => {
+    iframe.style.height = "520px";
+    iframe.style.transform = "scale(0.587)";
+  });
+  const shortHeight = await frame.locator("#flashcard").evaluate((card) => ({
+    cardWidth: card.getBoundingClientRect().width,
+    innerHeight: window.innerHeight,
+    scrollHeight: document.scrollingElement.scrollHeight,
+  }));
+  expect(Math.abs(shortHeight.cardWidth - fullHeight.cardWidth)).toBeLessThan(1);
+  expect(shortHeight.innerHeight).toBe(520);
+  expect(shortHeight.scrollHeight).toBeGreaterThan(shortHeight.innerHeight);
+  await page.screenshot({ path: testInfo.outputPath("tafelraum-practice-short-scroll.png") });
 
   frame = await openScaledFrame(page, "/index.html?teacherPractice=set-1&embed=tafelraum");
   await startMode(frame, "write");
   await expect(frame.locator("#input-stage")).toBeVisible();
-  expect(await countPreserved3dLayers(frame)).toBe(0);
 
   frame = await openScaledFrame(page, "/index.html?teacherPractice=set-1&embed=tafelraum");
   await startMode(frame, "test");
   await expect(frame.locator("#test-stage")).toBeVisible();
-  expect(await countPreserved3dLayers(frame)).toBe(0);
 });
 
 test("the regular Lerndeck practice card keeps its 3D presentation", async ({ page }) => {
