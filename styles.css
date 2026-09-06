@@ -7924,3 +7924,126 @@ button.student-screen__device-card {
     white-space: normal;
   }
 }
+
+/*
+ * Tafelraum scales the complete app iframe with its canvas camera. Keeping the
+ * regular 3D flip hierarchy inside that scaled iframe can make Chromium reuse a
+ * stale frame while the card or app is moving. The embedded variant therefore
+ * keeps the same states and swipe geometry in a single 2D compositing plane.
+ */
+html[data-tafelraum-embed="true"] .flashcard {
+  perspective: none;
+  transform: none;
+}
+
+html[data-tafelraum-embed="true"] .flashcard__inner {
+  transform: none;
+  transform-style: flat;
+  -webkit-transform-style: flat;
+  transition: none;
+  will-change: auto;
+}
+
+html[data-tafelraum-embed="true"] .flashcard__motion {
+  transform:
+    translate(var(--swipe-x, 0px), var(--swipe-y, 0px))
+    rotate(var(--swipe-tilt, 0deg));
+}
+
+html[data-tafelraum-embed="true"] .flashcard__face {
+  transform: none;
+  transform-style: flat;
+  -webkit-transform-style: flat;
+  backface-visibility: visible;
+  -webkit-backface-visibility: visible;
+  will-change: auto;
+}
+
+html[data-tafelraum-embed="true"] .flashcard__face--front {
+  opacity: 1;
+  visibility: visible;
+}
+
+html[data-tafelraum-embed="true"] .flashcard__face--back {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+html[data-tafelraum-embed="true"] .flashcard.is-flipped .flashcard__face--front {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+html[data-tafelraum-embed="true"] .flashcard.is-flipped .flashcard__face--back {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+html[data-tafelraum-embed="true"] .flashcard__corner-actions,
+html[data-tafelraum-embed="true"] .flashcard__gesture-hint,
+html[data-tafelraum-embed="true"] .flashcard__word,
+html[data-tafelraum-embed="true"] .flashcard__hint {
+  transform: none;
+  backface-visibility: visible;
+  -webkit-backface-visibility: visible;
+}
+
+html[data-tafelraum-embed="true"] .flashcard__content {
+  transform: translateY(-0.4rem);
+  backface-visibility: visible;
+  -webkit-backface-visibility: visible;
+  will-change: auto;
+}
+
+html[data-tafelraum-embed="true"] .flashcard__content.has-visual {
+  transform: translateY(-0.75rem);
+}
+
+html[data-tafelraum-embed="true"] .flashcard__content.has-hint {
+  transform: translateY(-0.9rem);
+}
+
+html[data-tafelraum-embed="true"] .flashcard__dock {
+  transform: translateX(-50%);
+}
+
+html[data-tafelraum-embed="true"] .flashcard.is-animating-left {
+  animation-name: flashcard-tafelraum-nudge-left;
+}
+
+html[data-tafelraum-embed="true"] .flashcard.is-animating-right {
+  animation-name: flashcard-tafelraum-nudge-right;
+}
+
+@media (min-width: 721px) {
+  html[data-tafelraum-embed="true"] .flashcard__face--front .flashcard__content {
+    transform: translateY(2.4rem);
+  }
+
+  html[data-tafelraum-embed="true"] .flashcard__face--front .flashcard__content.has-hint {
+    transform: translateY(1.4rem);
+  }
+}
+
+@keyframes flashcard-tafelraum-nudge-left {
+  0%, 100% {
+    transform: scale(1);
+  }
+
+  28% {
+    transform: translateX(-10px) scale(0.988);
+  }
+}
+
+@keyframes flashcard-tafelraum-nudge-right {
+  0%, 100% {
+    transform: scale(1);
+  }
+
+  28% {
+    transform: translateX(10px) scale(0.988);
+  }
+}

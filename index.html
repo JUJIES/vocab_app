@@ -24,19 +24,22 @@
       rel="stylesheet"
     />
     <script>
+      if (new URLSearchParams(window.location.search).get("embed") === "tafelraum") {
+        document.documentElement.dataset.tafelraumEmbed = "true";
+      }
       if (window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true) {
         document.documentElement.classList.add("is-pwa-standalone", "pwa-splash-pending");
       }
     </script>
     <link rel="stylesheet" href="./pwa-splash.css?v=2026-08-30-pwa-splash-v1" />
-    <link rel="stylesheet" href="./styles.css?v=2026-09-06-practice-layout-v1" />
+    <link rel="stylesheet" href="./styles.css?v=2026-09-06-tafelraum-card-compositing-v1" />
     <link rel="stylesheet" href="./ui-motion.css?v=2026-08-30-ui-motion-v1" />
     <script src="./pwa.js?v=2026-08-30-pwa-splash-v3" defer></script>
     <script src="./ui-motion.js?v=2026-08-30-ui-motion-v1" defer></script>
     <script src="./irregular-verbs.js?v=2026-09-06-optional-to-v2" defer></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js" defer></script>
-    <script src="./app.js?v=2026-09-06-practice-layout-v1" defer></script>
+    <script src="./app.js?v=2026-09-06-tafelraum-card-compositing-v1" defer></script>
   </head>
   <body>
     <div class="pwa-splash" role="status" aria-label="Lerndeck wird geladen">
