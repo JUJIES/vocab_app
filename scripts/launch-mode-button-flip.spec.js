@@ -125,47 +125,48 @@ test("all learning modes share one extensible settings dialog", async ({ page },
 
   await page.locator('.launch-mode-modal__mode-card[data-mode-key="practice"]').click();
   await page.locator("#launch-mode-start").click();
-  await expect(page.locator("#launch-settings-title")).toHaveText("Übungseinstellungen");
+  await expect(page.locator("#launch-settings-title")).toHaveText("Wie möchtest du abgefragt werden?");
   const directionGroup = page.locator('[data-learning-direction-group="launch"]');
   const sourceFirst = directionGroup.locator('[data-learning-direction="source-target"]');
   const targetFirst = directionGroup.locator('[data-learning-direction="target-source"]');
   await expect(directionGroup).toBeVisible();
-  await expect(sourceFirst.locator(".learning-direction-control__flag")).toHaveText("🇩🇪");
-  await expect(sourceFirst.locator(".learning-direction-control__name")).toHaveText("Deutsch");
-  await expect(sourceFirst).toHaveAttribute("aria-label", "Deutsch zuerst, danach Englisch");
-  await expect(targetFirst.locator(".learning-direction-control__flag")).toHaveText("🇬🇧");
-  await expect(targetFirst.locator(".learning-direction-control__name")).toHaveText("Englisch");
-  await expect(targetFirst).toHaveAttribute("aria-label", "Englisch zuerst, danach Deutsch");
+  await expect(sourceFirst.locator(".learning-direction-control__flag")).toHaveText(["🇩🇪", "🇬🇧"]);
+  await expect(sourceFirst.locator(".learning-direction-control__arrow")).toHaveText("→");
+  await expect(sourceFirst).toHaveAttribute("aria-label", "Deutsch wird gezeigt, Englisch eingeben");
+  await expect(targetFirst.locator(".learning-direction-control__flag")).toHaveText(["🇬🇧", "🇩🇪"]);
+  await expect(targetFirst.locator(".learning-direction-control__arrow")).toHaveText("→");
+  await expect(targetFirst).toHaveAttribute("aria-label", "Englisch wird gezeigt, Deutsch eingeben");
   await expect(page.locator("#launch-settings-panel")).not.toContainText("Abfragerichtung");
   await expect(page.locator("#launch-settings-panel")).not.toContainText("Was kommt zuerst?");
   await expect(page.locator("#launch-settings-panel")).not.toContainText("Wähle die Abfragerichtung");
   await expect(page.locator("#launch-settings-additional")).toBeHidden();
   await expect(page.locator("#launch-settings-start-label")).toHaveText("Üben starten");
   const directionGeometry = await sourceFirst.evaluate((choice) => {
-    const flag = choice.querySelector(".learning-direction-control__flag").getBoundingClientRect();
-    const name = choice.querySelector(".learning-direction-control__name").getBoundingClientRect();
+    const flags = Array.from(choice.querySelectorAll(".learning-direction-control__flag"))
+      .map((flag) => flag.getBoundingClientRect());
+    const arrow = choice.querySelector(".learning-direction-control__arrow").getBoundingClientRect();
     const bounds = choice.getBoundingClientRect();
     return {
-      flagAboveName: flag.bottom <= name.top,
-      flagCentered: Math.abs((flag.left + flag.width / 2) - (bounds.left + bounds.width / 2)) <= 1,
-      nameCentered: Math.abs((name.left + name.width / 2) - (bounds.left + bounds.width / 2)) <= 1,
+      leftToRight: flags[0].right <= arrow.left && arrow.right <= flags[1].left,
+      groupCentered: Math.abs(((flags[0].left + flags[1].right) / 2) - (bounds.left + bounds.width / 2)) <= 1,
+      verticallyCentered: flags.every((flag) => Math.abs((flag.top + flag.height / 2) - (bounds.top + bounds.height / 2)) <= 1),
     };
   });
-  expect(directionGeometry).toEqual({ flagAboveName: true, flagCentered: true, nameCentered: true });
+  expect(directionGeometry).toEqual({ leftToRight: true, groupCentered: true, verticallyCentered: true });
   await page.waitForTimeout(300);
   await page.locator("#launch-settings-panel").screenshot({ path: testInfo.outputPath("practice-settings.png") });
 
   await page.locator("#launch-settings-back").click();
   await page.locator('.launch-mode-modal__mode-card[data-mode-key="write"]').click();
   await page.locator("#launch-mode-start").click();
-  await expect(page.locator("#launch-settings-title")).toHaveText("Eingabeeinstellungen");
+  await expect(page.locator("#launch-settings-title")).toHaveText("Wie möchtest du abgefragt werden?");
   await expect(page.locator("#launch-settings-additional")).toBeHidden();
   await expect(page.locator("#launch-settings-start-label")).toHaveText("Eingabe starten");
 
   await page.locator("#launch-settings-back").click();
   await page.locator('.launch-mode-modal__mode-card[data-mode-key="test"]').click();
   await page.locator("#launch-mode-start").click();
-  await expect(page.locator("#launch-settings-title")).toHaveText("Testeinstellungen");
+  await expect(page.locator("#launch-settings-title")).toHaveText("Wie möchtest du abgefragt werden?");
   await expect(page.locator("#launch-settings-additional")).toBeVisible();
   await expect(page.locator(".launch-mode-modal__test-count-slider")).toBeVisible();
   await expect(page.locator("#launch-settings-start-label")).toHaveText("Testen starten");

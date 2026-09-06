@@ -1049,12 +1049,14 @@ function getLearningDirectionChoice(direction, labels = state.currentSetLanguage
     ? {
         firstLabel: resolvedLabels.targetLabel,
         secondLabel: resolvedLabels.sourceLabel,
-        flag: getLanguageFlag(resolvedLabels.targetLanguage, resolvedLabels.targetLabel),
+        firstFlag: getLanguageFlag(resolvedLabels.targetLanguage, resolvedLabels.targetLabel),
+        secondFlag: getLanguageFlag(resolvedLabels.sourceLanguage, resolvedLabels.sourceLabel),
       }
     : {
         firstLabel: resolvedLabels.sourceLabel,
         secondLabel: resolvedLabels.targetLabel,
-        flag: getLanguageFlag(resolvedLabels.sourceLanguage, resolvedLabels.sourceLabel),
+        firstFlag: getLanguageFlag(resolvedLabels.sourceLanguage, resolvedLabels.sourceLabel),
+        secondFlag: getLanguageFlag(resolvedLabels.targetLanguage, resolvedLabels.targetLabel),
       };
 }
 
@@ -1073,17 +1075,22 @@ function syncLearningDirectionGroup(groupName, selectedDirection, labels) {
     const direction = normalizeLearningDirection(button.dataset.learningDirection);
     const isSelected = direction === normalizeLearningDirection(selectedDirection);
     const choice = getLearningDirectionChoice(direction, labels);
-    const flag = document.createElement("span");
-    flag.className = "learning-direction-control__flag";
-    flag.setAttribute("aria-hidden", "true");
-    flag.textContent = choice.flag;
-    const name = document.createElement("span");
-    name.className = "learning-direction-control__name";
-    name.textContent = choice.firstLabel;
-    button.replaceChildren(flag, name);
+    const firstFlag = document.createElement("span");
+    firstFlag.className = "learning-direction-control__flag";
+    firstFlag.setAttribute("aria-hidden", "true");
+    firstFlag.textContent = choice.firstFlag;
+    const arrow = document.createElement("span");
+    arrow.className = "learning-direction-control__arrow";
+    arrow.setAttribute("aria-hidden", "true");
+    arrow.textContent = "→";
+    const secondFlag = document.createElement("span");
+    secondFlag.className = "learning-direction-control__flag";
+    secondFlag.setAttribute("aria-hidden", "true");
+    secondFlag.textContent = choice.secondFlag;
+    button.replaceChildren(firstFlag, arrow, secondFlag);
     button.classList.toggle("is-selected", isSelected);
     button.setAttribute("aria-pressed", String(isSelected));
-    button.setAttribute("aria-label", `${choice.firstLabel} zuerst, danach ${choice.secondLabel}`);
+    button.setAttribute("aria-label", `${choice.firstLabel} wird gezeigt, ${choice.secondLabel} eingeben`);
   }
 }
 
@@ -6804,10 +6811,7 @@ function openLaunchModeModal(setPath) {
 }
 
 function getLaunchSettingsTitle(modeKey) {
-  if (modeKey === "practice") return "Übungseinstellungen";
-  if (modeKey === "write") return "Eingabeeinstellungen";
-  if (modeKey === "test") return "Testeinstellungen";
-  return "Lerneinstellungen";
+  return "Wie möchtest du abgefragt werden?";
 }
 
 function renderLaunchSettings(subscription, selectedMode) {

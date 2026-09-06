@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Die Richtungswahl fragt jetzt eindeutig `Wie möchtest du abgefragt werden?` und zeigt beide Sprachen kompakt als `Flagge → Flagge`. Links steht die sichtbare Frage, rechts die einzugebende Antwort; missverständliche einzelne Sprachnamen entfallen, während Screenreader die vollständige Aktion vorlesen.
 - Sheet-Lernbilder erhalten nun beim Zellbeschnitt eine feste 8-Pixel-Sicherheitszone und nur noch eine abschließende WebP-Kodierung. Dadurch verschwinden dünne Sheet-Nähte ohne weitere Bildgenerierung; ältere aktive Sheet-Bilder lassen sich idempotent als neue, reversible Varianten nachbearbeiten.
 - Veröffentlichte Sets besitzen im Lehrerbereich jetzt eine eigene Aktion `Lernmodi öffnen`. Sie startet mit dem bestehenden Lehrkraftkonto dieselbe Modusauswahl und Lernoberfläche wie bei Schülern, kehrt über den Zurück-Pfeil zur Setliste zurück und schreibt bewusst keinen Tablet-Lernstand.
 - Einheitliches, reduziertes Eingabefeedback für Vokabeln und Verbformen: Der Versuch bleibt direkt im Feld sichtbar und korrigierbar; richtige Verbformen sind geschützt. Doppelte Antwortkopien, verschachtelte Feedbackkarten und blinkende Stifttasten entfallen. Der Prüfbutton bestätigt Erfolg an gleicher Position; bei Fehlern klappt nur eine kurze Hilfszeile auf. Die Lösungshilfe nennt bei Verben ausschließlich die noch falschen Formen. Wertung und Korrekturpflicht bleiben erhalten; Fokus, Enter und Reduced Motion sind berücksichtigt.
