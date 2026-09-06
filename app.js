@@ -101,6 +101,9 @@ const state = {
   activeStudentSetShareCode: "",
   activeStudentSetShareUrl: "",
   publicOrigin: "",
+  isTeacherPractice: false,
+  teacherPracticeSetId: "",
+  teacherPracticeEmbedded: false,
   activeTabletPairingId: "",
   inputAdvanceTimeoutId: null,
   inputSettingsOpen: false,
@@ -359,7 +362,6 @@ const elements = {
   launchSettingsModal: document.getElementById("launch-settings-modal"),
   launchSettingsPanel: document.getElementById("launch-settings-panel"),
   launchSettingsTitle: document.getElementById("launch-settings-title"),
-  launchSettingsDescription: document.getElementById("launch-settings-description"),
   launchSettingsAdditional: document.getElementById("launch-settings-additional"),
   launchSettingsStart: document.getElementById("launch-settings-start"),
   launchSettingsStartLabel: document.getElementById("launch-settings-start-label"),
@@ -423,14 +425,14 @@ const elements = {
   inputPromptDetail: document.getElementById("input-prompt-detail"),
   inputAnswerForm: document.getElementById("input-answer-form"),
   inputAnswerLabel: document.getElementById("input-answer-label"),
-  inputAnswerRow: document.getElementById("input-answer-row"),
   inputAnswerField: document.getElementById("input-answer-field"),
+  inputSingleAnswer: document.getElementById("input-single-answer"),
   inputVerbAnswerFields: document.getElementById("input-verb-answer-fields"),
   inputVerbAnswerInputs: document.querySelectorAll("[data-irregular-verb-input]"),
   inputCheckButton: document.getElementById("input-check-button"),
+  inputCheckLabel: document.getElementById("input-check-label"),
   inputFeedback: document.getElementById("input-feedback"),
   inputFeedbackTitle: document.getElementById("input-feedback-title"),
-  inputFeedbackInput: document.getElementById("input-feedback-input"),
   inputFeedbackCorrectRow: document.getElementById("input-feedback-correct-row"),
   inputFeedbackCorrect: document.getElementById("input-feedback-correct"),
   inputRevealAnswer: document.getElementById("input-reveal-answer"),
@@ -511,13 +513,14 @@ function bindEvents() {
   elements.inputDelayTypeWrong.addEventListener("click", handleInputDelayTypeSelect);
   elements.inputDelaySlider.addEventListener("input", handleInputDelaySliderChange);
   elements.launchModeStart.addEventListener("click", handleLaunchModeStart);
-  elements.launchModeClose.addEventListener("click", closeLaunchModeModal);
+  elements.launchModeClose.addEventListener("click", dismissLaunchModeModal);
   elements.launchModeModal.addEventListener("click", handleLaunchModeOverlayClick);
   elements.launchSettingsBack.addEventListener("click", returnToLaunchModeModal);
-  elements.launchSettingsClose.addEventListener("click", closeLaunchModeModal);
+  elements.launchSettingsClose.addEventListener("click", dismissLaunchModeModal);
   elements.launchSettingsStart.addEventListener("click", startPendingLaunchMode);
   elements.launchSettingsModal.addEventListener("click", handleLaunchSettingsOverlayClick);
   elements.inputAnswerForm.addEventListener("submit", handleInputAnswerSubmit);
+  elements.inputAnswerForm.addEventListener("input", handleInputAnswerEdit);
   elements.testForm.addEventListener("submit", handleTestSubmit);
   elements.inputRevealAnswer.addEventListener("click", handleInputRevealAnswer);
   for (const input of elements.inputVerbAnswerInputs) {
@@ -531,6 +534,12 @@ function bindEvents() {
 }
 
 async function initializeStudentApp() {
+  const teacherPracticeRequest = resolveTeacherPracticeRequest();
+  if (teacherPracticeRequest.hasParam) {
+    await initializeTeacherPractice(teacherPracticeRequest);
+    return;
+  }
+
   const setRequest = await resolveRequestedSetRequest();
 
   if (!setRequest.hasSetParam) {
@@ -557,6 +566,125 @@ async function initializeStudentApp() {
   state.requestedSetPath = setRequest.path;
   state.requestedSetUrl = setRequest.url;
   await continueStudentAccessFlow();
+}
+
+function resolveTeacherPracticeRequest() {
+  const params = new URLSearchParams(window.location.search);
+  if (!params.has("teacherPractice")) {
+    return { hasParam: false, setId: "", embedded: false };
+  }
+
+  const rawSetId = params.get("teacherPractice")?.trim().toLowerCase() || "";
+  const setId = /^[a-z0-9][a-z0-9_-]{0,127}$/.test(rawSetId) ? rawSetId : "";
+  return {
+    hasParam: true,
+    setId,
+    embedded: params.get("embed") === "tafelraum",
+  };
+}
+
+async function initializeTeacherPractice({ setId, embedded }) {
+  state.isTeacherPractice = true;
+  state.teacherPracticeSetId = setId;
+  state.teacherPracticeEmbedded = Boolean(embedded);
+  elements.appShell.dataset.teacherPractice = "true";
+  configureTeacherPracticeNavigation();
+
+  if (!setId) {
+    renderTeacherPracticeError("Das Lernset ist ungültig.");
+    return;
+  }
+
+  const headers = embedded ? { "X-Lerndeck-Embed": "tafelraum" } : {};
+  let sessionResponse;
+  let setResponse;
+  try {
+    sessionResponse = await apiRequest("/api/teacher/session", { headers });
+    if (!sessionResponse.ok || !sessionResponse.data?.session?.teacherId) {
+      returnToTeacherApp();
+      return;
+    }
+    setResponse = await apiRequest(`/api/teacher/sets/${encodeURIComponent(setId)}`, { headers });
+  } catch (error) {
+    console.error("Unable to open teacher practice:", error);
+    renderTeacherPracticeError("Der Server ist momentan nicht erreichbar.");
+    return;
+  }
+
+  const setEntry = setResponse.data?.set;
+  const setPath = normalizeSetPath(setEntry?.path);
+  if (!setResponse.ok || !setPath || setEntry?.status !== "published") {
+    renderTeacherPracticeError("Dieses veröffentlichte Lernset ist nicht verfügbar.");
+    return;
+  }
+
+  const subscription = normalizeSubscriptionLearningProgress({
+    id: setEntry.id || setId,
+    setPath,
+    title: typeof setEntry.title === "string" && setEntry.title.trim() ? setEntry.title.trim() : "Lernset",
+    subject: typeof setEntry.subject === "string" ? setEntry.subject.trim() : "",
+    description: typeof setEntry.description === "string" ? setEntry.description.trim() : "",
+    cardCount: Number.isFinite(setEntry.cardCount)
+      ? setEntry.cardCount
+      : (Array.isArray(setEntry.cards) ? setEntry.cards.length : 0),
+    sourceLabel: setEntry.sourceLabel,
+    targetLabel: setEntry.targetLabel,
+    sourceLanguage: setEntry.sourceLanguage,
+    targetLanguage: setEntry.targetLanguage,
+    defaultDirection: LEARNING_DIRECTIONS.SOURCE_TARGET,
+  });
+
+  state.subscriptions = [subscription];
+  state.requestedSetPath = setPath;
+  state.requestedSetUrl = new URL(setPath, getAppBaseUrl()).href;
+  renderStudentScreen({
+    mode: APP_MODES.HOME,
+    title: subscription.title,
+    message: "",
+    kicker: "Lehrkraftmodus",
+    primaryAction: "return-to-teacher",
+    primaryLabel: "Zur Lehreransicht",
+  });
+  openLaunchModeModal(setPath);
+}
+
+function renderTeacherPracticeError(detail) {
+  renderStudentLoadErrorState({
+    title: "Lernset nicht verfügbar",
+    message: "Der Lehrkraftmodus konnte nicht geöffnet werden.",
+    detail,
+    primaryAction: "return-to-teacher",
+    primaryLabel: "Zur Lehreransicht",
+  });
+}
+
+function buildTeacherReturnUrl() {
+  const url = new URL("teacher", getAppBaseUrl());
+  if (state.teacherPracticeEmbedded) {
+    url.searchParams.set("embed", "tafelraum");
+  }
+  return url.href;
+}
+
+function buildTeacherPracticeLearningUrl() {
+  const url = new URL("index.html", getAppBaseUrl());
+  url.searchParams.set("teacherPractice", state.teacherPracticeSetId);
+  if (state.teacherPracticeEmbedded) {
+    url.searchParams.set("embed", "tafelraum");
+  }
+  return url.href;
+}
+
+function returnToTeacherApp() {
+  window.location.assign(buildTeacherReturnUrl());
+}
+
+function configureTeacherPracticeNavigation() {
+  for (const button of [elements.studentHomeLink, elements.inputHomeLink, elements.testHomeLink]) {
+    button.setAttribute("aria-label", "Zur Lehreransicht");
+    const label = button.querySelector("span:not(.material-symbols-outlined)");
+    if (label) label.textContent = "Zur Lehreransicht";
+  }
 }
 
 async function startFlashcardSet(
@@ -774,13 +902,22 @@ function formatInputLanguageLabel(code) {
 }
 
 function resolveSetLanguageLabels(data) {
+  const sourceLanguage = typeof data?.set?.languages?.source === "string"
+    ? data.set.languages.source.trim().toLowerCase()
+    : "";
+  const targetLanguage = typeof data?.set?.languages?.target === "string"
+    ? data.set.languages.target.trim().toLowerCase()
+    : "";
+
   return {
     sourceLabel: typeof data?.set?.labels?.source === "string" && data.set.labels.source.trim()
       ? data.set.labels.source.trim()
-      : formatInputLanguageLabel(data?.set?.languages?.source),
+      : formatInputLanguageLabel(sourceLanguage),
     targetLabel: typeof data?.set?.labels?.target === "string" && data.set.labels.target.trim()
       ? data.set.labels.target.trim()
-      : formatInputLanguageLabel(data?.set?.languages?.target),
+      : formatInputLanguageLabel(targetLanguage),
+    sourceLanguage,
+    targetLanguage,
   };
 }
 
@@ -815,6 +952,9 @@ function loadLearningDirectionPreferences() {
 }
 
 function loadPreferredLearningDirection(setPath) {
+  if (state.isTeacherPractice) {
+    return "";
+  }
   const normalizedSetPath = normalizeSetPath(setPath);
   return normalizedSetPath
     ? parseLearningDirection(loadLearningDirectionPreferences()[normalizedSetPath])
@@ -822,6 +962,9 @@ function loadPreferredLearningDirection(setPath) {
 }
 
 function persistPreferredLearningDirection(setPath, direction) {
+  if (state.isTeacherPractice) {
+    return;
+  }
   const normalizedSetPath = normalizeSetPath(setPath);
   const normalizedDirection = parseLearningDirection(direction);
 
@@ -839,6 +982,8 @@ function getLearningDirectionLabels(labels = state.currentSetLanguageLabels) {
   return {
     sourceLabel: labels?.sourceLabel || "Vorderseite",
     targetLabel: labels?.targetLabel || "Rückseite",
+    sourceLanguage: labels?.sourceLanguage || "",
+    targetLanguage: labels?.targetLanguage || "",
   };
 }
 
@@ -853,7 +998,64 @@ function getSubscriptionDirectionMetadata(subscription) {
   return {
     sourceLabel: typeof subscription?.sourceLabel === "string" ? subscription.sourceLabel.trim() : "",
     targetLabel: typeof subscription?.targetLabel === "string" ? subscription.targetLabel.trim() : "",
+    sourceLanguage: typeof subscription?.sourceLanguage === "string" ? subscription.sourceLanguage.trim().toLowerCase() : "",
+    targetLanguage: typeof subscription?.targetLanguage === "string" ? subscription.targetLanguage.trim().toLowerCase() : "",
   };
+}
+
+function getLanguageFlag(languageCode, languageLabel = "") {
+  const normalizedCode = typeof languageCode === "string" ? languageCode.trim().toLowerCase() : "";
+  const normalizedLabel = typeof languageLabel === "string" ? languageLabel.trim().toLocaleLowerCase("de-DE") : "";
+  const flagByLanguage = {
+    ar: "🇸🇦",
+    de: "🇩🇪",
+    el: "🇬🇷",
+    en: "🇬🇧",
+    es: "🇪🇸",
+    fr: "🇫🇷",
+    it: "🇮🇹",
+    ja: "🇯🇵",
+    la: "🏛️",
+    nl: "🇳🇱",
+    pl: "🇵🇱",
+    pt: "🇵🇹",
+    ru: "🇷🇺",
+    tr: "🇹🇷",
+    uk: "🇺🇦",
+    zh: "🇨🇳",
+  };
+
+  if (flagByLanguage[normalizedCode]) {
+    return flagByLanguage[normalizedCode];
+  }
+
+  const inferredCode = [
+    ["deutsch", "de"],
+    ["englisch", "en"],
+    ["französisch", "fr"],
+    ["spanisch", "es"],
+    ["italienisch", "it"],
+    ["latein", "la"],
+  ].find(([label]) => normalizedLabel.includes(label))?.[1];
+
+  return flagByLanguage[inferredCode] || "🌐";
+}
+
+function getLearningDirectionChoice(direction, labels = state.currentSetLanguageLabels) {
+  const resolvedLabels = getLearningDirectionLabels(labels);
+  const usesTargetFirst = normalizeLearningDirection(direction) === LEARNING_DIRECTIONS.TARGET_SOURCE;
+
+  return usesTargetFirst
+    ? {
+        firstLabel: resolvedLabels.targetLabel,
+        secondLabel: resolvedLabels.sourceLabel,
+        flag: getLanguageFlag(resolvedLabels.targetLanguage, resolvedLabels.targetLabel),
+      }
+    : {
+        firstLabel: resolvedLabels.sourceLabel,
+        secondLabel: resolvedLabels.targetLabel,
+        flag: getLanguageFlag(resolvedLabels.sourceLanguage, resolvedLabels.sourceLabel),
+      };
 }
 
 function isDirectionConfigurableMode(modeKey) {
@@ -870,9 +1072,18 @@ function syncLearningDirectionGroup(groupName, selectedDirection, labels) {
   for (const button of group.querySelectorAll("[data-learning-direction]")) {
     const direction = normalizeLearningDirection(button.dataset.learningDirection);
     const isSelected = direction === normalizeLearningDirection(selectedDirection);
-    button.textContent = getLearningDirectionLabel(direction, labels);
+    const choice = getLearningDirectionChoice(direction, labels);
+    const flag = document.createElement("span");
+    flag.className = "learning-direction-control__flag";
+    flag.setAttribute("aria-hidden", "true");
+    flag.textContent = choice.flag;
+    const name = document.createElement("span");
+    name.className = "learning-direction-control__name";
+    name.textContent = choice.firstLabel;
+    button.replaceChildren(flag, name);
     button.classList.toggle("is-selected", isSelected);
     button.setAttribute("aria-pressed", String(isSelected));
+    button.setAttribute("aria-label", `${choice.firstLabel} zuerst, danach ${choice.secondLabel}`);
   }
 }
 
@@ -917,13 +1128,6 @@ function getInputDirectionLabel() {
 function getInputAnswerLabelText(card = getCurrentInputSessionCard()) {
   if (hasIrregularVerbAnswer(card)) {
     return "Drei Verbformen";
-  }
-
-  const sourceLabel = state.currentSetLanguageLabels?.sourceLabel || "";
-  const targetLabel = state.currentSetLanguageLabels?.targetLabel || "";
-
-  if (sourceLabel && targetLabel) {
-    return `${sourceLabel}-${targetLabel}`;
   }
 
   return "Deine Antwort";
@@ -1035,8 +1239,8 @@ function getInputVerbFields() {
 function configureInputAnswerFields(card) {
   const usesVerbFields = hasIrregularVerbAnswer(card);
   elements.inputAnswerField.hidden = usesVerbFields;
+  elements.inputSingleAnswer.hidden = usesVerbFields;
   elements.inputVerbAnswerFields.hidden = !usesVerbFields;
-  elements.inputAnswerRow.classList.toggle("has-irregular-verb", usesVerbFields);
   if (usesVerbFields) {
     elements.inputAnswerLabel.removeAttribute("for");
   } else {
@@ -1073,21 +1277,18 @@ function restoreInputAnswerValues(card, evaluation) {
 }
 
 function updateInputFieldEvaluation(card, evaluation) {
-  if (!hasIrregularVerbAnswer(card)) {
-    return;
-  }
-
-  const fieldEvaluations = Array.isArray(evaluation?.fieldEvaluations)
-    ? evaluation.fieldEvaluations
-    : [];
-  getInputVerbFields().forEach((input, index) => {
-    const field = input.closest(".input-stage__verb-field");
+  const usesVerbFields = hasIrregularVerbAnswer(card);
+  const fieldEvaluations = usesVerbFields ? evaluation?.fieldEvaluations || [] : [evaluation];
+  const inputs = usesVerbFields ? getInputVerbFields() : [elements.inputAnswerField];
+  inputs.forEach((input, index) => {
+    const field = input.closest(".input-stage__answer-field");
     const status = fieldEvaluations[index]?.status;
     if (field && ["correct", "almost", "wrong"].includes(status)) {
       field.dataset.evaluation = status;
     } else {
       field?.removeAttribute("data-evaluation");
     }
+    input.setAttribute("aria-invalid", String(Boolean(status) && status !== "correct"));
   });
 }
 
@@ -1095,9 +1296,11 @@ function setInputAnswerFieldsLocked(card, isLocked) {
   const inputs = hasIrregularVerbAnswer(card)
     ? getInputVerbFields()
     : [elements.inputAnswerField];
-  for (const input of inputs) {
+  for (const [index, input] of inputs.entries()) {
     input.disabled = isLocked;
-    input.readOnly = isLocked;
+    input.readOnly = isLocked || (hasIrregularVerbAnswer(card)
+      && isInputCorrectionRequired(state.inputSession)
+      && state.inputSession.evaluation?.fieldEvaluations?.[index]?.status === "correct");
   }
 }
 
@@ -1105,8 +1308,9 @@ function focusFirstInputAnswerField(card) {
   const inputs = hasIrregularVerbAnswer(card)
     ? getInputVerbFields()
     : [elements.inputAnswerField];
-  const target = inputs.find((input) => !input.disabled && !input.value.trim())
-    || inputs.find((input) => !input.disabled);
+  const editableInputs = inputs.filter((input) => !input.disabled && !input.readOnly);
+  const target = editableInputs.find((input) => input.getAttribute("aria-invalid") === "true")
+    || editableInputs.find((input) => !input.value.trim()) || editableInputs[0];
   target?.focus();
 }
 
@@ -1350,37 +1554,33 @@ function updateInputStageSummary() {
 function renderInputEvaluation(session = state.inputSession) {
   const evaluation = session?.evaluation;
 
-  if (!evaluation) {
+  if (!evaluation || evaluation.status === "correct") {
     elements.inputFeedback.classList.remove("is-visible");
     elements.inputFeedback.classList.remove("is-correct", "is-wrong");
     elements.inputFeedback.setAttribute("aria-hidden", "true");
-    elements.inputFeedbackTitle.textContent = "";
-    elements.inputFeedbackInput.textContent = "";
-    elements.inputFeedbackCorrectRow.hidden = true;
-    elements.inputFeedbackCorrect.textContent = "";
-    elements.inputRevealAnswer.hidden = true;
+    elements.inputFeedback.inert = true;
+    // Keep the inert content while its grid row collapses; clearing it here would snap the height.
     return;
   }
 
   const correctionRequired = isInputCorrectionRequired(session);
-  const correctionCompleted = isInputCorrectionCompleted(session);
   const feedbackTone = correctionRequired ? "wrong" : getInputFeedbackTone(evaluation.status);
   elements.inputFeedback.classList.add("is-visible");
   elements.inputFeedback.classList.toggle("is-correct", feedbackTone === "correct");
   elements.inputFeedback.classList.toggle("is-wrong", feedbackTone === "wrong");
   elements.inputFeedback.setAttribute("aria-hidden", "false");
+  elements.inputFeedback.inert = false;
   elements.inputFeedbackTitle.textContent = correctionRequired
-    ? "Noch nicht korrekt"
-    : correctionCompleted
-      ? "Korrigiert"
-      : feedbackTone === "correct"
-        ? "Richtig"
-        : "Falsch";
-  elements.inputFeedbackInput.textContent = formatInputEvaluationValue(evaluation);
+    ? "Markierte Antwort verbessern."
+    : "Noch nicht richtig.";
   const canRevealAnswer = correctionRequired && !state.inputSolutionRevealed;
   elements.inputFeedbackCorrectRow.hidden = feedbackTone === "correct"
     || (correctionRequired && !state.inputSolutionRevealed);
-  elements.inputFeedbackCorrect.textContent = evaluation.bestAnswer || "—";
+  // Only reveal the missing forms; accepted forms are already visible in their fields.
+  elements.inputFeedbackCorrect.textContent = Array.isArray(evaluation.fieldEvaluations)
+    ? evaluation.fieldEvaluations.flatMap((field, index) => field.status === "correct" ? []
+      : [`${window.LerndeckIrregularVerbs.FORM_LABELS[index]}: ${field.bestAnswer}`]).join(" · ")
+    : evaluation.bestAnswer || "—";
   elements.inputRevealAnswer.hidden = !canRevealAnswer;
 }
 
@@ -1396,16 +1596,9 @@ function renderInputCompletionState() {
   elements.inputAnswerLabel.hidden = false;
   configureInputAnswerFields(null);
   elements.inputCheckButton.hidden = false;
-  if (elements.inputAnswerRow instanceof HTMLElement) {
-    delete elements.inputAnswerRow.dataset.state;
-  }
-  if (elements.inputAnswerLabel instanceof HTMLElement) {
-    delete elements.inputAnswerLabel.dataset.state;
-  }
-  if (elements.inputCheckButton instanceof HTMLElement) {
-    delete elements.inputCheckButton.dataset.iconMode;
-    elements.inputCheckButton.setAttribute("aria-label", "Antwort prüfen");
-  }
+  elements.inputCheckButton.dataset.state = "";
+  elements.inputCheckButton.setAttribute("aria-label", "Antwort prüfen");
+  elements.inputCheckLabel.textContent = "Antwort prüfen";
   renderInputEvaluation(null);
   elements.inputStatusMessage.textContent = scorePercent === null
     ? "Eingabe abgeschlossen."
@@ -1447,12 +1640,14 @@ function renderInputSession() {
   }
   setInputAnswerFieldsLocked(card, hasLockedFeedback);
   updateInputFieldEvaluation(card, evaluation);
-  elements.inputCheckButton.hidden = hasLockedFeedback;
+  elements.inputCheckButton.hidden = false;
   elements.inputCheckButton.disabled = hasLockedFeedback;
-  elements.inputAnswerRow.dataset.state = correctionRequired ? "rewrite" : "";
-  elements.inputAnswerLabel.dataset.state = correctionRequired ? "rewrite" : "";
-  elements.inputCheckButton.dataset.iconMode = correctionRequired ? "rewrite" : "submit";
-  elements.inputCheckButton.setAttribute("aria-label", correctionRequired ? "Antwort noch einmal eingeben" : "Antwort prüfen");
+  const checkButtonLabel = evaluation?.status === "correct"
+    ? (correctionCompleted ? "Korrigiert" : "Richtig")
+    : correctionRequired ? "Korrektur prüfen" : "Antwort prüfen";
+  elements.inputCheckButton.dataset.state = evaluation?.status === "correct" ? "correct" : "";
+  elements.inputCheckButton.setAttribute("aria-label", checkButtonLabel);
+  elements.inputCheckLabel.textContent = checkButtonLabel;
 
   renderInputEvaluation(session);
 
@@ -1927,6 +2122,8 @@ async function loadLocalSetMetadata(setPath) {
           cardCount: Array.isArray(data?.cards) ? data.cards.length : null,
           sourceLabel: languageLabels.sourceLabel,
           targetLabel: languageLabels.targetLabel,
+          sourceLanguage: languageLabels.sourceLanguage,
+          targetLanguage: languageLabels.targetLanguage,
           defaultDirection: normalizeLearningDirection(setMeta?.defaultDirections?.flashcard),
         };
       } catch (error) {
@@ -4122,10 +4319,18 @@ function createInputMenuLogoutButton() {
 }
 
 function handleInputMenuLogout() {
+  if (state.isTeacherPractice) {
+    returnToTeacherApp();
+    return;
+  }
   executeStudentScreenAction("clear-local-tablet");
 }
 
 function handleFlashcardMenuLogout() {
+  if (state.isTeacherPractice) {
+    returnToTeacherApp();
+    return;
+  }
   executeStudentScreenAction("clear-local-tablet");
 }
 
@@ -4285,6 +4490,11 @@ function handleStudentScreenSecondaryAction() {
 }
 
 function executeStudentScreenAction(action) {
+  if (action === "return-to-teacher") {
+    returnToTeacherApp();
+    return;
+  }
+
   if (action === "retry-set") {
     initializeStudentApp();
     return;
@@ -4331,6 +4541,11 @@ function executeStudentScreenAction(action) {
 }
 
 async function handleReturnToStudentHome() {
+  if (state.isTeacherPractice) {
+    returnToTeacherApp();
+    return;
+  }
+
   closeInputSettingsMenu();
   clearActiveLearningSession();
   state.requestedSetPath = "";
@@ -4378,19 +4593,19 @@ function handleInputAnswerSubmit(event) {
     : evaluateInputAnswer(rawValues[0], card.answers);
   const rawInput = rawValues.map((value) => value.trim() || "—").join(" · ");
   state.inputSession = applyInputEvaluationToSession(state.inputSession, evaluation, rawInput);
-  if (isInputCorrectionRequired(state.inputSession) && evaluation.status !== "correct") {
-    if (hasIrregularVerbAnswer(card)) {
-      getInputVerbFields().forEach((input, index) => {
-        if (evaluation.fieldEvaluations?.[index]?.status !== "correct") {
-          input.value = "";
-        }
-      });
-    } else {
-      elements.inputAnswerField.value = "";
-    }
-  }
   renderInputSession();
+  if (isInputCorrectionRequired(state.inputSession)) {
+    focusFirstInputAnswerField(card);
+    document.activeElement?.select?.();
+  }
   scheduleInputAdvance(evaluation);
+}
+
+function handleInputAnswerEdit(event) {
+  const input = event.target;
+  if (!(input instanceof HTMLInputElement)) return;
+  input.closest(".input-stage__answer-field")?.removeAttribute("data-evaluation");
+  input.setAttribute("aria-invalid", "false");
 }
 
 function handleInputVerbFieldKeydown(event) {
@@ -4402,8 +4617,8 @@ function handleInputVerbFieldKeydown(event) {
   const currentIndex = fields.indexOf(event.currentTarget);
   const unansweredField = fields
     .slice(currentIndex + 1)
-    .find((field) => !field.value.trim())
-    || fields.slice(0, currentIndex).find((field) => !field.value.trim());
+    .find((field) => !field.readOnly && (!field.value.trim() || field.getAttribute("aria-invalid") === "true"))
+    || fields.slice(0, currentIndex).find((field) => !field.readOnly && (!field.value.trim() || field.getAttribute("aria-invalid") === "true"));
 
   if (!(unansweredField instanceof HTMLInputElement)) {
     return;
@@ -4421,7 +4636,7 @@ function handleInputRevealAnswer() {
   state.inputSolutionRevealed = true;
   renderInputEvaluation(state.inputSession);
   focusFirstInputAnswerField(getCurrentInputSessionCard());
-  elements.inputStatusMessage.textContent = `Korrekte Lösung: ${state.inputSession.evaluation?.bestAnswer || "unbekannt"}. Gib sie jetzt selbst ein.`;
+  elements.inputStatusMessage.textContent = `Lösung: ${elements.inputFeedbackCorrect.textContent}. Gib sie jetzt selbst ein.`;
 }
 
 async function handleInputAdvance() {
@@ -6597,9 +6812,6 @@ function getLaunchSettingsTitle(modeKey) {
 
 function renderLaunchSettings(subscription, selectedMode) {
   elements.launchSettingsTitle.textContent = getLaunchSettingsTitle(selectedMode.key);
-  elements.launchSettingsDescription.textContent = selectedMode.key === "test"
-    ? "Wähle die Abfragerichtung und den Umfang."
-    : "Wähle die Abfragerichtung.";
   elements.launchSettingsStartLabel.textContent = `${selectedMode.label} starten`;
   elements.launchSettingsAdditional.replaceChildren();
   elements.launchSettingsAdditional.hidden = selectedMode.key !== "test";
@@ -6683,14 +6895,22 @@ function closeLaunchModeModal() {
 
 function handleLaunchModeOverlayClick(event) {
   if (event.target === elements.launchModeModal) {
-    closeLaunchModeModal();
+    dismissLaunchModeModal();
   }
 }
 
 function handleLaunchSettingsOverlayClick(event) {
   if (event.target === elements.launchSettingsModal) {
-    closeLaunchModeModal();
+    dismissLaunchModeModal();
   }
+}
+
+function dismissLaunchModeModal() {
+  if (state.isTeacherPractice) {
+    returnToTeacherApp();
+    return;
+  }
+  closeLaunchModeModal();
 }
 
 async function handleLaunchModeStart() {
@@ -6737,7 +6957,9 @@ async function startPendingLaunchMode() {
   closeLaunchModeModal();
   state.requestedSetPath = setPath;
   state.requestedSetUrl = new URL(setPath, getAppBaseUrl()).href;
-  window.history.replaceState({}, "", buildCanonicalStudentSetUrl(setPath));
+  window.history.replaceState({}, "", state.isTeacherPractice
+    ? buildTeacherPracticeLearningUrl()
+    : buildCanonicalStudentSetUrl(setPath));
   if (selectedModeKey === "test") {
     await startTestSet(
       setPath,
@@ -6920,6 +7142,9 @@ function persistActiveLearningSession(
   direction = LEARNING_DIRECTIONS.SOURCE_TARGET,
   testCardCount = TEST_DEFAULT_CARD_COUNT,
 ) {
+  if (state.isTeacherPractice) {
+    return;
+  }
   const normalizedSetPath = normalizeSetPath(setPath);
 
   if (!normalizedSetPath) {
@@ -7067,6 +7292,12 @@ async function mergeLocalSetMetadataIntoSubscriptions(subscriptions) {
     const nextTargetLabel = typeof subscription?.targetLabel === "string" && subscription.targetLabel.trim()
       ? subscription.targetLabel.trim()
       : localMetadata.targetLabel;
+    const nextSourceLanguage = typeof subscription?.sourceLanguage === "string" && subscription.sourceLanguage.trim()
+      ? subscription.sourceLanguage.trim().toLowerCase()
+      : localMetadata.sourceLanguage;
+    const nextTargetLanguage = typeof subscription?.targetLanguage === "string" && subscription.targetLanguage.trim()
+      ? subscription.targetLanguage.trim().toLowerCase()
+      : localMetadata.targetLanguage;
     const nextDefaultDirection = parseLearningDirection(subscription?.defaultDirection)
       || localMetadata.defaultDirection;
 
@@ -7077,6 +7308,8 @@ async function mergeLocalSetMetadataIntoSubscriptions(subscriptions) {
       && nextCardCount === subscription?.cardCount
       && nextSourceLabel === subscription?.sourceLabel
       && nextTargetLabel === subscription?.targetLabel
+      && nextSourceLanguage === subscription?.sourceLanguage
+      && nextTargetLanguage === subscription?.targetLanguage
       && nextDefaultDirection === subscription?.defaultDirection
     ) {
       return subscription;
@@ -7090,6 +7323,8 @@ async function mergeLocalSetMetadataIntoSubscriptions(subscriptions) {
       cardCount: nextCardCount,
       sourceLabel: nextSourceLabel,
       targetLabel: nextTargetLabel,
+      sourceLanguage: nextSourceLanguage,
+      targetLanguage: nextTargetLanguage,
       defaultDirection: nextDefaultDirection,
     };
   }));
@@ -7754,6 +7989,9 @@ async function persistCompletedRoundCount({
   modeKey = state.activeLearningModeKey || DEFAULT_LEARNING_MODE_KEY,
   lastRoundPercent = null,
 } = {}) {
+  if (state.isTeacherPractice) {
+    return;
+  }
   const tabletId = loadLocalTabletId();
   const setPath = state.currentSetPath;
 
@@ -8395,7 +8633,7 @@ function handleWindowKeydown(event) {
 
   if (elements.launchModeModal && !elements.launchModeModal.hidden && event.key === "Escape") {
     event.preventDefault();
-    closeLaunchModeModal();
+    dismissLaunchModeModal();
     return;
   }
 

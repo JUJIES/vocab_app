@@ -933,6 +933,7 @@ body.has-modal-open {
 }
 
 .teacher-set-row__edit,
+.teacher-set-row__practice,
 .teacher-set-row__share,
 .teacher-set-row__delete {
   width: 2.25rem;
@@ -964,6 +965,8 @@ body.has-modal-open {
 
 .teacher-set-row__edit:hover,
 .teacher-set-row__edit:focus-visible,
+.teacher-set-row__practice:hover,
+.teacher-set-row__practice:focus-visible,
 .teacher-set-row__share:hover,
 .teacher-set-row__share:focus-visible {
   background: rgba(214, 224, 246, 0.12);
@@ -1756,6 +1759,8 @@ body.has-modal-open {
 
 .teacher-set-row__edit:hover,
 .teacher-set-row__edit:focus-visible,
+.teacher-set-row__practice:hover,
+.teacher-set-row__practice:focus-visible,
 .teacher-set-row__share:hover,
 .teacher-set-row__share:focus-visible {
   opacity: 1;
@@ -1764,6 +1769,7 @@ body.has-modal-open {
 }
 
 .teacher-set-row__edit .teacher-button__icon,
+.teacher-set-row__practice .teacher-button__icon,
 .teacher-set-row__share .teacher-button__icon {
   width: 1.05rem;
   height: 1.05rem;
@@ -2253,6 +2259,7 @@ body.has-modal-open {
   .teacher-set-row__toggle,
   .teacher-set-row__toggle-chevron,
   .teacher-set-row__tablets-panel,
+  .teacher-set-row__practice,
   .teacher-set-row__share,
   .teacher-set-row__delete {
     transition: none;

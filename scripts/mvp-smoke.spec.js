@@ -79,8 +79,14 @@ test("Monday MVP: teacher draft, stable code, tablet subscription and correction
     await page.locator('.launch-mode-modal__mode-card[data-mode-key="write"]').click();
     await page.getByRole("button", { name: "Eingabe starten" }).click();
     await expect(page.locator("#launch-settings-modal")).toBeVisible();
-    await expect(page.locator('[data-learning-direction-group="launch"]')).toContainText("Deutsch → Englisch");
-    await expect(page.locator('[data-learning-direction-group="launch"]')).toContainText("Englisch → Deutsch");
+    await expect(page.locator('[data-learning-direction-group="launch"] [data-learning-direction="source-target"]')).toHaveAttribute(
+      "aria-label",
+      "Deutsch zuerst, danach Englisch",
+    );
+    await expect(page.locator('[data-learning-direction-group="launch"] [data-learning-direction="target-source"]')).toHaveAttribute(
+      "aria-label",
+      "Englisch zuerst, danach Deutsch",
+    );
     await page.locator('[data-learning-direction-group="launch"] [data-learning-direction="source-target"]').click();
     await page.locator("#launch-settings-start").click();
 

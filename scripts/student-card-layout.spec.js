@@ -208,7 +208,7 @@ test("input reveals the image after the first answer and keeps it during correct
   await page.locator("#input-answer-field").fill("absichtlich falsch");
   await page.locator("#input-check-button").click();
 
-  await expect(page.locator("#input-feedback-title")).toHaveText("Noch nicht korrekt");
+  await expect(page.locator("#input-feedback-title")).toHaveText("Markierte Antwort verbessern.");
   await expect(visual).toBeVisible();
   await expect(promptPane).toHaveClass(/has-visual/);
   await expect.poll(() => visual.evaluate((element) => element.naturalWidth)).toBeGreaterThan(0);

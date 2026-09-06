@@ -9,7 +9,7 @@ const TABLET_SESSION_STORAGE_KEY = "dino-vocab-tablet-session-v1";
 
 test.use({
   baseURL: BASE_URL,
-  viewport: { width: 1366, height: 1024 },
+  viewport: { width: 1024, height: 768 },
   colorScheme: "dark",
   locale: "de-DE",
 });
@@ -71,12 +71,14 @@ async function readQrMetrics(page) {
     const shell = modal?.querySelector(".student-share__qr-shell");
     const frame = modal?.querySelector(".student-share__qr-frame");
     const canvas = modal?.querySelector(".student-share__qr");
+    const close = modal?.querySelector(".share-dialog__close");
 
     if (
       !(panel instanceof HTMLElement)
       || !(shell instanceof HTMLElement)
       || !(frame instanceof HTMLElement)
       || !(canvas instanceof HTMLCanvasElement)
+      || !(close instanceof HTMLButtonElement)
     ) {
       return null;
     }
@@ -85,6 +87,9 @@ async function readQrMetrics(page) {
     const shellRect = shell.getBoundingClientRect();
     const frameRect = frame.getBoundingClientRect();
     const canvasRect = canvas.getBoundingClientRect();
+    const closeRect = close.getBoundingClientRect();
+    const shellStyle = getComputedStyle(shell);
+    const closeStyle = getComputedStyle(close);
     const context = canvas.getContext("2d", { willReadFrequently: true });
 
     let minX = canvas.width;
@@ -122,6 +127,12 @@ async function readQrMetrics(page) {
       canvasHeight: canvasRect.height,
       bitmapWidth: canvas.width,
       bitmapHeight: canvas.height,
+      shellBackground: shellStyle.backgroundColor,
+      shellBackgroundImage: shellStyle.backgroundImage,
+      shellShadow: shellStyle.boxShadow,
+      closeBackground: closeStyle.backgroundColor,
+      closeWidth: closeRect.width,
+      closeHeight: closeRect.height,
       contentBounds: maxX >= minX && maxY >= minY
         ? {
           left: minX,
@@ -146,13 +157,19 @@ test("student set share modal shows code and keeps QR shell compact and stable",
   const first = await readQrMetrics(page);
 
   expect(first).toBeTruthy();
-  expect(first.panelWidth).toBeGreaterThan(340);
+  expect(first.panelWidth).toBeGreaterThan(first.frameWidth + 24);
   expect(first.shellWidth).toBeLessThan(first.panelWidth - 24);
   expect(first.shellWidth).toBeLessThanOrEqual(340);
   expect(first.frameWidth).toBeGreaterThan(240);
   expect(first.frameHeight).toBeGreaterThan(240);
   expect(first.canvasWidth).toBeGreaterThan(240);
   expect(first.canvasHeight).toBeGreaterThan(240);
+  expect(first.shellBackground).toBe("rgba(0, 0, 0, 0)");
+  expect(first.shellBackgroundImage).toBe("none");
+  expect(first.shellShadow).toBe("none");
+  expect(first.closeBackground).toBe("rgba(0, 0, 0, 0)");
+  expect(first.closeWidth).toBeGreaterThanOrEqual(44);
+  expect(first.closeHeight).toBeGreaterThanOrEqual(44);
   expect(first.contentBounds).toBeTruthy();
   expect(first.contentBounds.width).toBeGreaterThan(210);
   expect(Math.abs(first.contentBounds.left - first.contentBounds.right)).toBeLessThanOrEqual(1);

@@ -19,7 +19,7 @@ test("alternative irregular forms are accepted in their matching field", () => {
   assert.deepEqual(
     buildAnswerGroups("learn - learnt - learnt", ["learn - learned - learned"]),
     [
-      ["learn"],
+      ["learn", "to learn"],
       ["learnt", "learned"],
       ["learnt", "learned"],
     ],
@@ -30,7 +30,7 @@ test("alternative irregular forms are accepted in their matching field", () => {
       ["shine - shined - shined; shine - shone - shone"],
     ),
     [
-      ["shine"],
+      ["shine", "to shine"],
       ["shone", "shined"],
       ["shone", "shined"],
     ],
@@ -46,9 +46,15 @@ test("all three irregular verb fields must be correct", () => {
   });
   const groups = buildAnswerGroups("shine - shone - shone");
   const correct = evaluateInputs(["shine", "shone", "shone"], groups, exactEvaluator);
+  const correctWithTo = evaluateInputs(["to shine", "shone", "shone"], groups, exactEvaluator);
+  const storedWithToGroups = buildAnswerGroups("to shine - shone - shone");
+  const correctWithoutTo = evaluateInputs(["shine", "shone", "shone"], storedWithToGroups, exactEvaluator);
   const wrong = evaluateInputs(["shine", "shined", "shone"], groups, exactEvaluator);
 
   assert.equal(correct.status, "correct");
+  assert.equal(correctWithTo.status, "correct");
+  assert.equal(correctWithoutTo.status, "correct");
+  assert.deepEqual(storedWithToGroups[0], ["to shine", "shine"]);
   assert.equal(wrong.status, "wrong");
   assert.deepEqual(wrong.rawInputs, ["shine", "shined", "shone"]);
   assert.equal(wrong.bestAnswer, "shine · shone · shone");

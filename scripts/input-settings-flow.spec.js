@@ -108,7 +108,11 @@ test("input settings apply immediately during mandatory correction flow", async 
   await settingsButton.click();
   await expect(settingsButton).toHaveAttribute("aria-expanded", "true");
   await expect(popover).toHaveAttribute("aria-hidden", "false");
-  await expect(page.locator('[data-learning-direction-group="input"] [data-learning-direction="source-target"]')).toContainText("→");
+  await expect(page.locator('[data-learning-direction-group="input"] [data-learning-direction="source-target"]')).toHaveAttribute(
+    "aria-label",
+    /.+ zuerst, danach .+/,
+  );
+  await expect(page.locator('[data-learning-direction-group="input"] .learning-direction-control__flag')).toHaveCount(2);
   await page.locator('[data-learning-direction-group="input"] [data-learning-direction="target-source"]').click();
   await expect(promptWord).toHaveText(firstCard.target.text.trim());
 
@@ -126,7 +130,7 @@ test("input settings apply immediately during mandatory correction flow", async 
 
   await answerField.fill("falschtest");
   await page.locator("#input-answer-form").press("Enter");
-  await expect(feedbackTitle).toHaveText("Noch nicht korrekt");
+  await expect(feedbackTitle).toHaveText("Markierte Antwort verbessern.");
   await expect(answerField).toBeEnabled();
   await expect(promptWord).toHaveText(firstCard.source.text.trim());
 
@@ -139,7 +143,7 @@ test("input settings apply immediately during mandatory correction flow", async 
 
   await answerField.fill("nochmal falsch");
   await page.locator("#input-answer-form").press("Enter");
-  await expect(feedbackTitle).toHaveText("Noch nicht korrekt");
+  await expect(feedbackTitle).toHaveText("Markierte Antwort verbessern.");
 
   await answerField.fill(secondCard.target.text.trim());
   await page.locator("#input-answer-form").press("Enter");

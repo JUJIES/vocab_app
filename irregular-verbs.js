@@ -30,6 +30,19 @@
       : null;
   }
 
+  function getInfinitiveAnswerVariants(value) {
+    const infinitive = typeof value === "string" ? value.trim() : "";
+
+    if (!infinitive) {
+      return [];
+    }
+
+    const bareInfinitive = infinitive.replace(/^to\s+/iu, "").trim();
+    return bareInfinitive !== infinitive
+      ? [infinitive, bareInfinitive]
+      : [infinitive, `to ${infinitive}`];
+  }
+
   function buildAnswerGroups(primaryAnswer, alternativeAnswers = []) {
     const primaryForms = parseForms(primaryAnswer);
 
@@ -37,7 +50,9 @@
       return null;
     }
 
-    const groups = primaryForms.map((form) => [form]);
+    const groups = primaryForms.map((form, index) => (
+      index === 0 ? getInfinitiveAnswerVariants(form) : [form]
+    ));
     const candidates = Array.isArray(alternativeAnswers)
       ? alternativeAnswers.flatMap((answer) => (
           typeof answer === "string" ? answer.split(";") : []
@@ -51,12 +66,16 @@
       }
 
       candidateForms.forEach((form, index) => {
-        const normalizedForm = form.toLocaleLowerCase("de");
-        const alreadyIncluded = groups[index].some(
-          (answer) => answer.toLocaleLowerCase("de") === normalizedForm,
-        );
-        if (!alreadyIncluded) {
-          groups[index].push(form);
+        const acceptedForms = index === 0 ? getInfinitiveAnswerVariants(form) : [form];
+
+        for (const acceptedForm of acceptedForms) {
+          const normalizedForm = acceptedForm.toLocaleLowerCase("de");
+          const alreadyIncluded = groups[index].some(
+            (answer) => answer.toLocaleLowerCase("de") === normalizedForm,
+          );
+          if (!alreadyIncluded) {
+            groups[index].push(acceptedForm);
+          }
         }
       });
     }

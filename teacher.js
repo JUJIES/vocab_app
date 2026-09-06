@@ -9,6 +9,7 @@ const EXTERNAL_LINK_ICON_PATH = "./assets/icons/external-link.svg";
 const DELETE_ICON_PATH = "./assets/icons/trash-2.svg";
 const REMOVE_ICON_PATH = "./assets/icons/x.svg";
 const IMAGE_PLUS_ICON_PATH = "./assets/icons/image-plus.svg";
+const TEACHER_PRACTICE_ICON_PATH = "./assets/icons/learn-mode.svg";
 const BROKEN_LINK_ICON_PATH = "./assets/icons/broken-link.svg";
 const TIMEOUT_ICON_PATH = "./assets/icons/timeout.svg";
 const PASSWORD_ICON_PATH = "./assets/icons/password-svgrepo-com.svg";
@@ -822,6 +823,17 @@ function createSetRow(setEntry) {
   }
 
   if (setEntry.status !== "draft") {
+    const practiceAction = document.createElement("button");
+    practiceAction.className = "teacher-set-row__practice";
+    practiceAction.type = "button";
+    practiceAction.setAttribute("aria-label", `Lernmodi für Set ${setEntry.title} öffnen`);
+    practiceAction.title = "Lernmodi öffnen";
+    practiceAction.append(createButtonIcon(TEACHER_PRACTICE_ICON_PATH));
+    practiceAction.addEventListener("click", () => {
+      window.location.assign(buildTeacherPracticeUrl(setEntry));
+    });
+    actions.append(practiceAction);
+
     const shareAction = document.createElement("button");
     shareAction.className = "teacher-set-row__share";
     shareAction.type = "button";
@@ -851,6 +863,15 @@ function createSetRow(setEntry) {
 
   row.append(copy, actions);
   return row;
+}
+
+function buildTeacherPracticeUrl(setEntry) {
+  const url = new URL("index.html", window.location.href);
+  url.searchParams.set("teacherPractice", setEntry.id);
+  if (TAFELRAUM_EMBED) {
+    url.searchParams.set("embed", "tafelraum");
+  }
+  return url.href;
 }
 
 function createTabletUsageBlock(setEntry) {
@@ -2203,18 +2224,15 @@ function renderVisualControls() {
   const active = isVisualJobActive(job);
   const missingCount = state.editorCards.filter((card) => card.id && !card.visual).length;
   const visualCount = state.editorCards.filter((card) => card.id && card.visual).length;
-  elements.generateVisualsButton.hidden = !isPublished || (missingCount === 0 && !active);
+  const actionsAvailable = isPublished && !active;
+  elements.generateVisualsButton.hidden = !actionsAvailable || missingCount === 0;
   elements.generateVisualsButton.disabled = !state.visualConfigured || active || missingCount === 0;
-  elements.generateVisualsButton.querySelector("span").textContent = active
-    ? formatVisualJobProgress(job)
-    : missingCount > 0
-      ? `Bilder erstellen (${missingCount})`
-      : "Bilder erstellt";
-  elements.regenerateAllVisualsButton.hidden = !isPublished || visualCount === 0;
+  elements.generateVisualsButton.querySelector("span").textContent = missingCount > 0
+    ? `Bilder erstellen (${missingCount})`
+    : "Bilder erstellt";
+  elements.regenerateAllVisualsButton.hidden = !actionsAvailable || visualCount === 0;
   elements.regenerateAllVisualsButton.disabled = !state.visualConfigured || active;
-  elements.regenerateAllVisualsButton.querySelector("span").textContent = active
-    ? formatVisualJobProgress(job)
-    : "Alle Bilder neu";
+  elements.regenerateAllVisualsButton.querySelector("span").textContent = "Alle Bilder neu";
 
   elements.visualJobStatus.replaceChildren();
   if (active) {

@@ -144,7 +144,7 @@ test("every semicolon-delimited variant is a complete valid input answer", async
     await expect(page.locator("#input-prompt-word")).toHaveText(`area ${index + 1}`);
     await page.locator("#input-answer-field").fill(ANSWERS[index]);
     await page.locator("#input-answer-form").press("Enter");
-    await expect(page.locator("#input-feedback-title")).toHaveText("Richtig");
+    await expect(page.locator("#input-check-button")).toHaveText("Richtig");
   }
 
   await expect(page.locator("#input-prompt-word")).toHaveText("Fertig");

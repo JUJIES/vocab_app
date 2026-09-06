@@ -29,14 +29,14 @@
       }
     </script>
     <link rel="stylesheet" href="./pwa-splash.css?v=2026-08-30-pwa-splash-v1" />
-    <link rel="stylesheet" href="./styles.css?v=2026-09-06-student-share-v1" />
+    <link rel="stylesheet" href="./styles.css?v=2026-09-06-inline-feedback-v1" />
     <link rel="stylesheet" href="./ui-motion.css?v=2026-08-30-ui-motion-v1" />
     <script src="./pwa.js?v=2026-08-30-pwa-splash-v3" defer></script>
     <script src="./ui-motion.js?v=2026-08-30-ui-motion-v1" defer></script>
-    <script src="./irregular-verbs.js?v=2026-08-30-irregular-verbs-v1" defer></script>
+    <script src="./irregular-verbs.js?v=2026-09-06-optional-to-v2" defer></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js" defer></script>
-    <script src="./app.js?v=2026-09-06-random-learning-order-v1" defer></script>
+    <script src="./app.js?v=2026-09-06-inline-feedback-v1" defer></script>
   </head>
   <body>
     <div class="pwa-splash" role="status" aria-label="Lerndeck wird geladen">
@@ -183,7 +183,6 @@
                 aria-hidden="true"
               >
                 <div class="learning-direction-control">
-                  <p class="learning-direction-control__label">Was kommt zuerst?</p>
                   <div
                     class="learning-direction-control__choices"
                     role="group"
@@ -446,7 +445,6 @@
               >
                 <div class="input-stage__settings-block input-stage__settings-block--direction">
                   <div class="learning-direction-control">
-                    <p class="learning-direction-control__label">Was kommt zuerst?</p>
                     <div
                       class="learning-direction-control__choices"
                       role="group"
@@ -577,133 +575,95 @@
             </section>
 
             <section class="input-stage__response-pane">
-              <form id="input-answer-form" class="input-stage__form">
-                <div class="input-stage__form-head">
-                  <label id="input-answer-label" class="input-stage__label" for="input-answer-field">Deine Antwort</label>
-                </div>
-                <div id="input-answer-row" class="input-stage__input-row">
-                  <input
-                    id="input-answer-field"
-                    class="input-stage__input"
-                    type="text"
-                    autocomplete="off"
-                    autocapitalize="none"
-                    spellcheck="false"
-                    placeholder="Antwort eingeben"
-                  />
-                  <div id="input-verb-answer-fields" class="input-stage__verb-fields" hidden>
-                    <label class="input-stage__verb-field" for="input-verb-form-0">
-                      <span>Infinitiv</span>
+              <div id="input-answer-card" class="input-stage__answer-card">
+                <form id="input-answer-form" class="input-stage__form">
+                  <div class="input-stage__form-head">
+                    <label id="input-answer-label" class="input-stage__label" for="input-answer-field">Deine Antwort</label>
+                  </div>
+                  <div id="input-answer-row" class="input-stage__input-row">
+                    <div id="input-single-answer" class="input-stage__answer-field input-stage__single-field">
                       <input
-                        id="input-verb-form-0"
-                        class="input-stage__verb-input"
-                        type="text"
-                        autocomplete="off"
-                        autocapitalize="none"
-                        spellcheck="false"
-                        enterkeyhint="next"
-                        data-irregular-verb-input="0"
-                      />
-                    </label>
-                    <label class="input-stage__verb-field" for="input-verb-form-1">
-                      <span>Simple Past</span>
-                      <input
-                        id="input-verb-form-1"
-                        class="input-stage__verb-input"
-                        type="text"
-                        autocomplete="off"
-                        autocapitalize="none"
-                        spellcheck="false"
-                        enterkeyhint="next"
-                        data-irregular-verb-input="1"
-                      />
-                    </label>
-                    <label class="input-stage__verb-field" for="input-verb-form-2">
-                      <span>Past Participle</span>
-                      <input
-                        id="input-verb-form-2"
-                        class="input-stage__verb-input"
+                        id="input-answer-field"
+                        class="input-stage__input"
                         type="text"
                         autocomplete="off"
                         autocapitalize="none"
                         spellcheck="false"
                         enterkeyhint="done"
-                        data-irregular-verb-input="2"
+                        placeholder="Antwort eingeben"
                       />
-                    </label>
-                  </div>
-                  <button
-                    id="input-check-button"
-                    class="input-stage__button input-stage__button--enter"
-                    type="submit"
-                    aria-label="Antwort prüfen"
-                  >
-                    <svg
-                      id="input-check-icon"
-                      class="input-stage__button-icon"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                      aria-hidden="true"
+                      <span class="input-stage__field-status" aria-hidden="true"></span>
+                    </div>
+                    <div id="input-verb-answer-fields" class="input-stage__verb-fields" role="group" aria-labelledby="input-answer-label" hidden>
+                      <label class="input-stage__answer-field input-stage__verb-field" for="input-verb-form-0">
+                        <span>Infinitiv</span>
+                        <input
+                          id="input-verb-form-0"
+                          class="input-stage__verb-input"
+                          type="text"
+                          autocomplete="off"
+                          autocapitalize="none"
+                          spellcheck="false"
+                          enterkeyhint="next"
+                          data-irregular-verb-input="0"
+                        />
+                        <span class="input-stage__field-status" aria-hidden="true"></span>
+                      </label>
+                      <label class="input-stage__answer-field input-stage__verb-field" for="input-verb-form-1">
+                        <span>Simple Past</span>
+                        <input
+                          id="input-verb-form-1"
+                          class="input-stage__verb-input"
+                          type="text"
+                          autocomplete="off"
+                          autocapitalize="none"
+                          spellcheck="false"
+                          enterkeyhint="next"
+                          data-irregular-verb-input="1"
+                        />
+                        <span class="input-stage__field-status" aria-hidden="true"></span>
+                      </label>
+                      <label class="input-stage__answer-field input-stage__verb-field" for="input-verb-form-2">
+                        <span>Past Participle</span>
+                        <input
+                          id="input-verb-form-2"
+                          class="input-stage__verb-input"
+                          type="text"
+                          autocomplete="off"
+                          autocapitalize="none"
+                          spellcheck="false"
+                          enterkeyhint="done"
+                          data-irregular-verb-input="2"
+                        />
+                        <span class="input-stage__field-status" aria-hidden="true"></span>
+                      </label>
+                    </div>
+                    <button
+                      id="input-check-button"
+                      class="input-stage__button input-stage__button--enter"
+                      type="submit"
+                      aria-label="Antwort prüfen"
                     >
-                      <g class="input-stage__button-icon-glyph input-stage__button-icon-glyph--enter">
-                        <path
-                          d="M5 12h13"
-                          stroke="currentColor"
-                          stroke-width="1.9"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        />
-                        <path
-                          d="m13 7 5 5-5 5"
-                          stroke="currentColor"
-                          stroke-width="1.9"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        />
-                      </g>
-                      <g class="input-stage__button-icon-glyph input-stage__button-icon-glyph--rewrite">
-                        <path
-                          d="M13 21h7.2"
-                          stroke="currentColor"
-                          stroke-width="1.85"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        />
-                        <path
-                          d="M20.9 6.8a1 1 0 0 0-4-4L4 15.8a2 2 0 0 0-.5.8l-1.3 4.3a.5.5 0 0 0 .6.6l4.3-1.3a2 2 0 0 0 .8-.5z"
-                          stroke="currentColor"
-                          stroke-width="1.85"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        />
-                      </g>
-                    </svg>
-                  </button>
-                </div>
-              </form>
+                      <span id="input-check-label" class="input-stage__button-label">Antwort prüfen</span>
+                    </button>
+                  </div>
+                </form>
 
-              <section id="input-feedback" class="input-feedback" aria-live="polite" aria-hidden="true">
-                <p id="input-feedback-title" class="input-feedback__title"></p>
-                <div class="input-feedback__grid">
-                  <p class="input-feedback__row">
-                    <span class="input-feedback__label">Deine Eingabe</span>
-                    <strong id="input-feedback-input" class="input-feedback__value"></strong>
-                  </p>
-                  <p id="input-feedback-correct-row" class="input-feedback__row">
-                    <span class="input-feedback__label">Korrekte Lösung</span>
-                    <strong id="input-feedback-correct" class="input-feedback__value"></strong>
-                  </p>
-                </div>
-                <button
-                  id="input-reveal-answer"
-                  class="input-feedback__reveal"
-                  type="button"
-                  hidden
-                >
-                  Lösung anzeigen
-                </button>
-              </section>
+                <section id="input-feedback" class="input-feedback" aria-hidden="true" inert>
+                  <div class="input-feedback__content">
+                    <div class="input-feedback__heading">
+                      <p id="input-feedback-title" class="input-feedback__title"></p>
+                      <button id="input-reveal-answer" class="input-feedback__reveal" type="button" hidden>
+                        Lösung anzeigen
+                      </button>
+                    </div>
+                    <p id="input-feedback-correct-row" class="input-feedback__row" hidden>
+                      <span class="input-feedback__label">Lösung</span>
+                      <strong id="input-feedback-correct" class="input-feedback__value"></strong>
+                    </p>
+                  </div>
+                </section>
+              </div>
             </section>
           </article>
         </div>
@@ -850,7 +810,6 @@
         role="dialog"
         aria-modal="true"
         aria-labelledby="launch-settings-title"
-        aria-describedby="launch-settings-description"
         data-ui-motion="dialog"
         hidden
       >
@@ -874,19 +833,11 @@
           </button>
 
           <header class="launch-settings-modal__header">
-            <p class="launch-mode-modal__kicker">Einstellungen</p>
             <h2 id="launch-settings-title" class="launch-settings-modal__title">Übungseinstellungen</h2>
-            <p id="launch-settings-description" class="launch-settings-modal__description">
-              Lege fest, wie du lernen möchtest.
-            </p>
           </header>
 
           <div class="launch-settings-modal__groups">
-            <section id="launch-mode-direction" class="launch-settings-modal__group" aria-labelledby="launch-settings-direction-label">
-              <div class="launch-settings-modal__group-heading">
-                <h3 id="launch-settings-direction-label" class="launch-settings-modal__group-title">Abfragerichtung</h3>
-                <p class="launch-settings-modal__group-description">Was kommt zuerst?</p>
-              </div>
+            <section id="launch-mode-direction" class="launch-settings-modal__direction" aria-label="Abfragerichtung">
               <div
                 class="learning-direction-control__choices"
                 role="group"

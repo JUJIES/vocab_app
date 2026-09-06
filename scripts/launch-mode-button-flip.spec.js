@@ -126,9 +126,32 @@ test("all learning modes share one extensible settings dialog", async ({ page },
   await page.locator('.launch-mode-modal__mode-card[data-mode-key="practice"]').click();
   await page.locator("#launch-mode-start").click();
   await expect(page.locator("#launch-settings-title")).toHaveText("Übungseinstellungen");
-  await expect(page.locator('[data-learning-direction-group="launch"]')).toBeVisible();
+  const directionGroup = page.locator('[data-learning-direction-group="launch"]');
+  const sourceFirst = directionGroup.locator('[data-learning-direction="source-target"]');
+  const targetFirst = directionGroup.locator('[data-learning-direction="target-source"]');
+  await expect(directionGroup).toBeVisible();
+  await expect(sourceFirst.locator(".learning-direction-control__flag")).toHaveText("🇩🇪");
+  await expect(sourceFirst.locator(".learning-direction-control__name")).toHaveText("Deutsch");
+  await expect(sourceFirst).toHaveAttribute("aria-label", "Deutsch zuerst, danach Englisch");
+  await expect(targetFirst.locator(".learning-direction-control__flag")).toHaveText("🇬🇧");
+  await expect(targetFirst.locator(".learning-direction-control__name")).toHaveText("Englisch");
+  await expect(targetFirst).toHaveAttribute("aria-label", "Englisch zuerst, danach Deutsch");
+  await expect(page.locator("#launch-settings-panel")).not.toContainText("Abfragerichtung");
+  await expect(page.locator("#launch-settings-panel")).not.toContainText("Was kommt zuerst?");
+  await expect(page.locator("#launch-settings-panel")).not.toContainText("Wähle die Abfragerichtung");
   await expect(page.locator("#launch-settings-additional")).toBeHidden();
   await expect(page.locator("#launch-settings-start-label")).toHaveText("Üben starten");
+  const directionGeometry = await sourceFirst.evaluate((choice) => {
+    const flag = choice.querySelector(".learning-direction-control__flag").getBoundingClientRect();
+    const name = choice.querySelector(".learning-direction-control__name").getBoundingClientRect();
+    const bounds = choice.getBoundingClientRect();
+    return {
+      flagAboveName: flag.bottom <= name.top,
+      flagCentered: Math.abs((flag.left + flag.width / 2) - (bounds.left + bounds.width / 2)) <= 1,
+      nameCentered: Math.abs((name.left + name.width / 2) - (bounds.left + bounds.width / 2)) <= 1,
+    };
+  });
+  expect(directionGeometry).toEqual({ flagAboveName: true, flagCentered: true, nameCentered: true });
   await page.waitForTimeout(300);
   await page.locator("#launch-settings-panel").screenshot({ path: testInfo.outputPath("practice-settings.png") });
 
@@ -149,9 +172,9 @@ test("all learning modes share one extensible settings dialog", async ({ page },
   await page.waitForTimeout(300);
   await page.locator("#launch-settings-panel").screenshot({ path: testInfo.outputPath("test-settings.png") });
 
-  await page.locator('[data-learning-direction-group="launch"] [data-learning-direction="target-source"]').click();
+  await targetFirst.click();
   await expect(page.locator("#launch-settings-modal")).toBeVisible();
-  await expect(page.locator('[data-learning-direction-group="launch"] [data-learning-direction="target-source"]')).toHaveClass(/is-selected/);
+  await expect(targetFirst).toHaveClass(/is-selected/);
 
   await page.setViewportSize({ width: 390, height: 844 });
   const compactGeometry = await page.locator("#launch-settings-panel").evaluate((panel) => ({
