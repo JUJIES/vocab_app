@@ -23,6 +23,7 @@ test("sheet prompt fixes six concepts to a calm 3x2 grid without text", () => {
   assert.match(prompt, /2\. Vocabulary pair: Katze — cat/);
   assert.match(prompt, /letters, words/);
   assert.match(prompt, /Never include white margins/);
+  assert.match(prompt, /never place a smaller rectangular picture inside a dark matte/);
   assert.match(prompt, /Intended meaning/);
   assert.match(prompt, /Avoid/);
   assert.match(prompt, /6\. empty neutral background/);
@@ -40,6 +41,7 @@ test("single prompt applies an optional visual direction without weakening share
   assert.match(prompt, /red|roter/i);
   assert.match(prompt, /cannot override/);
   assert.match(prompt, /No white margins/);
+  assert.match(prompt, /never place a smaller rectangular picture inside a dark matte/);
 });
 
 test("semantic planning explicitly protects convenient from the comfortable sense", () => {
@@ -90,6 +92,62 @@ test("generated tile normalization removes a light outer frame and keeps a squar
   assert.equal(info.width, 512);
   assert.equal(info.height, 512);
   assert.ok(data[0] < 100, "the white outer frame should not remain in the top-left corner");
+});
+
+test("generated tile normalization removes an unmistakable dark rectangular matte", async () => {
+  const framedImage = await sharp({
+    create: {
+      width: 120,
+      height: 120,
+      channels: 3,
+      background: { r: 10, g: 20, b: 34 },
+    },
+  }).composite([{
+    input: await sharp({
+      create: {
+        width: 96,
+        height: 96,
+        channels: 3,
+        background: { r: 170, g: 125, b: 80 },
+      },
+    }).png().toBuffer(),
+    left: 12,
+    top: 12,
+  }]).png().toBuffer();
+
+  const normalized = await normalizeGeneratedTile(framedImage);
+  const { data, info } = await sharp(normalized).raw().toBuffer({ resolveWithObject: true });
+  assert.equal(info.width, 512);
+  assert.equal(info.height, 512);
+  assert.ok(data[0] > 120, "the dark technical matte should not remain in the corner");
+});
+
+test("generated tile normalization preserves a genuine dark scene background", async () => {
+  const sceneImage = await sharp({
+    create: {
+      width: 120,
+      height: 120,
+      channels: 3,
+      background: { r: 10, g: 20, b: 34 },
+    },
+  }).composite([{
+    input: await sharp({
+      create: {
+        width: 42,
+        height: 58,
+        channels: 3,
+        background: { r: 220, g: 145, b: 70 },
+      },
+    }).png().toBuffer(),
+    left: 39,
+    top: 38,
+  }]).png().toBuffer();
+
+  const normalized = await normalizeGeneratedTile(sceneImage);
+  const { data, info } = await sharp(normalized).raw().toBuffer({ resolveWithObject: true });
+  assert.equal(info.width, 512);
+  assert.equal(info.height, 512);
+  assert.ok(data[0] < 40, "the intended dark scene background should remain visible");
 });
 
 test("sheet jobs persist reusable assets, attach them, regenerate one and retain history", async () => {
