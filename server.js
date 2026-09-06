@@ -27,11 +27,14 @@ const MAX_TEACHER_LOGIN_FAILURES = 5;
 const TEACHER_LOGIN_LOCKOUT_MS = 15 * 60 * 1000;
 const ACCESS_SESSION_COOKIE_NAME = "dino_vocab_access_session";
 const TEACHER_SESSION_COOKIE_NAME = "lerndeck_teacher_session";
+const TEACHER_EMBED_SESSION_COOKIE_NAME = "lerndeck_teacher_embed_session";
+const TAFELRAUM_EMBED_HEADER = "x-lerndeck-embed";
 const ACCESS_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const ACCESS_SESSION_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 // Keep classroom devices signed in across lessons and restarts.
 const TABLET_SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const TEACHER_SESSION_COOKIE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+const TAFELRAUM_FRAME_ANCESTORS = readTafelraumFrameAncestors(process.env.TAFELRAUM_EMBED_ORIGINS);
 const TABLET_SET_CARD_COLOR_KEYS = new Set([
   "slate",
   "blue",
@@ -1301,8 +1304,9 @@ app.post("/api/tablets/:tabletId/decouple", async (request, response) => {
   }
 });
 
-app.get("/teacher", (_request, response) => {
+app.get("/teacher", (request, response) => {
   setPwaControlFileCacheHeaders(response);
+  setTeacherFramePolicy(request, response);
   response.sendFile(path.join(ROOT_DIR, "teacher.html"));
 });
 
@@ -1407,6 +1411,9 @@ function setPwaControlFileCacheHeaders(response) {
 app.get([...PUBLIC_ROOT_FILES.keys()], (request, response) => {
   if (PWA_CONTROL_FILE_PATHS.has(request.path)) {
     setPwaControlFileCacheHeaders(response);
+  }
+  if (request.path === "/teacher.html") {
+    response.set("Content-Security-Policy", "frame-ancestors 'none'");
   }
   response.sendFile(path.join(ROOT_DIR, PUBLIC_ROOT_FILES.get(request.path)));
 });
@@ -1768,26 +1775,66 @@ function readCookie(request, cookieName) {
 }
 
 function getTeacherSessionToken(request) {
-  return readCookie(request, TEACHER_SESSION_COOKIE_NAME) || getBearerToken(request);
+  const cookieName = isTafelraumEmbedApiRequest(request)
+    ? TEACHER_EMBED_SESSION_COOKIE_NAME
+    : TEACHER_SESSION_COOKIE_NAME;
+  return readCookie(request, cookieName) || getBearerToken(request);
 }
 
 function setTeacherSessionCookie(request, response, token) {
-  response.cookie(TEACHER_SESSION_COOKIE_NAME, token, {
+  const embedded = isTafelraumEmbedApiRequest(request);
+  response.cookie(embedded ? TEACHER_EMBED_SESSION_COOKIE_NAME : TEACHER_SESSION_COOKIE_NAME, token, {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: embedded && request.secure ? "none" : "lax",
     secure: request.secure,
+    ...(embedded && request.secure ? { partitioned: true } : {}),
     path: "/",
     maxAge: TEACHER_SESSION_COOKIE_MAX_AGE_MS,
   });
 }
 
 function clearTeacherSessionCookie(request, response) {
-  response.clearCookie(TEACHER_SESSION_COOKIE_NAME, {
+  const embedded = isTafelraumEmbedApiRequest(request);
+  response.clearCookie(embedded ? TEACHER_EMBED_SESSION_COOKIE_NAME : TEACHER_SESSION_COOKIE_NAME, {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: embedded && request.secure ? "none" : "lax",
     secure: request.secure,
+    ...(embedded && request.secure ? { partitioned: true } : {}),
     path: "/",
   });
+}
+
+function isTafelraumEmbedApiRequest(request) {
+  return request.get(TAFELRAUM_EMBED_HEADER) === "tafelraum";
+}
+
+function readTafelraumFrameAncestors(rawValue) {
+  const candidates = String(rawValue || "http://127.0.0.1:5173,http://localhost:5173")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const origins = candidates.flatMap((candidate) => {
+    try {
+      const url = new URL(candidate);
+      const loopbackHttp = url.protocol === "http:"
+        && (url.hostname === "127.0.0.1" || url.hostname === "localhost");
+      return (url.protocol === "https:" || loopbackHttp) && url.origin === candidate ? [url.origin] : [];
+    } catch (_error) {
+      return [];
+    }
+  });
+  if (origins.length === 0) {
+    throw new Error("TAFELRAUM_EMBED_ORIGINS enthält keine sichere Origin.");
+  }
+  return [...new Set(origins)];
+}
+
+function setTeacherFramePolicy(request, response) {
+  const embedded = request.query?.embed === "tafelraum";
+  response.set(
+    "Content-Security-Policy",
+    embedded ? `frame-ancestors ${TAFELRAUM_FRAME_ANCESTORS.join(" ")}` : "frame-ancestors 'none'",
+  );
 }
 
 function serializeMutatingRequests() {

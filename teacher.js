@@ -13,6 +13,8 @@ const BROKEN_LINK_ICON_PATH = "./assets/icons/broken-link.svg";
 const TIMEOUT_ICON_PATH = "./assets/icons/timeout.svg";
 const PASSWORD_ICON_PATH = "./assets/icons/password-svgrepo-com.svg";
 const LAST_TEACHER_STORAGE_KEY = "lerndeck-last-teacher-v1";
+const TAFELRAUM_EMBED = window.self !== window.top
+  && new URLSearchParams(window.location.search).get("embed") === "tafelraum";
 
 const state = {
   sets: [],
@@ -156,9 +158,115 @@ const elements = {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
+  installTafelraumBridge();
   bindEvents();
-  void initializeTeacherApp().finally(() => window.LerndeckPwa?.ready());
+  void initializeTeacherApp().finally(() => {
+    window.LerndeckPwa?.ready();
+    if (TAFELRAUM_EMBED) {
+      window.parent.postMessage({ type: "tafelraum:app-ready", appId: "lerndeck" }, "*");
+    }
+  });
 });
+
+function installTafelraumBridge() {
+  if (!TAFELRAUM_EMBED) return;
+  const interactiveSelector = [
+    "a[href]", "button", "input", "select", "summary", "textarea",
+    "[contenteditable='true']", "[draggable='true']", "[data-tafelraum-interactive]",
+    "[role='button']", "[role='checkbox']", "[role='combobox']", "[role='link']",
+    "[role='listbox']", "[role='option']", "[role='radio']", "[role='slider']",
+    "[role='spinbutton']", "[role='switch']", "[role='tab']",
+  ].join(",");
+  let backgroundPanEnabled = false;
+  let panPointerId = null;
+  let panTarget = null;
+  let lastPoint = { clientX: 0, clientY: 0 };
+  const contentOwnsPointer = (target) => target instanceof Element && Boolean(target.closest(interactiveSelector));
+  const canScrollToward = (target, deltaX, deltaY) => {
+    const vertical = Math.abs(deltaY) >= Math.abs(deltaX);
+    const delta = vertical ? deltaY : deltaX;
+    if (delta === 0) return false;
+    const root = document.scrollingElement;
+    for (let node = target instanceof Element ? target : null; node; node = node.parentElement) {
+      const style = getComputedStyle(node);
+      const overflow = vertical ? style.overflowY : style.overflowX;
+      const viewport = vertical ? node.clientHeight : node.clientWidth;
+      const extent = vertical ? node.scrollHeight : node.scrollWidth;
+      const position = vertical ? node.scrollTop : node.scrollLeft;
+      const scrollable = (node === root || /^(auto|scroll|overlay)$/.test(overflow)) && extent > viewport + 1;
+      if (scrollable && (delta < 0 ? position > 0.5 : position < extent - viewport - 0.5)) return true;
+    }
+    return false;
+  };
+  const postPan = (phase, point = lastPoint) => window.parent.postMessage({
+    type: "tafelraum:interactive-pan",
+    phase,
+    pointerId: panPointerId,
+    clientX: point.clientX,
+    clientY: point.clientY,
+  }, "*");
+  const finishPan = (phase, event) => {
+    if (panPointerId === null || (event && event.pointerId !== panPointerId)) return;
+    if (event) {
+      lastPoint = { clientX: event.clientX, clientY: event.clientY };
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }
+    postPan(phase);
+    if (panTarget?.hasPointerCapture?.(panPointerId)) panTarget.releasePointerCapture(panPointerId);
+    panPointerId = null;
+    panTarget = null;
+  };
+  window.addEventListener("message", (event) => {
+    if (event.source !== window.parent || event.data?.type !== "tafelraum:interactive-pan-mode") return;
+    backgroundPanEnabled = event.data.enabled === true;
+    if (!backgroundPanEnabled) finishPan("cancel");
+  });
+  window.addEventListener("pointerdown", (event) => {
+    if (!backgroundPanEnabled || panPointerId !== null || !event.isPrimary || event.button !== 0 || contentOwnsPointer(event.target)) return;
+    panPointerId = event.pointerId;
+    panTarget = event.target instanceof Element ? event.target : document.documentElement;
+    lastPoint = { clientX: event.clientX, clientY: event.clientY };
+    panTarget.setPointerCapture?.(event.pointerId);
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    postPan("start");
+  }, { capture: true });
+  window.addEventListener("pointermove", (event) => {
+    if (event.pointerId !== panPointerId) return;
+    lastPoint = { clientX: event.clientX, clientY: event.clientY };
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    postPan("move");
+  }, { capture: true });
+  window.addEventListener("pointerup", (event) => finishPan("end", event), { capture: true });
+  window.addEventListener("pointercancel", (event) => finishPan("cancel", event), { capture: true });
+  window.addEventListener("wheel", (event) => {
+    if (event.ctrlKey || event.metaKey) {
+      event.preventDefault();
+      window.parent.postMessage({
+        type: "tafelraum:interactive-zoom",
+        clientX: event.clientX,
+        clientY: event.clientY,
+        deltaMode: event.deltaMode,
+        deltaX: event.deltaX,
+        deltaY: event.deltaY,
+      }, "*");
+      return;
+    }
+    if (canScrollToward(event.target, event.deltaX, event.deltaY)) return;
+    event.preventDefault();
+    window.parent.postMessage({
+      type: "tafelraum:interactive-wheel-pan",
+      clientX: event.clientX,
+      clientY: event.clientY,
+      deltaMode: event.deltaMode,
+      deltaX: event.deltaX,
+      deltaY: event.deltaY,
+      shiftKey: event.shiftKey,
+    }, "*");
+  }, { capture: true, passive: false });
+}
 
 function bindEvents() {
   document.addEventListener("click", (event) => {
@@ -2944,6 +3052,7 @@ async function handleTeacherLogout() {
 
 async function requestJson(path, options = {}) {
   const headers = { ...(options.headers || {}) };
+  if (TAFELRAUM_EMBED) headers["X-Lerndeck-Embed"] = "tafelraum";
   if (options.body !== undefined) {
     headers["Content-Type"] = "application/json";
   }
