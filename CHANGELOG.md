@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Sheet-Lernbilder erhalten nun beim Zellbeschnitt eine feste 8-Pixel-Sicherheitszone und nur noch eine abschließende WebP-Kodierung. Dadurch verschwinden dünne Sheet-Nähte ohne weitere Bildgenerierung; ältere aktive Sheet-Bilder lassen sich idempotent als neue, reversible Varianten nachbearbeiten.
 - `Üben` mischt die Karten jetzt bei jeder Haupt- und Wiederholungsrunde neu; `Testen` behält seine zufällige Auswahl und gemischte Reihenfolge. Selbst der seltene unveränderte Ausgang einer Zufallsmischung wird bei mehreren Karten aufgebrochen, damit die Reihenfolge des Sets nicht als Lösungshilfe gelernt wird.
 - Der Teilen-Dialog der Schüler-App zeigt jetzt den stabilen sechsstelligen Set-Code direkt unter dem QR-Code. Der redundante Erklärungssatz über die Funktion des Links entfällt.
 - Der Lernstart verwendet jetzt ein gemeinsames, erweiterbares Einstellungsmodal für `Üben`, `Eingabe` und `Testen`: Die Richtung steht immer an derselben Stelle, der Testumfang erscheint nur in den `Testeinstellungen`, und alle gewählten Optionen werden erst über eine eindeutige Startaktion übernommen.

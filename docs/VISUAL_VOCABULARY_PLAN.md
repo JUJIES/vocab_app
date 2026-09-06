@@ -29,12 +29,14 @@ Die fachliche Planung nutzt `OPENAI_VISUAL_PLANNER_MODEL`, ersatzweise das berei
 
 - Ausgabe: `1536 × 1024`, `quality: low`, WebP
 - Raster: `3 × 2`
-- Kachel: exakt `512 × 512`
+- nominelle Kachel: `512 × 512`; davon werden rundherum 8 Pixel Sicherheitszone entfernt und die verbleibenden `496 × 496` einmalig auf `512 × 512` skaliert
 - Reihenfolge: links nach rechts, danach die zweite Zeile
 - ruhige, textfreie, konsistente Editorial-Illustrationen auf dunklem Hintergrund
 - Sheets werden nacheinander erzeugt; die Lehrkraft kann parallel im Editor weiterarbeiten
 
-Die 6er-Entscheidung priorisiert ausreichend große, eindeutig erkennbare Motive gegenüber maximaler Packdichte. Ein einzelnes Ersatzbild wird als `1024 × 1024`-Bild erzeugt und anschließend auf 512 × 512 normalisiert. Die Prompts verlangen ausdrücklich eine bis an alle vier Kanten fortlaufende Illustration statt eines kleineren Bildrechtecks auf einer dunklen Fläche. Zusätzlich entfernt die zentrale Normalisierung zusammenhängende, überwiegend helle Außenränder (maximal 20 Prozent je Seite). Einen dunklen technischen Innenrahmen entfernt sie nur, wenn alle vier Außenkanten farblich gleichmäßig sind, die gegenüberliegenden Abstände annähernd übereinstimmen und an allen vier inneren Kanten ein klarer Szenenwechsel beginnt. Bei Unsicherheit bleibt das Bild unverändert, damit echte dunkle Szenenhintergründe nicht beschnitten werden. Roh-Sheets werden nur im Arbeitsspeicher verarbeitet und nicht dauerhaft gespeichert.
+Die 6er-Entscheidung priorisiert ausreichend große, eindeutig erkennbare Motive gegenüber maximaler Packdichte. Die feste Sicherheitszone verhindert, dass helle, dunkle oder farbige Reste einer modellseitigen Sheet-Trennkante in die Lernkarte gelangen. Sie ist bewusst symmetrisch und inhaltsunabhängig: Natürlicher Himmel, Wasser oder dunkle Szenen lösen dadurch keinen variablen Fehlbeschnitt aus. Innerhalb der Sicherheitszone greift weiterhin die konservative Erkennung größerer echter Rahmen. Das Gesamtsheet wird vor dem Zellbeschnitt nicht erneut verlustbehaftet kodiert; jede Zielkachel erhält genau eine abschließende WebP-Kodierung.
+
+Ein einzelnes Ersatzbild wird als `1024 × 1024`-Bild erzeugt und anschließend auf 512 × 512 normalisiert. Die gemeinsame vorsichtige inhaltsabhängige Erkennung entfernt zusammenhängende, überwiegend helle Außenränder (maximal 20 Prozent je Seite). Einen dunklen technischen Innenrahmen entfernt sie nur, wenn alle vier Außenkanten farblich gleichmäßig sind, die gegenüberliegenden Abstände annähernd übereinstimmen und an allen vier inneren Kanten ein klarer Szenenwechsel beginnt. Bei Unsicherheit bleibt der erkannte Inhaltsbereich unverändert, damit echte dunkle Szenenhintergründe nicht beschnitten werden. Roh-Sheets werden nur im Arbeitsspeicher verarbeitet und nicht dauerhaft gespeichert.
 
 ## Datenmodell
 
@@ -60,7 +62,7 @@ Alle Varianten liegen unabhängig von der aktiven Kartenreferenz im Asset-Store:
 - Dateien: `DATA_DIR/visual-assets/*.webp`
 - Jobs: `DATA_DIR/visual-jobs.json`
 
-Jedes neue Asset speichert zusätzlich seinen Visual-Brief. Damit bleiben Bedeutungsentscheidung, geplante Szene und ausgeschlossene Verwechslungen bei späteren Varianten nachvollziehbar.
+Jedes neue Asset speichert zusätzlich seinen Visual-Brief. Sheet-Assets halten außerdem Sheetnummer, Zellindex und die verwendete `normalizationVersion` fest. Damit bleiben Bedeutungsentscheidung, geplanter Ausschnitt und ausgeschlossene Verwechslungen bei späteren Varianten nachvollziehbar.
 
 Damit ist die spätere setübergreifende Bibliothek ohne Datenmigration möglich. Das Entfernen verwaister Assets bleibt bewusst einem späteren referenzprüfenden Cleanup vorbehalten.
 
@@ -87,6 +89,7 @@ Neustart: queued/generating/applying → interrupted
 - Die Medienroute verwendet immutable Cache-Header. Jede neue Variante besitzt eine neue URL.
 - Fehlertexte unterscheiden Konfiguration, Rate Limit und allgemeinen Providerfehler, ohne Schlüssel- oder Providerdetails auszugeben.
 - Der Runtime-Ordner muss wie alle anderen Lerndeck-Daten außerhalb des Releases liegen und in Backups enthalten sein.
+- Bereits aktive ältere Sheet-Bilder lassen sich ohne Provideraufruf zunächst als Dry-Run und danach als neue, reversible Asset-Varianten normalisieren: `npm run visuals:normalize-sheets -- --data-dir=<Pfad> --teacher=<id> --set-id=<id>`; erst das zusätzliche `--apply` schreibt und aktiviert die Varianten. Der Befehl verlangt eine explizite Set-ID oder einen exakten Set-Titel und ist durch `normalizationVersion` idempotent.
 
 ## Bewusst vertagt
 

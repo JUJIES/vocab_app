@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "start": "node server.js",
-    "check": "node --check app.js && node --check teacher.js && node --check pwa.js && node --check ui-motion.js && node --check irregular-verbs.js && node --check server.js && node --check lib/visual-service.js && node --check sw.js && node --check scripts/provision-teachers.js",
+    "check": "node --check app.js && node --check teacher.js && node --check pwa.js && node --check ui-motion.js && node --check irregular-verbs.js && node --check server.js && node --check lib/visual-service.js && node --check sw.js && node --check scripts/provision-teachers.js && node --check scripts/normalize-sheet-visuals.js",
+    "visuals:normalize-sheets": "node scripts/normalize-sheet-visuals.js",
     "provision:teachers": "node scripts/provision-teachers.js",
     "test": "node --test tests/*.test.js",
     "verify": "npm run check && npm test"

@@ -11,6 +11,7 @@ const {
   buildSinglePrompt,
   buildVisualPlanningPrompt,
   normalizeGeneratedTile,
+  normalizeGeneratedSheetTile,
 } = require("../lib/visual-service");
 
 test("sheet prompt fixes six concepts to a calm 3x2 grid without text", () => {
@@ -150,6 +151,132 @@ test("generated tile normalization preserves a genuine dark scene background", a
   assert.ok(data[0] < 40, "the intended dark scene background should remain visible");
 });
 
+test("sheet tile normalization removes the fixed grid safety inset", async () => {
+  const interior = await sharp({
+    create: {
+      width: 506,
+      height: 506,
+      channels: 3,
+      background: { r: 35, g: 180, b: 90 },
+    },
+  }).png().toBuffer();
+  const composites = [];
+  for (let row = 0; row < 2; row += 1) {
+    for (let column = 0; column < 3; column += 1) {
+      composites.push({
+        input: interior,
+        left: (column * 512) + 3,
+        top: (row * 512) + 3,
+      });
+    }
+  }
+  const sheet = await sharp({
+    create: {
+      width: 1536,
+      height: 1024,
+      channels: 3,
+      background: { r: 245, g: 35, b: 45 },
+    },
+  }).composite(composites).webp({ quality: 90 }).toBuffer();
+
+  const normalized = await normalizeGeneratedSheetTile(sheet, { column: 1, row: 1 });
+  const { data, info } = await sharp(normalized).raw().toBuffer({ resolveWithObject: true });
+  assert.equal(info.width, 512);
+  assert.equal(info.height, 512);
+  assert.ok(data[0] < 80 && data[1] > 130, "the red sheet divider must not remain at the tile edge");
+});
+
+test("active legacy sheet assets are safely derived once without image generation", async () => {
+  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), "lerndeck-visual-normalize-test-"));
+  const setService = new SetService({ dataDir });
+  let imageGenerationCount = 0;
+  const client = {
+    responses: {
+      create: async ({ input }) => {
+        const prompt = input[0].content[0].text;
+        const cardJson = prompt.split("Vocabulary cards: ")[1].split("\nReturn exactly")[0];
+        const cards = JSON.parse(cardJson);
+        return {
+          output_text: JSON.stringify({
+            briefs: cards.map((card) => createBrief(card.cardId, card.back, `Scene for ${card.back}`)),
+          }),
+        };
+      },
+    },
+    images: {
+      generate: async () => {
+        imageGenerationCount += 1;
+        const image = await sharp({
+          create: {
+            width: 1536,
+            height: 1024,
+            channels: 3,
+            background: { r: 38, g: 55, b: 78 },
+          },
+        }).webp().toBuffer();
+        return { data: [{ b64_json: image.toString("base64") }] };
+      },
+    },
+  };
+  const visualService = new VisualService({ dataDir, setService, client });
+  const createdSet = await setService.createSet("julius", {
+    title: "Legacy sheet normalization",
+    cards: [{ front: "Feld", back: "field" }],
+  });
+  await visualService.startMissingVisuals("julius", createdSet.id);
+  await waitForCompletedJob(visualService, "julius", createdSet.id);
+
+  const [originalAsset] = await visualService.listAssets("julius", createdSet.id);
+  await visualService.assetStore.mutate((store) => {
+    store.assets.find((asset) => asset.id === originalAsset.id).normalizationVersion = "";
+  });
+  const framedTile = await sharp({
+    create: {
+      width: 512,
+      height: 512,
+      channels: 3,
+      background: { r: 245, g: 35, b: 45 },
+    },
+  }).composite([{
+    input: await sharp({
+      create: {
+        width: 506,
+        height: 506,
+        channels: 3,
+        background: { r: 35, g: 180, b: 90 },
+      },
+    }).png().toBuffer(),
+    left: 3,
+    top: 3,
+  }]).webp({ quality: 90 }).toBuffer();
+  await fs.writeFile(visualService.getAssetPath(originalAsset.id), framedTile);
+
+  const dryRun = await visualService.normalizeActiveSheetAssets("julius", createdSet.id);
+  assert.equal(dryRun.candidateCount, 1);
+  assert.equal(dryRun.appliedCount, 0);
+  const applied = await visualService.normalizeActiveSheetAssets("julius", createdSet.id, { apply: true });
+  assert.equal(applied.appliedCount, 1);
+  assert.equal(imageGenerationCount, 1, "post-processing must not trigger another image request");
+
+  const normalizedSet = await setService.getOwnedSet("julius", createdSet.id);
+  const derivedAssetId = normalizedSet.cards[0].visual.assetId;
+  assert.notEqual(derivedAssetId, originalAsset.id);
+  const [derivedAsset] = await visualService.listAssets("julius", createdSet.id);
+  assert.equal(derivedAsset.parentAssetId, originalAsset.id);
+  assert.equal(derivedAsset.normalizationVersion, "sheet-safe-inset-v1");
+  const { data, info } = await sharp(await fs.readFile(visualService.getAssetPath(derivedAssetId)))
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  assert.equal(info.width, 512);
+  assert.equal(info.height, 512);
+  assert.ok(data[0] < 80 && data[1] > 130, "the derived asset must no longer expose the border");
+
+  const repeated = await visualService.normalizeActiveSheetAssets("julius", createdSet.id, { apply: true });
+  assert.equal(repeated.candidateCount, 0);
+  assert.equal(repeated.alreadyNormalizedCount, 1);
+  assert.equal((await visualService.listAssets("julius", createdSet.id)).length, 2);
+});
+
 test("sheet jobs persist reusable assets, attach them, regenerate one and retain history", async () => {
   const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), "lerndeck-visual-test-"));
   const setService = new SetService({ dataDir });
@@ -209,6 +336,11 @@ test("sheet jobs persist reusable assets, attach them, regenerate one and retain
   assert.equal(visualizedSet.cards.filter((card) => card.visual?.url).length, 7);
   assert.deepEqual(generatedSizes, ["1536x1024", "1536x1024"]);
   assert.equal((await visualService.listAssets("julius", createdSet.id)).length, 7);
+  const firstSheetAsset = (await visualService.listAssets("julius", createdSet.id))
+    .find((asset) => asset.cardId === visualizedSet.cards[0].id);
+  assert.equal(firstSheetAsset.sheetNumber, 1);
+  assert.equal(firstSheetAsset.sheetIndex, 0);
+  assert.equal(firstSheetAsset.normalizationVersion, "sheet-safe-inset-v1");
   assert.equal(planningPrompts.length, 2);
   assert.match(generatedPrompts[0], /Exact meaning of term 1/);
   assert.match(generatedPrompts[0], /A concrete classroom-safe scene for term 1/);
