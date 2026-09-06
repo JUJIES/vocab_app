@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Die Vorderseite der Übungskarte nutzt auf Desktop und Tablet den vorhandenen Raum harmonischer: Der Begriff rückt auf eine ruhige Achse nahe der Kartenmitte, die Tipp-Aktion sitzt höher in einer klaren unteren Zone und ein sichtbarer Hinweis verschiebt den Inhalt nur moderat. Kartenformat, Rückseite und schmale Mobilansicht bleiben stabil.
 - Die Richtungswahl fragt jetzt eindeutig `Wie möchtest du abgefragt werden?` und zeigt beide Sprachen kompakt als `Flagge → Flagge`. Links steht die sichtbare Frage, rechts die einzugebende Antwort; missverständliche einzelne Sprachnamen entfallen, während Screenreader die vollständige Aktion vorlesen.
 - Sheet-Lernbilder erhalten nun beim Zellbeschnitt eine feste 8-Pixel-Sicherheitszone und nur noch eine abschließende WebP-Kodierung. Dadurch verschwinden dünne Sheet-Nähte ohne weitere Bildgenerierung; ältere aktive Sheet-Bilder lassen sich idempotent als neue, reversible Varianten nachbearbeiten.
 - Veröffentlichte Sets besitzen im Lehrerbereich jetzt eine eigene Aktion `Lernmodi öffnen`. Sie startet mit dem bestehenden Lehrkraftkonto dieselbe Modusauswahl und Lernoberfläche wie bei Schülern, kehrt über den Zurück-Pfeil zur Setliste zurück und schreibt bewusst keinen Tablet-Lernstand.

@@ -59,15 +59,36 @@ async function prepareStudentHome(page, options = {}) {
   await page.evaluate(async ({ deviceKey, sessionKey, tabletSessionKey }) => {
     window.localStorage.clear();
     window.sessionStorage.clear();
-    const response = await fetch("/api/tablets/rot-1/verify-pin", {
+    let response = await fetch("/api/tablets/rot-1/verify-pin", {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ pin: "1111" }),
     });
-    const data = await response.json();
+    let data = await response.json();
+    if (response.status === 409) {
+      response = await fetch("/api/tablets/rot-1/register", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin: "1111" }),
+      });
+      data = await response.json();
+    }
     if (!response.ok || !data?.session?.token) {
       throw new Error(`Unable to prepare tablet session: ${response.status}`);
+    }
+    const subscriptionResponse = await fetch("/api/tablets/rot-1/subscriptions", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Authorization": `Bearer ${data.session.token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ setPath: "sets/food-basics-01.json" }),
+    });
+    if (!subscriptionResponse.ok) {
+      throw new Error(`Unable to prepare layout subscription: ${subscriptionResponse.status}`);
     }
     window.localStorage.setItem(deviceKey, "rot-1");
     window.sessionStorage.setItem(sessionKey, "1");
@@ -143,6 +164,54 @@ test("long German terms stay on one line and inside the iPad and desktop card", 
   expect(desktopMetrics.lineCount).toBe(1);
   expect(desktopMetrics.insideCard).toBeTruthy();
   expect(desktopMetrics.fontSize).toBeLessThan(60);
+});
+
+test("practice front keeps word and tip action in one balanced vertical composition", async ({ page }, testInfo) => {
+  await prepareStudentHome(page, { withVisual: false });
+  await openMode(page, "practice");
+
+  async function readComposition() {
+    return page.locator("#front-face").evaluate((face) => {
+      const faceBounds = face.getBoundingClientRect();
+      const wordBounds = face.querySelector("#front-word").getBoundingClientRect();
+      const actionBounds = face.querySelector("#card-action").getBoundingClientRect();
+      return {
+        wordCenterRatio: ((wordBounds.top + wordBounds.height / 2) - faceBounds.top) / faceBounds.height,
+        actionCenterRatio: ((actionBounds.top + actionBounds.height / 2) - faceBounds.top) / faceBounds.height,
+        gapRatio: (actionBounds.top - wordBounds.bottom) / faceBounds.height,
+      };
+    });
+  }
+
+  for (const viewport of [
+    { name: "tablet", width: 1024, height: 768 },
+    { name: "desktop", width: 1366, height: 900 },
+  ]) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    const composition = await readComposition();
+    expect(composition.wordCenterRatio).toBeGreaterThan(0.39);
+    expect(composition.wordCenterRatio).toBeLessThan(0.48);
+    expect(composition.actionCenterRatio).toBeGreaterThan(0.76);
+    expect(composition.actionCenterRatio).toBeLessThan(0.88);
+    expect(composition.gapRatio).toBeGreaterThan(0.12);
+    expect(composition.gapRatio).toBeLessThan(0.38);
+    await page.locator("#flashcard").screenshot({
+      path: testInfo.outputPath(`practice-front-${viewport.name}.png`),
+    });
+  }
+
+  await expect(page.locator("#card-action")).toBeEnabled({ timeout: 3000 });
+  await page.locator("#card-action").click();
+  await expect(page.locator("#front-content")).toHaveClass(/has-hint/);
+  const hintClearance = await page.locator("#front-face").evaluate((face) => {
+    const hintBounds = face.querySelector(".flashcard__hint-shell").getBoundingClientRect();
+    const actionBounds = face.querySelector("#card-action").getBoundingClientRect();
+    return actionBounds.top - hintBounds.bottom;
+  });
+  expect(hintClearance).toBeGreaterThan(8);
+  await page.locator("#flashcard").screenshot({
+    path: testInfo.outputPath("practice-front-desktop-with-hint.png"),
+  });
 });
 
 test("front and back use the same type size for differently long terms", async ({ page }) => {

@@ -6921,6 +6921,20 @@ button.student-screen__device-card {
   justify-content: space-between;
 }
 
+@media (min-width: 721px) {
+  .flashcard__face--front .flashcard__content {
+    transform: translate3d(0, 2.4rem, 2px);
+  }
+
+  .flashcard__face--front .flashcard__content.has-hint {
+    transform: translate3d(0, 1.4rem, 2px);
+  }
+
+  .flashcard__face--front .flashcard__dock--front {
+    bottom: 3.4rem;
+  }
+}
+
 .flashcard__answer {
   display: grid;
   justify-items: center;
