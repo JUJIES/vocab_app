@@ -1570,6 +1570,13 @@ function shuffleCards(cards) {
     [shuffledCards[index], shuffledCards[randomIndex]] = [shuffledCards[randomIndex], shuffledCards[index]];
   }
 
+  if (
+    shuffledCards.length > 1
+    && shuffledCards.every((card, index) => card === cards[index])
+  ) {
+    [shuffledCards[0], shuffledCards[1]] = [shuffledCards[1], shuffledCards[0]];
+  }
+
   return shuffledCards;
 }
 
@@ -8618,7 +8625,7 @@ function getRoundResultPercent(cardCount, unknownCount) {
 }
 
 function startRound(cards, roundNumber, roundMode = "main") {
-  state.cards = cards;
+  state.cards = shuffleCards(cards);
   state.roundMode = roundMode;
   state.roundNumber = roundNumber;
   state.roundUnknownCards = [];

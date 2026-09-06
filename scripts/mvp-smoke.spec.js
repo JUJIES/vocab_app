@@ -71,7 +71,7 @@ test("Monday MVP: teacher draft, stable code, tablet subscription and correction
     await expect(page.locator("#launch-settings-modal")).toBeVisible();
     await page.locator('[data-learning-direction-group="launch"] [data-learning-direction="target-source"]').click();
     await page.locator("#launch-settings-start").click();
-    await expect(page.locator("#front-word")).toHaveText("dog");
+    await expect(page.locator("#front-word")).toHaveText(/^(dog|cat|bird)$/);
     await page.locator("#student-home-link").click();
     await expect(setCard).toBeVisible();
 

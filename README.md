@@ -15,7 +15,7 @@ Einsatzbereit sind:
 - Schnellimport aus klaren Textlisten sowie KI-Entwürfe aus Freitext, TXT, MD, CSV, Bildern, PDF, DOCX und PPTX; beim automatischen Erstentwurf schlägt die KI auch Titel, Fach, Beschreibung, Sprachen und Seitenbezeichnungen vor, eine optionale Importnotiz grenzt Auswahl, Umfang und Abfragerichtung ein
 - KI-Lernbilder für veröffentlichte Sets: sechs Motive pro Sheet, sichtbarer Hintergrundfortschritt, kompakte Vorschau im Karteneditor, einzelne Neugenerierung mit erhaltener Variantenhistorie und didaktisch gestufte Anzeige als Feedback nach Aufdecken beziehungsweise Antwort; `Testen` bleibt bildfrei
 - Schülerübernahme per Code, QR oder Link; der Set-Inhalt wird nicht auf das Tablet kopiert
-- Modi `Üben`, `Eingabe` und `Testen`; im Eingabemodus müssen falsche Antworten richtig wiederholt werden, während `Testen` eine zufällige Auswahl von mindestens fünf bis allen Set-Karten ohne Bilder oder Hilfen als Liste abfragt
+- Modi `Üben`, `Eingabe` und `Testen`; jede Übungsrunde mischt die Karten neu, im Eingabemodus müssen falsche Antworten richtig wiederholt werden, und `Testen` fragt eine zufällig ausgewählte und gemischte Teilmenge von mindestens fünf bis allen Set-Karten ohne Bilder oder Hilfen als Liste ab
 - Lernstand pro Tablet, Set und Lernmodus
 - installierbare Schüler-PWA für iPads/Relution und eigener Lehrkraft-Startpunkt für Mac-Web-Apps; der Browserzugang bleibt vollständig erhalten
 
@@ -31,7 +31,7 @@ Bewusst vertagt sind persönliche Schülerkonten, Dino-Lernpässe, Schulen/Grupp
 6. Importmaterial erzeugt immer nur einen bearbeitbaren Entwurf. Eine optionale Importnotiz wie `nur Lektion 1, Deutsch → Englisch` steuert Auswahl und Richtung. Originaldateien werden nicht gespeichert. Modellantworten werden serverseitig gegen dasselbe Set-Datenmodell validiert.
 7. Das Löschen eines Entwurfs oder veröffentlichten Sets entfernt ihn sofort aus dem Lehrerbereich. Veröffentlichte Codes und Pfade sind danach nicht mehr auflösbar; Tablet-Verknüpfungen und zugehörige Lernstände werden bereinigt. Intern bleibt der Datensatz archiviert, damit ein versehentliches Löschen im Runtime-Speicher grundsätzlich wiederherstellbar bleibt.
 8. Lernbilder sind eigene persistente Assets. Eine Karte referenziert nur ihre aktive Variante; ältere Generierungen bleiben für direkten Rückwechsel und die spätere Bibliothek erhalten. Inhaltsänderungen lösen die bestehende neue Karten-ID aus und entkoppeln damit veraltete Bilder.
-9. `Testen` zieht ohne Wiederholung eine zufällige Teilmenge des Sets. Die erste Prüfung zählt als Testergebnis; korrekte Zeilen werden gesperrt und falsche Zeilen bleiben rot bearbeitbar, bis alle Antworten stimmen. Es gibt dort keine Bilder, Audios, Hinweise oder eingeblendeten Lösungen.
+9. `Üben` mischt beim Start jeder Haupt- und Wiederholungsrunde neu. `Testen` zieht ohne Wiederholung eine zufällig ausgewählte und gemischte Teilmenge des Sets. Die erste Prüfung zählt als Testergebnis; korrekte Zeilen werden gesperrt und falsche Zeilen bleiben rot bearbeitbar, bis alle Antworten stimmen. Es gibt dort keine Bilder, Audios, Hinweise oder eingeblendeten Lösungen.
 
 Runtime-Daten liegen ausschließlich in `DATA_DIR` und dürfen bei Deployments nicht ersetzt werden. JSON-Schreibvorgänge laufen serialisiert und über atomare Dateiersetzung. Das ist für den einzelnen Beelink-Prozess bewusst einfach; bei mehreren Serverinstanzen muss die Store-Schicht später durch eine gemeinsame Datenbank ersetzt werden.
 

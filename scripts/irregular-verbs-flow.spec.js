@@ -83,7 +83,10 @@ async function prepareStudentHome(page) {
   });
 
   await page.goto(new URL("/index.html", BASE_URL).toString(), { waitUntil: "networkidle" });
-  await page.evaluate(() => document.fonts?.ready || Promise.resolve());
+  await page.evaluate(async () => {
+    Math.random = () => 0.5;
+    await (document.fonts?.ready || Promise.resolve());
+  });
   await expect(page.locator(".student-screen__library-card").first()).toBeVisible();
 }
 

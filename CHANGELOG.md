@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- `Üben` mischt die Karten jetzt bei jeder Haupt- und Wiederholungsrunde neu; `Testen` behält seine zufällige Auswahl und gemischte Reihenfolge. Selbst der seltene unveränderte Ausgang einer Zufallsmischung wird bei mehreren Karten aufgebrochen, damit die Reihenfolge des Sets nicht als Lösungshilfe gelernt wird.
 - Der Teilen-Dialog der Schüler-App zeigt jetzt den stabilen sechsstelligen Set-Code direkt unter dem QR-Code. Der redundante Erklärungssatz über die Funktion des Links entfällt.
 - Der Lernstart verwendet jetzt ein gemeinsames, erweiterbares Einstellungsmodal für `Üben`, `Eingabe` und `Testen`: Die Richtung steht immer an derselben Stelle, der Testumfang erscheint nur in den `Testeinstellungen`, und alle gewählten Optionen werden erst über eine eindeutige Startaktion übernommen.
 - Neue Deckkarten zeigen vor dem ersten Durchgang keinen funktionslosen „Bereit zum Starten“-Statusblock mehr; die freie Fläche beruhigt die Karte, während echte Statistiken nach dem Lernen erhalten bleiben.

@@ -107,6 +107,9 @@ async function prepareStudentHome(page) {
 
 test("test mode uses a random-sized list and keeps wrong answers editable until all are correct", async ({ page }) => {
   await prepareStudentHome(page);
+  await page.evaluate(() => {
+    Math.random = () => 0;
+  });
   const learningProgressApi = await page.evaluate(async ({ tabletSessionKey }) => {
     const session = JSON.parse(window.sessionStorage.getItem(tabletSessionKey));
     const headers = {
@@ -168,6 +171,13 @@ test("test mode uses a random-sized list and keeps wrong answers editable until 
   await expect(page.locator("#test-stage img, #test-stage [data-audio-button]")).toHaveCount(0);
 
   const rows = page.locator("#test-table-body .test-stage__row");
+  await expect(rows.locator(".test-stage__prompt")).toHaveText([
+    "Wort 2",
+    "Wort 3",
+    "Wort 4",
+    "Wort 5",
+    "Wort 6",
+  ]);
   for (let index = 0; index < 5; index += 1) {
     const row = rows.nth(index);
     const prompt = await row.locator(".test-stage__prompt").textContent();
@@ -202,4 +212,20 @@ test("test mode uses a random-sized list and keeps wrong answers editable until 
   expect(responsiveLayout.pageFits).toBeTruthy();
   expect(responsiveLayout.tableFits).toBeTruthy();
   expect(responsiveLayout.submitFits).toBeTruthy();
+});
+
+test("practice starts with a shuffled card order", async ({ page }) => {
+  await prepareStudentHome(page);
+  await page.evaluate(() => {
+    Math.random = () => 0.999999;
+  });
+
+  await page.locator(".student-screen__library-card").first().click();
+  await page.locator('.launch-mode-modal__mode-card[data-mode-key="practice"]').click();
+  await page.locator("#launch-mode-start").click();
+  await expect(page.locator("#launch-settings-modal")).toBeVisible();
+  await page.locator("#launch-settings-start").click();
+
+  await expect(page.locator("#flashcard")).toBeVisible();
+  await expect(page.locator("#front-word")).toHaveText("Wort 2");
 });

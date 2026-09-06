@@ -1,8 +1,11 @@
 const { test, expect } = require("playwright/test");
 
 const BASE_URL = process.env.BASE_URL || "http://127.0.0.1:4012";
-const TEST_TABLET_ID = "blau-2";
+const TEST_TABLET_ID = "rot-1";
 const TEST_TABLET_PIN = "1111";
+const DEVICE_STORAGE_KEY = "dino-vocab-device-id-v1";
+const SESSION_UNLOCK_KEY = "dino-vocab-session-unlocked-v1";
+const TABLET_SESSION_STORAGE_KEY = "dino-vocab-tablet-session-v1";
 
 test.use({
   baseURL: BASE_URL,
@@ -12,17 +15,45 @@ test.use({
 });
 
 async function prepareHome(page) {
-  await page.addInitScript(() => {
+  await page.goto("/index.html", { waitUntil: "networkidle" });
+  await page.evaluate(async ({ tabletId, pin, deviceKey, unlockKey, tabletSessionKey }) => {
     window.localStorage.clear();
     window.sessionStorage.clear();
+    let response = await fetch(`/api/tablets/${tabletId}/verify-pin`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin }),
+    });
+    let data = await response.json();
+    if (response.status === 409) {
+      response = await fetch(`/api/tablets/${tabletId}/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin }),
+      });
+      data = await response.json();
+    }
+    if (!response.ok || !data?.session?.token) throw new Error(`Session setup failed: ${response.status}`);
+    const subscription = await fetch(`/api/tablets/${tabletId}/subscriptions`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${data.session.token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ setPath: "sets/food-basics-01.json" }),
+    });
+    if (!subscription.ok) throw new Error(`Subscription setup failed: ${subscription.status}`);
+    window.localStorage.setItem(deviceKey, tabletId);
+    window.sessionStorage.setItem(unlockKey, "1");
+    window.sessionStorage.setItem(tabletSessionKey, JSON.stringify({ tabletId, token: data.session.token }));
+  }, {
+    tabletId: TEST_TABLET_ID,
+    pin: TEST_TABLET_PIN,
+    deviceKey: DEVICE_STORAGE_KEY,
+    unlockKey: SESSION_UNLOCK_KEY,
+    tabletSessionKey: TABLET_SESSION_STORAGE_KEY,
   });
-
   await page.goto("/index.html", { waitUntil: "networkidle" });
-  await expect(page.locator("#student-screen-title")).toContainText("Lerndeck");
-  await page.getByRole("button", { name: /Weiterlernen/i }).click();
-  await page.locator('select[name="tabletId"]').selectOption(TEST_TABLET_ID);
-  await page.locator('input[name="pin-entry"]').fill(TEST_TABLET_PIN);
-  await page.locator('.student-screen__access-form--login button[type="submit"]').click();
   await expect(page.locator(".student-screen__library-menu-toggle").first()).toBeVisible();
 }
 
@@ -105,15 +136,19 @@ async function readQrMetrics(page) {
   });
 }
 
-test("student set share modal keeps QR shell compact and stable", async ({ page }) => {
+test("student set share modal shows code and keeps QR shell compact and stable", async ({ page }, testInfo) => {
   await prepareHome(page);
 
   await openShareModal(page);
+  await expect(page.locator(".student-share__set-code-value")).toHaveText(/^[A-HJ-NP-Z2-9]{6}$/);
+  await expect(page.locator("#student-set-modal")).not.toContainText("Mit diesem Link");
+  await page.locator(".student-set-panel").screenshot({ path: testInfo.outputPath("student-share-with-code.png") });
   const first = await readQrMetrics(page);
 
   expect(first).toBeTruthy();
-  expect(first.panelWidth).toBeGreaterThan(420);
-  expect(first.shellWidth).toBeLessThan(first.panelWidth - 80);
+  expect(first.panelWidth).toBeGreaterThan(340);
+  expect(first.shellWidth).toBeLessThan(first.panelWidth - 24);
+  expect(first.shellWidth).toBeLessThanOrEqual(340);
   expect(first.frameWidth).toBeGreaterThan(240);
   expect(first.frameHeight).toBeGreaterThan(240);
   expect(first.canvasWidth).toBeGreaterThan(240);
