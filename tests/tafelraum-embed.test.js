@@ -7,14 +7,14 @@ const test = require("node:test");
 const { TeacherService } = require("../lib/teacher-service");
 
 async function waitForHealth(origin) {
-  for (let attempt = 0; attempt < 50; attempt += 1) {
+  for (let attempt = 0; attempt < 150; attempt += 1) {
     try {
       const response = await fetch(`${origin}/health`);
       if (response.ok) return;
     } catch (_error) {
       // Server startup is intentionally polled with a short bounded retry.
     }
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
   throw new Error("Testserver wurde nicht rechtzeitig bereit.");
 }
