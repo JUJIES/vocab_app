@@ -294,6 +294,23 @@ app.post("/api/teacher/sets/:setId/visual-jobs", async (request, response) => {
   }
 });
 
+app.post("/api/teacher/sets/:setId/visual-regenerations", async (request, response) => {
+  const sessionResult = requireTeacherSession(request);
+  if (!sessionResult.ok) {
+    response.status(sessionResult.status).json({ error: sessionResult.error });
+    return;
+  }
+  try {
+    const job = await visualService.startAllVisualRegeneration(
+      sessionResult.teacherId,
+      request.params.setId,
+    );
+    response.status(202).json({ success: true, job });
+  } catch (error) {
+    handleApiError(response, error, "Bilder konnten nicht neu erstellt werden.");
+  }
+});
+
 app.post("/api/teacher/sets/:setId/cards/:cardId/visual-regenerations", async (request, response) => {
   const sessionResult = requireTeacherSession(request);
   if (!sessionResult.ok) {
@@ -305,6 +322,7 @@ app.post("/api/teacher/sets/:setId/cards/:cardId/visual-regenerations", async (r
       sessionResult.teacherId,
       request.params.setId,
       request.params.cardId,
+      request.body?.instruction,
     );
     response.status(202).json({ success: true, job });
   } catch (error) {

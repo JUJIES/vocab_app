@@ -1715,6 +1715,36 @@ body.has-modal-open {
   cursor: pointer;
 }
 
+.set-card-visual__instruction {
+  display: grid;
+  gap: 0.3rem;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.set-card-visual__instruction textarea {
+  width: 100%;
+  min-height: 3.5rem;
+  padding: 0.55rem 0.6rem;
+  resize: vertical;
+  border: 1px solid rgba(214, 224, 246, 0.14);
+  border-radius: 0.65rem;
+  background: rgba(214, 224, 246, 0.055);
+  color: var(--text);
+  font: inherit;
+  line-height: 1.35;
+}
+
+.set-card-visual__instruction textarea::placeholder {
+  color: rgba(183, 200, 230, 0.56);
+}
+
+.set-card-visual__instruction textarea:focus {
+  border-color: rgba(155, 183, 228, 0.55);
+  outline: 2px solid rgba(111, 147, 202, 0.18);
+}
+
 .set-card-visual__regenerate .teacher-button__icon {
   width: 0.85rem;
   height: 0.85rem;

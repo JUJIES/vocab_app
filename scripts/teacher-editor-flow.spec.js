@@ -169,6 +169,13 @@ test("teacher editor separates creation, manual editing and automatic additions"
   await expect(page.locator("#set-editor-form")).toBeVisible();
   await expect(page.locator("#set-editor-choice")).toBeHidden();
   await expect(page.locator("#set-import-section")).toBeHidden();
+  await page.getByRole("button", { name: "Bild zu Karte 1 erstellen" }).click();
+  await expect(page.getByLabel("Bildwunsch für Karte 1")).toBeVisible();
+  await expect(page.getByLabel("Bildwunsch für Karte 1")).toHaveAttribute(
+    "placeholder",
+    "z. B. roter Bus von der Seite",
+  );
+  await page.getByRole("button", { name: "Bild zu Karte 1 erstellen" }).click();
 
   const originalTitle = await page.locator("#set-title-input").inputValue();
   const originalCardCount = await page.locator(".set-card-editor-row").count();

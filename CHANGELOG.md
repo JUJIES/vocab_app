@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Lernbilder werden vor dem Rendern fachlich geplant: Ein strukturierter Visual-Brief nutzt das vollständige Deutsch/Englisch-Paar und den Set-Kontext, grenzt wahrscheinliche Verwechslungen wie `convenient`/`comfortable` ausdrücklich ab und bleibt am Bild nachvollziehbar. Mit `Alle Bilder neu` kann eine Lehrkraft ein komplettes Set sicher neu planen; ältere Varianten bleiben erhalten.
+- Einzelne Lernbilder lassen sich mit einem optionalen kurzen Bildwunsch neu erzeugen; die Anweisung bleibt bei der Variante nachvollziehbar. Einheitlichere Generierungsregeln und eine vorsichtige automatische Entfernung heller Außenränder reduzieren weiße Ränder und uneinheitliche Ausschnitte.
 - KI-Lernbilder als persistenter Hintergrundworkflow umgesetzt: sechs Begriffe pro 3×2-Sheet, Fortschritt im Editor und in der Setliste, kompakte Hover-/Fokusvorschau pro Karte, einzelne Neugenerierung mit erhaltener Variantenhistorie, sichere immutable Medienroute sowie ruhige didaktische Einblendung in `Sichten`, `Üben` und `Eingabe`.
 - Release `8fe6bcf` mit PWA-Shell `v104` auf dem Beelink aktiviert; vorhandener OpenAI-Dienstschlüssel erkannt, Runtime vor dem Cutover gesichert und öffentlicher Health-/Cachecheck bestanden.
 - Karten mit genau drei durch Leerzeichen und Bindestriche getrennten Verbformen werden automatisch als unregelmäßige Verben dargestellt: Der Infinitiv bleibt die ruhige Hauptform, Simple Past und Past Participle erscheinen separat; im Eingabemodus werden alle drei Formen in eigenen Feldern geprüft, während der Editor weiterhin nur eine kompakte Zeile speichert.

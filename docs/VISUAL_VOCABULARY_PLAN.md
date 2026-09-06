@@ -7,7 +7,8 @@ Status: **erste vollständige Produktstufe implementiert.** Sheet-Erstellung, Ei
 - Ein Bild gehört zum Konzept einer Karte, nicht fest zu einer Sprachseite.
 - Bilder können erst für veröffentlichte Sets erzeugt werden, weil dafür stabile Set- und Karten-IDs nötig sind.
 - `Bilder erstellen` verarbeitet nur Karten, denen noch kein Bild zugeordnet ist. Vorhandene Bilder werden nicht still überschrieben.
-- Ein Klick auf `Neu erstellen` erzeugt eine einzelne neue Variante, aktiviert sie nach erfolgreicher Erstellung und bewahrt alle älteren Varianten auf.
+- `Alle Bilder neu` plant und erzeugt sämtliche Karten eines veröffentlichten Sets neu. Die neuen Varianten werden erst nach einem vollständig erfolgreichen Job aktiviert; alle bisherigen Varianten bleiben auswählbar.
+- Ein Klick auf `Neu erstellen` erzeugt eine einzelne neue Variante, aktiviert sie nach erfolgreicher Erstellung und bewahrt alle älteren Varianten auf. Eine optionale kurze Bildnotiz steuert nur diese Variante und bleibt als Asset-Metadatum für weitere Iterationen erhalten; sie verändert weder Karteninhalt noch Karten-ID.
 - Die kompakten Bildschaltflächen im Karteneditor öffnen per Hover, Fokus oder Klick eine größere Vorschau. Bis zu fünf bisherige Varianten lassen sich dort direkt wieder auswählen.
 - Eine inhaltlich geänderte Karte erhält wie bisher eine neue Karten-ID und verliert damit bewusst ihre alte Bildzuordnung. Reine Bildwechsel erhalten Karten-ID und Lernstand.
 
@@ -22,7 +23,9 @@ Status: **erste vollständige Produktstufe implementiert.** Sheet-Erstellung, Ei
 
 ## Generierung
 
-Die App verwendet die OpenAI Images API mit `gpt-image-2` (konfigurierbar über `OPENAI_IMAGE_MODEL`). Ein Sheet enthält sechs Motive in einem festen Raster:
+Vor jedem Bildaufruf erzeugt ein Textmodell einen strukturierten Visual-Brief. Es erhält Set-Titel, Fach, Beschreibung, Sprachrichtung, Seitenlabels und das vollständige Deutsch/Englisch-Paar. Der Brief hält für jede Karte die beabsichtigte englische Bedeutung, eine konkrete textfreie Szene, zu vermeidende Nachbarbedeutungen, die Darstellungsstrategie und einen Unsicherheitsgrad fest. Dadurch wird beispielsweise `convenient` als „praktisch/günstig für die Situation“ geplant und ausdrücklich gegen das körperliche `comfortable` abgegrenzt. Eine fehlende oder unvollständige Planung bricht den Job ab, bevor Bilder zugeordnet werden; es gibt keinen stillen Rückfall auf die bloße Übersetzung.
+
+Die fachliche Planung nutzt `OPENAI_VISUAL_PLANNER_MODEL`, ersatzweise das bereits konfigurierte `OPENAI_IMPORT_MODEL` beziehungsweise `gpt-5.6-terra`, mit mittlerem Reasoning und strengem JSON-Schema. Die App verwendet danach die OpenAI Images API mit `gpt-image-2` (konfigurierbar über `OPENAI_IMAGE_MODEL`). Ein Sheet enthält sechs Motive in einem festen Raster:
 
 - Ausgabe: `1536 × 1024`, `quality: low`, WebP
 - Raster: `3 × 2`
@@ -31,7 +34,7 @@ Die App verwendet die OpenAI Images API mit `gpt-image-2` (konfigurierbar über 
 - ruhige, textfreie, konsistente Editorial-Illustrationen auf dunklem Hintergrund
 - Sheets werden nacheinander erzeugt; die Lehrkraft kann parallel im Editor weiterarbeiten
 
-Die 6er-Entscheidung priorisiert ausreichend große, eindeutig erkennbare Motive gegenüber maximaler Packdichte. Ein einzelnes Ersatzbild wird als `1024 × 1024`-Bild erzeugt und anschließend auf 512 × 512 normalisiert. Roh-Sheets werden nur im Arbeitsspeicher verarbeitet und nicht dauerhaft gespeichert.
+Die 6er-Entscheidung priorisiert ausreichend große, eindeutig erkennbare Motive gegenüber maximaler Packdichte. Ein einzelnes Ersatzbild wird als `1024 × 1024`-Bild erzeugt und anschließend auf 512 × 512 normalisiert. Die Prompts verlangen randfüllende Hintergründe und einen einheitlichen Motivabstand. Zusätzlich entfernt die zentrale Normalisierung ausschließlich zusammenhängende, überwiegend helle Außenränder (maximal 20 Prozent je Seite) und skaliert danach wieder quadratisch; dunkle Motivflächen werden nicht pauschal beschnitten. Roh-Sheets werden nur im Arbeitsspeicher verarbeitet und nicht dauerhaft gespeichert.
 
 ## Datenmodell
 
@@ -56,6 +59,8 @@ Alle Varianten liegen unabhängig von der aktiven Kartenreferenz im Asset-Store:
 - Metadaten: `DATA_DIR/visual-assets.json`
 - Dateien: `DATA_DIR/visual-assets/*.webp`
 - Jobs: `DATA_DIR/visual-jobs.json`
+
+Jedes neue Asset speichert zusätzlich seinen Visual-Brief. Damit bleiben Bedeutungsentscheidung, geplante Szene und ausgeschlossene Verwechslungen bei späteren Varianten nachvollziehbar.
 
 Damit ist die spätere setübergreifende Bibliothek ohne Datenmigration möglich. Das Entfernen verwaister Assets bleibt bewusst einem späteren referenzprüfenden Cleanup vorbehalten.
 
@@ -87,7 +92,6 @@ Neustart: queued/generating/applying → interrupted
 
 - setübergreifende Suche und Wiederverwendung aus der vorhandenen Asset-Bibliothek
 - Lehrkraft-Budgetgrenzen und Kostenübersicht
-- modellgestützte automatische Qualitätsprüfung auf Schrift, vertauschte Zellen und Mehrdeutigkeit
-- manuell editierbare Motivbeschreibungen vor der Generierung
+- modellgestützte automatische Prüfung des fertigen Pixels auf Schrift, vertauschte Zellen und Abweichungen vom Visual-Brief
 - eigener Lernmodus `Bild → Wort` mit separatem Lernstand
 - referenzprüfender Cleanup nicht mehr benötigter Assets

@@ -138,6 +138,7 @@ const elements = {
   setCardCount: document.getElementById("set-card-count"),
   addCardButton: document.getElementById("add-card-button"),
   generateVisualsButton: document.getElementById("generate-visuals-button"),
+  regenerateAllVisualsButton: document.getElementById("regenerate-all-visuals-button"),
   visualJobStatus: document.getElementById("visual-job-status"),
   setImportSection: document.getElementById("set-import-section"),
   setImportDropzone: document.getElementById("set-import-dropzone"),
@@ -196,6 +197,7 @@ function bindEvents() {
   elements.setTargetLabelInput.addEventListener("input", updateEditorCardSideLabels);
   elements.addCardButton.addEventListener("click", () => addEditorCard());
   elements.generateVisualsButton.addEventListener("click", handleGenerateMissingVisuals);
+  elements.regenerateAllVisualsButton.addEventListener("click", handleRegenerateAllVisuals);
   elements.setImportFilePicker.addEventListener("click", () => elements.setImportFiles.click());
   elements.setImportFiles.addEventListener("change", () => {
     setEditorFiles(Array.from(elements.setImportFiles.files || []), { append: true });
@@ -2025,12 +2027,26 @@ function createEditorVisualControl(card, index) {
       popover.append(historyRow);
     }
 
+    const instructionLabel = document.createElement("label");
+    instructionLabel.className = "set-card-visual__instruction";
+    const instructionText = document.createElement("span");
+    instructionText.textContent = "Bildwunsch (optional)";
+    const instructionInput = document.createElement("textarea");
+    instructionInput.rows = 2;
+    instructionInput.maxLength = 300;
+    instructionInput.value = activeAsset?.instruction || "";
+    instructionInput.placeholder = "z. B. roter Bus von der Seite";
+    instructionInput.setAttribute("aria-label", `Bildwunsch für Karte ${index + 1}`);
+    instructionInput.addEventListener("click", (event) => event.stopPropagation());
+    instructionLabel.append(instructionText, instructionInput);
+    popover.append(instructionLabel);
+
     const regenerate = document.createElement("button");
     regenerate.type = "button";
     regenerate.className = "set-card-visual__regenerate";
-    regenerate.disabled = isVisualJobActive(getLatestVisualJob(state.editorSetId));
+    regenerate.disabled = !state.visualConfigured || isVisualJobActive(getLatestVisualJob(state.editorSetId));
     regenerate.append(createButtonIcon(IMAGE_PLUS_ICON_PATH), document.createTextNode(activeAsset ? "Neu erstellen" : "Bild erstellen"));
-    regenerate.addEventListener("click", () => void handleRegenerateCardVisual(card));
+    regenerate.addEventListener("click", () => void handleRegenerateCardVisual(card, instructionInput.value));
     popover.append(regenerate);
     shell.append(popover);
   }
@@ -2071,13 +2087,14 @@ function formatVisualJobProgress(job) {
 }
 
 function renderVisualControls() {
-  if (!elements.generateVisualsButton || !elements.visualJobStatus) {
+  if (!elements.generateVisualsButton || !elements.regenerateAllVisualsButton || !elements.visualJobStatus) {
     return;
   }
   const isPublished = state.editorSetStatus === "published" && Boolean(state.editorSetId);
   const job = isPublished ? getLatestVisualJob(state.editorSetId) : null;
   const active = isVisualJobActive(job);
   const missingCount = state.editorCards.filter((card) => card.id && !card.visual).length;
+  const visualCount = state.editorCards.filter((card) => card.id && card.visual).length;
   elements.generateVisualsButton.hidden = !isPublished || (missingCount === 0 && !active);
   elements.generateVisualsButton.disabled = !state.visualConfigured || active || missingCount === 0;
   elements.generateVisualsButton.querySelector("span").textContent = active
@@ -2085,6 +2102,11 @@ function renderVisualControls() {
     : missingCount > 0
       ? `Bilder erstellen (${missingCount})`
       : "Bilder erstellt";
+  elements.regenerateAllVisualsButton.hidden = !isPublished || visualCount === 0;
+  elements.regenerateAllVisualsButton.disabled = !state.visualConfigured || active;
+  elements.regenerateAllVisualsButton.querySelector("span").textContent = active
+    ? formatVisualJobProgress(job)
+    : "Alle Bilder neu";
 
   elements.visualJobStatus.replaceChildren();
   if (active) {
@@ -2176,14 +2198,47 @@ async function handleGenerateMissingVisuals() {
   }
 }
 
-async function handleRegenerateCardVisual(card) {
+async function handleRegenerateAllVisuals() {
+  if (!state.editorSetId) {
+    return;
+  }
+  const cardCount = state.editorCards.filter((card) => card.id).length;
+  const confirmed = window.confirm(
+    `Alle ${cardCount} Bilder dieses Sets fachlich neu planen und erstellen? Die bisherigen Varianten bleiben in der Bildauswahl erhalten.`,
+  );
+  if (!confirmed) {
+    return;
+  }
+  elements.regenerateAllVisualsButton.disabled = true;
+  try {
+    const response = await requestJson(
+      `/api/teacher/sets/${encodeURIComponent(state.editorSetId)}/visual-regenerations`,
+      { auth: "teacher", method: "POST" },
+    );
+    if (!response.ok) {
+      throw createTeacherRequestError(response, "Bilder konnten nicht neu erstellt werden.");
+    }
+    const job = normalizeVisualJob(response.data?.job);
+    if (job) {
+      state.visualJobs = [job, ...state.visualJobs.filter((entry) => entry.setId !== job.setId)];
+    }
+    renderVisualControls();
+    renderEditorCards();
+    scheduleVisualJobPolling();
+  } catch (error) {
+    elements.setEditorFeedback.textContent = error.message || "Bilder konnten nicht neu erstellt werden.";
+    renderVisualControls();
+  }
+}
+
+async function handleRegenerateCardVisual(card, instruction = "") {
   if (!state.editorSetId || !card?.id) {
     return;
   }
   try {
     const response = await requestJson(
       `/api/teacher/sets/${encodeURIComponent(state.editorSetId)}/cards/${encodeURIComponent(card.id)}/visual-regenerations`,
-      { auth: "teacher", method: "POST" },
+      { auth: "teacher", method: "POST", body: { instruction: instruction.trim() } },
     );
     if (!response.ok) {
       throw createTeacherRequestError(response, "Bild konnte nicht erstellt werden.");
