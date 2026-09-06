@@ -97,7 +97,7 @@ async function openMode(page, modeKey) {
 
 test("answer side shows one primary term and calm alternatives without duplicate context", async ({ page }) => {
   await prepareStudentHome(page);
-  await openMode(page, "view");
+  await openMode(page, "practice");
   await expect(page.locator("#flashcard")).toBeVisible();
 
   await page.locator("#flashcard").click();

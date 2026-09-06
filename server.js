@@ -43,7 +43,6 @@ const TABLET_SET_CARD_COLOR_KEYS = new Set([
   "violet",
 ]);
 const LEARNING_MODE_KEYS = Object.freeze([
-  "view",
   "practice",
   "write",
   "test",
@@ -901,79 +900,6 @@ app.get("/api/tablets/:tabletId/learning-progress", async (request, response) =>
   }
 });
 
-app.put("/api/tablets/:tabletId/learning-progress", async (request, response) => {
-  const sessionResult = requireTabletSession(request, request.params.tabletId);
-
-  if (!sessionResult.ok) {
-    response.status(sessionResult.status).json({
-      error: sessionResult.error,
-    });
-    return;
-  }
-
-  const setPath = normalizeSetPath(request.body?.setPath);
-  const starStates = normalizeStarStates(request.body?.starStates);
-
-  if (!setPath) {
-    response.status(400).json({
-      error: "Gültiger Set-Pfad fehlt.",
-    });
-    return;
-  }
-
-  try {
-    const store = await readTabletStore();
-    const tablet = findTablet(store, request.params.tabletId);
-
-    if (!tablet) {
-      response.status(404).json({
-        error: "Tablet nicht gefunden.",
-      });
-      return;
-    }
-
-    if (!tablet.registered) {
-      response.status(409).json({
-        error: "Tablet ist nicht mehr gekoppelt. Bitte neu registrieren.",
-        tablet: toSafeTablet(tablet),
-      });
-      return;
-    }
-
-    const learningProgress = normalizeTabletLearningProgress(tablet);
-    const timestamp = new Date().toISOString();
-    const previousEntry = learningProgress.find((entry) => entry.setPath === setPath) || null;
-    const nextEntry = {
-      setPath,
-      starStates,
-      modeProgress: cloneLearningModeProgressMap(previousEntry?.modeProgress),
-      updatedAt: timestamp,
-    };
-    const existingIndex = learningProgress.findIndex((entry) => entry.setPath === setPath);
-
-    if (existingIndex === -1) {
-      learningProgress.push(nextEntry);
-    } else {
-      learningProgress[existingIndex] = nextEntry;
-    }
-
-    tablet.learningProgress = learningProgress;
-    tablet.updatedAt = timestamp;
-    await writeTabletStore(store);
-
-    response.json({
-      success: true,
-      tablet: toSafeTablet(tablet),
-      progress: getTabletLearningProgress(tablet, setPath),
-    });
-  } catch (error) {
-    console.error("Unable to save learning progress:", error);
-    response.status(500).json({
-      error: "Lernstand konnte nicht gespeichert werden.",
-    });
-  }
-});
-
 app.post("/api/tablets/:tabletId/learning-progress/rounds", async (request, response) => {
   const sessionResult = requireTabletSession(request, request.params.tabletId);
 
@@ -1038,7 +964,6 @@ app.post("/api/tablets/:tabletId/learning-progress/rounds", async (request, resp
 
     const nextEntry = {
       setPath,
-      starStates: previousEntry?.starStates || {},
       modeProgress: nextModeProgress,
       updatedAt: timestamp,
     };
@@ -2414,7 +2339,6 @@ function normalizeTabletLearningProgress(tablet) {
 
       return {
         setPath,
-        starStates: normalizeStarStates(entry?.starStates),
         modeProgress: normalizeLearningModeProgressMap(entry?.modeProgress, entry),
         updatedAt: typeof entry?.updatedAt === "string" && entry.updatedAt.trim()
           ? entry.updatedAt.trim()
@@ -2422,31 +2346,6 @@ function normalizeTabletLearningProgress(tablet) {
       };
     })
     .filter(Boolean);
-}
-
-function normalizeStarStates(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return {};
-  }
-
-  const nextStates = {};
-
-  for (const [cardId, rawState] of Object.entries(value)) {
-    const normalizedCardId = typeof cardId === "string" ? cardId.trim() : "";
-    const normalizedState = typeof rawState === "string" ? rawState.trim() : "";
-
-    if (!normalizedCardId || !isValidStoredStarState(normalizedState)) {
-      continue;
-    }
-
-    nextStates[normalizedCardId] = normalizedState;
-  }
-
-  return nextStates;
-}
-
-function isValidStoredStarState(value) {
-  return value === "green" || value === "yellow" || value === "orange";
 }
 
 function getTabletLearningProgress(tablet, setPath) {
@@ -2457,7 +2356,6 @@ function getTabletLearningProgress(tablet, setPath) {
 
   return {
     setPath: normalizedSetPath,
-    starStates: entry?.starStates || {},
     completedRoundCount: practiceProgress?.completedRoundCount || 0,
     averageScorePercent: practiceProgress?.averageScorePercent ?? null,
     lastRoundPercent: practiceProgress?.lastRoundPercent ?? null,

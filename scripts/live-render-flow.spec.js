@@ -142,8 +142,6 @@ test.describe("live mutation flow", () => {
     await page.reload();
     await expect(page.locator("#flashcard")).toBeVisible();
     await expect(page.getByText("Schon hinzugefügt.")).toHaveCount(0);
-    await page.locator("[data-star-button]").filter({ has: page.locator(":visible") }).first().click();
-
     const freshContext = await browser.newContext();
     const freshPage = await freshContext.newPage();
     await primeKnownTabletPage(freshPage, TEST_TABLET_ID);
@@ -151,9 +149,7 @@ test.describe("live mutation flow", () => {
     await expect(freshPage.locator("#student-screen-title")).toContainText("Lerndeck");
     await quickLogin(freshPage, TEST_TABLET_PIN);
     await openFirstSet(freshPage);
-    await expect(
-      freshPage.locator("[data-star-button]").filter({ has: freshPage.locator(":visible") }).first(),
-    ).toHaveAttribute("data-star-state", "green");
+    await expect(freshPage.locator("[data-star-button]")).toHaveCount(0);
     await freshContext.close();
 
     await ensureTabletIsDecoupled(request, teacherHeaders, TEST_TABLET_ID);

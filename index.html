@@ -29,14 +29,14 @@
       }
     </script>
     <link rel="stylesheet" href="./pwa-splash.css?v=2026-08-30-pwa-splash-v1" />
-    <link rel="stylesheet" href="./styles.css?v=2026-08-30-learning-visuals-v1" />
+    <link rel="stylesheet" href="./styles.css?v=2026-09-06-learning-images-v1" />
     <link rel="stylesheet" href="./ui-motion.css?v=2026-08-30-ui-motion-v1" />
     <script src="./pwa.js?v=2026-08-30-pwa-splash-v3" defer></script>
     <script src="./ui-motion.js?v=2026-08-30-ui-motion-v1" defer></script>
     <script src="./irregular-verbs.js?v=2026-08-30-irregular-verbs-v1" defer></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js" defer></script>
-    <script src="./app.js?v=2026-08-30-learning-visuals-v1" defer></script>
+    <script src="./app.js?v=2026-09-06-learning-images-v1" defer></script>
   </head>
   <body>
     <div class="pwa-splash" role="status" aria-label="Lerndeck wird geladen">
@@ -242,21 +242,12 @@
                       <span class="material-symbols-outlined card-audio__icon" aria-hidden="true">volume_up</span>
                     </button>
 
-                    <button
-                      class="card-star card-control"
-                      type="button"
-                      aria-label="Schwierigkeit markieren"
-                      data-star-button
-                    >
-                      <span class="material-symbols-outlined card-star__icon" aria-hidden="true">star</span>
-                    </button>
                   </span>
 
                   <span
                     id="front-content"
                     class="flashcard__content"
                   >
-                    <img id="front-visual" class="flashcard__visual" alt="" hidden />
                     <span class="flashcard__answer">
                       <span id="front-word" class="flashcard__word">&nbsp;</span>
                       <span
@@ -337,14 +328,6 @@
                       <span class="material-symbols-outlined card-audio__icon" aria-hidden="true">volume_up</span>
                     </button>
 
-                    <button
-                      class="card-star card-control"
-                      type="button"
-                      aria-label="Schwierigkeit markieren"
-                      data-star-button
-                    >
-                      <span class="material-symbols-outlined card-star__icon" aria-hidden="true">star</span>
-                    </button>
                   </span>
 
                   <span class="flashcard__content">
@@ -384,35 +367,6 @@
                     >
                       <span class="back-action__icon back-action__icon--known" aria-hidden="true"></span>
                     </button>
-                    <div class="view-rating card-control" data-view-rating hidden>
-                      <button
-                        class="view-star"
-                        type="button"
-                        aria-label="Als gruen markieren"
-                        data-view-star-button
-                        data-view-star-value="green"
-                      >
-                        <span class="view-star__icon" aria-hidden="true"></span>
-                      </button>
-                      <button
-                        class="view-star"
-                        type="button"
-                        aria-label="Als gelb markieren"
-                        data-view-star-button
-                        data-view-star-value="yellow"
-                      >
-                        <span class="view-star__icon" aria-hidden="true"></span>
-                      </button>
-                      <button
-                        class="view-star"
-                        type="button"
-                        aria-label="Als orange markieren"
-                        data-view-star-button
-                        data-view-star-value="orange"
-                      >
-                        <span class="view-star__icon" aria-hidden="true"></span>
-                      </button>
-                    </div>
                   </div>
                 </span>
               </span>
@@ -647,6 +601,7 @@
                         autocomplete="off"
                         autocapitalize="none"
                         spellcheck="false"
+                        enterkeyhint="next"
                         data-irregular-verb-input="0"
                       />
                     </label>
@@ -659,6 +614,7 @@
                         autocomplete="off"
                         autocapitalize="none"
                         spellcheck="false"
+                        enterkeyhint="next"
                         data-irregular-verb-input="1"
                       />
                     </label>
@@ -671,6 +627,7 @@
                         autocomplete="off"
                         autocapitalize="none"
                         spellcheck="false"
+                        enterkeyhint="done"
                         data-irregular-verb-input="2"
                       />
                     </label>
@@ -738,12 +695,77 @@
                     <strong id="input-feedback-correct" class="input-feedback__value"></strong>
                   </p>
                 </div>
+                <button
+                  id="input-reveal-answer"
+                  class="input-feedback__reveal"
+                  type="button"
+                  hidden
+                >
+                  Lösung anzeigen
+                </button>
               </section>
             </section>
           </article>
         </div>
 
         <p id="input-status-message" class="status-message visually-hidden" role="status"></p>
+      </section>
+
+      <section id="test-stage" class="test-stage" aria-label="Testmodus" hidden>
+        <header class="test-stage__menu">
+          <button
+            id="test-home-link"
+            class="student-home-link"
+            type="button"
+            aria-label="Zur Übersicht"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+            <span>Zur Übersicht</span>
+          </button>
+
+          <div class="test-stage__heading">
+            <p class="test-stage__kicker">Testen</p>
+            <h1 id="test-stage-title" class="test-stage__title">Vokabeltest</h1>
+          </div>
+
+          <button
+            id="test-menu-logout"
+            class="student-screen__action student-screen__action--secondary student-screen__home-logout test-stage__menu-logout"
+            type="button"
+            aria-label="Abmelden"
+          >
+            <span class="student-screen__action-icon" aria-hidden="true"></span>
+            <span>Abmelden</span>
+          </button>
+        </header>
+
+        <main class="test-stage__shell">
+          <section id="test-feedback" class="test-stage__feedback" aria-live="polite" hidden>
+            <strong id="test-feedback-title"></strong>
+            <span id="test-feedback-detail"></span>
+          </section>
+
+          <form id="test-form" class="test-stage__form">
+            <div class="test-stage__table-shell">
+              <table class="test-stage__table">
+                <thead>
+                  <tr>
+                    <th class="test-stage__number-head" scope="col"><span class="visually-hidden">Nummer</span></th>
+                    <th id="test-source-label" scope="col">Vokabel</th>
+                    <th id="test-target-label" scope="col">Antwort</th>
+                  </tr>
+                </thead>
+                <tbody id="test-table-body"></tbody>
+              </table>
+            </div>
+
+            <div class="test-stage__actions">
+              <button id="test-submit" class="test-stage__submit" type="submit">Antworten prüfen</button>
+            </div>
+          </form>
+        </main>
+
+        <p id="test-status-message" class="status-message visually-hidden" role="status"></p>
       </section>
 
       <div

@@ -27,28 +27,6 @@
       "flashcard",
       "test"
     ],
-    "starLevels": [
-      {
-        "value": 0,
-        "label": "none",
-        "color": "none"
-      },
-      {
-        "value": 1,
-        "label": "easy",
-        "color": "green"
-      },
-      {
-        "value": 2,
-        "label": "medium",
-        "color": "yellow"
-      },
-      {
-        "value": 3,
-        "label": "hard",
-        "color": "orange"
-      }
-    ],
     "hintStrategies": {
       "flashcard": [
         "context",

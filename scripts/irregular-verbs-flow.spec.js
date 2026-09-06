@@ -9,6 +9,8 @@ test.use({
   viewport: { width: 1024, height: 768 },
   colorScheme: "dark",
   locale: "de-DE",
+  hasTouch: true,
+  deviceScaleFactor: 2,
 });
 
 function buildIrregularVerbSet() {
@@ -98,10 +100,18 @@ async function openMode(page, modeKey, direction = "source-target") {
 
 test("irregular verb cards emphasize the infinitive and separate the other forms", async ({ page }) => {
   await prepareStudentHome(page);
-  await openMode(page, "view");
+  await openMode(page, "practice");
 
+  await expect(page.locator("#front-word")).toHaveText("scheinen");
+  const frontSize = await page.locator("#front-word").evaluate(
+    (element) => Number.parseFloat(getComputedStyle(element).fontSize),
+  );
   await page.locator("#flashcard").click();
   await expect(page.locator("#back-word .irregular-verb-term__primary")).toHaveText("shine");
+  const backPrimarySize = await page.locator("#back-word .irregular-verb-term__primary").evaluate(
+    (element) => Number.parseFloat(getComputedStyle(element).fontSize),
+  );
+  expect(backPrimarySize).toBe(frontSize);
   const secondaryForms = page.locator("#back-word .irregular-verb-term__form");
   await expect(secondaryForms).toHaveCount(2);
   await expect(secondaryForms.nth(0).locator("small")).toHaveText("Simple Past");
@@ -145,6 +155,69 @@ test("input mode asks all three forms separately and preserves correct fields du
   await verbFields.nth(1).fill("shone");
   await page.locator("#input-answer-form").press("Enter");
   await expect(page.locator("#input-feedback-title")).toHaveText("Korrigiert");
+});
+
+test("Enter advances through verb fields and correction offers an explicit solution", async ({ page }) => {
+  await prepareStudentHome(page);
+  await openMode(page, "write");
+
+  const verbFields = page.locator("[data-irregular-verb-input]");
+  await verbFields.nth(0).fill("shine");
+  await verbFields.nth(0).press("Enter");
+  await expect(verbFields.nth(1)).toBeFocused();
+  await expect(page.locator("#input-feedback")).toHaveAttribute("aria-hidden", "true");
+
+  await verbFields.nth(1).fill("shined");
+  await verbFields.nth(1).press("Enter");
+  await expect(verbFields.nth(2)).toBeFocused();
+  await expect(page.locator("#input-feedback")).toHaveAttribute("aria-hidden", "true");
+
+  await verbFields.nth(2).fill("shone");
+  await verbFields.nth(2).press("Enter");
+  await expect(page.locator("#input-feedback-title")).toHaveText("Noch nicht korrekt");
+  await expect(page.locator("#input-reveal-answer")).toBeVisible();
+  await expect(page.locator("#input-feedback-correct-row")).toBeHidden();
+
+  await page.locator("#input-reveal-answer").click();
+  await expect(page.locator("#input-feedback-correct-row")).toBeVisible();
+  await expect(page.locator("#input-feedback-correct")).toHaveText("shine · shone · shone");
+  await expect(verbFields.nth(1)).toBeFocused();
+  await expect(page.locator("#input-reveal-answer")).toBeHidden();
+});
+
+test("tablet portrait keeps all verb inputs and correction help usable", async ({ page }) => {
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await prepareStudentHome(page);
+  await openMode(page, "write");
+
+  const verbFields = page.locator("[data-irregular-verb-input]");
+  const responsePane = page.locator(".input-stage__response-pane");
+  await expect(verbFields).toHaveCount(3);
+
+  for (const field of await verbFields.all()) {
+    await expect(field).toBeInViewport();
+  }
+
+  await verbFields.nth(0).fill("shine");
+  await verbFields.nth(1).fill("shined");
+  await verbFields.nth(2).fill("shone");
+  await page.locator("#input-check-button").tap();
+
+  const revealButton = page.locator("#input-reveal-answer");
+  await expect(revealButton).toBeVisible();
+  await expect(revealButton).toBeInViewport();
+  await revealButton.tap();
+  await expect(page.locator("#input-feedback-correct-row")).toBeVisible();
+  await expect(page.locator("#input-feedback-correct-row")).toBeInViewport();
+
+  const responseBounds = await responsePane.boundingBox();
+  const feedbackBounds = await page.locator("#input-feedback").boundingBox();
+  expect(responseBounds).not.toBeNull();
+  expect(feedbackBounds).not.toBeNull();
+  expect(feedbackBounds.x).toBeGreaterThanOrEqual(responseBounds.x);
+  expect(feedbackBounds.x + feedbackBounds.width).toBeLessThanOrEqual(
+    responseBounds.x + responseBounds.width,
+  );
 });
 
 test("reverse input direction shows the three forms as a structured prompt", async ({ page }) => {

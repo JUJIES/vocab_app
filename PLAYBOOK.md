@@ -11,15 +11,16 @@ Lerndeck ist ein schnelles, ruhiges Lernwerkzeug für Unterrichtstablets. Kinder
 - dauerhafte, widerrufbare Tablet-Sitzung
 - Set-Zuweisung per Link oder QR-Code
 - Set-Übernahme per sechsstelliger Code-Eingabe
-- Modi `Sichten`, `Üben` und `Eingabe`
+- Modi `Üben`, `Eingabe` und `Testen`
 - falsche Eingaben werden bis zur korrekten Eingabe wiederholt
+- Testumfang von mindestens fünf bis allen Karten; zufällige Auswahl, tabellarische Eingabe, strikte Korrekturschleife ohne Bilder oder Hilfen
 - Lernstand pro Tablet, Set und Modus
 - sechs persönliche Lehrkraftkonten mit einmaliger Aktivierung
 - Lehrerbereich für Editor, Import, Set-Freigabe und Tablet-Verwaltung
 - Textimport ohne KI sowie multimodaler KI-Entwurf mit optionaler Importnotiz und anschließender Prüfung
 - getrennt installierbare PWA-Einstiege für Schüler (`/`) und Lehrkräfte (`/teacher`) mit gemeinsamer Runtime
 
-Der Modus `Testen`, Schülerkonten, Lernpässe, Gruppen/Schulen und Tauri sind noch nicht Teil des einsatzbereiten MVP.
+Schülerkonten, Lernpässe, Gruppen/Schulen und Tauri sind noch nicht Teil des einsatzbereiten MVP.
 
 ## Produktregeln
 
@@ -42,7 +43,7 @@ Der Modus `Testen`, Schülerkonten, Lernpässe, Gruppen/Schulen und Tauri sind n
 2. Beobachtete Reibung bei Geräte-Ersteinrichtung, Code-Übernahme und Wiederaufnahme beheben.
 3. Lehrer- und Schüleroberfläche gezielt auf Ruhe, Tastaturbedienung und iPad quer prüfen.
 4. Dino-Lernpässe erst nach dem Gerätetest als getrennte persönliche Identität fachlich definieren.
-5. Modus `Testen` fachlich definieren und erst danach freischalten.
+5. Den Testmodus im Feldtest auf sinnvolle Standardgröße und verständliches Kurzfeedback prüfen.
 
 ## Design
 

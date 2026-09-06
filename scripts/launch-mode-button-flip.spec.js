@@ -61,6 +61,7 @@ test("launch mode start button keeps width stable and flips between differently 
 
   await page.locator(".student-screen__library-card").first().click();
   await expect(page.locator("#launch-mode-modal")).toBeVisible();
+  await page.waitForTimeout(360);
 
   const initialButtonWidth = await page.locator("#launch-mode-start").evaluate((node) => node.getBoundingClientRect().width);
 

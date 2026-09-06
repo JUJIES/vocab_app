@@ -14,10 +14,10 @@ Status: **erste vollständige Produktstufe implementiert.** Sheet-Erstellung, Ei
 
 ## Didaktische Darstellung
 
-- `Sichten`: Das Bild ist direkt zusammen mit dem Begriff sichtbar.
 - `Üben`: Das Bild bleibt auf der Frageseite verborgen und erscheint erst nach dem Aufdecken auf der Antwortseite.
-- `Eingabe`: Das Bild erscheint erst nach einer abgeschlossenen Antwort beziehungsweise Korrektur; während eines nötigen Korrekturversuchs bleibt es verborgen.
-- Vor dem Aufdecken wird weder das Bild noch sein Alternativtext in den DOM-Zugänglichkeitsbaum gegeben. Damit verrät die Bildbeschreibung nicht unbemerkt die Lösung.
+- `Eingabe`: Das Bild erscheint nach dem ersten Prüfen und bleibt auch während eines nötigen Korrekturversuchs als Feedback sichtbar.
+- `Testen`: Das Bild bleibt als Hilfe verborgen.
+- In `Eingabe` und `Testen` wird ein verborgenes Bild mitsamt Alternativtext aus dem DOM-Zugänglichkeitsbaum genommen, damit es die Lösung nicht unbemerkt verrät.
 - Karten ohne Bild behalten unverändert das bestehende ruhige Layout und zeigen keinen leeren Platzhalter.
 - Die Quelldatei ist 512 × 512 Pixel groß; die Oberfläche zeigt sie je nach Modus ungefähr 140–224 CSS-Pixel groß.
 

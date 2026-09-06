@@ -129,6 +129,7 @@ test("private sets keep their path and share code while revisions update", async
     const publicEntry = await service.resolveShareCode(created.shareCode);
     assert.equal(publicEntry.path, created.path);
     const document = service.toSetDocument(await service.findPublishedSetById(created.id));
+    assert.deepEqual(document.settings, { enabledModes: ["flashcard", "test"] });
     assert.equal(document.cards[0].hintData.flashcard.exampleId, "answer");
     assert.equal(document.cards[0].examples[0].target, "dog");
   });

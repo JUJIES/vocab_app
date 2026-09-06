@@ -13,13 +13,13 @@ Einsatzbereit sind:
 - ausschließlich private Sets pro Lehrkraft mit Erstellen, Bearbeiten, Löschen und stabilem Set-Code; es gibt im MVP keine Vorlagen oder zwischen Lehrkräften geteilten Bibliotheken
 - automatisch gespeicherte Set-Entwürfe: erster sinnvoller Inhalt und fertige Importentwürfe werden sofort gesichert, bleiben nach einem Reload unter `Entwürfe (n)` wiederauffindbar und werden erst beim Veröffentlichen per Code oder QR für Tablets erreichbar
 - Schnellimport aus klaren Textlisten sowie KI-Entwürfe aus Freitext, TXT, MD, CSV, Bildern, PDF, DOCX und PPTX; beim automatischen Erstentwurf schlägt die KI auch Titel, Fach, Beschreibung, Sprachen und Seitenbezeichnungen vor, eine optionale Importnotiz grenzt Auswahl, Umfang und Abfragerichtung ein
-- KI-Lernbilder für veröffentlichte Sets: sechs Motive pro Sheet, sichtbarer Hintergrundfortschritt, kompakte Vorschau im Karteneditor, einzelne Neugenerierung mit erhaltener Variantenhistorie und didaktisch gestufte Anzeige in allen drei Lernmodi
+- KI-Lernbilder für veröffentlichte Sets: sechs Motive pro Sheet, sichtbarer Hintergrundfortschritt, kompakte Vorschau im Karteneditor, einzelne Neugenerierung mit erhaltener Variantenhistorie und didaktisch gestufte Anzeige als Feedback nach Aufdecken beziehungsweise Antwort; `Testen` bleibt bildfrei
 - Schülerübernahme per Code, QR oder Link; der Set-Inhalt wird nicht auf das Tablet kopiert
-- Modi `Sichten`, `Üben` und `Eingabe`; falsche Eingaben müssen im Korrekturmodus richtig wiederholt werden
+- Modi `Üben`, `Eingabe` und `Testen`; im Eingabemodus müssen falsche Antworten richtig wiederholt werden, während `Testen` eine zufällige Auswahl von mindestens fünf bis allen Set-Karten ohne Bilder oder Hilfen als Liste abfragt
 - Lernstand pro Tablet, Set und Lernmodus
 - installierbare Schüler-PWA für iPads/Relution und eigener Lehrkraft-Startpunkt für Mac-Web-Apps; der Browserzugang bleibt vollständig erhalten
 
-Bewusst vertagt sind persönliche Schülerkonten, Dino-Lernpässe, Schulen/Gruppen, Set-Zuweisungsverwaltung, Tauri und der Modus `Testen`.
+Bewusst vertagt sind persönliche Schülerkonten, Dino-Lernpässe, Schulen/Gruppen, Set-Zuweisungsverwaltung und Tauri.
 
 ## Zentrale Produktlogik
 
@@ -31,6 +31,7 @@ Bewusst vertagt sind persönliche Schülerkonten, Dino-Lernpässe, Schulen/Grupp
 6. Importmaterial erzeugt immer nur einen bearbeitbaren Entwurf. Eine optionale Importnotiz wie `nur Lektion 1, Deutsch → Englisch` steuert Auswahl und Richtung. Originaldateien werden nicht gespeichert. Modellantworten werden serverseitig gegen dasselbe Set-Datenmodell validiert.
 7. Das Löschen eines Entwurfs oder veröffentlichten Sets entfernt ihn sofort aus dem Lehrerbereich. Veröffentlichte Codes und Pfade sind danach nicht mehr auflösbar; Tablet-Verknüpfungen und zugehörige Lernstände werden bereinigt. Intern bleibt der Datensatz archiviert, damit ein versehentliches Löschen im Runtime-Speicher grundsätzlich wiederherstellbar bleibt.
 8. Lernbilder sind eigene persistente Assets. Eine Karte referenziert nur ihre aktive Variante; ältere Generierungen bleiben für direkten Rückwechsel und die spätere Bibliothek erhalten. Inhaltsänderungen lösen die bestehende neue Karten-ID aus und entkoppeln damit veraltete Bilder.
+9. `Testen` zieht ohne Wiederholung eine zufällige Teilmenge des Sets. Die erste Prüfung zählt als Testergebnis; korrekte Zeilen werden gesperrt und falsche Zeilen bleiben rot bearbeitbar, bis alle Antworten stimmen. Es gibt dort keine Bilder, Audios, Hinweise oder eingeblendeten Lösungen.
 
 Runtime-Daten liegen ausschließlich in `DATA_DIR` und dürfen bei Deployments nicht ersetzt werden. JSON-Schreibvorgänge laufen serialisiert und über atomare Dateiersetzung. Das ist für den einzelnen Beelink-Prozess bewusst einfach; bei mehreren Serverinstanzen muss die Store-Schicht später durch eine gemeinsame Datenbank ersetzt werden.
 

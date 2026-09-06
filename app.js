@@ -15,6 +15,8 @@ const INPUT_DELAY_PRESETS = Object.freeze({
     Object.freeze({ key: "long", label: "lang", delayMs: 4000 }),
   ]),
 });
+const TEST_MIN_CARD_COUNT = 5;
+const TEST_DEFAULT_CARD_COUNT = 10;
 
 const state = {
   appMode: "home",
@@ -36,8 +38,6 @@ const state = {
   subscriptions: [],
   baseCards: [],
   allCards: [],
-  setStorageKey: "",
-  starStates: {},
   cards: [],
   roundMode: "main",
   currentIndex: 0,
@@ -48,15 +48,10 @@ const state = {
   summaryMode: null,
   pendingNextRoundCards: [],
   pendingNextRoundNumber: null,
-  pendingStarReviewCards: [],
   summaryRoundKnownCount: 0,
   summaryRoundUnknownCount: 0,
-  hasStartedStarReview: false,
   knownCount: 0,
   unknownCount: 0,
-  viewSelectionAdvanceId: null,
-  viewSelectionCommitCardId: "",
-  viewSelectionCommitState: "",
   isFlipped: false,
   flipRotationDeg: 0,
   flipMotionId: null,
@@ -79,7 +74,6 @@ const state = {
   swipeMetrics: null,
   swipeSettleId: null,
   swipeFrameId: null,
-  starCommitId: null,
   suppressNextClick: false,
   ignoreCardClickUntil: 0,
   suppressAudioClickUntil: 0,
@@ -90,6 +84,8 @@ const state = {
   pendingLaunchSetTitle: "",
   pendingLaunchModeKey: "practice",
   pendingLaunchDirection: "source-target",
+  pendingTestCardCount: TEST_DEFAULT_CARD_COUNT,
+  activeTestCardCount: TEST_DEFAULT_CARD_COUNT,
   launchModeScrollY: 0,
   launchModeDetailRenderedModeKey: "",
   launchModeDetailTransitionTimerId: null,
@@ -105,13 +101,13 @@ const state = {
   activeStudentSetShareUrl: "",
   publicOrigin: "",
   activeTabletPairingId: "",
-  learningProgressSavePending: false,
   inputAdvanceTimeoutId: null,
   inputSettingsOpen: false,
   inputCorrectionModeEnabled: true,
   inputDelayEditorType: "correct",
   inputCorrectAdvanceDelayMs: DEFAULT_INPUT_CORRECT_ADVANCE_DELAY_MS,
   inputIncorrectAdvanceDelayMs: DEFAULT_INPUT_INCORRECT_ADVANCE_DELAY_MS,
+  inputSolutionRevealed: false,
   inputSession: {
     cards: [],
     currentIndex: 0,
@@ -120,6 +116,14 @@ const state = {
     attemptCountForCurrentCard: 0,
     evaluation: null,
     scoredEvaluation: null,
+    isComplete: false,
+  },
+  testSession: {
+    cards: [],
+    evaluations: {},
+    initialCorrectCount: null,
+    initialWrongCount: null,
+    checkCount: 0,
     isComplete: false,
   },
 };
@@ -132,6 +136,7 @@ const APP_MODES = Object.freeze({
   PIN: "pin",
   FLASHCARD: "flashcard",
   INPUT: "input",
+  TEST: "test",
   LOAD_ERROR: "load-error",
 });
 
@@ -147,7 +152,6 @@ const ACCESS_PIN_COOLDOWN_STEPS_MS = [
   60 * 1000,
   5 * 60 * 1000,
 ];
-const STAR_SEQUENCE = ["none", "green", "yellow", "orange"];
 const EXAMPLE_SET_QUERY_PATH = "sets/food-basics-01.json";
 const DEFAULT_TABLET_ID = "rot-1";
 const DEFAULT_TABLET_LABEL = "Rot 1";
@@ -165,13 +169,11 @@ const EXTERNAL_LINK_ICON_PATH = "./assets/icons/external-link.svg";
 const BROKEN_LINK_ICON_PATH = "./assets/icons/broken-link.svg";
 const LIBRARY_MINUS_ICON_PATH = "./assets/icons/library-minus.svg";
 const LEARNING_MODE_ICON_PATHS = Object.freeze({
-  view: "./assets/icons/learning-mode-view.svg",
   practice: "./assets/icons/learning-mode-practice.svg",
   write: "./assets/icons/learning-mode-write.svg",
   test: "./assets/icons/learning-mode-test.svg",
 });
 const LEARNING_MODE_KEYS = Object.freeze([
-  "view",
   "practice",
   "write",
   "test",
@@ -182,17 +184,6 @@ const LEARNING_DIRECTIONS = Object.freeze({
   TARGET_SOURCE: "target-source",
 });
 const LEARNING_MODES = Object.freeze([
-  {
-    key: "view",
-    label: "Sichten",
-    description: "Ohne richtig oder falsch. Nur anschauen und durchgehen.",
-    iconPath: LEARNING_MODE_ICON_PATHS.view,
-    accentColor: "#7daa8c",
-    accentRgb: "125, 170, 140",
-    distributionPercent: 20,
-    isAvailable: true,
-    availabilityLabel: "Verfügbar",
-  },
   {
     key: "practice",
     label: "Üben",
@@ -211,7 +202,7 @@ const LEARNING_MODES = Object.freeze([
     iconPath: LEARNING_MODE_ICON_PATHS.write,
     accentColor: "#a184c2",
     accentRgb: "161, 132, 194",
-    distributionPercent: 15,
+    distributionPercent: 25,
     isAvailable: true,
     availabilityLabel: "Verfügbar",
   },
@@ -222,9 +213,9 @@ const LEARNING_MODES = Object.freeze([
     iconPath: LEARNING_MODE_ICON_PATHS.test,
     accentColor: "#d2a96c",
     accentRgb: "210, 169, 108",
-    distributionPercent: 25,
-    isAvailable: false,
-    availabilityLabel: "Später",
+    distributionPercent: 35,
+    isAvailable: true,
+    availabilityLabel: "Verfügbar",
   },
 ]);
 const STUDENT_SET_COLOR_PALETTE = Object.freeze([
@@ -390,18 +381,14 @@ const elements = {
   learningDirectionButtons: document.querySelectorAll("[data-learning-direction]"),
   knownCounts: document.querySelectorAll("[data-known-count]"),
   unknownCounts: document.querySelectorAll("[data-unknown-count]"),
-  starButtons: document.querySelectorAll("[data-star-button]"),
   audioButtons: document.querySelectorAll("[data-audio-button]"),
   evalButtons: document.querySelectorAll("[data-eval-button]"),
-  viewRatingGroups: document.querySelectorAll("[data-view-rating]"),
-  viewStarButtons: document.querySelectorAll("[data-view-star-button]"),
   frontContent: document.getElementById("front-content"),
   frontFace: document.getElementById("front-face"),
   backFace: document.getElementById("back-face"),
   cardAction: document.getElementById("card-action"),
   cardSecondaryAction: document.getElementById("card-secondary-action"),
   frontWord: document.getElementById("front-word"),
-  frontVisual: document.getElementById("front-visual"),
   frontAlternatives: document.getElementById("front-alternatives"),
   frontHint: document.getElementById("front-hint"),
   backWord: document.getElementById("back-word"),
@@ -440,7 +427,21 @@ const elements = {
   inputFeedbackInput: document.getElementById("input-feedback-input"),
   inputFeedbackCorrectRow: document.getElementById("input-feedback-correct-row"),
   inputFeedbackCorrect: document.getElementById("input-feedback-correct"),
+  inputRevealAnswer: document.getElementById("input-reveal-answer"),
   inputStatusMessage: document.getElementById("input-status-message"),
+  testStage: document.getElementById("test-stage"),
+  testHomeLink: document.getElementById("test-home-link"),
+  testMenuLogout: document.getElementById("test-menu-logout"),
+  testStageTitle: document.getElementById("test-stage-title"),
+  testFeedback: document.getElementById("test-feedback"),
+  testFeedbackTitle: document.getElementById("test-feedback-title"),
+  testFeedbackDetail: document.getElementById("test-feedback-detail"),
+  testForm: document.getElementById("test-form"),
+  testSourceLabel: document.getElementById("test-source-label"),
+  testTargetLabel: document.getElementById("test-target-label"),
+  testTableBody: document.getElementById("test-table-body"),
+  testSubmit: document.getElementById("test-submit"),
+  testStatusMessage: document.getElementById("test-status-message"),
 };
 
 let addSetScanner = null;
@@ -473,11 +474,6 @@ function bindEvents() {
   elements.cardSecondaryAction.addEventListener("click", handleCardSecondaryAction);
   elements.cardSecondaryAction.addEventListener("pointerdown", handleControlPointerDown);
   elements.cardSecondaryAction.addEventListener("pointerup", stopControlEventPropagation);
-  for (const starButton of elements.starButtons) {
-    starButton.addEventListener("click", handleStarAction);
-    starButton.addEventListener("pointerdown", handleControlPointerDown);
-    starButton.addEventListener("pointerup", stopControlEventPropagation);
-  }
   for (const audioButton of elements.audioButtons) {
     audioButton.addEventListener("click", handleAudioAction);
     audioButton.addEventListener("pointerdown", handleControlPointerDown);
@@ -488,11 +484,6 @@ function bindEvents() {
     evalButton.addEventListener("pointerdown", handleControlPointerDown);
     evalButton.addEventListener("pointerup", stopControlEventPropagation);
   }
-  for (const viewStarButton of elements.viewStarButtons) {
-    viewStarButton.addEventListener("click", handleViewStarAction);
-    viewStarButton.addEventListener("pointerdown", handleControlPointerDown);
-    viewStarButton.addEventListener("pointerup", stopControlEventPropagation);
-  }
   window.addEventListener("keydown", handleWindowKeydown);
   elements.studentScreenPrimaryAction.addEventListener("click", handleStudentScreenPrimaryAction);
   elements.studentScreenSecondaryAction.addEventListener("click", handleStudentScreenSecondaryAction);
@@ -500,12 +491,14 @@ function bindEvents() {
   elements.studentShareBlock.addEventListener("click", handleStudentShareOverlayClick);
   elements.studentHomeLink.addEventListener("click", handleReturnToStudentHome);
   elements.inputHomeLink.addEventListener("click", handleReturnToStudentHome);
+  elements.testHomeLink.addEventListener("click", handleReturnToStudentHome);
   elements.flashcardMenuLogout.addEventListener("click", handleFlashcardMenuLogout);
   elements.flashcardSettingsButton.addEventListener("click", handleFlashcardSettingsToggle);
   for (const directionButton of elements.learningDirectionButtons) {
     directionButton.addEventListener("click", handleLearningDirectionSelect);
   }
   elements.inputMenuLogout.addEventListener("click", handleInputMenuLogout);
+  elements.testMenuLogout.addEventListener("click", handleInputMenuLogout);
   elements.inputSettingsButton.addEventListener("click", handleInputSettingsToggle);
   elements.inputCorrectionToggle?.addEventListener("change", handleInputCorrectionToggleChange);
   elements.inputDelayTypeCorrect.addEventListener("click", handleInputDelayTypeSelect);
@@ -518,6 +511,11 @@ function bindEvents() {
   elements.launchDirectionClose.addEventListener("click", closeLaunchModeModal);
   elements.launchDirectionModal.addEventListener("click", handleLaunchDirectionOverlayClick);
   elements.inputAnswerForm.addEventListener("submit", handleInputAnswerSubmit);
+  elements.testForm.addEventListener("submit", handleTestSubmit);
+  elements.inputRevealAnswer.addEventListener("click", handleInputRevealAnswer);
+  for (const input of elements.inputVerbAnswerInputs) {
+    input.addEventListener("keydown", handleInputVerbFieldKeydown);
+  }
   elements.addSetClose.addEventListener("click", closeAddSetModal);
   elements.addSetModal.addEventListener("click", handleAddSetModalOverlayClick);
   elements.studentSetModalClose.addEventListener("click", closeStudentSetModal);
@@ -583,11 +581,6 @@ async function startFlashcardSet(
 
   try {
     const data = await loadSet(setUrl);
-    const tabletId = loadLocalTabletId();
-
-    if (!tabletId) {
-      throw new Error("Tablet ist nicht angemeldet.");
-    }
 
     state.currentSetLanguageLabels = resolveSetLanguageLabels(data);
     if (!parseLearningDirection(learningDirection) && !loadPreferredLearningDirection(setPath)) {
@@ -600,11 +593,8 @@ async function startFlashcardSet(
         state.activeLearningDirection,
       );
     }
-    state.setStorageKey = getSetStorageKey(data);
-    state.starStates = await loadServerLearningProgress(tabletId, setPath, state.setStorageKey);
     state.baseCards = buildCards(data);
     state.allCards = orientLearningCards(state.baseCards, state.activeLearningDirection);
-    state.hasStartedStarReview = false;
     state.knownCount = 0;
     state.unknownCount = 0;
     syncFlashcardSettingsControls();
@@ -642,6 +632,7 @@ function createInputSessionState(cards = []) {
 
 function resetInputLearningState(cards = []) {
   clearInputAdvanceTimeout();
+  state.inputSolutionRevealed = false;
   state.inputSession = createInputSessionState(cards);
 }
 
@@ -859,7 +850,7 @@ function getSubscriptionDirectionMetadata(subscription) {
 }
 
 function isDirectionConfigurableMode(modeKey) {
-  return modeKey === "view" || modeKey === "practice" || modeKey === "write";
+  return modeKey === "practice" || modeKey === "write" || modeKey === "test";
 }
 
 function syncLearningDirectionGroup(groupName, selectedDirection, labels) {
@@ -945,8 +936,17 @@ function renderLearningTerm(element, value) {
   const forms = getIrregularVerbForms(text);
   element.replaceChildren();
   element.classList.toggle("has-irregular-verb", Boolean(forms));
+  element.classList.remove("is-single-term", "has-paired-term-size");
+  element.style.removeProperty("--learning-term-max-size");
+  element.style.removeProperty("--learning-term-paired-max-size");
 
   if (!forms) {
+    const isSingleTerm = Boolean(text) && !/\s/u.test(text);
+    element.classList.toggle("is-single-term", isSingleTerm);
+    if (isSingleTerm) {
+      const maxSizeRem = getLearningTermMaxSizeRem(text);
+      element.style.setProperty("--learning-term-max-size", `${maxSizeRem.toFixed(3)}rem`);
+    }
     element.textContent = text || "\u00a0";
     element.removeAttribute("aria-label");
     return;
@@ -981,6 +981,34 @@ function renderLearningTerm(element, value) {
       .map((label, index) => `${label}: ${forms[index]}`)
       .join(", "),
   );
+}
+
+function getLearningTermMaxSizeRem(value) {
+  const text = typeof value === "string" ? value.trim() : "";
+  if (!text || /\s/u.test(text) || getIrregularVerbForms(text)) {
+    return 4;
+  }
+
+  const characterCount = Array.from(text).length;
+  return Math.min(Math.max(32 / (characterCount * 0.55), 1.7), 4);
+}
+
+function syncFlashcardPairTypography(card) {
+  const words = [elements.frontWord, elements.backWord];
+  const visualSizeLimit = card?.visual?.url ? 3.4 : 4;
+  const pairedMaxSizeRem = Math.min(
+    visualSizeLimit,
+    getLearningTermMaxSizeRem(card?.sourceText),
+    getLearningTermMaxSizeRem(card?.targetText),
+  );
+
+  for (const word of words) {
+    word.classList.add("has-paired-term-size");
+    word.style.setProperty(
+      "--learning-term-paired-max-size",
+      `${pairedMaxSizeRem.toFixed(3)}rem`,
+    );
+  }
 }
 
 function formatLearningTermInline(value) {
@@ -1323,6 +1351,7 @@ function renderInputEvaluation(session = state.inputSession) {
     elements.inputFeedbackInput.textContent = "";
     elements.inputFeedbackCorrectRow.hidden = true;
     elements.inputFeedbackCorrect.textContent = "";
+    elements.inputRevealAnswer.hidden = true;
     return;
   }
 
@@ -1341,8 +1370,11 @@ function renderInputEvaluation(session = state.inputSession) {
         ? "Richtig"
         : "Falsch";
   elements.inputFeedbackInput.textContent = formatInputEvaluationValue(evaluation);
-  elements.inputFeedbackCorrectRow.hidden = feedbackTone === "correct" || correctionRequired;
+  const canRevealAnswer = correctionRequired && !state.inputSolutionRevealed;
+  elements.inputFeedbackCorrectRow.hidden = feedbackTone === "correct"
+    || (correctionRequired && !state.inputSolutionRevealed);
   elements.inputFeedbackCorrect.textContent = evaluation.bestAnswer || "—";
+  elements.inputRevealAnswer.hidden = !canRevealAnswer;
 }
 
 function renderInputCompletionState() {
@@ -1395,7 +1427,7 @@ function renderInputSession() {
 
   elements.inputPromptKicker.textContent = "";
   renderLearningTerm(elements.inputPromptWord, card.sourceText);
-  renderInputVisual(card, Boolean(evaluation) && !correctionRequired);
+  renderInputVisual(card, Boolean(evaluation));
   elements.inputPromptDetail.textContent = buildInputPromptDetail(card);
   elements.inputAnswerForm.hidden = false;
   elements.inputAnswerLabel.hidden = false;
@@ -1500,6 +1532,246 @@ async function startInputSet(
     renderInputSession();
   } catch (error) {
     console.error("Unable to start input set:", error);
+    renderStudentLoadErrorState({
+      title: "Set nicht verfügbar",
+      message: "Set konnte nicht geöffnet werden.",
+      detail: "",
+      primaryAction: "retry-set",
+      primaryLabel: "Erneut",
+      secondaryAction: "clear-set",
+      secondaryLabel: "Start",
+    });
+  }
+}
+
+function createTestSessionState(cards = []) {
+  return {
+    cards: Array.isArray(cards) ? cards : [],
+    evaluations: {},
+    initialCorrectCount: null,
+    initialWrongCount: null,
+    checkCount: 0,
+    isComplete: false,
+  };
+}
+
+function shuffleCards(cards) {
+  const shuffledCards = [...cards];
+
+  for (let index = shuffledCards.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [shuffledCards[index], shuffledCards[randomIndex]] = [shuffledCards[randomIndex], shuffledCards[index]];
+  }
+
+  return shuffledCards;
+}
+
+function selectRandomTestCards(cards, requestedCount) {
+  const count = clamp(Math.floor(requestedCount), 1, cards.length);
+  return shuffleCards(cards).slice(0, count);
+}
+
+function resetTestLearningState(cards = []) {
+  state.testSession = createTestSessionState(cards);
+}
+
+function getTestEvaluationCounts(session = state.testSession) {
+  const evaluations = Object.values(session.evaluations || {});
+  return {
+    correctCount: evaluations.filter((evaluation) => evaluation?.status === "correct").length,
+    wrongCount: evaluations.filter((evaluation) => evaluation?.status === "wrong").length,
+  };
+}
+
+function createTestTableRow(card, index) {
+  const evaluation = state.testSession.evaluations[index] || null;
+  const row = document.createElement("tr");
+  row.className = "test-stage__row";
+  row.classList.toggle("is-wrong", evaluation?.status === "wrong");
+  row.classList.toggle("is-correct", evaluation?.status === "correct");
+
+  const numberCell = document.createElement("th");
+  numberCell.className = "test-stage__number";
+  numberCell.scope = "row";
+  numberCell.textContent = String(index + 1);
+
+  const promptCell = document.createElement("td");
+  promptCell.className = "test-stage__prompt";
+  promptCell.textContent = card.sourceText;
+
+  const answerCell = document.createElement("td");
+  answerCell.className = "test-stage__answer";
+  const input = document.createElement("input");
+  input.className = "test-stage__input";
+  input.type = "text";
+  input.autocomplete = "off";
+  input.autocapitalize = "none";
+  input.spellcheck = false;
+  input.required = true;
+  input.dataset.testAnswerIndex = String(index);
+  input.setAttribute("aria-label", `Antwort für ${card.sourceText}`);
+  input.value = evaluation?.input || "";
+  input.readOnly = evaluation?.status === "correct" || state.testSession.isComplete;
+  if (evaluation?.status === "wrong") {
+    input.setAttribute("aria-invalid", "true");
+  }
+  answerCell.append(input);
+
+  row.append(numberCell, promptCell, answerCell);
+  return row;
+}
+
+function renderTestSession({ focusWrongAnswer = false } = {}) {
+  const session = state.testSession;
+  const labels = getLearningDirectionLabels();
+  const usesReverseDirection = state.activeLearningDirection === LEARNING_DIRECTIONS.TARGET_SOURCE;
+  elements.testSourceLabel.textContent = usesReverseDirection ? labels.targetLabel : labels.sourceLabel;
+  elements.testTargetLabel.textContent = usesReverseDirection ? labels.sourceLabel : labels.targetLabel;
+  elements.testTableBody.replaceChildren(
+    ...session.cards.map((card, index) => createTestTableRow(card, index)),
+  );
+
+  const hasEvaluation = session.checkCount > 0;
+  const { correctCount, wrongCount } = getTestEvaluationCounts(session);
+  elements.testFeedback.hidden = !hasEvaluation;
+  elements.testFeedback.classList.toggle("is-complete", session.isComplete);
+  elements.testFeedbackTitle.textContent = session.isComplete
+    ? "Alles richtig"
+    : `${correctCount} richtig · ${wrongCount} falsch`;
+  elements.testFeedbackDetail.textContent = session.isComplete
+    ? `${session.cards.length} von ${session.cards.length} Antworten stimmen.`
+    : "Verbessere die rot markierten Antworten und prüfe erneut.";
+  elements.testSubmit.textContent = session.isComplete
+    ? "Neuen Test starten"
+    : hasEvaluation
+      ? "Erneut prüfen"
+      : "Antworten prüfen";
+
+  elements.testStatusMessage.textContent = session.isComplete
+    ? `Test abgeschlossen. Alle ${session.cards.length} Antworten sind richtig.`
+    : hasEvaluation
+      ? `${correctCount} richtig, ${wrongCount} falsch. Korrigiere die rot markierten Antworten.`
+      : `Test mit ${session.cards.length} Vokabeln. Fülle alle Antworten aus.`;
+
+  if (focusWrongAnswer) {
+    const firstWrongInput = elements.testTableBody.querySelector(".test-stage__row.is-wrong .test-stage__input");
+    firstWrongInput?.focus();
+    firstWrongInput?.select();
+  }
+}
+
+function startNewTestRound() {
+  const selectedCards = selectRandomTestCards(state.allCards, state.activeTestCardCount);
+  resetTestLearningState(selectedCards);
+  renderTestSession();
+  elements.testTableBody.querySelector(".test-stage__input")?.focus();
+}
+
+async function handleTestSubmit(event) {
+  event.preventDefault();
+
+  if (state.testSession.isComplete) {
+    startNewTestRound();
+    return;
+  }
+
+  const previousEvaluations = state.testSession.evaluations;
+  const nextEvaluations = { ...previousEvaluations };
+
+  for (const [index, card] of state.testSession.cards.entries()) {
+    if (previousEvaluations[index]?.status === "correct") {
+      continue;
+    }
+
+    const input = elements.testTableBody.querySelector(`[data-test-answer-index="${index}"]`);
+    const rawInput = input instanceof HTMLInputElement ? input.value.trim() : "";
+    const evaluation = evaluateInputAnswer(rawInput, card.answers);
+    nextEvaluations[index] = {
+      status: evaluation.status === "correct" ? "correct" : "wrong",
+      input: rawInput,
+    };
+  }
+
+  const nextCheckCount = state.testSession.checkCount + 1;
+  const counts = getTestEvaluationCounts({ evaluations: nextEvaluations });
+  const isComplete = counts.wrongCount === 0;
+  const isFirstCheck = state.testSession.checkCount === 0;
+  state.testSession = {
+    ...state.testSession,
+    evaluations: nextEvaluations,
+    initialCorrectCount: isFirstCheck ? counts.correctCount : state.testSession.initialCorrectCount,
+    initialWrongCount: isFirstCheck ? counts.wrongCount : state.testSession.initialWrongCount,
+    checkCount: nextCheckCount,
+    isComplete,
+  };
+  renderTestSession({ focusWrongAnswer: !isComplete });
+
+  if (isFirstCheck) {
+    const initialPercent = getRoundResultPercent(state.testSession.cards.length, counts.wrongCount);
+    await persistCompletedRoundCount({
+      modeKey: "test",
+      lastRoundPercent: initialPercent,
+    });
+  }
+}
+
+async function startTestSet(
+  setPath,
+  setUrl = new URL(setPath, getAppBaseUrl()).href,
+  learningDirection = "",
+  requestedCardCount = TEST_DEFAULT_CARD_COUNT,
+) {
+  const normalizedRequestedCardCount = Math.max(1, Math.floor(requestedCardCount));
+  state.currentSetPath = setPath;
+  state.currentSetUrl = setUrl;
+  state.currentSetBaseUrl = new URL("./", setUrl).href;
+  state.currentSetLanguageLabels = null;
+  state.baseCards = [];
+  state.allCards = [];
+  state.activeLearningModeKey = "test";
+  state.activeLearningDirection = parseLearningDirection(learningDirection)
+    || loadPreferredLearningDirection(setPath)
+    || LEARNING_DIRECTIONS.SOURCE_TARGET;
+  state.activeTestCardCount = normalizedRequestedCardCount;
+  persistActiveLearningSession(
+    setPath,
+    "test",
+    APP_MODES.TEST,
+    state.activeLearningDirection,
+    state.activeTestCardCount,
+  );
+  setStudentAppMode(APP_MODES.TEST);
+  state.activeTestCardCount = normalizedRequestedCardCount;
+  resetTestLearningState();
+  elements.testStageTitle.textContent = state.pendingLaunchSetTitle || "Vokabeltest";
+  elements.testSourceLabel.textContent = "Vokabel";
+  elements.testTargetLabel.textContent = "Antwort";
+  elements.testTableBody.replaceChildren();
+  elements.testFeedback.hidden = true;
+  elements.testSubmit.textContent = "Antworten prüfen";
+  elements.testStatusMessage.textContent = "Set wird geöffnet.";
+
+  try {
+    const data = await loadSet(setUrl);
+    state.currentSetLanguageLabels = resolveSetLanguageLabels(data);
+    state.baseCards = buildCards(data);
+    state.allCards = orientLearningCards(state.baseCards, state.activeLearningDirection);
+    state.activeTestCardCount = clamp(
+      state.activeTestCardCount,
+      Math.min(TEST_MIN_CARD_COUNT, state.allCards.length),
+      state.allCards.length,
+    );
+    elements.testStageTitle.textContent = data?.set?.title || "Vokabeltest";
+    persistActiveLearningSession(
+      setPath,
+      "test",
+      APP_MODES.TEST,
+      state.activeLearningDirection,
+      state.activeTestCardCount,
+    );
+    startNewTestRound();
+  } catch (error) {
+    console.error("Unable to start test set:", error);
     renderStudentLoadErrorState({
       title: "Set nicht verfügbar",
       message: "Set konnte nicht geöffnet werden.",
@@ -1780,15 +2052,18 @@ function setStudentAppMode(mode) {
     closeLaunchModeModal();
   }
   elements.appShell.dataset.appMode = mode;
-  elements.studentScreen.hidden = mode === APP_MODES.FLASHCARD || mode === APP_MODES.INPUT;
+  elements.studentScreen.hidden = mode === APP_MODES.FLASHCARD || mode === APP_MODES.INPUT || mode === APP_MODES.TEST;
   elements.cardStage.hidden = mode !== APP_MODES.FLASHCARD;
   elements.inputStage.hidden = mode !== APP_MODES.INPUT;
+  elements.testStage.hidden = mode !== APP_MODES.TEST;
   if (previousMode !== mode) {
     const activeSurface = mode === APP_MODES.FLASHCARD
       ? elements.cardStage
       : mode === APP_MODES.INPUT
         ? elements.inputStage
-        : elements.studentScreen;
+        : mode === APP_MODES.TEST
+          ? elements.testStage
+          : elements.studentScreen;
     window.LerndeckUiMotion.revealSurface(activeSurface);
   }
   updateStudentShareBlock();
@@ -3996,13 +4271,11 @@ function handleStudentScreenSecondaryAction() {
 
 function executeStudentScreenAction(action) {
   if (action === "retry-set") {
-    resetViewSelectionState();
     initializeStudentApp();
     return;
   }
 
   if (action === "go-home") {
-    resetViewSelectionState();
     clearActiveLearningSession();
     state.requestedSetPath = "";
     state.requestedSetUrl = "";
@@ -4015,7 +4288,6 @@ function executeStudentScreenAction(action) {
   }
 
   if (action === "clear-set") {
-    resetViewSelectionState();
     clearActiveLearningSession();
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.delete("set");
@@ -4026,7 +4298,6 @@ function executeStudentScreenAction(action) {
   }
 
   if (action === "clear-local-tablet") {
-    resetViewSelectionState();
     clearActiveLearningSession();
     clearLocalTabletId();
     clearStudentSessionUnlock();
@@ -4046,7 +4317,6 @@ function executeStudentScreenAction(action) {
 
 async function handleReturnToStudentHome() {
   closeInputSettingsMenu();
-  resetViewSelectionState();
   clearActiveLearningSession();
   state.requestedSetPath = "";
   state.requestedSetUrl = "";
@@ -4056,7 +4326,10 @@ async function handleReturnToStudentHome() {
   state.currentSetLanguageLabels = null;
   state.baseCards = [];
   state.allCards = [];
+  state.activeTestCardCount = TEST_DEFAULT_CARD_COUNT;
   resetInputLearningState();
+  resetTestLearningState();
+  elements.testTableBody.replaceChildren();
 
   const nextUrl = new URL(window.location.href);
   nextUrl.searchParams.delete("set");
@@ -4105,6 +4378,37 @@ function handleInputAnswerSubmit(event) {
   scheduleInputAdvance(evaluation);
 }
 
+function handleInputVerbFieldKeydown(event) {
+  if (event.key !== "Enter" || event.repeat) {
+    return;
+  }
+
+  const fields = getInputVerbFields();
+  const currentIndex = fields.indexOf(event.currentTarget);
+  const unansweredField = fields
+    .slice(currentIndex + 1)
+    .find((field) => !field.value.trim())
+    || fields.slice(0, currentIndex).find((field) => !field.value.trim());
+
+  if (!(unansweredField instanceof HTMLInputElement)) {
+    return;
+  }
+
+  event.preventDefault();
+  unansweredField.focus();
+}
+
+function handleInputRevealAnswer() {
+  if (!isInputCorrectionRequired(state.inputSession)) {
+    return;
+  }
+
+  state.inputSolutionRevealed = true;
+  renderInputEvaluation(state.inputSession);
+  focusFirstInputAnswerField(getCurrentInputSessionCard());
+  elements.inputStatusMessage.textContent = `Korrekte Lösung: ${state.inputSession.evaluation?.bestAnswer || "unbekannt"}. Gib sie jetzt selbst ein.`;
+}
+
 async function handleInputAdvance() {
   clearInputAdvanceTimeout();
 
@@ -4128,6 +4432,7 @@ async function handleInputAdvance() {
   }
 
   state.inputSession = advanceInputSession(state.inputSession);
+  state.inputSolutionRevealed = false;
   clearInputAnswerFields();
   renderInputSession();
 }
@@ -5733,6 +6038,26 @@ function getPendingLaunchSubscription() {
   return state.subscriptions.find((entry) => entry?.setPath === state.pendingLaunchSetPath) || null;
 }
 
+function getSubscriptionCardCount(subscription) {
+  return Number.isFinite(subscription?.cardCount)
+    ? Math.max(1, Math.floor(subscription.cardCount))
+    : TEST_DEFAULT_CARD_COUNT;
+}
+
+function getTestCardCountRange(subscription) {
+  const maximum = getSubscriptionCardCount(subscription);
+  return {
+    minimum: Math.min(TEST_MIN_CARD_COUNT, maximum),
+    maximum,
+  };
+}
+
+function clampTestCardCount(value, subscription) {
+  const { minimum, maximum } = getTestCardCountRange(subscription);
+  const numericValue = Number.isFinite(Number(value)) ? Math.floor(Number(value)) : TEST_DEFAULT_CARD_COUNT;
+  return clamp(numericValue, minimum, maximum);
+}
+
 function formatLearningModePercent(value) {
   return Number.isFinite(value) ? `${Math.round(value)} %` : "–";
 }
@@ -6087,7 +6412,44 @@ function getLaunchModeTransitionDirection(previousModeKey, nextModeKey) {
   return nextIndex > previousIndex ? 1 : -1;
 }
 
-function createLaunchModeDetailContent(mode, progress) {
+function createTestCardCountControl(subscription) {
+  const { minimum, maximum } = getTestCardCountRange(subscription);
+  const selectedCount = clampTestCardCount(state.pendingTestCardCount, subscription);
+  state.pendingTestCardCount = selectedCount;
+
+  const control = document.createElement("div");
+  control.className = "launch-mode-modal__test-count";
+
+  const heading = document.createElement("div");
+  heading.className = "launch-mode-modal__test-count-heading";
+
+  const label = document.createElement("label");
+  label.className = "launch-mode-modal__test-count-label";
+  label.textContent = "Umfang";
+
+  const output = document.createElement("output");
+  output.className = "launch-mode-modal__test-count-value";
+  output.textContent = `${selectedCount} von ${maximum} Vokabeln`;
+
+  const slider = document.createElement("input");
+  slider.className = "launch-mode-modal__test-count-slider";
+  slider.type = "range";
+  slider.min = String(minimum);
+  slider.max = String(maximum);
+  slider.step = "1";
+  slider.value = String(selectedCount);
+  slider.setAttribute("aria-label", `Anzahl der Vokabeln, mindestens ${minimum}, höchstens ${maximum}`);
+  slider.addEventListener("input", () => {
+    state.pendingTestCardCount = clampTestCardCount(slider.value, subscription);
+    output.textContent = `${state.pendingTestCardCount} von ${maximum} Vokabeln`;
+  });
+
+  heading.append(label, output);
+  control.append(heading, slider);
+  return control;
+}
+
+function createLaunchModeDetailContent(mode, progress, subscription) {
   const content = document.createElement("div");
   content.className = "launch-mode-modal__detail-content";
   content.dataset.modeKey = mode.key;
@@ -6106,6 +6468,9 @@ function createLaunchModeDetailContent(mode, progress) {
   meta.hidden = !meta.textContent;
 
   content.append(title, description, meta);
+  if (mode.key === "test") {
+    content.append(createTestCardCountControl(subscription));
+  }
   return content;
 }
 
@@ -6167,7 +6532,7 @@ function renderLaunchModeDetail(subscription, { previousModeKey = "", forceInsta
 
   const currentContent = stage.querySelector(".launch-mode-modal__detail-content.is-current");
   const currentModeKey = currentContent?.dataset.modeKey || state.launchModeDetailRenderedModeKey || "";
-  const nextContent = createLaunchModeDetailContent(selectedMode, progress);
+  const nextContent = createLaunchModeDetailContent(selectedMode, progress, subscription);
   const direction = getLaunchModeTransitionDirection(previousModeKey || currentModeKey, selectedMode.key);
   const shouldAnimate = !forceInstant
     && currentContent instanceof HTMLElement
@@ -6253,6 +6618,8 @@ function openLaunchModeModal(setPath) {
   state.pendingLaunchDirection = loadPreferredLearningDirection(setPath)
     || parseLearningDirection(subscription?.defaultDirection)
     || LEARNING_DIRECTIONS.SOURCE_TARGET;
+  const { maximum } = getTestCardCountRange(subscription);
+  state.pendingTestCardCount = Math.min(TEST_DEFAULT_CARD_COUNT, maximum);
   state.launchModeScrollY = window.scrollY || window.pageYOffset || 0;
   renderLaunchModeModal({
     forceRebuildCards: true,
@@ -6309,6 +6676,7 @@ function closeLaunchModeModal() {
   state.pendingLaunchSetTitle = "";
   state.pendingLaunchModeKey = DEFAULT_LEARNING_MODE_KEY;
   state.pendingLaunchDirection = LEARNING_DIRECTIONS.SOURCE_TARGET;
+  state.pendingTestCardCount = TEST_DEFAULT_CARD_COUNT;
   state.launchModeScrollY = 0;
   state.launchModeDetailRenderedModeKey = "";
   state.launchModeActionRenderedModeKey = "";
@@ -6374,6 +6742,10 @@ async function startPendingLaunchMode() {
   const setPath = state.pendingLaunchSetPath;
   const selectedModeKey = state.pendingLaunchModeKey;
   const selectedDirection = state.pendingLaunchDirection;
+  const selectedTestCardCount = clampTestCardCount(
+    state.pendingTestCardCount,
+    getPendingLaunchSubscription(),
+  );
   if (isDirectionConfigurableMode(selectedModeKey)) {
     persistPreferredLearningDirection(setPath, selectedDirection);
   }
@@ -6381,6 +6753,16 @@ async function startPendingLaunchMode() {
   state.requestedSetPath = setPath;
   state.requestedSetUrl = new URL(setPath, getAppBaseUrl()).href;
   window.history.replaceState({}, "", buildCanonicalStudentSetUrl(setPath));
+  if (selectedModeKey === "test") {
+    await startTestSet(
+      setPath,
+      new URL(setPath, getAppBaseUrl()).href,
+      selectedDirection,
+      selectedTestCardCount,
+    );
+    return;
+  }
+
   if (selectedModeKey === "write") {
     await startInputSet(
       setPath,
@@ -6530,7 +6912,14 @@ function loadActiveLearningSession() {
     return {
       setPath,
       modeKey: normalizeLearningModeKey(parsed?.modeKey),
-      appMode: parsed?.appMode === APP_MODES.INPUT ? APP_MODES.INPUT : APP_MODES.FLASHCARD,
+      appMode: parsed?.appMode === APP_MODES.INPUT
+        ? APP_MODES.INPUT
+        : parsed?.appMode === APP_MODES.TEST
+          ? APP_MODES.TEST
+          : APP_MODES.FLASHCARD,
+      testCardCount: Number.isFinite(parsed?.testCardCount)
+        ? Math.max(1, Math.floor(parsed.testCardCount))
+        : TEST_DEFAULT_CARD_COUNT,
       direction: normalizeLearningDirection(parsed?.direction),
     };
   } catch (error) {
@@ -6539,7 +6928,13 @@ function loadActiveLearningSession() {
   }
 }
 
-function persistActiveLearningSession(setPath, modeKey, appMode, direction = LEARNING_DIRECTIONS.SOURCE_TARGET) {
+function persistActiveLearningSession(
+  setPath,
+  modeKey,
+  appMode,
+  direction = LEARNING_DIRECTIONS.SOURCE_TARGET,
+  testCardCount = TEST_DEFAULT_CARD_COUNT,
+) {
   const normalizedSetPath = normalizeSetPath(setPath);
 
   if (!normalizedSetPath) {
@@ -6550,8 +6945,13 @@ function persistActiveLearningSession(setPath, modeKey, appMode, direction = LEA
   persistPersistentStorageItem(ACTIVE_LEARNING_SESSION_STORAGE_KEY, JSON.stringify({
     setPath: normalizedSetPath,
     modeKey: normalizeLearningModeKey(modeKey),
-    appMode: appMode === APP_MODES.INPUT ? APP_MODES.INPUT : APP_MODES.FLASHCARD,
+    appMode: appMode === APP_MODES.INPUT
+      ? APP_MODES.INPUT
+      : appMode === APP_MODES.TEST
+        ? APP_MODES.TEST
+        : APP_MODES.FLASHCARD,
     direction: normalizeLearningDirection(direction),
+    testCardCount: Math.max(1, Math.floor(testCardCount)),
   }));
 }
 
@@ -6581,6 +6981,16 @@ async function resumeActiveLearningSession(setPath) {
   const setUrl = new URL(setPath, getAppBaseUrl()).href;
   state.requestedSetPath = setPath;
   state.requestedSetUrl = setUrl;
+
+  if (activeSession.appMode === APP_MODES.TEST || activeSession.modeKey === "test") {
+    await startTestSet(
+      setPath,
+      setUrl,
+      activeSession.direction,
+      activeSession.testCardCount,
+    );
+    return true;
+  }
 
   if (activeSession.appMode === APP_MODES.INPUT || activeSession.modeKey === "write") {
     await startInputSet(setPath, setUrl, activeSession.modeKey, activeSession.direction);
@@ -7294,102 +7704,6 @@ function getApiErrorMessage(response, fallbackMessage) {
     : fallbackMessage;
 }
 
-function getSetStorageKey(data) {
-  const explicitId = typeof data?.set?.id === "string"
-    ? data.set.id.trim()
-    : typeof data?.id === "string"
-      ? data.id.trim()
-      : "";
-  return explicitId || "example-set-improved";
-}
-
-async function loadServerLearningProgress(tabletId, setPath, setStorageKey) {
-  void setStorageKey;
-  const response = await apiRequest(
-    `/api/tablets/${encodeURIComponent(tabletId)}/learning-progress?set=${encodeURIComponent(setPath)}`,
-    {
-      auth: "tablet",
-      tabletId,
-    },
-  );
-
-  if (response.status === 409) {
-    await handleDecoupledTabletState(tabletId);
-    throw new Error("TABLET_DECOUPLED");
-  }
-
-  if (response.status === 401 || response.status === 403) {
-    await handleExpiredTabletSession(tabletId);
-    throw new Error("TABLET_AUTH_REQUIRED");
-  }
-
-  if (!response.ok) {
-    throw new Error(getApiErrorMessage(response, "Lernstand konnte nicht geladen werden."));
-  }
-
-  syncActiveTabletContext(response.data?.tablet || null);
-  return normalizeStarStates(response.data?.progress?.starStates);
-}
-
-async function saveTabletLearningProgress(tabletId, setPath, starStates) {
-  try {
-    const response = await apiRequest(`/api/tablets/${encodeURIComponent(tabletId)}/learning-progress`, {
-      auth: "tablet",
-      tabletId,
-      method: "PUT",
-      body: {
-        setPath,
-        starStates,
-      },
-    });
-
-    if (response.status === 409) {
-      await handleDecoupledTabletState(tabletId);
-      return {
-        ok: false,
-        decoupled: true,
-        authRequired: false,
-        error: "Tablet wurde entkoppelt.",
-      };
-    }
-
-    if (response.status === 401 || response.status === 403) {
-      await handleExpiredTabletSession(tabletId);
-      return {
-        ok: false,
-        decoupled: false,
-        authRequired: true,
-        error: "Sitzung abgelaufen. Bitte erneut mit PIN anmelden.",
-      };
-    }
-
-    if (!response.ok) {
-      return {
-        ok: false,
-        decoupled: false,
-        authRequired: false,
-        error: getApiErrorMessage(response, "Lernstand konnte nicht gespeichert werden."),
-      };
-    }
-
-    syncActiveTabletContext(response.data?.tablet || null);
-    return {
-      ok: true,
-      decoupled: false,
-      authRequired: false,
-      error: "",
-    };
-  } catch (error) {
-    console.error("Unable to save learning progress:", error);
-    return {
-      ok: false,
-      decoupled: false,
-      authRequired: false,
-      error: "Server nicht erreichbar. Lernstand konnte nicht gespeichert werden.",
-    };
-  }
-}
-
 async function incrementTabletCompletedRounds(tabletId, setPath, {
   incrementBy = 1,
   modeKey = DEFAULT_LEARNING_MODE_KEY,
@@ -7469,44 +7783,6 @@ async function persistCompletedRoundCount({
   });
 }
 
-async function persistServerLearningProgress(previousStarStates) {
-  const tabletId = loadLocalTabletId();
-  const setPath = state.currentSetPath;
-
-  if (!tabletId || !setPath) {
-    state.learningProgressSavePending = false;
-    updateStarButtons();
-    updateViewRatingButtons();
-    return;
-  }
-
-  const nextStarStates = normalizeStarStates(state.starStates);
-  const result = await saveTabletLearningProgress(tabletId, setPath, nextStarStates);
-
-  if (!result.ok) {
-    state.learningProgressSavePending = false;
-
-    if (result.decoupled || result.authRequired) {
-      return;
-    }
-
-    state.starStates = previousStarStates;
-    updateStarButtons();
-    updateViewRatingButtons();
-
-    if (state.currentCard && !state.summaryMode && !state.isComplete) {
-      renderCard();
-    }
-
-    window.alert(result.error);
-    return;
-  }
-
-  state.learningProgressSavePending = false;
-  updateStarButtons();
-  updateViewRatingButtons();
-}
-
 async function handleDecoupledTabletState(tabletId) {
   state.currentSetPath = "";
   state.currentSetUrl = "";
@@ -7514,9 +7790,6 @@ async function handleDecoupledTabletState(tabletId) {
   state.currentSetLanguageLabels = null;
   state.baseCards = [];
   state.allCards = [];
-  state.setStorageKey = "";
-  state.starStates = {};
-  state.learningProgressSavePending = false;
   clearActiveLearningSession();
   clearLocalTabletId();
   clearStudentSessionUnlock();
@@ -7539,7 +7812,6 @@ async function handleExpiredTabletSession(tabletId, feedback = "Sitzung abgelauf
   state.currentSetLanguageLabels = null;
   state.baseCards = [];
   state.allCards = [];
-  state.learningProgressSavePending = false;
   clearActiveLearningSession();
   clearStudentSessionUnlock();
   clearTabletSession();
@@ -7552,31 +7824,6 @@ async function handleExpiredTabletSession(tabletId, feedback = "Sitzung abgelauf
     knownDeviceFeedback: feedback,
     showRegistration: false,
   });
-}
-
-function normalizeStarStates(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return {};
-  }
-
-  const nextStates = {};
-
-  for (const [cardId, rawState] of Object.entries(value)) {
-    const normalizedCardId = typeof cardId === "string" ? cardId.trim() : "";
-    const normalizedState = typeof rawState === "string" ? rawState.trim() : "";
-
-    if (!normalizedCardId || !isStoredStarState(normalizedState)) {
-      continue;
-    }
-
-    nextStates[normalizedCardId] = normalizedState;
-  }
-
-  return nextStates;
-}
-
-function isStoredStarState(value) {
-  return value === "green" || value === "yellow" || value === "orange";
 }
 
 function syncActiveTabletContext(tablet) {
@@ -8194,20 +8441,6 @@ function handleWindowKeydown(event) {
     return;
   }
 
-  if (isViewLearningMode() && state.isFlipped) {
-    if (event.key === "ArrowLeft") {
-      event.preventDefault();
-      advanceViewCard("next");
-      return;
-    }
-
-    if (event.key === "ArrowRight") {
-      event.preventDefault();
-      advanceViewCard("previous");
-      return;
-    }
-  }
-
   if (event.key === "ArrowLeft") {
     event.preventDefault();
     flipCard("left");
@@ -8234,100 +8467,19 @@ function flipCard(direction = "right") {
   renderCard();
 }
 
-function isViewLearningMode() {
-  return state.activeLearningModeKey === "view";
-}
-
-function isViewReviewRound() {
-  return state.roundMode === "view-review";
-}
-
-function clearViewSelectionAdvance() {
-  if (state.viewSelectionAdvanceId === null) {
-    return;
-  }
-
-  window.clearTimeout(state.viewSelectionAdvanceId);
-  state.viewSelectionAdvanceId = null;
-}
-
-function clearViewSelectionCommitState() {
-  state.viewSelectionCommitCardId = "";
-  state.viewSelectionCommitState = "";
-}
-
-function resetViewSelectionState() {
-  clearViewSelectionAdvance();
-  clearViewSelectionCommitState();
-}
-
-function getViewRatedCardCount(cards = state.allCards) {
-  if (!Array.isArray(cards)) {
-    return 0;
-  }
-
-  return cards.reduce((count, card) => (
-    count + (isStoredStarState(state.starStates[card?.id]) ? 1 : 0)
-  ), 0);
-}
-
-function getViewUnratedCards(cards = state.allCards) {
-  if (!Array.isArray(cards)) {
-    return [];
-  }
-
-  return cards.filter((card) => !isStoredStarState(state.starStates[card?.id]));
-}
-
-function getViewRatedPercent(cards = state.allCards) {
-  if (!Array.isArray(cards) || cards.length < 1) {
-    return null;
-  }
-
-  return Math.round((getViewRatedCardCount(cards) / cards.length) * 100);
-}
-
 function canPerformSwipeAction(action) {
-  if (action === "known" || action === "unknown") {
-    return true;
-  }
-
-  if (action === "previous") {
-    return canNavigatePrevious();
-  }
-
-  if (action === "next") {
-    return Boolean(state.currentCard);
-  }
-
-  return false;
+  return action === "known" || action === "unknown";
 }
 
 function getSwipeActionFromDelta(deltaX) {
-  if (isViewLearningMode()) {
-    return deltaX > 0 ? "previous" : "next";
-  }
-
   return deltaX > 0 ? "known" : "unknown";
 }
 
 function getSwipeTintRgb(deltaX) {
-  if (isViewLearningMode()) {
-    return deltaX >= 0 ? "126 152 179" : "109 162 146";
-  }
-
   return deltaX >= 0 ? "112 146 121" : "154 103 98";
 }
 
 function getSwipeSettleTintRgb(action) {
-  if (action === "previous") {
-    return "126 152 179";
-  }
-
-  if (action === "next") {
-    return "109 162 146";
-  }
-
   return action === "known" ? "112 146 121" : "154 103 98";
 }
 
@@ -8340,38 +8492,7 @@ function getSwipeStatusLabel(action) {
     return "Unknown.";
   }
 
-  if (action === "previous") {
-    return "Vorherige Karte.";
-  }
-
-  return "Naechste Karte.";
-}
-
-function advanceViewCard(direction = "next") {
-  resetViewSelectionState();
-
-  if (direction === "previous") {
-    goToPreviousCard();
-    return;
-  }
-
-  if (canNavigateNext()) {
-    goToNextCard();
-    return;
-  }
-
-  void persistCompletedRoundCount({
-    lastRoundPercent: getViewRatedPercent(),
-  });
-
-  const unratedCards = getViewUnratedCards();
-
-  if (unratedCards.length > 0) {
-    renderViewReviewPromptState(unratedCards);
-    return;
-  }
-
-  renderCompletionState();
+  return "Unknown.";
 }
 
 function evaluateCurrentCard(result) {
@@ -8406,15 +8527,6 @@ function evaluateCurrentCard(result) {
     return;
   }
 
-  if (state.roundMode === "main" && !state.hasStartedStarReview) {
-    const starReviewCards = getStarReviewCards();
-
-    if (starReviewCards.length > 0) {
-      renderStarReviewIntroState(starReviewCards);
-      return;
-    }
-  }
-
   renderCompletionState();
 }
 
@@ -8423,19 +8535,8 @@ function handlePrimaryAction(event) {
   event.preventDefault();
   event.stopPropagation();
 
-  if (state.summaryMode === "view-review") {
-    startRound([...state.pendingNextRoundCards], state.pendingNextRoundNumber, "view-review");
-    return;
-  }
-
   if (state.summaryMode === "round") {
     startRound([...state.pendingNextRoundCards], state.pendingNextRoundNumber, state.roundMode);
-    return;
-  }
-
-  if (state.summaryMode === "star-review") {
-    state.hasStartedStarReview = true;
-    startRound([...state.pendingStarReviewCards], 1, "star");
     return;
   }
 
@@ -8445,13 +8546,6 @@ function handlePrimaryAction(event) {
   }
 
   if (!state.currentCard) {
-    return;
-  }
-
-  if (isViewLearningMode()) {
-    if (!state.isFlipped) {
-      flipCard();
-    }
     return;
   }
 
@@ -8476,62 +8570,6 @@ function handleCardSecondaryAction(event) {
   if (event.currentTarget?.dataset?.action === "restart-learning") {
     restartLearningSession();
   }
-}
-
-function handleStarAction(event) {
-  markControlInteraction();
-  event.preventDefault();
-  event.stopPropagation();
-
-  if (!state.currentCard || state.learningProgressSavePending) {
-    return;
-  }
-
-  const currentState = getCurrentStarState();
-  const currentIndex = STAR_SEQUENCE.indexOf(currentState);
-  const nextState = STAR_SEQUENCE[(currentIndex + 1) % STAR_SEQUENCE.length];
-  const previousStarStates = { ...state.starStates };
-
-  if (nextState === "none") {
-    delete state.starStates[state.currentCard.id];
-  } else {
-    state.starStates[state.currentCard.id] = nextState;
-  }
-
-  state.learningProgressSavePending = true;
-  updateStarButtons();
-  triggerStarCommitMotion();
-  void persistServerLearningProgress(previousStarStates);
-}
-
-function handleViewStarAction(event) {
-  markControlInteraction();
-  event.preventDefault();
-  event.stopPropagation();
-
-  if (!isViewLearningMode() || !state.currentCard || !state.isFlipped) {
-    return;
-  }
-
-  const nextState = event.currentTarget?.dataset?.viewStarValue;
-
-  if (!isStoredStarState(nextState)) {
-    return;
-  }
-
-  const previousStarStates = { ...state.starStates };
-  state.starStates[state.currentCard.id] = nextState;
-  state.viewSelectionCommitCardId = state.currentCard.id;
-  state.viewSelectionCommitState = nextState;
-  state.learningProgressSavePending = true;
-  clearViewSelectionAdvance();
-  updateViewRatingButtons();
-  void persistServerLearningProgress(previousStarStates);
-
-  state.viewSelectionAdvanceId = window.setTimeout(() => {
-    state.viewSelectionAdvanceId = null;
-    advanceViewCard("next");
-  }, 640);
 }
 
 function handleEvalAction(event) {
@@ -8592,45 +8630,6 @@ function triggerAudioPlayback(audioButton, event) {
   playAudio(audioState.path);
 }
 
-function getCurrentStarState() {
-  if (!state.currentCard) {
-    return "none";
-  }
-
-  return state.starStates[state.currentCard.id] || "none";
-}
-
-function triggerStarCommitMotion() {
-  clearStarCommitMotion();
-
-  for (const starButton of elements.starButtons) {
-    starButton.classList.remove("is-committing");
-  }
-
-  void elements.flashcard.offsetWidth;
-
-  for (const starButton of elements.starButtons) {
-    if (!starButton.hidden) {
-      starButton.classList.add("is-committing");
-    }
-  }
-
-  state.starCommitId = window.setTimeout(() => {
-    clearStarCommitMotion();
-  }, 180);
-}
-
-function clearStarCommitMotion() {
-  if (state.starCommitId !== null) {
-    window.clearTimeout(state.starCommitId);
-    state.starCommitId = null;
-  }
-
-  for (const starButton of elements.starButtons) {
-    starButton.classList.remove("is-committing");
-  }
-}
-
 function getRoundResultPercent(cardCount, unknownCount) {
   if (!Number.isFinite(cardCount) || cardCount < 1) {
     return null;
@@ -8638,10 +8637,6 @@ function getRoundResultPercent(cardCount, unknownCount) {
 
   const knownCount = cardCount - (Number.isFinite(unknownCount) ? unknownCount : 0);
   return Math.round((clamp(knownCount, 0, cardCount) / cardCount) * 100);
-}
-
-function getStarReviewCards() {
-  return state.allCards.filter((card) => state.starStates[card.id] === "orange");
 }
 
 function startRound(cards, roundNumber, roundMode = "main") {
@@ -8653,7 +8648,6 @@ function startRound(cards, roundNumber, roundMode = "main") {
   state.summaryMode = null;
   state.pendingNextRoundCards = [];
   state.pendingNextRoundNumber = null;
-  state.pendingStarReviewCards = [];
   state.summaryRoundKnownCount = 0;
   state.summaryRoundUnknownCount = 0;
   state.currentIndex = 0;
@@ -8664,8 +8658,6 @@ function startRound(cards, roundNumber, roundMode = "main") {
 
 function restartLearningSession() {
   state.roundMode = "main";
-  state.hasStartedStarReview = false;
-  state.pendingStarReviewCards = [];
   state.knownCount = 0;
   state.unknownCount = 0;
   startRound([...state.allCards], 1, "main");
@@ -8703,7 +8695,6 @@ function resetCurrentCardState() {
   startFlipReset();
   clearSwipeSettle();
   resetSwipeVisual();
-  resetViewSelectionState();
 
   state.isFlipped = false;
   state.flipRotationDeg = 0;
@@ -8713,11 +8704,6 @@ function resetCurrentCardState() {
   state.hintReady = false;
   state.hintProgressCycle += 1;
   state.suppressNextClick = false;
-
-  if (isViewLearningMode()) {
-    state.hintReady = true;
-    return;
-  }
 
   startHintDelay();
 }
@@ -8768,20 +8754,8 @@ function canFlipCard() {
   return state.appMode === APP_MODES.FLASHCARD && Boolean(state.currentCard);
 }
 
-function canNavigatePrevious() {
-  return state.currentIndex > 0;
-}
-
 function canNavigateNext() {
   return state.currentIndex < state.cards.length - 1;
-}
-
-function goToPreviousCard() {
-  if (!canNavigatePrevious()) {
-    return;
-  }
-
-  goToCard(state.currentIndex - 1);
 }
 
 function goToNextCard() {
@@ -8986,7 +8960,7 @@ function settleSwipe(result) {
   const dragY = state.swipeDeltaY;
   const touchInput = state.swipePointerType === "touch";
   const exitY = `${clamp(dragY * (touchInput ? 0.18 : 0.16), -72, 72)}px`;
-  const settledPositive = result === "known" || result === "previous";
+  const settledPositive = result === "known";
   const resolvedExitX = `${(settledPositive ? 1 : -1) * Math.max(cardWidth * 1.08, 320)}px`;
   const exitTilt = settledPositive ? "10deg" : "-10deg";
 
@@ -9003,12 +8977,7 @@ function settleSwipe(result) {
   state.swipeSettleId = window.setTimeout(() => {
     clearSwipeSettle();
     resetSwipeVisual();
-    if (result === "known" || result === "unknown") {
-      evaluateCurrentCard(result);
-      return;
-    }
-
-    advanceViewCard(result);
+    evaluateCurrentCard(result);
   }, 220);
 }
 
@@ -9067,7 +9036,6 @@ function renderLoadingState() {
   startFlipReset();
   clearSwipeSettle();
   resetSwipeVisual();
-  resetViewSelectionState();
   state.isComplete = false;
   state.summaryMode = null;
   elements.flashcard.disabled = true;
@@ -9099,10 +9067,8 @@ function renderLoadingState() {
   elements.frontHint.classList.remove("is-summary");
   elements.frontHint.classList.remove("is-visible");
   elements.statusMessage.textContent = "Lade Set.";
-  updateStarButtons();
   updateAudioButtons();
   updateEvalButtons();
-  updateViewRatingButtons();
   updateCardSecondaryAction();
   updateOutcomeCounters();
   updateProgressState({ hidden: true });
@@ -9115,7 +9081,6 @@ function renderRoundSummaryState() {
   startFlipReset();
   clearSwipeSettle();
   resetSwipeVisual();
-  resetViewSelectionState();
 
   state.isComplete = false;
   state.summaryMode = "round";
@@ -9154,10 +9119,8 @@ function renderRoundSummaryState() {
   elements.statusMessage.textContent = getRoundSummaryStatusMessage();
   elements.flashcard.setAttribute("aria-label", getRoundSummaryCardLabel());
   elements.cardAction.setAttribute("aria-label", "Weiter.");
-  updateStarButtons();
   updateAudioButtons();
   updateEvalButtons();
-  updateViewRatingButtons();
   updateCardSecondaryAction();
   updateOutcomeCounters();
   updateProgressState({
@@ -9167,79 +9130,6 @@ function renderRoundSummaryState() {
   });
 }
 
-function renderStarReviewIntroState(cards) {
-  stopCurrentAudio();
-  clearHintDelay();
-  clearFlipMotion();
-  startFlipReset();
-  clearSwipeSettle();
-  resetSwipeVisual();
-  resetViewSelectionState();
-
-  state.isComplete = false;
-  state.summaryMode = "star-review";
-  state.pendingStarReviewCards = [...cards];
-  state.currentCard = null;
-  state.currentIndex = 0;
-  state.hasRevealedAnswer = false;
-  state.hintLevel = 0;
-  state.hintReady = false;
-
-  elements.flashcard.disabled = true;
-  elements.flashcard.classList.remove("is-loading", "has-error", "is-flipped", "is-flippable");
-  elements.flashcard.style.setProperty("--flip-rotation", "0deg");
-  elements.flashcard.setAttribute("aria-disabled", "true");
-  elements.flashcard.setAttribute("tabindex", "-1");
-  elements.frontContent.classList.remove("has-hint");
-  updateFaceVisibility(false);
-  elements.cardAction.disabled = false;
-  elements.cardAction.classList.remove(
-    "is-flip",
-    "is-continue",
-    "is-restart",
-    "is-ready",
-    "is-waiting",
-    "progress-cycle-even",
-    "progress-cycle-odd",
-  );
-  elements.cardAction.classList.add("is-continue");
-  renderFlashcardAnswer(elements.frontWord, elements.frontAlternatives, "");
-  renderFlashcardAnswer(elements.backWord, elements.backAlternatives, "");
-  renderStarModeWord(elements.frontWord);
-  renderStarModeWord(elements.backWord);
-  renderBackContext(null);
-  renderStarReviewIntroSummary(cards.length);
-  elements.frontHint.classList.add("is-summary", "is-visible");
-  elements.statusMessage.textContent = getStarReviewIntroStatusMessage(cards.length);
-  elements.flashcard.setAttribute("aria-label", getStarReviewIntroCardLabel(cards.length));
-  elements.cardAction.setAttribute("aria-label", "Starten.");
-  updateStarButtons();
-  updateAudioButtons();
-  updateEvalButtons();
-  updateViewRatingButtons();
-  updateCardSecondaryAction();
-  updateOutcomeCounters();
-  updateProgressState({
-    hidden: false,
-    label: "★-Runde · bereit",
-    value: 100,
-  });
-}
-
-function renderStarModeWord(target) {
-  target.replaceChildren();
-
-  const wrapper = document.createElement("span");
-  wrapper.className = "flashcard__word--mode";
-
-  const icon = document.createElement("span");
-  icon.className = "material-symbols-outlined flashcard__word-icon";
-  icon.textContent = "star";
-
-  wrapper.append(icon, document.createTextNode("-Runde"));
-  target.append(wrapper);
-}
-
 function renderCompletionState() {
   stopCurrentAudio();
   clearHintDelay();
@@ -9247,7 +9137,6 @@ function renderCompletionState() {
   startFlipReset();
   clearSwipeSettle();
   resetSwipeVisual();
-  resetViewSelectionState();
 
   state.isComplete = true;
   state.summaryMode = null;
@@ -9283,76 +9172,13 @@ function renderCompletionState() {
   elements.statusMessage.textContent = getCompletionStatusMessage();
   elements.flashcard.setAttribute("aria-label", getCompletionCardLabel());
   elements.cardAction.setAttribute("aria-label", "Neu starten.");
-  updateStarButtons();
   updateAudioButtons();
   updateEvalButtons();
-  updateViewRatingButtons();
   updateCardSecondaryAction();
   updateOutcomeCounters();
   updateProgressState({
     hidden: false,
-    label: isViewLearningMode() ? "Sichten · fertig" : "Durchgang · fertig",
-    value: 100,
-  });
-}
-
-function renderViewReviewPromptState(cards) {
-  stopCurrentAudio();
-  clearHintDelay();
-  clearFlipMotion();
-  startFlipReset();
-  clearSwipeSettle();
-  resetSwipeVisual();
-  resetViewSelectionState();
-
-  state.isComplete = false;
-  state.summaryMode = "view-review";
-  state.pendingNextRoundCards = [...cards];
-  state.pendingNextRoundNumber = state.roundNumber + 1;
-  state.currentCard = null;
-  state.currentIndex = 0;
-  state.hasRevealedAnswer = false;
-  state.hintLevel = 0;
-  state.hintReady = false;
-
-  elements.flashcard.disabled = true;
-  elements.flashcard.classList.remove("is-loading", "has-error", "is-flipped", "is-flippable");
-  elements.flashcard.style.setProperty("--flip-rotation", "0deg");
-  elements.flashcard.setAttribute("aria-disabled", "true");
-  elements.flashcard.setAttribute("tabindex", "-1");
-  elements.frontContent.classList.remove("has-hint");
-  updateFaceVisibility(false);
-  elements.cardAction.disabled = false;
-  elements.cardAction.classList.remove(
-    "is-flip",
-    "is-restart",
-    "is-ready",
-    "is-waiting",
-    "progress-cycle-even",
-    "progress-cycle-odd",
-  );
-  elements.cardAction.classList.add("is-continue");
-  renderFlashcardAnswer(elements.frontWord, elements.frontAlternatives, "Sichten fertig");
-  renderFlashcardAnswer(elements.backWord, elements.backAlternatives, "Sichten fertig");
-  renderBackContext(null);
-  renderViewReviewSummary(cards.length);
-  elements.frontHint.classList.add("is-summary", "is-visible");
-  elements.statusMessage.textContent = getViewReviewStatusMessage();
-  elements.flashcard.setAttribute("aria-label", getViewReviewCardLabel());
-  elements.cardAction.setAttribute("aria-label", "Unbewertete durchgehen.");
-  updateStarButtons();
-  updateAudioButtons();
-  updateEvalButtons();
-  updateViewRatingButtons();
-  updateCardSecondaryAction({
-    hidden: false,
-    label: "Neu starten",
-    action: "restart-learning",
-  });
-  updateOutcomeCounters();
-  updateProgressState({
-    hidden: false,
-    label: "Sichten · abgeschlossen",
+    label: "Durchgang · fertig",
     value: 100,
   });
 }
@@ -9366,20 +9192,15 @@ function renderCard() {
     hints,
     backContext,
   } = state.currentCard;
-  const viewMode = isViewLearningMode();
-  const currentHint = !viewMode && !state.hasRevealedAnswer && state.hintLevel > 0
+  const currentHint = !state.hasRevealedAnswer && state.hintLevel > 0
     ? hints[state.hintLevel - 1]
     : "";
   const cardCanFlip = canFlipCard();
-  const hintSequenceComplete = viewMode ? true : isHintSequenceComplete();
-  const hintAvailable = viewMode ? !state.isFlipped : !state.hasRevealedAnswer;
-  const waitingForHint = !viewMode && hintAvailable && !state.hintReady && !hintSequenceComplete;
-  const actionIsEnabled = viewMode
-    ? !state.isFlipped
-    : hintAvailable && (state.hintReady || hintSequenceComplete);
-  const hintReadyState = viewMode
-    ? !state.isFlipped
-    : hintAvailable && state.hintReady && !hintSequenceComplete;
+  const hintSequenceComplete = isHintSequenceComplete();
+  const hintAvailable = !state.hasRevealedAnswer;
+  const waitingForHint = hintAvailable && !state.hintReady && !hintSequenceComplete;
+  const actionIsEnabled = hintAvailable && (state.hintReady || hintSequenceComplete);
+  const hintReadyState = hintAvailable && state.hintReady && !hintSequenceComplete;
   const hintProgressClass = state.hintProgressCycle % 2 === 0
     ? "progress-cycle-even"
     : "progress-cycle-odd";
@@ -9406,6 +9227,7 @@ function renderCard() {
     targetText,
     targetAlternatives,
   );
+  syncFlashcardPairTypography(state.currentCard);
   renderFlashcardVisuals(state.currentCard);
   renderHint(currentHint);
   renderBackContext(backContext);
@@ -9413,7 +9235,7 @@ function renderCard() {
   elements.frontHint.classList.toggle("is-visible", Boolean(currentHint) && !state.isFlipped);
 
   elements.cardAction.disabled = !actionIsEnabled;
-  elements.cardAction.classList.toggle("is-flip", viewMode ? !state.isFlipped : hintAvailable && hintSequenceComplete);
+  elements.cardAction.classList.toggle("is-flip", hintAvailable && hintSequenceComplete);
   elements.cardAction.classList.remove("is-continue");
   elements.cardAction.classList.remove("is-restart");
   elements.cardAction.classList.toggle("is-waiting", waitingForHint);
@@ -9426,10 +9248,8 @@ function renderCard() {
     "aria-label",
     getCardLabel(),
   );
-  updateStarButtons();
   updateAudioButtons();
   updateEvalButtons();
-  updateViewRatingButtons();
   updateCardSecondaryAction();
   updateOutcomeCounters();
   updateProgressState({
@@ -9446,7 +9266,6 @@ function renderErrorState(message) {
   startFlipReset();
   clearSwipeSettle();
   resetSwipeVisual();
-  resetViewSelectionState();
   state.currentCard = null;
   state.isComplete = false;
   state.summaryMode = null;
@@ -9487,26 +9306,11 @@ function renderErrorState(message) {
   elements.statusMessage.textContent = message;
   elements.flashcard.setAttribute("aria-label", message);
   elements.cardAction.setAttribute("aria-label", message);
-  updateStarButtons();
   updateAudioButtons();
   updateEvalButtons();
-  updateViewRatingButtons();
   updateCardSecondaryAction();
   updateOutcomeCounters();
   updateProgressState({ hidden: true });
-}
-
-function updateStarButtons() {
-  const starState = getCurrentStarState();
-  const hasCurrentCard = Boolean(state.currentCard) && !state.summaryMode && !state.isComplete && !isViewLearningMode();
-
-  for (const starButton of elements.starButtons) {
-    starButton.hidden = !hasCurrentCard;
-    starButton.disabled = !hasCurrentCard || state.learningProgressSavePending;
-    starButton.dataset.starState = starState;
-    starButton.classList.toggle("is-marked", starState !== "none");
-    starButton.setAttribute("aria-label", getStarActionLabel(starState));
-  }
 }
 
 function updateAudioButtons() {
@@ -9606,67 +9410,11 @@ function updateEvalButtons() {
   const showEvalButtons = Boolean(state.currentCard)
     && state.isFlipped
     && !state.summaryMode
-    && !state.isComplete
-    && !isViewLearningMode();
+    && !state.isComplete;
 
   for (const evalButton of elements.evalButtons) {
     evalButton.hidden = !showEvalButtons;
     evalButton.disabled = !showEvalButtons;
-  }
-}
-
-function getViewStarButtonLabel(starValue, isSelected) {
-  const toneLabel = starValue === "green"
-    ? "Gruen"
-    : (starValue === "yellow" ? "Gelb" : "Orange");
-
-  if (!state.currentCard) {
-    return `${toneLabel} nicht verfuegbar.`;
-  }
-
-  if (isSelected) {
-    return `${toneLabel} gewaehlt.`;
-  }
-
-  return `Als ${toneLabel.toLowerCase()} markieren.`;
-}
-
-function updateViewRatingButtons() {
-  const showViewRating = Boolean(state.currentCard)
-    && state.isFlipped
-    && !state.summaryMode
-    && !state.isComplete
-    && isViewLearningMode();
-  const selectedState = getCurrentStarState();
-  const isCommitting = showViewRating
-    && state.currentCard?.id === state.viewSelectionCommitCardId
-    && selectedState === state.viewSelectionCommitState;
-
-  for (const group of elements.viewRatingGroups) {
-    group.hidden = !showViewRating;
-
-    if (!showViewRating) {
-      delete group.dataset.selected;
-      group.classList.remove("is-committing");
-      continue;
-    }
-
-    if (isStoredStarState(selectedState)) {
-      group.dataset.selected = selectedState;
-    } else {
-      delete group.dataset.selected;
-    }
-
-    group.classList.toggle("is-committing", isCommitting);
-  }
-
-  for (const button of elements.viewStarButtons) {
-    const starValue = button.dataset.viewStarValue || "";
-    const isSelected = selectedState === starValue;
-    button.hidden = !showViewRating;
-    button.disabled = !showViewRating || isCommitting || state.learningProgressSavePending;
-    button.setAttribute("aria-pressed", String(isSelected));
-    button.setAttribute("aria-label", getViewStarButtonLabel(starValue, isSelected));
   }
 }
 
@@ -9681,26 +9429,6 @@ function updateCardSecondaryAction({
   elements.cardSecondaryAction.textContent = hidden ? "" : label;
 }
 
-function getStarActionLabel(starState) {
-  if (!state.currentCard) {
-    return "Schwierigkeit nicht verfügbar.";
-  }
-
-  if (starState === "none") {
-    return "Schwierigkeit markieren. Nächster Zustand: grün.";
-  }
-
-  if (starState === "green") {
-    return "Grün markiert. Nächster Zustand: gelb.";
-  }
-
-  if (starState === "yellow") {
-    return "Gelb markiert. Nächster Zustand: orange.";
-  }
-
-  return "Orange markiert. Nächster Zustand: keine Markierung.";
-}
-
 function updateOutcomeCounters() {
   for (const counter of elements.knownCounts) {
     counter.textContent = String(state.knownCount);
@@ -9712,11 +9440,6 @@ function updateOutcomeCounters() {
 }
 
 function renderCompletionSummary() {
-  if (isViewLearningMode()) {
-    renderViewCompletionSummary();
-    return;
-  }
-
   elements.frontHint.replaceChildren();
 
   const titleLine = document.createElement("span");
@@ -9741,42 +9464,13 @@ function renderCompletionSummary() {
   );
 }
 
-function renderViewCompletionSummary() {
-  const ratedCount = getViewRatedCardCount();
-  const unratedCount = getViewUnratedCards().length;
-
-  elements.frontHint.replaceChildren();
-
-  const titleLine = document.createElement("span");
-  titleLine.className = "flashcard__summary-line flashcard__summary-line--title";
-  titleLine.textContent = "Fertig.";
-
-  const metricsLine = document.createElement("span");
-  metricsLine.className = "flashcard__summary-line flashcard__summary-line--metrics";
-  metricsLine.append(
-    createSummaryStat("known", `${ratedCount} bewertet`),
-    createSummaryStat("unknown", `${unratedCount} unbewertet`),
-  );
-
-  const detailLine = document.createElement("span");
-  detailLine.className = "flashcard__summary-line";
-  detailLine.textContent = isViewReviewRound()
-    ? "Alle offenen Karten sind jetzt eingeordnet."
-    : "Alle Karten wurden einmal gesichtet.";
-
-  elements.frontHint.append(titleLine, metricsLine, detailLine);
-  elements.frontHint.setAttribute(
-    "aria-label",
-    `Fertig. ${ratedCount} bewertet. ${unratedCount} unbewertet.`,
-  );
-}
-
 function renderRoundSummary() {
   elements.frontHint.replaceChildren();
 
-  const titleLine = state.roundMode === "star"
-    ? createStarRoundTitle("fertig.")
-    : createSummaryTextLine("flashcard__summary-line flashcard__summary-line--title", "Runde fertig.");
+  const titleLine = createSummaryTextLine(
+    "flashcard__summary-line flashcard__summary-line--title",
+    "Runde fertig.",
+  );
 
   const metricsLine = document.createElement("span");
   metricsLine.className = "flashcard__summary-line flashcard__summary-line--metrics";
@@ -9790,54 +9484,6 @@ function renderRoundSummary() {
     "aria-label",
     `Runde fertig. ${state.summaryRoundKnownCount} richtig. ${state.summaryRoundUnknownCount} offen.`,
   );
-}
-
-function renderStarReviewIntroSummary(cardCount) {
-  elements.frontHint.replaceChildren();
-
-  const metricsLine = document.createElement("span");
-  metricsLine.className = "flashcard__summary-line flashcard__summary-line--metrics";
-  metricsLine.append(createStarCardCountLine(cardCount));
-
-  elements.frontHint.append(metricsLine);
-  elements.frontHint.setAttribute(
-    "aria-label",
-    `${cardCount} Stern-Karten.`,
-  );
-}
-
-function renderViewReviewSummary(unratedCount) {
-  const ratedCount = getViewRatedCardCount();
-
-  elements.frontHint.replaceChildren();
-
-  const titleLine = document.createElement("span");
-  titleLine.className = "flashcard__summary-line flashcard__summary-line--title";
-  titleLine.textContent = "Noch offen";
-
-  const metricsLine = document.createElement("span");
-  metricsLine.className = "flashcard__summary-line flashcard__summary-line--metrics";
-  metricsLine.append(
-    createSummaryStat("known", `${ratedCount} bewertet`),
-    createSummaryStat("unknown", `${unratedCount} unbewertet`),
-  );
-
-  const detailLine = document.createElement("span");
-  detailLine.className = "flashcard__summary-line";
-  detailLine.textContent = "Willst du die unbewerteten Karten jetzt noch durchgehen?";
-
-  elements.frontHint.append(titleLine, metricsLine, detailLine);
-  elements.frontHint.setAttribute(
-    "aria-label",
-    `${ratedCount} bewertet. ${unratedCount} unbewertet.`,
-  );
-}
-
-function createStarRoundTitle(suffixText) {
-  const titleLine = document.createElement("span");
-  titleLine.className = "flashcard__summary-line flashcard__summary-line--mode";
-  titleLine.append(createStarRoundWord("Runde"), document.createTextNode(` ${suffixText}`));
-  return titleLine;
 }
 
 function createSummaryTextLine(className, text) {
@@ -9854,57 +9500,18 @@ function createSummaryStat(type, text) {
   return stat;
 }
 
-function createStarCardCountLine(cardCount) {
-  const stat = document.createElement("span");
-  stat.className = "flashcard__summary-stat flashcard__summary-stat--star";
-  stat.append(
-    document.createTextNode(`${cardCount} x `),
-    createStarRoundWord("Karten"),
-  );
-  return stat;
-}
-
-function createStarRoundWord(word) {
-  const wrapper = document.createElement("span");
-  wrapper.className = "flashcard__star-word";
-  wrapper.append(createSummaryIcon("star-inline"), document.createTextNode(`-${word}`));
-  return wrapper;
-}
-
 function createSummaryIcon(type) {
-  if (type === "star" || type === "star-inline") {
-    const icon = document.createElement("span");
-    icon.className = `flashcard__summary-icon flashcard__summary-icon--star${type === "star-inline" ? " flashcard__summary-icon--star-inline" : ""}`;
-    return icon;
-  }
-
   const icon = document.createElement("span");
   icon.className = `flashcard__summary-icon flashcard__summary-icon--${type}`;
   return icon;
 }
 
 function getRoundProgressLabel() {
-  if (isViewLearningMode()) {
-    return isViewReviewRound()
-      ? `Unbewertete · ${state.currentIndex + 1} / ${state.cards.length}`
-      : `Sichten · ${state.currentIndex + 1} / ${state.cards.length}`;
-  }
-
-  return state.roundMode === "star"
-    ? `★-Runde ${state.roundNumber} · ${state.currentIndex + 1} / ${state.cards.length}`
-    : `Runde ${state.roundNumber} · ${state.currentIndex + 1} / ${state.cards.length}`;
+  return `Runde ${state.roundNumber} · ${state.currentIndex + 1} / ${state.cards.length}`;
 }
 
 function getRoundSummaryProgressLabel() {
-  if (isViewLearningMode()) {
-    return isViewReviewRound()
-      ? "Unbewertete · abgeschlossen"
-      : "Sichten · abgeschlossen";
-  }
-
-  return state.roundMode === "star"
-    ? `★-Runde ${state.roundNumber} · abgeschlossen`
-    : `Runde ${state.roundNumber} · abgeschlossen`;
+  return `Runde ${state.roundNumber} · abgeschlossen`;
 }
 
 function updateProgressFillAnimation(fillElement, value) {
@@ -9966,12 +9573,10 @@ function renderFlashcardAnswer(wordElement, alternativesElement, primaryText, al
 }
 
 function hideFlashcardVisuals() {
-  for (const image of [elements.frontVisual, elements.backVisual]) {
-    image.hidden = true;
-    image.removeAttribute("src");
-    image.alt = "";
-    image.closest(".flashcard__content")?.classList.remove("has-visual");
-  }
+  elements.backVisual.hidden = true;
+  elements.backVisual.removeAttribute("src");
+  elements.backVisual.alt = "";
+  elements.backVisual.closest(".flashcard__content")?.classList.remove("has-visual");
 }
 
 function renderFlashcardVisuals(card) {
@@ -9980,18 +9585,10 @@ function renderFlashcardVisuals(card) {
     hideFlashcardVisuals();
     return;
   }
-  const showFront = isViewLearningMode();
-  const showBack = isViewLearningMode() || state.isFlipped;
-  for (const [image, visible] of [[elements.frontVisual, showFront], [elements.backVisual, showBack]]) {
-    image.hidden = !visible;
-    image.alt = visible ? (visual.alt || "Lernbild") : "";
-    if (visible) {
-      image.src = visual.url;
-    } else {
-      image.removeAttribute("src");
-    }
-    image.closest(".flashcard__content")?.classList.toggle("has-visual", visible);
-  }
+  elements.backVisual.hidden = false;
+  elements.backVisual.alt = visual.alt || "Lernbild";
+  elements.backVisual.src = visual.url;
+  elements.backVisual.closest(".flashcard__content")?.classList.add("has-visual");
 }
 
 function renderInputVisual(card, visible) {
@@ -10093,10 +9690,6 @@ function getActionLabel() {
     return "Nicht verfügbar.";
   }
 
-  if (isViewLearningMode()) {
-    return state.isFlipped ? "Rueckseite." : "Aufdecken.";
-  }
-
   if (state.hasRevealedAnswer) {
     return "Kein Hinweis.";
   }
@@ -10117,26 +9710,12 @@ function getStatusMessage() {
     return getRoundSummaryStatusMessage();
   }
 
-  if (state.summaryMode === "view-review") {
-    return getViewReviewStatusMessage();
-  }
-
-  if (state.summaryMode === "star-review") {
-    return getStarReviewIntroStatusMessage(state.pendingStarReviewCards.length);
-  }
-
   if (state.isComplete) {
     return getCompletionStatusMessage();
   }
 
   if (!state.currentCard) {
     return "Lade Set.";
-  }
-
-  if (isViewLearningMode()) {
-    return state.isFlipped
-      ? `${getCurrentRoundCardStatus()} Rueckseite. Nach links fuer die naechste Karte, nach rechts fuer die vorige Karte.`
-      : `${getCurrentRoundCardStatus()} Tippen zum Aufdecken.`;
   }
 
   if (state.isFlipped) {
@@ -10161,74 +9740,28 @@ function getStatusMessage() {
 }
 
 function getRoundSummaryStatusMessage() {
-  return state.roundMode === "star"
-    ? `Stern-Runde beendet. ${state.summaryRoundKnownCount} richtig. ${state.summaryRoundUnknownCount} offen.`
-    : `Runde beendet. ${state.summaryRoundKnownCount} richtig. ${state.summaryRoundUnknownCount} offen.`;
-}
-
-function getViewReviewStatusMessage() {
-  const ratedCount = getViewRatedCardCount();
-  const unratedCount = getViewUnratedCards().length;
-  return `Sichten beendet. ${ratedCount} bewertet. ${unratedCount} unbewertet.`;
-}
-
-function getStarReviewIntroStatusMessage(cardCount) {
-  return `Stern-Runde. ${cardCount} Karten.`;
+  return `Runde beendet. ${state.summaryRoundKnownCount} richtig. ${state.summaryRoundUnknownCount} offen.`;
 }
 
 function getCompletionStatusMessage() {
-  if (isViewLearningMode()) {
-    return `Fertig. ${getViewRatedCardCount()} bewertet. ${getViewUnratedCards().length} unbewertet.`;
-  }
-
   return `Fertig. ${state.knownCount} richtig. ${state.unknownCount} falsch.`;
 }
 
 function getRoundSummaryCardLabel() {
-  return state.roundMode === "star"
-    ? `Stern-Runde fertig. ${state.summaryRoundKnownCount} richtig. ${state.summaryRoundUnknownCount} offen.`
-    : `Runde fertig. ${state.summaryRoundKnownCount} richtig. ${state.summaryRoundUnknownCount} offen.`;
-}
-
-function getViewReviewCardLabel() {
-  return `Sichten beendet. ${getViewRatedCardCount()} bewertet. ${getViewUnratedCards().length} unbewertet.`;
-}
-
-function getStarReviewIntroCardLabel(cardCount) {
-  return `Stern-Runde. ${cardCount} Karten.`;
+  return `Runde fertig. ${state.summaryRoundKnownCount} richtig. ${state.summaryRoundUnknownCount} offen.`;
 }
 
 function getCompletionCardLabel() {
-  if (isViewLearningMode()) {
-    return `Fertig. ${getViewRatedCardCount()} bewertet. ${getViewUnratedCards().length} unbewertet.`;
-  }
-
   return `Fertig. ${state.knownCount} richtig. ${state.unknownCount} falsch.`;
 }
 
 function getCurrentRoundCardStatus() {
-  if (isViewLearningMode()) {
-    return isViewReviewRound()
-      ? `Unbewertete Karte ${state.currentIndex + 1} von ${state.cards.length}.`
-      : `Sichten. Karte ${state.currentIndex + 1} von ${state.cards.length}.`;
-  }
-
-  return state.roundMode === "star"
-    ? `Stern-Runde ${state.roundNumber}. Karte ${state.currentIndex + 1} von ${state.cards.length}.`
-    : `Runde ${state.roundNumber}. Karte ${state.currentIndex + 1} von ${state.cards.length}.`;
+  return `Runde ${state.roundNumber}. Karte ${state.currentIndex + 1} von ${state.cards.length}.`;
 }
 
 function getCardLabel() {
   if (!state.currentCard) {
     return "Karte nicht verfügbar.";
-  }
-
-  if (isViewLearningMode()) {
-    if (state.isFlipped) {
-      return `${getAccessibleTargetAnswer()}. Nach links fuer die naechste Karte. Nach rechts fuer die vorige Karte.`;
-    }
-
-    return `${formatLearningTermInline(state.currentCard.sourceText)}. Tippen zum Aufdecken.`;
   }
 
   if (state.isFlipped) {
