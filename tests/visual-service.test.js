@@ -23,7 +23,9 @@ test("sheet prompt fixes six concepts to a calm 3x2 grid without text", () => {
   assert.match(prompt, /exact 3-column by 2-row grid/);
   assert.match(prompt, /semantically unrelated flashcards/);
   assert.match(prompt, /x=512, x=1024, and y=512/);
-  assert.match(prompt, /same edge-to-edge dark navy background/);
+  assert.match(prompt, /same solid edge-to-edge dark navy/);
+  assert.match(prompt, /rather than conventional photography/);
+  assert.match(prompt, /Only a semantically essential full scene may use its own scenery/);
   assert.match(prompt, /Semantic independence must not weaken the shared formal art direction/);
   assert.match(prompt, /48-pixel quiet zone of background/);
   assert.match(prompt, /no distinct object or foreground detail may enter or cross it/);
@@ -57,7 +59,10 @@ test("single prompt applies an optional visual direction without weakening share
   assert.match(prompt, /never place a smaller rectangular picture inside a dark matte/);
   assert.match(prompt, /universal visual symbols are allowed/);
   assert.match(prompt, /calm, modern, friendly editorial illustration language/);
-  assert.match(prompt, /edge-to-edge dark navy background/);
+  assert.match(prompt, /same solid edge-to-edge dark navy/);
+  assert.match(prompt, /rather than conventional photography/);
+  assert.match(prompt, /do not replace it with sky, landscape, a room wall/);
+  assert.match(prompt, /Only a semantically essential full scene may use its own scenery/);
   assert.match(prompt, /formal direction is mandatory/);
   assert.match(prompt, /48-pixel quiet zone of background/);
   assert.match(prompt, /no distinct object or foreground detail may enter or cross it/);
