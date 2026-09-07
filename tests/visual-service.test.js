@@ -20,9 +20,12 @@ test("sheet prompt fixes six concepts to a calm 3x2 grid without text", () => {
     plannedCard("card_2", "Katze", "cat", "A cat sitting beside a food bowl"),
   ]);
   assert.match(prompt, /exact 3-column by 2-row grid/);
+  assert.match(prompt, /unrelated flashcards/);
+  assert.match(prompt, /object, action, human interaction, relation, diagram, symbolic composition, or full scene/);
   assert.match(prompt, /1\. Vocabulary pair: Hund — dog/);
   assert.match(prompt, /2\. Vocabulary pair: Katze — cat/);
   assert.match(prompt, /letters, words/);
+  assert.match(prompt, /universal visual symbols are allowed/);
   assert.match(prompt, /Never include white margins/);
   assert.match(prompt, /never place a smaller rectangular picture inside a dark matte/);
   assert.match(prompt, /Intended meaning/);
@@ -37,15 +40,20 @@ test("single prompt applies an optional visual direction without weakening share
     back: "bus",
     instruction: "Ein roter Doppeldeckerbus von der Seite",
     visualBrief: createBrief("card_bus", "A public road vehicle", "A red city bus at a bus stop"),
+  }, {
+    title: "Means of transport",
+    description: "Use transport throughout",
   });
 
   assert.match(prompt, /red|roter/i);
   assert.match(prompt, /cannot override/);
   assert.match(prompt, /No white margins/);
   assert.match(prompt, /never place a smaller rectangular picture inside a dark matte/);
+  assert.match(prompt, /universal visual symbols are allowed/);
+  assert.doesNotMatch(prompt, /Means of transport|Use transport throughout/);
 });
 
-test("semantic planning explicitly protects convenient from the comfortable sense", () => {
+test("semantic planning uses each vocabulary pair independently with contrastive examples", () => {
   const prompt = buildVisualPlanningPrompt([{
     id: "card_convenient",
     front: "praktisch; bequem",
@@ -61,10 +69,33 @@ test("semantic planning explicitly protects convenient from the comfortable sens
   });
 
   assert.match(prompt, /German-speaking secondary-school students/);
+  assert.match(prompt, /Treat every vocabulary card independently/);
   assert.match(prompt, /convenient = useful\/easy for the situation/);
   assert.match(prompt, /never physical comfort such as a sofa/);
+  assert.match(prompt, /compared with — verglichen mit/);
+  assert.match(prompt, /I disagree because/);
+  assert.match(prompt, /object, action, interaction, relation, diagram, symbolic, or scene/);
   assert.match(prompt, /Do not translate one side in isolation/);
-  assert.match(prompt, /Means of transport/);
+  assert.doesNotMatch(prompt, /Set context:|Means of transport/);
+});
+
+test("legacy visual briefs normalize into the current representation model", () => {
+  const prompt = buildSinglePrompt({
+    id: "card_legacy",
+    front: "Verglichen mit …",
+    back: "Compared with ...",
+    visualBrief: {
+      cardId: "card_legacy",
+      intendedMeaning: "comparison",
+      scene: "Two objects shown side by side",
+      avoid: ["a shared topic"],
+      strategy: "relation",
+      confidence: "high",
+    },
+  });
+
+  assert.match(prompt, /Visual concept: Two objects shown side by side/);
+  assert.match(prompt, /Representation\/confidence: relation\/high/);
 });
 
 test("generated tile normalization removes a light outer frame and keeps a square output", async () => {
@@ -381,13 +412,13 @@ test("sheet jobs persist reusable assets, attach them, regenerate one and retain
   assert.equal(restoredSet.cards[0].visual.assetId, originalAssetId);
 });
 
-function createBrief(cardId, intendedMeaning, scene) {
+function createBrief(cardId, intendedMeaning, visualConcept) {
   return {
     cardId,
     intendedMeaning,
-    scene,
+    visualConcept,
     avoid: ["a neighboring but incorrect meaning"],
-    strategy: "contextual",
+    representation: "scene",
     confidence: "high",
   };
 }

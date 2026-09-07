@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- Lernbilder werden nicht mehr künstlich an das Thema ihres Sets gebunden. Der Planner betrachtet jedes vollständige Vokabelpaar einzeln, nutzt kontrastive Beispiele für semantische Randfälle und wählt passend zwischen Objekt, Handlung, Interaktion, Relation, Diagramm, Symbolik oder Szene. Der Bild-Renderer erhält keinen Set-Kontext mehr und vereinheitlicht über Sheet-Zellen nur technische Qualität, nicht Motiv oder Erzählung.
 - Neue Lernbilder werden für Sheets und Einzelvarianten nun in `medium` statt `low` erzeugt. Die höhere Produktionsqualität reduziert Detail-, Text- und Logikartefakte, während Visual-Planung und der deterministische Kachelbeschnitt unverändert bleiben.
 - Im Tafelraum-Einbettungsmodus behält die Übungskarte bei einer niedrigeren App-Fläche ihre normale Breite und wird wie das Set-Menü vertikal scrollbar, statt sich abhängig von der Framehöhe zu verkleinern. Die 3D-Kartenanimation und das normale Lerndeck-Verhalten bleiben unverändert.
 - Die Vorderseite der Übungskarte nutzt auf Desktop und Tablet den vorhandenen Raum harmonischer: Der Begriff rückt auf eine ruhige Achse nahe der Kartenmitte, die Tipp-Aktion sitzt höher in einer klaren unteren Zone und ein sichtbarer Hinweis verschiebt den Inhalt nur moderat. Kartenformat, Rückseite und schmale Mobilansicht bleiben stabil.
