@@ -1378,6 +1378,7 @@ const PUBLIC_ROOT_FILES = new Map([
   ["/teacher.html", "teacher.html"],
   ["/teacher.css", "teacher.css"],
   ["/teacher.js", "teacher.js"],
+  ["/tafelraum-embed.js", "tafelraum-embed.js"],
   ["/pwa-splash.css", "pwa-splash.css"],
   ["/ui-motion.css", "ui-motion.css"],
   ["/ui-motion.js", "ui-motion.js"],

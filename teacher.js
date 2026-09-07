@@ -163,9 +163,7 @@ document.addEventListener("DOMContentLoaded", () => {
   bindEvents();
   void initializeTeacherApp().finally(() => {
     window.LerndeckPwa?.ready();
-    if (TAFELRAUM_EMBED) {
-      window.parent.postMessage({ type: "tafelraum:app-ready", appId: "lerndeck" }, "*");
-    }
+    window.LerndeckTafelraumEmbed?.ready();
   });
 });
 

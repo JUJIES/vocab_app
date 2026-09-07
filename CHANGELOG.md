@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- Im Tafelraum-Embed steuern `⌘/Strg +`, `⌘/Strg −` und `⌘/Strg 0` jetzt den vom Canvas gespeicherten App-Inhaltszoom. Das gilt im Lehrermenü und in allen Lernmodi; außerhalb der Einbettung bleibt der normale Browserzoom unverändert.
 - Lernbilder werden nicht mehr künstlich an das Thema ihres Sets gebunden. Der Planner betrachtet jedes vollständige Vokabelpaar einzeln, nutzt kontrastive Beispiele für semantische Randfälle und wählt passend zwischen Objekt, Handlung, Interaktion, Relation, Diagramm, Symbolik oder Szene. Der Bild-Renderer erhält keinen Set-Kontext mehr und vereinheitlicht über Sheet-Zellen nur technische Qualität, nicht Motiv oder Erzählung.
 - Neue Lernbilder werden für Sheets und Einzelvarianten nun in `medium` statt `low` erzeugt. Die höhere Produktionsqualität reduziert Detail-, Text- und Logikartefakte, während Visual-Planung und der deterministische Kachelbeschnitt unverändert bleiben.
 - Im Tafelraum-Einbettungsmodus behält die Übungskarte bei einer niedrigeren App-Fläche ihre normale Breite und wird wie das Set-Menü vertikal scrollbar, statt sich abhängig von der Framehöhe zu verkleinern. Die 3D-Kartenanimation und das normale Lerndeck-Verhalten bleiben unverändert.

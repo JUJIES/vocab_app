@@ -466,7 +466,10 @@ document.addEventListener("DOMContentLoaded", () => {
   bindEvents();
   syncInputSettingsControls();
   void initializeStudentShareOrigin();
-  void initializeStudentApp().finally(() => window.LerndeckPwa?.ready());
+  void initializeStudentApp().finally(() => {
+    window.LerndeckPwa?.ready();
+    window.LerndeckTafelraumEmbed?.ready();
+  });
 });
 
 function bindEvents() {

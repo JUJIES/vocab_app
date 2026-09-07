@@ -96,6 +96,18 @@ async function openScaledFrame(page, path, { expectEmbedMarker = true } = {}) {
         transform-origin: top left;
       }
     </style>
+    <script>
+      if (window.__tafelraumTestMessageHandler) {
+        window.removeEventListener("message", window.__tafelraumTestMessageHandler);
+      }
+      window.__tafelraumTestMessages = [];
+      window.__tafelraumTestMessageHandler = (event) => {
+        if (event.data?.type?.startsWith("tafelraum:")) {
+          window.__tafelraumTestMessages.push(event.data);
+        }
+      };
+      window.addEventListener("message", window.__tafelraumTestMessageHandler);
+    </script>
     <div id="clip"><iframe title="Lerndeck" src="${new URL(path, BASE_URL)}"></iframe></div>
   `);
   const frame = page.frameLocator('iframe[title="Lerndeck"]');
@@ -121,6 +133,24 @@ test("embedded practice keeps its card size and scrolls when the frame becomes s
 
   let frame = await openScaledFrame(page, "/teacher?embed=tafelraum", { expectEmbedMarker: false });
   await expect(frame.locator(".teacher-set-row").first()).toBeVisible();
+  await expect.poll(() => frame.locator("body").evaluate(
+    () => window.LerndeckTafelraumEmbed?.active,
+  )).toBe(true);
+  await expect.poll(() => page.evaluate(() => window.__tafelraumTestMessages.some(
+    (message) => message.type === "tafelraum:app-ready" && message.appId === "lerndeck",
+  ))).toBe(true);
+  expect(await frame.locator("body").evaluate(() => [
+    { key: "=", metaKey: true },
+    { ctrlKey: true, key: "-" },
+    { key: "0", metaKey: true },
+  ].map((init) => !window.dispatchEvent(new KeyboardEvent("keydown", {
+    ...init,
+    bubbles: true,
+    cancelable: true,
+  }))))).toEqual([true, true, true]);
+  await expect.poll(() => page.evaluate(() => window.__tafelraumTestMessages.filter(
+    (message) => message.type === "tafelraum:app-content-zoom",
+  ).map((message) => message.action))).toEqual(["increase", "decrease", "reset"]);
 
   frame = await openScaledFrame(
     page,
@@ -128,6 +158,20 @@ test("embedded practice keeps its card size and scrolls when the frame becomes s
   );
   await startMode(frame, "practice");
   await expect(frame.locator("#flashcard")).toBeVisible();
+  expect(await frame.locator("body").evaluate(() => !window.dispatchEvent(new KeyboardEvent("keydown", {
+    key: "=",
+    metaKey: true,
+    bubbles: true,
+    cancelable: true,
+  })))).toBe(true);
+  await expect.poll(() => page.evaluate(() => window.__tafelraumTestMessages.some(
+    (message) => message.type === "tafelraum:app-ready" && message.appId === "lerndeck",
+  ))).toBe(true);
+  await expect.poll(() => page.evaluate(() => window.__tafelraumTestMessages.some(
+    (message) => message.type === "tafelraum:app-content-zoom"
+      && message.appId === "lerndeck"
+      && message.action === "increase",
+  ))).toBe(true);
   await expect(frame.locator(".flashcard__inner")).toHaveCSS("transform-style", "preserve-3d");
   const fullHeight = await frame.locator("#flashcard").evaluate((card) => ({
     cardWidth: card.getBoundingClientRect().width,
