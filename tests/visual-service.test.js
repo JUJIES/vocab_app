@@ -10,6 +10,7 @@ const {
   buildSheetPrompt,
   buildSinglePrompt,
   buildVisualPlanningPrompt,
+  detectGeneratedSheetGrid,
   normalizeGeneratedTile,
   normalizeGeneratedSheetTile,
 } = require("../lib/visual-service");
@@ -20,7 +21,10 @@ test("sheet prompt fixes six concepts to a calm 3x2 grid without text", () => {
     plannedCard("card_2", "Katze", "cat", "A cat sitting beside a food bowl"),
   ]);
   assert.match(prompt, /exact 3-column by 2-row grid/);
-  assert.match(prompt, /unrelated flashcards/);
+  assert.match(prompt, /semantically unrelated flashcards/);
+  assert.match(prompt, /x=512, x=1024, and y=512/);
+  assert.match(prompt, /same edge-to-edge dark navy background/);
+  assert.match(prompt, /Semantic independence must not weaken the shared formal art direction/);
   assert.match(prompt, /object, action, human interaction, relation, diagram, symbolic composition, or full scene/);
   assert.match(prompt, /1\. Vocabulary pair: Hund — dog/);
   assert.match(prompt, /2\. Vocabulary pair: Katze — cat/);
@@ -217,6 +221,36 @@ test("sheet tile normalization removes the fixed grid safety inset", async () =>
   assert.ok(data[0] < 80 && data[1] > 130, "the red sheet divider must not remain at the tile edge");
 });
 
+test("sheet tile normalization follows displaced full-sheet separators conservatively", async () => {
+  const verticalBoundary = 964;
+  const horizontalBoundary = 490;
+  const sheet = await sharp({
+    create: {
+      width: 1536,
+      height: 1024,
+      channels: 3,
+      background: { r: 25, g: 45, b: 70 },
+    },
+  }).composite([
+    { input: await solidImage(444, 474, { r: 35, g: 180, b: 90 }), left: 520, top: 8 },
+    { input: await solidImage(444, 518, { r: 120, g: 55, b: 180 }), left: 520, top: 498 },
+    { input: await solidImage(564, 474, { r: 35, g: 95, b: 200 }), left: 972, top: 8 },
+    { input: await solidImage(4, 1024, { r: 250, g: 250, b: 250 }), left: verticalBoundary - 2, top: 0 },
+    { input: await solidImage(1536, 4, { r: 250, g: 250, b: 250 }), left: 0, top: horizontalBoundary - 2 },
+  ]).png().toBuffer();
+
+  const grid = await detectGeneratedSheetGrid(sheet);
+  assert.deepEqual(grid.columns, [0, 512, verticalBoundary, 1536]);
+  assert.deepEqual(grid.rows, [0, horizontalBoundary, 1024]);
+
+  const topMiddle = await normalizeGeneratedSheetTile(sheet, { column: 1, row: 0, grid });
+  const bottomMiddle = await normalizeGeneratedSheetTile(sheet, { column: 1, row: 1, grid });
+  const topPixel = await firstPixel(topMiddle);
+  const bottomPixel = await firstPixel(bottomMiddle);
+  assert.ok(topPixel[1] > topPixel[0] && topPixel[1] > topPixel[2]);
+  assert.ok(bottomPixel[2] > bottomPixel[0] && bottomPixel[2] > bottomPixel[1]);
+});
+
 test("active legacy sheet assets are safely derived once without image generation", async () => {
   const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), "lerndeck-visual-normalize-test-"));
   const setService = new SetService({ dataDir });
@@ -374,7 +408,7 @@ test("sheet jobs persist reusable assets, attach them, regenerate one and retain
     .find((asset) => asset.cardId === visualizedSet.cards[0].id);
   assert.equal(firstSheetAsset.sheetNumber, 1);
   assert.equal(firstSheetAsset.sheetIndex, 0);
-  assert.equal(firstSheetAsset.normalizationVersion, "sheet-safe-inset-v1");
+  assert.equal(firstSheetAsset.normalizationVersion, "sheet-adaptive-grid-v2");
   assert.equal(planningPrompts.length, 2);
   assert.match(generatedPrompts[0], /Exact meaning of term 1/);
   assert.match(generatedPrompts[0], /A concrete classroom-safe scene for term 1/);
@@ -430,6 +464,17 @@ function plannedCard(id, front, back, scene) {
     back,
     visualBrief: createBrief(id, `Exact meaning of ${back}`, scene),
   };
+}
+
+async function solidImage(width, height, background) {
+  return sharp({
+    create: { width, height, channels: 3, background },
+  }).png().toBuffer();
+}
+
+async function firstPixel(buffer) {
+  const { data } = await sharp(buffer).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  return [data[0], data[1], data[2]];
 }
 
 async function waitForCompletedJob(service, teacherId, setId) {
