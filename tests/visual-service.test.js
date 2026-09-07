@@ -25,6 +25,8 @@ test("sheet prompt fixes six concepts to a calm 3x2 grid without text", () => {
   assert.match(prompt, /x=512, x=1024, and y=512/);
   assert.match(prompt, /same edge-to-edge dark navy background/);
   assert.match(prompt, /Semantic independence must not weaken the shared formal art direction/);
+  assert.match(prompt, /48-pixel quiet zone of background/);
+  assert.match(prompt, /no distinct object or foreground detail may enter or cross it/);
   assert.match(prompt, /object, action, human interaction, relation, diagram, symbolic composition, or full scene/);
   assert.match(prompt, /1\. Vocabulary pair: Hund — dog/);
   assert.match(prompt, /2\. Vocabulary pair: Katze — cat/);
