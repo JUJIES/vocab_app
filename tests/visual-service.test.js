@@ -56,6 +56,11 @@ test("single prompt applies an optional visual direction without weakening share
   assert.match(prompt, /No white margins/);
   assert.match(prompt, /never place a smaller rectangular picture inside a dark matte/);
   assert.match(prompt, /universal visual symbols are allowed/);
+  assert.match(prompt, /calm, modern, friendly editorial illustration language/);
+  assert.match(prompt, /edge-to-edge dark navy background/);
+  assert.match(prompt, /formal direction is mandatory/);
+  assert.match(prompt, /48-pixel quiet zone of background/);
+  assert.match(prompt, /no distinct object or foreground detail may enter or cross it/);
   assert.doesNotMatch(prompt, /Means of transport|Use transport throughout/);
 });
 
