@@ -2362,6 +2362,11 @@ function getNextLearningModeTotalScorePercent(previousEntry, {
   lastRoundPercent = null,
 } = {}) {
   if (Number.isFinite(previousEntry?.totalScorePercent)) {
+    if (lastRoundPercent === null && previousEntry.completedRoundCount > 0) {
+      const previousAverage = previousEntry.totalScorePercent / previousEntry.completedRoundCount;
+      return previousEntry.totalScorePercent + previousAverage * incrementBy;
+    }
+
     return previousEntry.totalScorePercent + (
       lastRoundPercent !== null ? lastRoundPercent * incrementBy : 0
     );

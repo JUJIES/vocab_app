@@ -236,6 +236,36 @@ test("front and back use the same type size for differently long terms", async (
   expect(frontSize).toBeLessThan(60);
 });
 
+test("practice swipes freely forward and backward on both card faces", async ({ page }) => {
+  await prepareStudentHome(page, { withVisual: false });
+  await openMode(page, "practice");
+
+  const card = page.locator("#flashcard");
+  await expect(page.locator("#front-word")).not.toHaveText("\u00a0");
+  const firstWord = await page.locator("#front-word").textContent();
+  await expect(page.locator("[data-eval-button]")).toHaveCount(0);
+
+  async function swipe(deltaX) {
+    const bounds = await card.boundingBox();
+    const startX = bounds.x + bounds.width / 2;
+    const startY = bounds.y + bounds.height / 2;
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(startX + deltaX, startY, { steps: 8 });
+    await page.mouse.up();
+  }
+
+  await swipe(-260);
+  await expect(page.locator("#front-word")).not.toHaveText(firstWord);
+  await expect(card).not.toHaveClass(/is-flipped/);
+
+  await card.click();
+  await expect(card).toHaveClass(/is-flipped/);
+  await swipe(260);
+  await expect(page.locator("#front-word")).toHaveText(firstWord);
+  await expect(card).not.toHaveClass(/is-flipped/);
+});
+
 test("cards without a visual do not leave an empty frame", async ({ page }) => {
   await prepareStudentHome(page, { withVisual: false });
   await openMode(page, "practice");

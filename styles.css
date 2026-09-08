@@ -6589,52 +6589,6 @@ button.student-screen__device-card {
   }
 }
 
-.progress-metric {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.42rem;
-  min-width: 3.1rem;
-  color: var(--text-muted);
-  font-size: 0.86rem;
-  line-height: 1;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.progress-metric--unknown {
-  color: rgba(231, 147, 139, 0.94);
-  justify-self: end;
-}
-
-.progress-metric--known {
-  color: rgba(168, 207, 195, 0.96);
-  justify-self: start;
-}
-
-.progress-metric__icon {
-  width: 0.95rem;
-  height: 0.95rem;
-  display: inline-block;
-  flex: 0 0 auto;
-  background: currentColor;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
-  -webkit-mask-size: contain;
-  mask-size: contain;
-}
-
-.progress-metric__icon--unknown {
-  -webkit-mask-image: url("./assets/icons/x-mark.svg");
-  mask-image: url("./assets/icons/x-mark.svg");
-}
-
-.progress-metric__icon--known {
-  -webkit-mask-image: url("./assets/icons/check.svg");
-  mask-image: url("./assets/icons/check.svg");
-}
-
 .flashcard-shell {
   position: relative;
   width: min(100%, 58rem, calc((100dvh - (var(--app-pad-block) * 2)) * 1.6));
@@ -6654,12 +6608,8 @@ button.student-screen__device-card {
   transform: translateZ(0);
   isolation: isolate;
   -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
+  touch-action: pan-y;
   user-select: none;
-}
-
-.flashcard.is-flipped {
-  touch-action: none;
 }
 
 .flashcard[aria-disabled="true"] {
@@ -6916,11 +6866,6 @@ button.student-screen__device-card {
   transition: opacity 220ms ease;
 }
 
-.flashcard__dock--back {
-  width: calc(100% - 3.4rem);
-  justify-content: space-between;
-}
-
 @media (min-width: 721px) {
   .flashcard__face--front .flashcard__content {
     transform: translate3d(0, 2.4rem, 2px);
@@ -7105,81 +7050,6 @@ button.student-screen__device-card {
   text-underline-offset: 0.12em;
 }
 
-.flashcard__hint.is-summary {
-  display: grid;
-  gap: 0.42rem;
-  justify-items: center;
-  white-space: normal;
-  text-wrap: pretty;
-  line-height: 1.45;
-}
-
-.flashcard__summary-line {
-  display: block;
-}
-
-.flashcard__summary-line--title {
-  color: var(--text);
-  font-weight: 700;
-}
-
-.flashcard__summary-line--metrics {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  color: var(--text);
-  font-weight: 700;
-  flex-wrap: wrap;
-}
-
-.flashcard__summary-line--restart {
-  color: rgba(241, 239, 233, 0.74);
-}
-
-.flashcard__summary-line--mode {
-  color: var(--text);
-  font-weight: 700;
-}
-
-.flashcard__summary-stat {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-}
-
-.flashcard__summary-icon {
-  width: 1rem;
-  height: 1rem;
-  display: inline-block;
-  flex: 0 0 auto;
-  background: currentColor;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
-  -webkit-mask-size: contain;
-  mask-size: contain;
-}
-
-.flashcard__summary-stat--known {
-  color: rgba(154, 188, 163, 0.96);
-}
-
-.flashcard__summary-stat--unknown {
-  color: rgba(212, 132, 125, 0.94);
-}
-
-.flashcard__summary-icon--known {
-  -webkit-mask-image: url("./assets/icons/check.svg");
-  mask-image: url("./assets/icons/check.svg");
-}
-
-.flashcard__summary-icon--unknown {
-  -webkit-mask-image: url("./assets/icons/x-mark.svg");
-  mask-image: url("./assets/icons/x-mark.svg");
-}
-
 .flashcard__hint-mask {
   display: inline-grid;
   grid-auto-flow: column;
@@ -7290,72 +7160,6 @@ button.student-screen__device-card {
   color: var(--text);
 }
 
-.card-action.is-restart {
-  color: var(--text);
-  background: var(--surface-glass-strong);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 0 18px rgba(174, 194, 233, 0.12);
-}
-
-.card-action.is-continue {
-  color: var(--text);
-  background: var(--surface-glass-strong);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 0 18px rgba(174, 194, 233, 0.1);
-}
-
-.card-secondary-action {
-  min-width: 9.4rem;
-  height: 3.2rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 1.2rem;
-  border: 0;
-  border-radius: 999px;
-  background: rgba(223, 232, 255, 0.1);
-  color: rgba(241, 239, 233, 0.92);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 10px 24px rgba(4, 9, 20, 0.16);
-  font: inherit;
-  font-size: 0.95rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  transition:
-    opacity 220ms ease,
-    background-color 220ms ease,
-    box-shadow 220ms ease,
-    transform 220ms ease,
-    color 220ms ease;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.card-secondary-action:not(:disabled) {
-  cursor: pointer;
-}
-
-.card-secondary-action:not(:disabled):hover,
-.card-secondary-action:not(:disabled):focus-visible {
-  background: rgba(223, 232, 255, 0.16);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
-    0 0 18px rgba(174, 194, 233, 0.1);
-  transform: translateY(-1px);
-}
-
-.card-secondary-action:focus-visible {
-  outline: 2px solid rgba(223, 232, 255, 0.42);
-  outline-offset: 0.35rem;
-}
-
-.card-secondary-action[hidden] {
-  display: none;
-}
-
 .card-action__progress {
   position: absolute;
   inset: 0;
@@ -7403,108 +7207,10 @@ button.student-screen__device-card {
     transform 220ms ease;
 }
 
-.card-action:not(.is-flip):not(.is-restart):not(.is-continue) .card-action__icon--hint,
-.card-action.is-flip .card-action__icon--flip,
-.card-action.is-restart .card-action__icon--restart,
-.card-action.is-continue .card-action__icon--continue {
+.card-action:not(.is-flip) .card-action__icon--hint,
+.card-action.is-flip .card-action__icon--flip {
   opacity: 1;
   transform: scale(1);
-}
-
-.back-action {
-  width: 4.25rem;
-  height: 4.25rem;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: var(--surface-glass);
-  color: var(--text-muted);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
-    0 12px 28px rgba(4, 9, 20, 0.18);
-  transition:
-    opacity 220ms ease,
-    background-color 220ms ease,
-    color 220ms ease,
-    box-shadow 220ms ease,
-    transform 220ms ease;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.back-action--unknown {
-  color: rgba(212, 132, 125, 0.84);
-  background: rgba(212, 132, 125, 0.08);
-  box-shadow:
-    inset 0 0 0 1px rgba(212, 132, 125, 0.12),
-    0 0 0 1px rgba(255, 255, 255, 0.01);
-}
-
-.back-action--known {
-  color: rgba(154, 188, 163, 0.9);
-  background: rgba(154, 188, 163, 0.08);
-  box-shadow:
-    inset 0 0 0 1px rgba(154, 188, 163, 0.12),
-    0 0 0 1px rgba(255, 255, 255, 0.01);
-}
-
-.back-action:not(:disabled) {
-  cursor: pointer;
-}
-
-.back-action:hover,
-.back-action:focus-visible {
-  transform: translateY(-1px);
-}
-
-.back-action:focus-visible {
-  outline: 2px solid rgba(223, 232, 255, 0.42);
-  outline-offset: 0.35rem;
-}
-
-.back-action--unknown:hover,
-.back-action--unknown:focus-visible {
-  color: rgba(212, 132, 125, 0.96);
-  box-shadow:
-    inset 0 0 0 1px rgba(212, 132, 125, 0.14),
-    0 0 18px rgba(212, 132, 125, 0.08);
-}
-
-.back-action--known:hover,
-.back-action--known:focus-visible {
-  color: rgba(154, 188, 163, 0.98);
-  box-shadow:
-    inset 0 0 0 1px rgba(154, 188, 163, 0.14),
-    0 0 18px rgba(154, 188, 163, 0.08);
-}
-
-.back-action[hidden] {
-  display: none;
-}
-
-.back-action__icon {
-  width: 1.18rem;
-  height: 1.18rem;
-  display: inline-block;
-  background: currentColor;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
-  -webkit-mask-position: center;
-  mask-position: center;
-  -webkit-mask-size: contain;
-  mask-size: contain;
-}
-
-.back-action__icon--unknown {
-  -webkit-mask-image: url("./assets/icons/x-mark.svg");
-  mask-image: url("./assets/icons/x-mark.svg");
-}
-
-.back-action__icon--known {
-  -webkit-mask-image: url("./assets/icons/check.svg");
-  mask-image: url("./assets/icons/check.svg");
 }
 
 @media (any-pointer: coarse) {
@@ -7604,11 +7310,6 @@ button.student-screen__device-card {
   .card-audio {
     width: 2.3rem;
     height: 2.3rem;
-  }
-
-  .back-action {
-    width: 4.7rem;
-    height: 4.7rem;
   }
 
   .flashcard__gesture-hint {
@@ -7829,13 +7530,6 @@ button.student-screen__device-card {
   .card-action {
     width: 4.2rem;
     height: 4.2rem;
-  }
-
-  .card-secondary-action {
-    min-width: 8.7rem;
-    height: 3rem;
-    padding-inline: 1rem;
-    font-size: 0.9rem;
   }
 
   .card-nav {
