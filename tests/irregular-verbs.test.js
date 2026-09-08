@@ -6,6 +6,7 @@ const {
   evaluateInputs,
   parseForms,
 } = require("../irregular-verbs");
+const answerRules = require("../answer-rules");
 
 test("irregular verb forms require exactly three deliberately separated values", () => {
   assert.deepEqual(parseForms("shine - shone - shone"), ["shine", "shone", "shone"]);
@@ -58,4 +59,15 @@ test("all three irregular verb fields must be correct", () => {
   assert.equal(wrong.status, "wrong");
   assert.deepEqual(wrong.rawInputs, ["shine", "shined", "shone"]);
   assert.equal(wrong.bestAnswer, "shine · shone · shone");
+});
+
+test("irregular verb fields use the shared punctuation-tolerant evaluation", () => {
+  const groups = buildAnswerGroups("shine - shone - shone");
+  const evaluation = evaluateInputs(
+    ["shine!", "shone?", "(shone)"],
+    groups,
+    answerRules.evaluate,
+  );
+
+  assert.equal(evaluation.status, "correct");
 });

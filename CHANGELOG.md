@@ -1,9 +1,8 @@
 # Changelog
 
-- Akzeptierte Varianten, die sich nur durch ein abschließendes Auslassungszeichen unterscheiden, werden beim Üben nicht mehr als vermeintliche Synonyme unter dem Hauptbegriff wiederholt. Tatsächlich abweichende Alternativen bleiben in der ruhigen Zusatzzeile sichtbar, und für die Eingabe gelten weiterhin alle hinterlegten Varianten.
-
 ## Unreleased
 
+- Antwortprüfung und Flashcard-Varianten folgen jetzt einem gemeinsamen Regelsystem in `answer-rules.js`: Groß-/Kleinschreibung, mehrfacher Leerraum und sämtliche Satzzeichen sind für die Wertung unerheblich, während echte Wortgrenzen, Buchstaben, Ziffern, Umlaute und Akzente weiterhin stimmen müssen. Die Zusatzzeile zeigt nur echte inhaltliche Alternativen; Typografie-, Artikel-, Infinitiv-, Flexions- und enge Schreibvarianten bleiben als Eingabe gültig, erscheinen aber nicht mehr als vermeintliche Synonyme.
 - Im Tafelraum-Embed steuern `⌘/Strg +`, `⌘/Strg −` und `⌘/Strg 0` jetzt den vom Canvas gespeicherten App-Inhaltszoom. Das gilt im Lehrermenü und in allen Lernmodi; außerhalb der Einbettung bleibt der normale Browserzoom unverändert.
 - Lernbilder werden nicht mehr künstlich an das Thema ihres Sets gebunden. Der Planner betrachtet jedes vollständige Vokabelpaar einzeln, nutzt kontrastive Beispiele für semantische Randfälle und wählt passend zwischen Objekt, Handlung, Interaktion, Relation, Diagramm, Symbolik oder Szene. Der Bild-Renderer erhält keinen Set-Kontext mehr: Motiv und Erzählung bleiben inhaltlich unabhängig, während Raster, Hintergrund, Illustrationssprache, Padding und technische Qualität formal einheitlich sind. Diese gemeinsame Formvorgabe gilt auch für einzeln neu erzeugte Varianten. Eine ruhige 48-Pixel-Randzone hält Vordergrundobjekte in ihrer Zelle; eine konservative Ganzsheet-Erkennung korrigiert zusätzlich eindeutig verschobene helle Rasterlinien vor dem Kachelzuschnitt.
 - Neue Lernbilder werden für Sheets und Einzelvarianten nun in `medium` statt `low` erzeugt. Die höhere Produktionsqualität reduziert Detail-, Text- und Logikartefakte, während Visual-Planung und der deterministische Kachelbeschnitt unverändert bleiben.

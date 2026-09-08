@@ -50,7 +50,9 @@ test("PWA metadata points each surface at the correct manifest and opaque icons"
   assert.match(serviceWorker, /ui-motion\.css\?v=/);
   assert.match(serviceWorker, /ui-motion\.js\?v=/);
   assert.match(studentHtml, /irregular-verbs\.js\?v=/);
+  assert.match(studentHtml, /answer-rules\.js\?v=/);
   assert.match(serviceWorker, /irregular-verbs\.js\?v=/);
+  assert.match(serviceWorker, /answer-rules\.js\?v=/);
 
   const expectedPngs = new Map([
     ["icons/favicon-32.png", 32],
@@ -84,6 +86,7 @@ test("PWA control files bypass intermediary caches and service worker updates by
   assert.match(pwaScript, /lerndeck:app-ready/);
   assert.match(serverSource, /"\/sw\.js"/);
   assert.match(serverSource, /"\/pwa-splash\.css"/);
+  assert.match(serverSource, /"\/answer-rules\.js"/);
   assert.match(serverSource, /no-store, no-cache, must-revalidate/);
 });
 

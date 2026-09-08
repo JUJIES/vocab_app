@@ -57,16 +57,39 @@ async function prepareStudentHome(page, setData = buildVariantSet()) {
     window.sessionStorage.clear();
 
     const tabletId = "rot-1";
-    const response = await fetch(`/api/tablets/${encodeURIComponent(tabletId)}/verify-pin`, {
+    let response = await fetch(`/api/tablets/${encodeURIComponent(tabletId)}/verify-pin`, {
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ pin: "1111" }),
     });
-    const data = await response.json();
+    let data = await response.json();
+
+    if (response.status === 409) {
+      response = await fetch(`/api/tablets/${encodeURIComponent(tabletId)}/register`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pin: "1111" }),
+      });
+      data = await response.json();
+    }
 
     if (!response.ok || !data?.session?.token) {
       throw new Error(`Unable to prepare tablet session: ${response.status}`);
+    }
+
+    const subscriptionResponse = await fetch(`/api/tablets/${encodeURIComponent(tabletId)}/subscriptions`, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Authorization": `Bearer ${data.session.token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ setPath: "sets/food-basics-01.json" }),
+    });
+    if (!subscriptionResponse.ok) {
+      throw new Error(`Unable to prepare answer-variant subscription: ${subscriptionResponse.status}`);
     }
 
     window.localStorage.setItem(deviceKey, tabletId);
@@ -161,6 +184,99 @@ test("accepted punctuation variants stay valid without repeating the primary ans
   await prepareStudentHome(page, setData);
   await openMode(page, "write");
   await page.locator("#input-answer-field").fill("It depends on ...");
+  await page.locator("#input-answer-form").press("Enter");
+  await expect(page.locator("#input-check-button")).toHaveText("Richtig");
+});
+
+test("commas are optional when checking an answer", async ({ page }) => {
+  const setData = buildVariantSet();
+  setData.set.languages = { source: "de", target: "en" };
+  setData.set.labels = { source: "Deutsch", target: "Englisch" };
+  setData.cards = [{
+    id: "agree-because",
+    source: { text: "Ich stimme zu, weil …" },
+    target: { text: "I agree because" },
+    examples: [{
+      id: "answer",
+      source: "Ich stimme zu, weil …",
+      target: "I agree because",
+    }],
+    hintData: {
+      flashcard: {
+        exampleId: "answer",
+        maskedWord: "_ _____ _______",
+        firstLetterHint: "I _____ _______",
+      },
+    },
+    acceptedAnswers: ["I agree because"],
+  }];
+
+  await prepareStudentHome(page, setData);
+  await openMode(page, "write");
+  await page.locator("#input-answer-field").fill("I agree, because");
+  await page.locator("#input-answer-form").press("Enter");
+  await expect(page.locator("#input-check-button")).toHaveText("Richtig");
+
+  setData.cards[0] = {
+    ...setData.cards[0],
+    id: "opinion-comma",
+    source: { text: "Meiner Meinung nach …" },
+    target: { text: "In my opinion," },
+    examples: [{
+      id: "answer",
+      source: "Meiner Meinung nach …",
+      target: "In my opinion,",
+    }],
+    acceptedAnswers: ["In my opinion,"],
+  };
+  await prepareStudentHome(page, setData);
+  await openMode(page, "write");
+  await page.locator("#input-answer-field").fill("In my opinion");
+  await page.locator("#input-answer-form").press("Enter");
+  await expect(page.locator("#input-check-button")).toHaveText("Richtig");
+});
+
+test("flashcards hide spelling and form variants but keep real synonyms", async ({ page }) => {
+  const setData = buildVariantSet();
+  setData.set.languages = { source: "de", target: "en" };
+  setData.set.labels = { source: "Deutsch", target: "Englisch" };
+  setData.cards = [{
+    id: "motorized-vehicle",
+    source: { text: "motorisiertes Fahrzeug" },
+    target: { text: "motorized vehicle" },
+    examples: [{
+      id: "answer",
+      source: "motorisiertes Fahrzeug",
+      target: "motorized vehicle",
+    }],
+    hintData: {
+      flashcard: {
+        exampleId: "answer",
+        maskedWord: "_________ _______",
+        firstLetterHint: "m________ _______",
+      },
+    },
+    acceptedAnswers: [
+      "motorised vehicle",
+      "(motorized vehicle)",
+      "a motorized vehicle",
+      "powered vehicle",
+    ],
+  }];
+
+  await prepareStudentHome(page, setData);
+  await openMode(page, "practice");
+  await page.locator("#flashcard").click();
+  await expect(page.locator("#back-word")).toHaveText("motorized vehicle");
+  await expect(page.locator("#back-alternatives")).toHaveText("(powered vehicle)");
+  await expect(page.locator("#flashcard")).toHaveAttribute(
+    "aria-label",
+    /Weitere gültige Antworten: powered vehicle/,
+  );
+
+  await prepareStudentHome(page, setData);
+  await openMode(page, "write");
+  await page.locator("#input-answer-field").fill("motorised vehicle");
   await page.locator("#input-answer-form").press("Enter");
   await expect(page.locator("#input-check-button")).toHaveText("Richtig");
 });

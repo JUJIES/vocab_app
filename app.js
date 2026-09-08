@@ -8103,7 +8103,10 @@ function buildCards(data) {
     throw new Error("Vocabulary set contains no cards.");
   }
 
-  return data.cards.map((card) => buildCardData(card));
+  return data.cards.map((card) => buildCardData(card, {
+    sourceLanguage: data.set?.languages?.source,
+    targetLanguage: data.set?.languages?.target,
+  }));
 }
 
 function orientLearningCards(cards, direction) {
@@ -8141,7 +8144,7 @@ function buildAnswerOnlyHints(answer) {
   }));
 }
 
-function buildCardData(card) {
+function buildCardData(card, { sourceLanguage = "", targetLanguage = "" } = {}) {
   const rawSourceText = card?.source?.text?.trim();
   const rawTargetText = card?.target?.text?.trim();
   const audioSource = normalizeAudioPath(card?.audio?.source);
@@ -8188,16 +8191,25 @@ function buildCardData(card) {
   const answers = buildAcceptedAnswerList(rawTargetText, acceptedAnswers);
   const sourceAnswers = buildAcceptedAnswerList(rawSourceText);
   const sourceText = sourceAnswers[0] || rawSourceText;
-  const sourceAlternatives = sourceAnswers.slice(1);
+  const sourceAcceptedAlternatives = sourceAnswers.slice(1);
+  const sourceAlternatives = buildVisibleAnswerAlternatives(
+    sourceText,
+    sourceAcceptedAlternatives,
+    sourceLanguage,
+  );
   const targetText = answers[0] || rawTargetText;
-  const targetAlternatives = buildVisibleAnswerAlternatives(targetText, answers.slice(1));
+  const targetAlternatives = buildVisibleAnswerAlternatives(
+    targetText,
+    answers.slice(1),
+    targetLanguage,
+  );
   const irregularVerbAnswerGroups = window.LerndeckIrregularVerbs.buildAnswerGroups(
     targetText,
     answers.slice(1),
   );
   const sourceIrregularVerbAnswerGroups = window.LerndeckIrregularVerbs.buildAnswerGroups(
     sourceText,
-    sourceAlternatives,
+    sourceAcceptedAlternatives,
   );
   const exampleIsAnswerOnly = isAnswerOnlyExample(
     exampleText,
@@ -8300,26 +8312,21 @@ function buildAcceptedAnswerList(targetText, acceptedAnswers = []) {
   return answers;
 }
 
-function buildVisibleAnswerAlternatives(primaryAnswer, acceptedAnswers = []) {
-  const seen = new Set([normalizeVisibleAnswerValue(primaryAnswer)]);
+function buildVisibleAnswerAlternatives(primaryAnswer, acceptedAnswers = [], language = "") {
+  const comparedAnswers = [primaryAnswer];
   const alternatives = [];
 
   for (const answer of acceptedAnswers) {
-    const normalizedAnswer = normalizeVisibleAnswerValue(answer);
-    if (!normalizedAnswer || seen.has(normalizedAnswer)) {
+    if (!normalizeInputAnswerValue(answer) || comparedAnswers.some((candidate) => (
+      window.LerndeckAnswerRules.areEquivalentDisplayForms(candidate, answer, { language })
+    ))) {
       continue;
     }
-    seen.add(normalizedAnswer);
+    comparedAnswers.push(answer);
     alternatives.push(answer);
   }
 
   return alternatives;
-}
-
-function normalizeVisibleAnswerValue(value) {
-  return normalizeInputAnswerValue(value)
-    .replace(/\s*(?:\.{3}|…)\s*$/u, "")
-    .trim();
 }
 
 function splitAnswerVariants(value) {
@@ -8342,116 +8349,11 @@ function isAnswerOnlyExample(exampleText, answers) {
 }
 
 function normalizeInputAnswerValue(value) {
-  return typeof value === "string"
-    ? value.trim().toLowerCase().replace(/\s+/g, " ")
-    : "";
-}
-
-function calculateLevenshteinDistance(source, target) {
-  const left = normalizeInputAnswerValue(source);
-  const right = normalizeInputAnswerValue(target);
-
-  if (left === right) {
-    return 0;
-  }
-
-  if (!left) {
-    return right.length;
-  }
-
-  if (!right) {
-    return left.length;
-  }
-
-  const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
-  const current = new Array(right.length + 1).fill(0);
-
-  for (let row = 1; row <= left.length; row += 1) {
-    current[0] = row;
-
-    for (let column = 1; column <= right.length; column += 1) {
-      const substitutionCost = left[row - 1] === right[column - 1] ? 0 : 1;
-      current[column] = Math.min(
-        current[column - 1] + 1,
-        previous[column] + 1,
-        previous[column - 1] + substitutionCost,
-      );
-    }
-
-    for (let index = 0; index <= right.length; index += 1) {
-      previous[index] = current[index];
-    }
-  }
-
-  return previous[right.length];
-}
-
-function getInputAlmostDistanceLimit(answerLength) {
-  if (answerLength >= 9) {
-    return 2;
-  }
-
-  if (answerLength >= 5) {
-    return 1;
-  }
-
-  return 0;
+  return window.LerndeckAnswerRules.normalizeForComparison(value);
 }
 
 function evaluateInputAnswer(input, answers) {
-  const normalizedInput = normalizeInputAnswerValue(input);
-  const validAnswers = Array.isArray(answers)
-    ? answers
-        .filter((answer) => typeof answer === "string")
-        .map((answer) => answer.trim())
-        .filter(Boolean)
-    : [];
-  const normalizedAnswers = validAnswers.map((answer) => ({
-    raw: answer,
-    normalized: normalizeInputAnswerValue(answer),
-  }));
-
-  if (normalizedAnswers.length === 0) {
-    return {
-      status: "wrong",
-      normalizedInput,
-      bestAnswer: "",
-      distance: null,
-    };
-  }
-
-  const exactAnswer = normalizedAnswers.find((answer) => answer.normalized === normalizedInput);
-  if (exactAnswer) {
-    return {
-      status: "correct",
-      normalizedInput,
-      bestAnswer: exactAnswer.raw,
-      distance: 0,
-    };
-  }
-
-  let bestMatch = normalizedAnswers[0];
-  let bestDistance = calculateLevenshteinDistance(normalizedInput, bestMatch.normalized);
-
-  for (const answer of normalizedAnswers.slice(1)) {
-    const distance = calculateLevenshteinDistance(normalizedInput, answer.normalized);
-
-    if (distance < bestDistance) {
-      bestMatch = answer;
-      bestDistance = distance;
-    }
-  }
-
-  const almostDistanceLimit = getInputAlmostDistanceLimit(bestMatch.normalized.length);
-  const hasSameFirstLetter = normalizedInput[0] && bestMatch.normalized[0] && normalizedInput[0] === bestMatch.normalized[0];
-  const isAlmost = almostDistanceLimit > 0 && bestDistance > 0 && bestDistance <= almostDistanceLimit && hasSameFirstLetter;
-
-  return {
-    status: isAlmost ? "almost" : "wrong",
-    normalizedInput,
-    bestAnswer: bestMatch.raw,
-    distance: bestDistance,
-  };
+  return window.LerndeckAnswerRules.evaluate(input, answers);
 }
 
 function normalizeAudioPath(value) {

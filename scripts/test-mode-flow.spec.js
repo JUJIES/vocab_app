@@ -24,12 +24,12 @@ function buildTestSet() {
       return {
         id: `test-card-${number}`,
         source: { text: `Wort ${number}` },
-        target: { text: `answer ${number}` },
+        target: { text: `answer ${number}?` },
         acceptedAnswers: [],
         examples: [{
           id: "example",
           source: `Wort ${number}`,
-          target: `answer ${number}`,
+          target: `answer ${number}?`,
         }],
         hintData: {
           flashcard: {
@@ -105,7 +105,7 @@ async function prepareStudentHome(page) {
   await expect(page.locator(".student-screen__library-card").first()).toBeVisible();
 }
 
-test("test mode uses a random-sized list and keeps wrong answers editable until all are correct", async ({ page }) => {
+test("test mode ignores punctuation and keeps wrong answers editable until all are correct", async ({ page }) => {
   await prepareStudentHome(page);
   await page.evaluate(() => {
     Math.random = () => 0;
@@ -151,7 +151,7 @@ test("test mode uses a random-sized list and keeps wrong answers editable until 
   await expect(page.locator(".launch-mode-modal__test-count-slider")).toHaveCount(0);
   await page.locator("#launch-mode-start").click();
   await expect(page.locator("#launch-settings-modal")).toBeVisible();
-  await expect(page.locator("#launch-settings-title")).toHaveText("Testeinstellungen");
+  await expect(page.locator("#launch-settings-title")).toHaveText("Wie möchtest du abgefragt werden?");
   await expect(page.locator('[data-learning-direction-group="launch"]')).toBeVisible();
   const countSlider = page.locator(".launch-mode-modal__test-count-slider");
   await expect(countSlider).toBeVisible();
