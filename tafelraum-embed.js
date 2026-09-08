@@ -5,7 +5,7 @@
 
   function contentZoomAction(event) {
     if ((!event.metaKey && !event.ctrlKey) || event.altKey || event.isComposing) return "";
-    if (event.key === "+" || event.key === "=") return "increase";
+    if (event.key === "+" || event.key === "=" || event.code === "BracketRight" || event.code === "NumpadAdd") return "increase";
     if (event.key === "-" || event.key === "_") return "decrease";
     if (event.key === "0") return "reset";
     return "";

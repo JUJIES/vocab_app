@@ -141,16 +141,17 @@ test("embedded practice keeps its card size and scrolls when the frame becomes s
   ))).toBe(true);
   expect(await frame.locator("body").evaluate(() => [
     { key: "=", metaKey: true },
+    { code: "BracketRight", key: "]", metaKey: true },
     { ctrlKey: true, key: "-" },
     { key: "0", metaKey: true },
   ].map((init) => !window.dispatchEvent(new KeyboardEvent("keydown", {
     ...init,
     bubbles: true,
     cancelable: true,
-  }))))).toEqual([true, true, true]);
+  }))))).toEqual([true, true, true, true]);
   await expect.poll(() => page.evaluate(() => window.__tafelraumTestMessages.filter(
     (message) => message.type === "tafelraum:app-content-zoom",
-  ).map((message) => message.action))).toEqual(["increase", "decrease", "reset"]);
+  ).map((message) => message.action))).toEqual(["increase", "increase", "decrease", "reset"]);
 
   frame = await openScaledFrame(
     page,
