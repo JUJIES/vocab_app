@@ -21,6 +21,8 @@ $ServiceName = 'BeelinkApp-Lerndeck'
 $ServiceConfig = 'C:\ProgramData\Beelink\Services\lerndeck\service-6000.xml'
 $PublicBaseUrl = 'https://lerndeck.jujies.app'
 $ImportModel = 'gpt-5.6-terra'
+$ImageGenerationModel = 'gpt-image-2.5-flare-2026-09-08'
+$ImageEditModel = 'gpt-image-2.5-sunburst-2026-09-08'
 
 function Invoke-Native {
   param(
@@ -167,6 +169,8 @@ $PreviousEnvironment = @{
   DATA_DIR = $env:DATA_DIR
   PUBLIC_BASE_URL = $env:PUBLIC_BASE_URL
   OPENAI_IMPORT_MODEL = $env:OPENAI_IMPORT_MODEL
+  OPENAI_IMAGE_GENERATION_MODEL = $env:OPENAI_IMAGE_GENERATION_MODEL
+  OPENAI_IMAGE_EDIT_MODEL = $env:OPENAI_IMAGE_EDIT_MODEL
   TEACHER_PIN = $env:TEACHER_PIN
 }
 
@@ -177,6 +181,8 @@ try {
   $env:DATA_DIR = $CandidateData
   $env:PUBLIC_BASE_URL = "http://127.0.0.1:$CandidatePort"
   $env:OPENAI_IMPORT_MODEL = $ImportModel
+  $env:OPENAI_IMAGE_GENERATION_MODEL = $ImageGenerationModel
+  $env:OPENAI_IMAGE_EDIT_MODEL = $ImageEditModel
   $env:TEACHER_PIN = 'candidate-only'
 
   $CandidateProcess = Start-Process -FilePath 'node.exe' -ArgumentList @('server.js') `
@@ -219,6 +225,8 @@ $PreviousWorkingDirectory = [string]$ServiceXml.service.workingdirectory
 
 Set-ServiceEnvironmentValue -Document $ServiceXml -Name 'PUBLIC_BASE_URL' -Value $PublicBaseUrl
 Set-ServiceEnvironmentValue -Document $ServiceXml -Name 'OPENAI_IMPORT_MODEL' -Value $ImportModel
+Set-ServiceEnvironmentValue -Document $ServiceXml -Name 'OPENAI_IMAGE_GENERATION_MODEL' -Value $ImageGenerationModel
+Set-ServiceEnvironmentValue -Document $ServiceXml -Name 'OPENAI_IMAGE_EDIT_MODEL' -Value $ImageEditModel
 $WorkingDirectoryNode = $ServiceXml.SelectSingleNode('/service/workingdirectory')
 if ($null -eq $WorkingDirectoryNode) {
   throw 'Service configuration has no /service/workingdirectory element.'

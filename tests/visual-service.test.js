@@ -9,6 +9,7 @@ const {
   VisualService,
   buildSheetPrompt,
   buildSinglePrompt,
+  buildSingleEditPrompt,
   buildVisualPlanningPrompt,
   detectGeneratedSheetGrid,
   normalizeGeneratedTile,
@@ -67,6 +68,21 @@ test("single prompt applies an optional visual direction without weakening share
   assert.match(prompt, /48-pixel quiet zone of background/);
   assert.match(prompt, /no distinct object or foreground detail may enter or cross it/);
   assert.doesNotMatch(prompt, /Means of transport|Use transport throughout/);
+});
+
+test("single edit prompt treats the current image as a reference and the brief as authoritative", () => {
+  const prompt = buildSingleEditPrompt({
+    id: "card_bus",
+    front: "Bus",
+    back: "bus",
+    instruction: "Mit einem gelben Ball im Vordergrund",
+    visualBrief: createBrief("card_bus", "A public road vehicle", "A red city bus at a bus stop"),
+  });
+
+  assert.match(prompt, /Edit the supplied current learning illustration/);
+  assert.match(prompt, /Preserve its calm editorial illustration language/);
+  assert.match(prompt, /gelben Ball/);
+  assert.match(prompt, /semantic brief and teacher direction are authoritative/);
 });
 
 test("semantic planning uses each vocabulary pair independently with contrastive examples", () => {
@@ -360,7 +376,35 @@ test("sheet jobs persist reusable assets, attach them, regenerate one and retain
   const generatedSizes = [];
   const generatedQualities = [];
   const generatedPrompts = [];
+  const imageOperations = [];
   const planningPrompts = [];
+  const createImageResponse = async ({ model, size, quality, prompt }, operation) => {
+    generatedSizes.push(size);
+    generatedQualities.push(quality);
+    generatedPrompts.push(prompt);
+    imageOperations.push({ operation, model });
+    const [width, height] = size.split("x").map(Number);
+    const image = await sharp({
+      create: {
+        width,
+        height,
+        channels: 3,
+        background: { r: 38, g: 55, b: 78 },
+      },
+    }).webp().toBuffer();
+    return {
+      data: [{ b64_json: image.toString("base64") }],
+      usage: {
+        input_tokens: operation === "edit" ? 120 : 20,
+        input_tokens_details: {
+          text_tokens: 20,
+          image_tokens: operation === "edit" ? 100 : 0,
+        },
+        output_tokens: 1_000,
+        total_tokens: operation === "edit" ? 1_120 : 1_020,
+      },
+    };
+  };
   const client = {
     responses: {
       create: async ({ input }) => {
@@ -381,21 +425,8 @@ test("sheet jobs persist reusable assets, attach them, regenerate one and retain
       },
     },
     images: {
-      generate: async ({ size, quality, prompt }) => {
-        generatedSizes.push(size);
-        generatedQualities.push(quality);
-        generatedPrompts.push(prompt);
-        const [width, height] = size.split("x").map(Number);
-        const image = await sharp({
-          create: {
-            width,
-            height,
-            channels: 3,
-            background: { r: 38, g: 55, b: 78 },
-          },
-        }).webp().toBuffer();
-        return { data: [{ b64_json: image.toString("base64") }] };
-      },
+      generate: async (request) => createImageResponse(request, "generate"),
+      edit: async (request) => createImageResponse(request, "edit"),
     },
   };
   const visualService = new VisualService({ dataDir, setService, client });
@@ -410,7 +441,7 @@ test("sheet jobs persist reusable assets, attach them, regenerate one and retain
   });
 
   await visualService.startMissingVisuals("julius", createdSet.id);
-  await waitForCompletedJob(visualService, "julius", createdSet.id);
+  const firstJob = await waitForCompletedJob(visualService, "julius", createdSet.id);
   const visualizedSet = await setService.getOwnedSet("julius", createdSet.id);
   assert.equal(visualizedSet.cards.filter((card) => card.visual?.url).length, 7);
   assert.deepEqual(generatedSizes, ["1536x1024", "1536x1024"]);
@@ -421,6 +452,11 @@ test("sheet jobs persist reusable assets, attach them, regenerate one and retain
   assert.equal(firstSheetAsset.sheetNumber, 1);
   assert.equal(firstSheetAsset.sheetIndex, 0);
   assert.equal(firstSheetAsset.normalizationVersion, "sheet-adaptive-grid-v2");
+  assert.equal(firstSheetAsset.generation.model, "gpt-image-2.5-flare-2026-09-08");
+  assert.equal(firstSheetAsset.generation.operation, "generate");
+  assert.equal(firstJob.generationSummary.requestCount, 2);
+  assert.equal(firstJob.generationSummary.usage.outputTokens, 2_000);
+  assert.equal(firstJob.generationSummary.estimatedCostUsd, 0.0602);
   assert.equal(planningPrompts.length, 2);
   assert.match(generatedPrompts[0], /Exact meaning of term 1/);
   assert.match(generatedPrompts[0], /A concrete classroom-safe scene for term 1/);
@@ -448,9 +484,18 @@ test("sheet jobs persist reusable assets, attach them, regenerate one and retain
   assert.equal(history.length, 3);
   assert.equal(history[0].instruction, "Mit einem gelben Ball im Vordergrund");
   assert.equal(history[0].visualBrief.intendedMeaning, "Exact meaning of term 1");
+  assert.equal(history[0].generation.model, "gpt-image-2.5-sunburst-2026-09-08");
+  assert.equal(history[0].generation.operation, "edit");
   assert.match(generatedPrompts.at(-1), /gelben Ball/);
   assert.deepEqual(generatedSizes, ["1536x1024", "1536x1024", "1536x1024", "1536x1024", "1024x1024"]);
   assert.deepEqual(generatedQualities, ["medium", "medium", "medium", "medium", "medium"]);
+  assert.deepEqual(imageOperations, [
+    { operation: "generate", model: "gpt-image-2.5-flare-2026-09-08" },
+    { operation: "generate", model: "gpt-image-2.5-flare-2026-09-08" },
+    { operation: "generate", model: "gpt-image-2.5-flare-2026-09-08" },
+    { operation: "generate", model: "gpt-image-2.5-flare-2026-09-08" },
+    { operation: "edit", model: "gpt-image-2.5-sunburst-2026-09-08" },
+  ]);
   assert.equal(planningPrompts.length, 5);
 
   await visualService.selectAsset("julius", createdSet.id, card.id, originalAssetId);
