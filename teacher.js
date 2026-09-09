@@ -14,6 +14,7 @@ const BROKEN_LINK_ICON_PATH = "./assets/icons/broken-link.svg";
 const TIMEOUT_ICON_PATH = "./assets/icons/timeout.svg";
 const PASSWORD_ICON_PATH = "./assets/icons/password-svgrepo-com.svg";
 const LAST_TEACHER_STORAGE_KEY = "lerndeck-last-teacher-v1";
+const ADMIN_SET_GROUP_STORAGE_KEY = "lerndeck-admin-set-groups-v1";
 const TAFELRAUM_EMBED = window.self !== window.top
   && new URLSearchParams(window.location.search).get("embed") === "tafelraum";
 
@@ -79,6 +80,7 @@ const elements = {
   shellMessage: document.getElementById("teacher-shell-message"),
   accountStatus: document.getElementById("teacher-account-status"),
   profileName: document.getElementById("teacher-profile-name"),
+  profileRole: document.getElementById("teacher-profile-role"),
   logoutButton: document.getElementById("teacher-logout-button"),
   settingsButton: document.getElementById("teacher-settings-button"),
   settingsMenu: document.getElementById("teacher-settings-menu"),
@@ -571,6 +573,9 @@ function normalizeSetEntry(entry) {
   const subject = typeof entry?.subject === "string" ? entry.subject.trim() : "";
   const category = typeof entry?.category === "string" ? entry.category.trim() : "";
   const status = entry?.status === "draft" ? "draft" : "published";
+  const ownerTeacherId = typeof entry?.ownerTeacherId === "string" && entry.ownerTeacherId.trim()
+    ? entry.ownerTeacherId.trim()
+    : (state.currentTeacher?.id || "");
   const tablets = Array.isArray(entry?.tablets)
     ? entry.tablets
         .map((tablet) => normalizeTabletEntry(tablet))
@@ -591,6 +596,14 @@ function normalizeSetEntry(entry) {
     category,
     status,
     editable: Boolean(entry?.editable),
+    deletable: entry?.deletable === undefined
+      ? Boolean(entry?.editable && ownerTeacherId === state.currentTeacher?.id)
+      : Boolean(entry.deletable),
+    ownerTeacherId,
+    ownerDisplayName: typeof entry?.ownerDisplayName === "string" && entry.ownerDisplayName.trim()
+      ? entry.ownerDisplayName.trim()
+      : ownerTeacherId,
+    managedByAdmin: Boolean(entry?.managedByAdmin),
     cardCount: Number.isFinite(entry?.cardCount) ? Math.max(0, Math.trunc(entry.cardCount)) : 0,
     updatedAt: typeof entry?.updatedAt === "string" ? entry.updatedAt.trim() : "",
     tablets,
@@ -678,20 +691,87 @@ function renderSetList() {
   }
 
   elements.emptyState.hidden = true;
-  const drafts = state.sets.filter((setEntry) => setEntry.status === "draft");
-  const publishedSets = state.sets.filter((setEntry) => setEntry.status !== "draft");
-  const publishedCopy = `${publishedSets.length} Set${publishedSets.length === 1 ? "" : "s"}`;
-  const draftCopy = drafts.length === 1 ? "1 Entwurf" : `${drafts.length} Entwürfe`;
-  elements.setsMeta.textContent = drafts.length ? `${publishedCopy} · ${draftCopy}` : publishedCopy;
-
-  if (drafts.length > 0) {
-    elements.setList.append(createSetGroup(drafts, `Entwürfe (${drafts.length})`));
-    if (publishedSets.length > 0) {
-      elements.setList.append(createSetGroup(publishedSets, "Veröffentlichte Sets"));
-    }
-    return;
+  const ownSets = state.sets.filter((setEntry) => setEntry.ownerTeacherId === state.currentTeacher?.id);
+  const otherSets = state.sets.filter((setEntry) => setEntry.ownerTeacherId !== state.currentTeacher?.id);
+  if (state.currentTeacher?.role === "admin") {
+    elements.setsMeta.textContent = `${ownSets.length} eigene · ${otherSets.length} von anderen`;
+  } else {
+    elements.setsMeta.textContent = formatSetCount(ownSets.length);
   }
-  elements.setList.append(createSetGroup(publishedSets));
+
+  appendSetCollection(elements.setList, ownSets);
+  if (state.currentTeacher?.role === "admin" && otherSets.length > 0) {
+    const managedSection = document.createElement("section");
+    managedSection.className = "teacher-managed-sets";
+    const heading = document.createElement("h3");
+    heading.className = "teacher-managed-sets__title";
+    heading.textContent = "Sets anderer Lehrkräfte";
+    managedSection.append(heading);
+
+    const groups = new Map();
+    for (const setEntry of otherSets) {
+      const owner = setEntry.ownerTeacherId;
+      if (!groups.has(owner)) groups.set(owner, []);
+      groups.get(owner).push(setEntry);
+    }
+    for (const [ownerTeacherId, sets] of groups) {
+      managedSection.append(createManagedOwnerGroup(ownerTeacherId, sets));
+    }
+    elements.setList.append(managedSection);
+  }
+}
+
+function formatSetCount(count) {
+  return `${count} Set${count === 1 ? "" : "s"}`;
+}
+
+function appendSetCollection(container, sets) {
+  const drafts = sets.filter((setEntry) => setEntry.status === "draft");
+  const publishedSets = sets.filter((setEntry) => setEntry.status !== "draft");
+  if (drafts.length > 0) {
+    container.append(createSetGroup(drafts, `Entwürfe (${drafts.length})`));
+  }
+  if (publishedSets.length > 0) {
+    container.append(createSetGroup(publishedSets, drafts.length ? "Veröffentlichte Sets" : ""));
+  }
+}
+
+function createManagedOwnerGroup(ownerTeacherId, sets) {
+  const details = document.createElement("details");
+  details.className = "teacher-managed-owner";
+  details.dataset.ownerTeacherId = ownerTeacherId;
+  details.open = readOpenAdminSetGroups().includes(ownerTeacherId);
+
+  const summary = document.createElement("summary");
+  summary.className = "teacher-managed-owner__summary";
+  const name = document.createElement("strong");
+  name.textContent = sets[0]?.ownerDisplayName || ownerTeacherId;
+  const count = document.createElement("span");
+  count.textContent = formatSetCount(sets.length);
+  summary.append(name, count);
+
+  const content = document.createElement("div");
+  content.className = "teacher-managed-owner__content";
+  appendSetCollection(content, sets);
+  details.append(summary, content);
+  details.addEventListener("toggle", () => storeOpenAdminSetGroup(ownerTeacherId, details.open));
+  return details;
+}
+
+function readOpenAdminSetGroups() {
+  try {
+    const value = JSON.parse(window.localStorage.getItem(ADMIN_SET_GROUP_STORAGE_KEY) || "[]");
+    return Array.isArray(value) ? value.filter((entry) => typeof entry === "string") : [];
+  } catch (_error) {
+    return [];
+  }
+}
+
+function storeOpenAdminSetGroup(ownerTeacherId, isOpen) {
+  const owners = new Set(readOpenAdminSetGroups());
+  if (isOpen) owners.add(ownerTeacherId);
+  else owners.delete(ownerTeacherId);
+  window.localStorage.setItem(ADMIN_SET_GROUP_STORAGE_KEY, JSON.stringify([...owners]));
 }
 
 function createSetGroup(sets, titleText = "") {
@@ -846,7 +926,7 @@ function createSetRow(setEntry) {
     actions.append(shareAction);
   }
 
-  if (setEntry.editable) {
+  if (setEntry.deletable) {
     const deleteAction = document.createElement("button");
     deleteAction.className = "teacher-set-row__delete";
     deleteAction.type = "button";
@@ -1275,7 +1355,9 @@ function showTeacherShell() {
   elements.authFeedback.textContent = "";
   const displayName = state.currentTeacher?.displayName || "Lehrkraft";
   elements.profileName.textContent = displayName;
-  elements.accountStatus.setAttribute("aria-label", `Angemeldet als ${displayName}`);
+  const isAdmin = state.currentTeacher?.role === "admin";
+  elements.profileRole.hidden = !isAdmin;
+  elements.accountStatus.setAttribute("aria-label", `Angemeldet als ${displayName}${isAdmin ? ", Admin" : ""}`);
   closeTeacherSettingsMenu();
   closeTabletActionMenus();
 }

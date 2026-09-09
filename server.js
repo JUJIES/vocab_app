@@ -212,16 +212,26 @@ app.get("/api/sets", async (request, response) => {
 
   try {
     const store = await readTabletStore();
-    const sets = await setService.listOwnedSets(sessionResult.teacherId);
+    const [teacher, accounts] = await Promise.all([
+      teacherService.getTeacher(sessionResult.teacherId),
+      teacherService.listPublicAccounts(),
+    ]);
+    const isAdmin = teacher?.role === "admin";
+    const sets = isAdmin
+      ? await setService.listManageableSets()
+      : await setService.listOwnedSets(sessionResult.teacherId);
+    const accountNames = new Map(accounts.map((account) => [account.id, account.displayName]));
 
     response.json({
       sets: sets.map((setEntry) => ({
         ...setEntry,
+        ownerDisplayName: accountNames.get(setEntry.ownerTeacherId) || setEntry.ownerTeacherId,
+        managedByAdmin: isAdmin && setEntry.ownerTeacherId !== sessionResult.teacherId,
+        editable: setEntry.ownerTeacherId === sessionResult.teacherId || isAdmin,
+        deletable: setEntry.ownerTeacherId === sessionResult.teacherId,
         tablets: getTabletsForSet(store, setEntry?.path),
       })),
-      teacher: {
-        id: sessionResult.teacherId,
-      },
+      teacher,
       importConfigured: importService.isConfigured(),
       visualConfigured: visualService.isConfigured(),
     });
@@ -241,7 +251,10 @@ app.get("/api/teacher/sets/:setId", async (request, response) => {
   }
 
   try {
-    const setEntry = await setService.getOwnedSet(sessionResult.teacherId, request.params.setId);
+    const access = await resolveManagedSetAccess(sessionResult, request.params.setId);
+    const setEntry = access
+      ? await setService.getOwnedSet(access.ownerTeacherId, request.params.setId)
+      : null;
     if (!setEntry) {
       response.status(404).json({ error: "Set nicht gefunden." });
       return;
@@ -259,7 +272,12 @@ app.get("/api/teacher/visual-jobs", async (request, response) => {
     return;
   }
   try {
-    response.json({ jobs: await visualService.listJobs(sessionResult.teacherId) });
+    const teacher = await teacherService.getTeacher(sessionResult.teacherId);
+    response.json({
+      jobs: await visualService.listJobs(sessionResult.teacherId, {
+        allOwners: teacher?.role === "admin",
+      }),
+    });
   } catch (error) {
     handleApiError(response, error, "Bildstatus konnte nicht geladen werden.");
   }
@@ -272,9 +290,14 @@ app.get("/api/teacher/sets/:setId/visual-assets", async (request, response) => {
     return;
   }
   try {
+    const access = await resolveManagedSetAccess(sessionResult, request.params.setId);
+    if (!access) {
+      response.status(404).json({ error: "Set nicht gefunden." });
+      return;
+    }
     const [assets, jobs] = await Promise.all([
-      visualService.listAssets(sessionResult.teacherId, request.params.setId),
-      visualService.listJobs(sessionResult.teacherId, { setId: request.params.setId }),
+      visualService.listAssets(access.ownerTeacherId, request.params.setId),
+      visualService.listJobs(access.ownerTeacherId, { setId: request.params.setId }),
     ]);
     response.json({ assets, jobs });
   } catch (error) {
@@ -289,7 +312,8 @@ app.post("/api/teacher/sets/:setId/visual-jobs", async (request, response) => {
     return;
   }
   try {
-    const job = await visualService.startMissingVisuals(sessionResult.teacherId, request.params.setId);
+    const access = await requireManagedSetAccess(sessionResult, request.params.setId);
+    const job = await visualService.startMissingVisuals(access.ownerTeacherId, request.params.setId);
     response.status(202).json({ success: true, job });
   } catch (error) {
     handleApiError(response, error, "Bilderstellung konnte nicht gestartet werden.");
@@ -303,8 +327,9 @@ app.post("/api/teacher/sets/:setId/visual-regenerations", async (request, respon
     return;
   }
   try {
+    const access = await requireManagedSetAccess(sessionResult, request.params.setId);
     const job = await visualService.startAllVisualRegeneration(
-      sessionResult.teacherId,
+      access.ownerTeacherId,
       request.params.setId,
     );
     response.status(202).json({ success: true, job });
@@ -320,8 +345,9 @@ app.post("/api/teacher/sets/:setId/cards/:cardId/visual-regenerations", async (r
     return;
   }
   try {
+    const access = await requireManagedSetAccess(sessionResult, request.params.setId);
     const job = await visualService.startCardRegeneration(
-      sessionResult.teacherId,
+      access.ownerTeacherId,
       request.params.setId,
       request.params.cardId,
       request.body?.instruction,
@@ -339,8 +365,9 @@ app.put("/api/teacher/sets/:setId/cards/:cardId/visual", async (request, respons
     return;
   }
   try {
+    const access = await requireManagedSetAccess(sessionResult, request.params.setId);
     const result = await visualService.selectAsset(
-      sessionResult.teacherId,
+      access.ownerTeacherId,
       request.params.setId,
       request.params.cardId,
       request.body?.assetId,
@@ -389,7 +416,8 @@ app.put("/api/teacher/set-drafts/:setId", async (request, response) => {
   }
 
   try {
-    const setEntry = await setService.updateDraft(sessionResult.teacherId, request.params.setId, request.body);
+    const access = await requireManagedSetAccess(sessionResult, request.params.setId);
+    const setEntry = await setService.updateDraft(access.ownerTeacherId, request.params.setId, request.body);
     response.json({ success: true, set: setEntry });
   } catch (error) {
     handleApiError(response, error, "Entwurf konnte nicht gespeichert werden.");
@@ -404,7 +432,8 @@ app.put("/api/teacher/sets/:setId", async (request, response) => {
   }
 
   try {
-    const setEntry = await setService.updateSet(sessionResult.teacherId, request.params.setId, request.body);
+    const access = await requireManagedSetAccess(sessionResult, request.params.setId);
+    const setEntry = await setService.updateSet(access.ownerTeacherId, request.params.setId, request.body);
     response.json({ success: true, set: setEntry });
   } catch (error) {
     handleApiError(response, error, "Set konnte nicht gespeichert werden.");
@@ -2174,6 +2203,35 @@ function persistTabletSessions() {
 
 function requireTeacherSession(request) {
   return teacherService.requireSession(getTeacherSessionToken(request));
+}
+
+async function resolveManagedSetAccess(sessionResult, setId) {
+  const [teacher, ownerTeacherId] = await Promise.all([
+    teacherService.getTeacher(sessionResult.teacherId),
+    setService.getSetOwnerId(setId),
+  ]);
+  if (!teacher || !ownerTeacherId) {
+    return null;
+  }
+  if (ownerTeacherId !== teacher.id && teacher.role !== "admin") {
+    return null;
+  }
+  return {
+    actorTeacherId: teacher.id,
+    ownerTeacherId,
+    isAdmin: teacher.role === "admin",
+  };
+}
+
+async function requireManagedSetAccess(sessionResult, setId) {
+  const access = await resolveManagedSetAccess(sessionResult, setId);
+  if (access) {
+    return access;
+  }
+  const error = new Error("Set nicht gefunden.");
+  error.status = 404;
+  error.code = "SET_NOT_FOUND";
+  throw error;
 }
 
 function requireTabletOrTeacherSession(request, tabletId) {

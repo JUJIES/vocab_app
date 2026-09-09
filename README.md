@@ -10,7 +10,7 @@ Einsatzbereit sind:
 - einmalige Tablet-Kopplung mit Geräte-PIN und dauerhafte, widerrufbare Sitzung
 - sechs vorbereitete Lehrkraftkonten: Julius, Jessi S., Jessi B., Jörg, Aksana und Matti
 - direkt nutzbare Lehrkraftkonten mit einmaligem Startpasswort und eigenem Passwortwechsel im Zahnrad-Menü
-- ausschließlich private Sets pro Lehrkraft mit Erstellen, Bearbeiten, Löschen und stabilem Set-Code; es gibt im MVP keine Vorlagen oder zwischen Lehrkräften geteilten Bibliotheken
+- private Sets pro Lehrkraft mit Erstellen, Bearbeiten, Löschen und stabilem Set-Code; Julius hat als Admin zusätzlich eine getrennte, einklappbare Sicht auf die Sets anderer Lehrkräfte und darf sie prüfen, bearbeiten sowie ihre Bilder verwalten, ohne Eigentümerschaft oder Löschrecht zu übernehmen
 - automatisch gespeicherte Set-Entwürfe: erster sinnvoller Inhalt und fertige Importentwürfe werden sofort gesichert, bleiben nach einem Reload unter `Entwürfe (n)` wiederauffindbar und werden erst beim Veröffentlichen per Code oder QR für Tablets erreichbar
 - Schnellimport aus klaren Textlisten sowie KI-Entwürfe aus Freitext, TXT, MD, CSV, Bildern, PDF, DOCX und PPTX; beim automatischen Erstentwurf schlägt die KI auch Titel, Fach, Beschreibung, Sprachen und Seitenbezeichnungen vor, eine optionale Importnotiz grenzt Auswahl, Umfang und Abfragerichtung ein
 - KI-Lernbilder für veröffentlichte Sets: sechs Motive pro Sheet, sichtbarer Hintergrundfortschritt, kompakte Vorschau im Karteneditor, einzelne Neugenerierung mit erhaltener Variantenhistorie und didaktisch gestufte Anzeige als Feedback nach Aufdecken beziehungsweise Antwort; `Testen` bleibt bildfrei
@@ -24,7 +24,7 @@ Bewusst vertagt sind persönliche Schülerkonten, Dino-Lernpässe, Schulen/Grupp
 ## Zentrale Produktlogik
 
 1. Das Tablet wählt einmal seinen bekannten Gerätenamen und setzt einen PIN. Browser und Server halten eine widerrufbare Gerätesitzung.
-2. Eine Lehrkraft besitzt ihre eigenen Sets. Andere Lehrkraftkonten sehen diese Sets im Editor nicht.
+2. Eine Lehrkraft besitzt ihre eigenen Sets. Normale Lehrkraftkonten sehen fremde Sets nicht. Admins sehen sie nach Eigentümer getrennt und dürfen sie bearbeiten sowie Bilder verwalten; Eigentümerschaft und das Löschen fremder Sets bleiben ausgeschlossen.
 3. Ein veröffentlichtes Set erhält genau einen stabilen Pfad und Code. Bearbeitungen erhöhen die Revision, ersetzen aber weder Pfad noch Code.
 4. Ein Code fügt nur den stabilen Set-Pfad zum Tablet hinzu. Beim Öffnen kommt die aktuelle Revision direkt vom Server. Während eines laufenden `Üben`-Durchgangs werden ausschließlich neu fertiggestellte Bilder anhand stabiler Karten-IDs ergänzt; Reihenfolge, Position, Kartenseite und Hinweise bleiben erhalten. Inhaltliche Kartenänderungen greifen erst beim nächsten Start.
 5. Lernstände bleiben am Tablet. Unveränderte Karten behalten bei einer Set-Bearbeitung ihre Karten-ID; nur inhaltlich geänderte Karten erhalten eine neue ID.
@@ -45,7 +45,7 @@ npm run provision:teachers -- --data-dir=/absoluter/pfad/zur/runtime/data
 DATA_DIR=/absoluter/pfad/zur/runtime/data OPENAI_API_KEY=... npm start
 ```
 
-Der Provisionierungsschritt gibt einmalig zufällige Startpasswörter für Konten ohne Passwort aus. Bereits eingerichtete Konten bleiben unverändert. Die Startpasswörter werden sicher persönlich weitergegeben; nach der ersten Anmeldung führt Lerndeck direkt zum Passwortwechsel im Zahnrad-Menü. `--reset-passwords` setzt bewusst auch bestehende Passwörter zurück und gehört nicht in den normalen Ablauf. Passwörter und API-Key gehören weder ins Repository noch in Screenshots oder Tickets.
+Der Provisionierungsschritt gibt einmalig zufällige Startpasswörter für Konten ohne Passwort aus und gleicht Rollen aus `data/teachers.seed.json` ab. Bereits eingerichtete Passwörter und Sitzungen bleiben bei einer Rollenänderung unverändert. Die Startpasswörter werden sicher persönlich weitergegeben; nach der ersten Anmeldung führt Lerndeck direkt zum Passwortwechsel im Zahnrad-Menü. `--reset-passwords` setzt bewusst auch bestehende Passwörter zurück und gehört nicht in den normalen Ablauf. Passwörter und API-Key gehören weder ins Repository noch in Screenshots oder Tickets.
 
 Ein einzelnes vergessenes Lehrkraftpasswort wird gezielt zurückgesetzt, ohne andere Konten zu verändern: `npm run provision:teachers -- --data-dir=/absoluter/pfad/zur/runtime/data --reset-teacher=julius`. Dabei werden bestehende Sitzungen dieses Kontos widerrufen und ein neues einmaliges Startpasswort ausgegeben.
 
@@ -58,8 +58,8 @@ Wichtige Umgebungsvariablen:
 - `DATA_DIR`: persistenter Runtime-Ordner, im Betrieb zwingend außerhalb des Releases
 - `OPENAI_API_KEY`: serverseitiger Key für KI-Import und Bildgenerierung; ohne ihn funktionieren manuelle Sets und klare Textlisten weiter
 - `OPENAI_IMPORT_MODEL`: optional, Standard `gpt-5.6-terra`
-- `OPENAI_IMAGE_GENERATION_MODEL`: optional, Standard `gpt-image-2.5-flare-2026-09-08` für neue Bilder und 6er-Sheets
-- `OPENAI_IMAGE_EDIT_MODEL`: optional, Standard `gpt-image-2.5-sunburst-2026-09-08` für gezielte Korrekturen vorhandener Varianten
+- `OPENAI_IMAGE_GENERATION_MODEL`: optional, vorerst Standard `gpt-image-2` für neue Bilder und 6er-Sheets
+- `OPENAI_IMAGE_EDIT_MODEL`: optional, vorerst Standard `gpt-image-2` für gezielte Korrekturen vorhandener Varianten; die getrennte Konfiguration erlaubt später einen geprüften Modellwechsel
 - `PUBLIC_BASE_URL`: öffentliche HTTPS-Basis für erzeugte QR-Links
 - `PORT` und `HOST`: Standard `3000` und `0.0.0.0`
 

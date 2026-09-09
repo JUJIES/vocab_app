@@ -452,7 +452,7 @@ test("sheet jobs persist reusable assets, attach them, regenerate one and retain
   assert.equal(firstSheetAsset.sheetNumber, 1);
   assert.equal(firstSheetAsset.sheetIndex, 0);
   assert.equal(firstSheetAsset.normalizationVersion, "sheet-adaptive-grid-v2");
-  assert.equal(firstSheetAsset.generation.model, "gpt-image-2.5-flare-2026-09-08");
+  assert.equal(firstSheetAsset.generation.model, "gpt-image-2");
   assert.equal(firstSheetAsset.generation.operation, "generate");
   assert.equal(firstJob.generationSummary.requestCount, 2);
   assert.equal(firstJob.generationSummary.usage.outputTokens, 2_000);
@@ -484,17 +484,17 @@ test("sheet jobs persist reusable assets, attach them, regenerate one and retain
   assert.equal(history.length, 3);
   assert.equal(history[0].instruction, "Mit einem gelben Ball im Vordergrund");
   assert.equal(history[0].visualBrief.intendedMeaning, "Exact meaning of term 1");
-  assert.equal(history[0].generation.model, "gpt-image-2.5-sunburst-2026-09-08");
+  assert.equal(history[0].generation.model, "gpt-image-2");
   assert.equal(history[0].generation.operation, "edit");
   assert.match(generatedPrompts.at(-1), /gelben Ball/);
   assert.deepEqual(generatedSizes, ["1536x1024", "1536x1024", "1536x1024", "1536x1024", "1024x1024"]);
   assert.deepEqual(generatedQualities, ["medium", "medium", "medium", "medium", "medium"]);
   assert.deepEqual(imageOperations, [
-    { operation: "generate", model: "gpt-image-2.5-flare-2026-09-08" },
-    { operation: "generate", model: "gpt-image-2.5-flare-2026-09-08" },
-    { operation: "generate", model: "gpt-image-2.5-flare-2026-09-08" },
-    { operation: "generate", model: "gpt-image-2.5-flare-2026-09-08" },
-    { operation: "edit", model: "gpt-image-2.5-sunburst-2026-09-08" },
+    { operation: "generate", model: "gpt-image-2" },
+    { operation: "generate", model: "gpt-image-2" },
+    { operation: "generate", model: "gpt-image-2" },
+    { operation: "generate", model: "gpt-image-2" },
+    { operation: "edit", model: "gpt-image-2" },
   ]);
   assert.equal(planningPrompts.length, 5);
 

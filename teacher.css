@@ -520,6 +520,76 @@ body.has-modal-open {
   text-transform: uppercase;
 }
 
+.teacher-managed-sets {
+  display: grid;
+  gap: 0.85rem;
+  padding-top: 0.25rem;
+}
+
+.teacher-managed-sets__title {
+  margin: 0;
+  color: var(--heading-text);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.teacher-managed-owner {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 1.2rem;
+  background: rgba(25, 34, 48, 0.68);
+}
+
+.teacher-managed-owner__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  color: var(--heading-text);
+  cursor: pointer;
+  list-style: none;
+}
+
+.teacher-managed-owner__summary::-webkit-details-marker {
+  display: none;
+}
+
+.teacher-managed-owner__summary::after {
+  content: "›";
+  color: var(--text-muted);
+  font-size: 1.35rem;
+  transform: rotate(90deg);
+  transition: transform 180ms ease;
+}
+
+.teacher-managed-owner[open] .teacher-managed-owner__summary::after {
+  transform: rotate(-90deg);
+}
+
+.teacher-managed-owner__summary span {
+  margin-left: auto;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.teacher-managed-owner__content {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0 1rem 1rem;
+}
+
+.teacher-account-status__role {
+  padding: 0.16rem 0.42rem;
+  border-radius: 999px;
+  background: rgba(113, 168, 255, 0.14);
+  color: #bcd5ff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
 .teacher-tablet-list {
   display: grid;
   gap: 0.85rem;

@@ -38,7 +38,8 @@ DATA_DIR=C:\Users\Julius Herrmann\Coding Projects\_runtime\Lerndeck\data
 PUBLIC_BASE_URL=https://lerndeck.jujies.app
 OPENAI_API_KEY=<serverseitiger Key>
 OPENAI_IMPORT_MODEL=gpt-5.6-terra
-OPENAI_IMAGE_MODEL=gpt-image-2
+OPENAI_IMAGE_GENERATION_MODEL=gpt-image-2
+OPENAI_IMAGE_EDIT_MODEL=gpt-image-2
 PORT=6000
 HOST=127.0.0.1
 ```
@@ -102,13 +103,13 @@ Folgende Dateien gehören zur Runtime und nie in einen Release-Cutover:
 
 - `data/tablets.json`: Tablet-Kopplungen, hinzugefügte Set-Pfade und Lernstände
 - `data/tablet-sessions.json`: gehashte Tablet-Sitzungstokens
-- `data/teachers.json`: Lehrkraftkonten, Passwort-Hashes und Status des ersten Passwortwechsels
+- `data/teachers.json`: Lehrkraftkonten, Rollen, Passwort-Hashes und Status des ersten Passwortwechsels
 - `data/teacher-sessions.json`: gehashte Lehrkraft-Sitzungstokens
 - `data/teacher-sets.json`: private Set-Quellen, stabile Codes und Revisionen
 - `data/visual-assets.json` und `data/visual-assets/*.webp`: erzeugte Lernbilder und ihre wiederverwendbare Historie
 - `data/visual-jobs.json`: persistenter Fortschritt und Abschlussstatus der Bildgenerierung
 
-`data/tablets.seed.json` und `data/teachers.seed.json` sind dagegen versionskontrollierte, geheimnisfreie Vorlagen. Bestehende Tablet-Daten werden durch den neuen MVP nicht migriert oder gelöscht. Fehlende neue Lehrkraftdateien werden beim ersten Start aus dem Seed erzeugt.
+`data/tablets.seed.json` und `data/teachers.seed.json` sind dagegen versionskontrollierte, geheimnisfreie Vorlagen. Bestehende Tablet-Daten werden durch den neuen MVP nicht migriert oder gelöscht. Fehlende neue Lehrkraftdateien werden beim ersten Start aus dem Seed erzeugt; der normale Provisionierungslauf gleicht außerdem Rollen ab, ohne Passwörter oder Sitzungen zurückzusetzen.
 
 Beim ersten Start eines Releases mit privater Set-Bibliothek werden die fünf historischen JSON-Sets aus `sets/sets-index.json` einmalig in `data/teacher-sets.json` als Eigentum von Julius übernommen. Die Migration ist idempotent und überschreibt spätere Bearbeitungen nicht. Alte Set-Pfade und Karten-IDs bleiben bestehen, damit auf Tablets bereits hinzugefügte Sets und ihre Lernstände weiter funktionieren. Vor dem Cutover deshalb wie üblich den gesamten Runtime-Ordner sichern und nach dem Start prüfen, dass Julius die Sets unter `Meine Sets` sieht, ein anderes Lehrkraftkonto dagegen nicht.
 

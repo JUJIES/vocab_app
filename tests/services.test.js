@@ -34,7 +34,7 @@ test("teacher start passwords are provisioned once and can be changed", async ()
     const seedPath = path.join(directory, "teachers.seed.json");
     await fs.writeFile(seedPath, JSON.stringify({
       version: 1,
-      teachers: [{ id: "julius", username: "julius", displayName: "Julius" }],
+      teachers: [{ id: "julius", username: "julius", displayName: "Julius", role: "admin" }],
     }));
     const service = new TeacherService({ dataDir: directory, seedPath });
     const [provisioned] = await service.provisionInitialPasswords();
@@ -47,6 +47,7 @@ test("teacher start passwords are provisioned once and can be changed", async ()
       password: provisioned.initialPassword,
     });
     assert.equal(teacher.status, "active");
+    assert.equal(teacher.role, "admin");
     assert.equal(teacher.mustChangePassword, true);
     await assert.rejects(
       () => service.changePassword({
@@ -99,6 +100,32 @@ test("teacher start passwords are provisioned once and can be changed", async ()
   });
 });
 
+test("teacher role metadata is reconciled without resetting an existing password", async () => {
+  await withTempDirectory(async (directory) => {
+    const seedPath = path.join(directory, "teachers.seed.json");
+    await fs.writeFile(seedPath, JSON.stringify({
+      version: 1,
+      teachers: [{ id: "julius", username: "julius", displayName: "Julius" }],
+    }));
+    const service = new TeacherService({ dataDir: directory, seedPath });
+    const [credentials] = await service.provisionInitialPasswords();
+    await service.changePassword({
+      teacherId: "julius",
+      currentPassword: credentials.initialPassword,
+      newPassword: "bleibt-unveraendert",
+    });
+
+    await fs.writeFile(seedPath, JSON.stringify({
+      version: 1,
+      teachers: [{ id: "julius", username: "julius", displayName: "Julius", role: "admin" }],
+    }));
+    assert.deepEqual(await service.provisionInitialPasswords(), []);
+    const teacher = await service.authenticate({ teacherId: "julius", password: "bleibt-unveraendert" });
+    assert.equal(teacher.role, "admin");
+    assert.equal(teacher.mustChangePassword, false);
+  });
+});
+
 test("private sets keep their path and share code while revisions update", async () => {
   await withTempDirectory(async (directory) => {
     const service = new SetService({ dataDir: directory });
@@ -144,6 +171,10 @@ test("teacher sets stay private while public codes remain resolvable", async () 
     });
     assert.equal((await service.listOwnedSets("julius")).length, 1);
     assert.equal((await service.listOwnedSets("jessi-s")).length, 0);
+    const manageableSets = await service.listManageableSets();
+    assert.equal(manageableSets.length, 1);
+    assert.equal(manageableSets[0].ownerTeacherId, "julius");
+    assert.equal(await service.getSetOwnerId(juliusSet.id), "julius");
     assert.equal((await service.resolveShareCode(juliusSet.shareCode)).title, "Privat");
   });
 });

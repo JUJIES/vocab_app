@@ -21,8 +21,8 @@ $ServiceName = 'BeelinkApp-Lerndeck'
 $ServiceConfig = 'C:\ProgramData\Beelink\Services\lerndeck\service-6000.xml'
 $PublicBaseUrl = 'https://lerndeck.jujies.app'
 $ImportModel = 'gpt-5.6-terra'
-$ImageGenerationModel = 'gpt-image-2.5-flare-2026-09-08'
-$ImageEditModel = 'gpt-image-2.5-sunburst-2026-09-08'
+$ImageGenerationModel = 'gpt-image-2'
+$ImageEditModel = 'gpt-image-2'
 
 function Invoke-Native {
   param(
