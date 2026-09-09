@@ -90,6 +90,12 @@ test("PWA control files bypass intermediary caches and service worker updates by
   assert.match(serverSource, /no-store, no-cache, must-revalidate/);
 });
 
+test("published user sets bypass the service worker cache", () => {
+  const serviceWorker = readText("sw.js");
+
+  assert.match(serviceWorker, /url\.pathname\.startsWith\("\/sets\/user\/"\)/);
+});
+
 test("student and teacher dialogs share one accessible motion system", () => {
   const studentHtml = readText("index.html");
   const teacherHtml = readText("teacher.html");

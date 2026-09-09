@@ -17,6 +17,8 @@ const INPUT_DELAY_PRESETS = Object.freeze({
 });
 const TEST_MIN_CARD_COUNT = 5;
 const TEST_DEFAULT_CARD_COUNT = 10;
+const PRACTICE_VISUAL_REFRESH_INTERVAL_MS = 8000;
+const PRACTICE_VISUAL_REFRESH_MAX_ATTEMPTS = 75;
 
 const state = {
   appMode: "home",
@@ -35,6 +37,11 @@ const state = {
   currentSetUrl: "",
   currentSetBaseUrl: "",
   currentSetLanguageLabels: null,
+  currentSetRevision: null,
+  practiceVisualRefreshTimerId: null,
+  practiceVisualRefreshInFlight: false,
+  practiceVisualRefreshAttempts: 0,
+  practiceVisualRefreshRunId: 0,
   subscriptions: [],
   baseCards: [],
   allCards: [],
@@ -674,10 +681,12 @@ async function startFlashcardSet(
   learningModeKey = DEFAULT_LEARNING_MODE_KEY,
   learningDirection = "",
 ) {
+  stopPracticeVisualRefresh();
   state.currentSetPath = setPath;
   state.currentSetUrl = setUrl;
   state.currentSetBaseUrl = new URL("./", setUrl).href;
   state.currentSetLanguageLabels = null;
+  state.currentSetRevision = null;
   state.baseCards = [];
   state.allCards = [];
   state.flashcardSettingsOpen = false;
@@ -699,6 +708,7 @@ async function startFlashcardSet(
     const data = await loadSet(setUrl);
 
     state.currentSetLanguageLabels = resolveSetLanguageLabels(data);
+    state.currentSetRevision = getSetRevision(data);
     if (!parseLearningDirection(learningDirection) && !loadPreferredLearningDirection(setPath)) {
       state.activeLearningDirection = normalizeLearningDirection(data?.set?.defaultDirections?.flashcard);
       persistPreferredLearningDirection(setPath, state.activeLearningDirection);
@@ -713,6 +723,7 @@ async function startFlashcardSet(
     state.allCards = orientLearningCards(state.baseCards, state.activeLearningDirection);
     syncFlashcardSettingsControls();
     startPracticeSession(state.allCards);
+    startPracticeVisualRefresh();
   } catch (error) {
     if (error && (error.message === "TABLET_DECOUPLED" || error.message === "TABLET_AUTH_REQUIRED")) {
       return;
@@ -728,6 +739,127 @@ async function startFlashcardSet(
       secondaryAction: "clear-set",
       secondaryLabel: "Start",
     });
+  }
+}
+
+function getSetRevision(data) {
+  const revision = Number(data?.set?.revision);
+  return Number.isFinite(revision) ? revision : null;
+}
+
+function hasMissingPracticeVisuals(cards = state.baseCards) {
+  return cards.some((card) => !card?.visual?.url);
+}
+
+function hasMatchingPracticeCardStructure(currentCards, refreshedCards) {
+  if (currentCards.length !== refreshedCards.length) {
+    return false;
+  }
+
+  const refreshedIds = new Set(refreshedCards.map((card) => card.id));
+  return currentCards.every((card) => refreshedIds.has(card.id));
+}
+
+function stopPracticeVisualRefresh() {
+  state.practiceVisualRefreshRunId += 1;
+  if (state.practiceVisualRefreshTimerId !== null) {
+    window.clearInterval(state.practiceVisualRefreshTimerId);
+    state.practiceVisualRefreshTimerId = null;
+  }
+  state.practiceVisualRefreshAttempts = 0;
+}
+
+function startPracticeVisualRefresh() {
+  stopPracticeVisualRefresh();
+
+  if (
+    state.appMode !== APP_MODES.FLASHCARD
+    || !state.currentSetUrl
+    || !hasMissingPracticeVisuals()
+  ) {
+    return;
+  }
+
+  state.practiceVisualRefreshTimerId = window.setInterval(() => {
+    void refreshPracticeVisuals();
+  }, PRACTICE_VISUAL_REFRESH_INTERVAL_MS);
+}
+
+async function refreshPracticeVisuals() {
+  if (
+    state.appMode !== APP_MODES.FLASHCARD
+    || !state.currentSetUrl
+    || !hasMissingPracticeVisuals()
+    || state.practiceVisualRefreshInFlight
+    || document.visibilityState === "hidden"
+  ) {
+    return false;
+  }
+
+  if (state.practiceVisualRefreshAttempts >= PRACTICE_VISUAL_REFRESH_MAX_ATTEMPTS) {
+    stopPracticeVisualRefresh();
+    return false;
+  }
+
+  const expectedSetUrl = state.currentSetUrl;
+  const expectedRunId = state.practiceVisualRefreshRunId;
+  state.practiceVisualRefreshAttempts += 1;
+  state.practiceVisualRefreshInFlight = true;
+
+  try {
+    const data = await loadSet(expectedSetUrl);
+
+    if (
+      state.appMode !== APP_MODES.FLASHCARD
+      || state.currentSetUrl !== expectedSetUrl
+      || state.practiceVisualRefreshRunId !== expectedRunId
+    ) {
+      return false;
+    }
+
+    const nextRevision = getSetRevision(data);
+    if (nextRevision !== null && nextRevision === state.currentSetRevision) {
+      return false;
+    }
+
+    const refreshedBaseCards = buildCards(data);
+    if (!hasMatchingPracticeCardStructure(state.baseCards, refreshedBaseCards)) {
+      stopPracticeVisualRefresh();
+      return false;
+    }
+
+    const refreshedById = new Map(refreshedBaseCards.map((card) => [card.id, card]));
+    state.baseCards = state.baseCards.map((card) => {
+      const refreshedCard = refreshedById.get(card.id);
+      return {
+        ...card,
+        visual: refreshedCard.visual,
+        reverse: card.reverse ? {
+          ...card.reverse,
+          visual: refreshedCard.reverse?.visual || refreshedCard.visual,
+        } : card.reverse,
+      };
+    });
+    state.allCards = orientLearningCards(state.baseCards, state.activeLearningDirection);
+
+    const activeCardsById = new Map(state.allCards.map((card) => [card.id, card]));
+    state.cards = state.cards.map((card) => activeCardsById.get(card.id) || card);
+    state.currentCard = state.cards[state.currentIndex] || null;
+    state.currentSetRevision = nextRevision;
+
+    if (state.currentCard) {
+      renderFlashcardVisuals(state.currentCard);
+    }
+
+    if (!hasMissingPracticeVisuals()) {
+      stopPracticeVisualRefresh();
+    }
+    return true;
+  } catch (error) {
+    console.error("Unable to refresh practice visuals:", error);
+    return false;
+  } finally {
+    state.practiceVisualRefreshInFlight = false;
   }
 }
 
@@ -2238,6 +2370,7 @@ function setStudentAppMode(mode) {
   }
 
   if (mode !== APP_MODES.FLASHCARD) {
+    stopPracticeVisualRefresh();
     closeFlashcardSettingsMenu();
   }
 

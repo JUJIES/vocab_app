@@ -14,12 +14,12 @@ test.use({
   deviceScaleFactor: 2,
 });
 
-function buildVisualSet({ withVisual = true } = {}) {
+function buildVisualSet({ withVisual = true, revision = 1 } = {}) {
   return {
     set: {
       id: "student-card-layout-test",
       title: "Society and Sustainability",
-      revision: 1,
+      revision,
       languages: { source: "de", target: "en" },
       labels: { source: "Deutsch", target: "Englisch" },
     },
@@ -52,7 +52,11 @@ async function prepareStudentHome(page, options = {}) {
   await page.route("**/sets/*.json", (route) => route.fulfill({
     status: 200,
     contentType: "application/json",
-    body: JSON.stringify(buildVisualSet(options)),
+    body: JSON.stringify(
+      typeof options.setProvider === "function"
+        ? options.setProvider()
+        : buildVisualSet(options),
+    ),
   }));
 
   await page.goto(new URL("/health", BASE_URL).toString(), { waitUntil: "networkidle" });
@@ -293,6 +297,35 @@ test("practice keeps the front image tile absent and reveals the image on the ba
   await expect(visual.locator("..")).toHaveClass(/has-visual/);
   await expect.poll(() => visual.evaluate((element) => element.naturalWidth)).toBeGreaterThan(0);
   await expect(visual).toHaveAttribute("alt", "Lernbild zu umweltfreundlich");
+});
+
+test("practice adds finished visuals without restarting the current card", async ({ page }) => {
+  let visualsReady = false;
+  await prepareStudentHome(page, {
+    setProvider: () => buildVisualSet({
+      withVisual: visualsReady,
+      revision: visualsReady ? 2 : 1,
+    }),
+  });
+  await openMode(page, "practice");
+
+  const card = page.locator("#flashcard");
+  await expect(page.locator("#front-word")).not.toHaveText("\u00a0");
+  const currentWord = await page.locator("#front-word").textContent();
+  const currentProgress = await page.locator("#progress-label").textContent();
+  await card.click();
+  await expect(card).toHaveClass(/is-flipped/);
+  await expect(page.locator("#back-visual")).toBeHidden();
+
+  visualsReady = true;
+  const refreshed = await page.evaluate(() => refreshPracticeVisuals());
+
+  expect(refreshed).toBeTruthy();
+  await expect(page.locator("#front-word")).toHaveText(currentWord);
+  await expect(page.locator("#progress-label")).toHaveText(currentProgress);
+  await expect(card).toHaveClass(/is-flipped/);
+  await expect(page.locator("#back-visual")).toBeVisible();
+  await expect(page.locator("#back-visual")).toHaveAttribute("alt", `Lernbild zu ${currentWord}`);
 });
 
 test("input reveals the image after the first answer and keeps it during correction", async ({ page }) => {
