@@ -186,8 +186,16 @@ test("test mode ignores punctuation and keeps wrong answers editable until all a
   }
 
   await page.locator("#test-submit").click();
-  await expect(page.locator("#test-feedback-title")).toHaveText("4 richtig · 1 falsch");
+  await expect(page.locator("#test-feedback-title")).toHaveText("4/5 richtig");
+  await expect(page.locator("#test-feedback-detail")).toHaveText("80 % · ungefähr Note 3");
+  await expect(page.locator("#test-feedback-note")).toHaveText("Unverbindliche Orientierung nach IHK-Schlüssel · 1 Antwort noch verbessern.");
   await expect(page.locator(".test-stage__row.is-wrong")).toHaveCount(1);
+  await expect(page.locator('.test-stage__answer-status[data-status="correct"]')).toHaveCount(4);
+  await expect(page.locator('.test-stage__answer-status[data-status="wrong"]')).toHaveCount(1);
+  await expect(page.locator('.test-stage__answer-status[data-status="correct"]').first()).toHaveText("✓");
+  await expect(page.locator('.test-stage__answer-status[data-status="wrong"]')).toHaveText("✕");
+  await expect(page.locator('.test-stage__answer-status[data-status="correct"]').first()).toHaveAttribute("aria-label", "Richtig");
+  await expect(page.locator('.test-stage__answer-status[data-status="wrong"]')).toHaveAttribute("aria-label", "Falsch");
   const correctInputs = page.locator(".test-stage__row.is-correct .test-stage__input");
   await expect(correctInputs).toHaveCount(4);
   await expect(correctInputs.first()).toHaveAttribute("readonly", "");
@@ -199,18 +207,47 @@ test("test mode ignores punctuation and keeps wrong answers editable until all a
   await wrongRow.locator(".test-stage__input").fill(`answer ${wrongNumber}`);
   await page.locator("#test-submit").click();
 
-  await expect(page.locator("#test-feedback-title")).toHaveText("Alles richtig");
+  await expect(page.locator("#test-feedback-title")).toHaveText("4/5 richtig");
+  await expect(page.locator("#test-feedback-detail")).toHaveText("80 % · ungefähr Note 3");
+  await expect(page.locator("#test-feedback-note")).toContainText("Alle Fehler verbessert.");
   await expect(page.locator(".test-stage__row.is-wrong")).toHaveCount(0);
+  await expect(page.locator('.test-stage__answer-status[data-status="correct"]')).toHaveCount(5);
+  await expect(page.locator('.test-stage__answer-status[data-status="wrong"]')).toHaveCount(0);
   await expect(page.locator("#test-submit")).toHaveText("Neuen Test starten");
+
+  for (const viewport of [
+    { width: 1440, height: 900 },
+    { width: 1024, height: 768 },
+  ]) {
+    await page.setViewportSize(viewport);
+    const wideLayout = await page.locator("#test-stage").evaluate((stage) => {
+      const table = stage.querySelector(".test-stage__table-shell").getBoundingClientRect();
+      const feedback = stage.querySelector("#test-feedback").getBoundingClientRect();
+      return {
+        pageFits: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+        tableFits: table.right <= window.innerWidth,
+        feedbackFits: feedback.right <= window.innerWidth,
+        feedbackIsBelowTable: feedback.top >= table.bottom,
+      };
+    });
+    expect(wideLayout).toEqual({
+      pageFits: true,
+      tableFits: true,
+      feedbackFits: true,
+      feedbackIsBelowTable: true,
+    });
+  }
 
   await page.setViewportSize({ width: 390, height: 844 });
   const responsiveLayout = await page.locator("#test-stage").evaluate((stage) => ({
     pageFits: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
     tableFits: stage.querySelector(".test-stage__table-shell").getBoundingClientRect().right <= window.innerWidth,
+    feedbackFits: stage.querySelector("#test-feedback").getBoundingClientRect().right <= window.innerWidth,
     submitFits: stage.querySelector("#test-submit").getBoundingClientRect().right <= window.innerWidth,
   }));
   expect(responsiveLayout.pageFits).toBeTruthy();
   expect(responsiveLayout.tableFits).toBeTruthy();
+  expect(responsiveLayout.feedbackFits).toBeTruthy();
   expect(responsiveLayout.submitFits).toBeTruthy();
 });
 

@@ -10,8 +10,8 @@ test("answer comparison ignores case, repeated whitespace and sentence punctuati
     expected,
   );
   assert.equal(answerRules.normalizeForComparison("I  agree, because …"), "i agree because");
-  assert.equal(answerRules.normalizeForComparison("car-sharing"), "carsharing");
-  assert.equal(answerRules.normalizeForComparison("can't"), "cant");
+  assert.equal(answerRules.normalizeForComparison("car–sharing"), "car-sharing");
+  assert.equal(answerRules.normalizeForComparison("can’t"), "can't");
   assert.notEqual(
     answerRules.normalizeForComparison("now here"),
     answerRules.normalizeForComparison("nowhere"),
@@ -29,7 +29,7 @@ test("answer comparison keeps letters, digits and diacritics meaningful", () => 
   );
 });
 
-test("punctuation variants are correct while a wrong word remains wrong", () => {
+test("sentence punctuation is ignored while word spelling remains exact", () => {
   assert.equal(
     answerRules.evaluate("Authorities Which safety rules apply", [
       "Authorities: “Which safety rules apply?”",
@@ -40,7 +40,9 @@ test("punctuation variants are correct while a wrong word remains wrong", () => 
     answerRules.evaluate("Which security rules apply?", ["Which safety rules apply?"]).status,
     "wrong",
   );
-  assert.equal(answerRules.evaluate("wellknown", ["well-known"]).status, "correct");
+  assert.notEqual(answerRules.evaluate("cant", ["can't"]).status, "correct");
+  assert.notEqual(answerRules.evaluate("wellknown", ["well-known"]).status, "correct");
+  assert.equal(answerRules.evaluate("email", ["e-mail", "email"]).status, "correct");
 });
 
 test("display equivalence hides forms but preserves genuine synonyms", () => {
@@ -54,6 +56,10 @@ test("display equivalence hides forms but preserves genuine synonyms", () => {
   );
   assert.equal(
     answerRules.areEquivalentDisplayForms("motorized vehicle", "a motorized vehicle", { language: "en" }),
+    true,
+  );
+  assert.equal(
+    answerRules.areEquivalentDisplayForms("e-mail", "email", { language: "en" }),
     true,
   );
   assert.equal(

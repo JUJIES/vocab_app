@@ -4740,36 +4740,40 @@ button.student-screen__device-card {
 }
 
 .test-stage__feedback {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.9rem 1.1rem;
-  border: 1px solid rgba(213, 125, 112, 0.2);
+  gap: 0.3rem 1.25rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(210, 169, 108, 0.25);
   border-radius: 1rem;
-  background: rgba(154, 78, 70, 0.12);
-  color: rgba(247, 230, 226, 0.94);
+  background: rgba(210, 169, 108, 0.08);
+  color: rgba(248, 242, 230, 0.96);
 }
 
 .test-stage__feedback[hidden] {
   display: none;
 }
 
-.test-stage__feedback.is-complete {
-  border-color: rgba(126, 190, 142, 0.2);
-  background: rgba(82, 137, 96, 0.12);
-  color: rgba(230, 246, 234, 0.94);
-}
-
 .test-stage__feedback strong {
-  font-size: 1rem;
-  font-weight: 800;
+  font-size: clamp(1.05rem, 1.8vw, 1.22rem);
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
 }
 
 .test-stage__feedback span {
-  color: rgba(222, 229, 241, 0.72);
-  font-size: 0.9rem;
-  font-weight: 650;
+  color: rgba(248, 242, 230, 0.9);
+  font-size: clamp(0.95rem, 1.5vw, 1.08rem);
+  font-weight: 780;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.test-stage__feedback-note {
+  grid-column: 1 / -1;
+  color: rgba(222, 229, 241, 0.67);
+  font-size: 0.76rem;
+  font-weight: 620;
 }
 
 .test-stage__form {
@@ -4837,6 +4841,41 @@ button.student-screen__device-card {
   font-size: 0.94rem;
   font-weight: 680;
   transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.test-stage__answer-control {
+  position: relative;
+}
+
+.test-stage__answer-status {
+  position: absolute;
+  top: 50%;
+  right: 0.72rem;
+  width: 1.55rem;
+  height: 1.55rem;
+  display: grid;
+  place-items: center;
+  transform: translateY(-50%);
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.test-stage__answer-status[data-status="correct"] {
+  background: rgba(86, 148, 102, 0.28);
+  color: rgba(178, 232, 189, 0.98);
+}
+
+.test-stage__answer-status[data-status="wrong"] {
+  background: rgba(166, 65, 56, 0.3);
+  color: rgba(255, 180, 169, 0.98);
+}
+
+.test-stage__answer-control.has-status .test-stage__input {
+  padding-right: 3rem;
 }
 
 .test-stage__input:focus {
@@ -5947,9 +5986,13 @@ button.student-screen__device-card {
 
 
   .test-stage__feedback {
-    align-items: flex-start;
-    flex-direction: column;
+    grid-template-columns: 1fr;
+    align-items: start;
     gap: 0.25rem;
+  }
+
+  .test-stage__feedback span {
+    text-align: left;
   }
 
   .test-stage__table th,

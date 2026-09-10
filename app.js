@@ -437,6 +437,7 @@ const elements = {
   testFeedback: document.getElementById("test-feedback"),
   testFeedbackTitle: document.getElementById("test-feedback-title"),
   testFeedbackDetail: document.getElementById("test-feedback-detail"),
+  testFeedbackNote: document.getElementById("test-feedback-note"),
   testForm: document.getElementById("test-form"),
   testSourceLabel: document.getElementById("test-source-label"),
   testTargetLabel: document.getElementById("test-target-label"),
@@ -1910,6 +1911,14 @@ function getTestEvaluationCounts(session = state.testSession) {
   };
 }
 
+function getInitialTestResult(session = state.testSession) {
+  const { correctCount } = getTestEvaluationCounts(session);
+  return window.LerndeckGradingRules.summarizeResult(
+    Number.isInteger(session.initialCorrectCount) ? session.initialCorrectCount : correctCount,
+    session.cards.length,
+  );
+}
+
 function createTestTableRow(card, index) {
   const evaluation = state.testSession.evaluations[index] || null;
   const row = document.createElement("tr");
@@ -1942,7 +1951,21 @@ function createTestTableRow(card, index) {
   if (evaluation?.status === "wrong") {
     input.setAttribute("aria-invalid", "true");
   }
-  answerCell.append(input);
+  const answerControl = document.createElement("div");
+  answerControl.className = "test-stage__answer-control";
+  answerControl.classList.toggle("has-status", Boolean(evaluation));
+  answerControl.append(input);
+  if (evaluation) {
+    const answerStatus = document.createElement("span");
+    const isCorrect = evaluation.status === "correct";
+    answerStatus.className = "test-stage__answer-status";
+    answerStatus.dataset.status = evaluation.status;
+    answerStatus.setAttribute("role", "img");
+    answerStatus.setAttribute("aria-label", isCorrect ? "Richtig" : "Falsch");
+    answerStatus.textContent = isCorrect ? "✓" : "✕";
+    answerControl.append(answerStatus);
+  }
+  answerCell.append(answerControl);
 
   row.append(numberCell, promptCell, answerCell);
   return row;
@@ -1960,14 +1983,13 @@ function renderTestSession({ focusWrongAnswer = false } = {}) {
 
   const hasEvaluation = session.checkCount > 0;
   const { correctCount, wrongCount } = getTestEvaluationCounts(session);
+  const initialResult = getInitialTestResult(session);
   elements.testFeedback.hidden = !hasEvaluation;
-  elements.testFeedback.classList.toggle("is-complete", session.isComplete);
-  elements.testFeedbackTitle.textContent = session.isComplete
-    ? "Alles richtig"
-    : `${correctCount} richtig · ${wrongCount} falsch`;
-  elements.testFeedbackDetail.textContent = session.isComplete
-    ? `${session.cards.length} von ${session.cards.length} Antworten stimmen.`
-    : "Verbessere die rot markierten Antworten und prüfe erneut.";
+  elements.testFeedbackTitle.textContent = `${initialResult.correctCount}/${initialResult.totalCount} richtig`;
+  elements.testFeedbackDetail.textContent = `${initialResult.percent} % · ungefähr Note ${initialResult.grade}`;
+  elements.testFeedbackNote.textContent = session.isComplete
+    ? "Unverbindliche Orientierung nach IHK-Schlüssel · Alle Fehler verbessert."
+    : `Unverbindliche Orientierung nach IHK-Schlüssel · ${wrongCount} ${wrongCount === 1 ? "Antwort" : "Antworten"} noch verbessern.`;
   elements.testSubmit.textContent = session.isComplete
     ? "Neuen Test starten"
     : hasEvaluation
@@ -2034,7 +2056,7 @@ async function handleTestSubmit(event) {
   renderTestSession({ focusWrongAnswer: !isComplete });
 
   if (isFirstCheck) {
-    const initialPercent = getRoundResultPercent(state.testSession.cards.length, counts.wrongCount);
+    const initialPercent = getInitialTestResult(state.testSession).percent;
     await persistCompletedRoundCount({
       modeKey: "test",
       lastRoundPercent: initialPercent,

@@ -213,7 +213,7 @@ test("commas are optional when checking an answer", async ({ page }) => {
 
   await prepareStudentHome(page, setData);
   await openMode(page, "write");
-  await page.locator("#input-answer-field").fill("I agree, because");
+  await page.locator("#input-answer-field").fill("i AGREE, because");
   await page.locator("#input-answer-form").press("Enter");
   await expect(page.locator("#input-check-button")).toHaveText("Richtig");
 
@@ -234,6 +234,37 @@ test("commas are optional when checking an answer", async ({ page }) => {
   await page.locator("#input-answer-field").fill("In my opinion");
   await page.locator("#input-answer-form").press("Enter");
   await expect(page.locator("#input-check-button")).toHaveText("Richtig");
+});
+
+test("word spelling remains exact even when punctuation is optional", async ({ page }) => {
+  const setData = buildVariantSet();
+  setData.set.languages = { source: "de", target: "en" };
+  setData.set.labels = { source: "Deutsch", target: "Englisch" };
+  setData.cards = [{
+    id: "cant-apostrophe",
+    source: { text: "kann nicht" },
+    target: { text: "can't" },
+    examples: [{ id: "answer", source: "kann nicht", target: "can't" }],
+    hintData: {
+      flashcard: {
+        exampleId: "answer",
+        maskedWord: "_____",
+        firstLetterHint: "c____",
+      },
+    },
+    acceptedAnswers: ["can't"],
+  }];
+
+  await prepareStudentHome(page, setData);
+  await openMode(page, "write");
+  await page.locator("#input-answer-field").fill("cant.");
+  await page.locator("#input-answer-form").press("Enter");
+  await expect(page.locator("#input-feedback-title")).toHaveText("Markierte Antwort verbessern.");
+  await expect(page.locator("#input-check-button")).toHaveText("Korrektur prüfen");
+
+  await page.locator("#input-answer-field").fill("CAN'T!");
+  await page.locator("#input-answer-form").press("Enter");
+  await expect(page.locator("#input-check-button")).toHaveText("Korrigiert");
 });
 
 test("flashcards hide spelling and form variants but keep real synonyms", async ({ page }) => {

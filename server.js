@@ -1405,6 +1405,7 @@ const PUBLIC_ROOT_FILES = new Map([
   ["/styles.css", "styles.css"],
   ["/app.js", "app.js"],
   ["/answer-rules.js", "answer-rules.js"],
+  ["/grading-rules.js", "grading-rules.js"],
   ["/teacher.html", "teacher.html"],
   ["/teacher.css", "teacher.css"],
   ["/teacher.js", "teacher.js"],

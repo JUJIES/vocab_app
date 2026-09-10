@@ -10,17 +10,24 @@
   }
 })(typeof globalThis === "object" ? globalThis : this, () => {
   const ENGLISH_OPTIONAL_LEADING_WORDS = new Set(["a", "an", "the", "to"]);
+  const COMPARISON_TOKEN_PATTERN = /[\p{L}\p{N}]+(?:['’‘ʼ\p{Pd}][\p{L}\p{N}]+)*/gu;
 
   function normalizeForComparison(value) {
-    return typeof value === "string"
-      ? value
-          .normalize("NFKC")
-          .trim()
-          .toLocaleLowerCase()
-          .replace(/(?<=[\p{L}\p{N}])['’\p{Pd}](?=[\p{L}\p{N}])/gu, "")
-          .replace(/[\p{P}\p{Z}\s]+/gu, " ")
-          .trim()
-      : "";
+    if (typeof value !== "string") {
+      return "";
+    }
+
+    const tokens = value
+      .normalize("NFKC")
+      .trim()
+      .toLocaleLowerCase()
+      .match(COMPARISON_TOKEN_PATTERN) || [];
+
+    return tokens
+      .map((token) => token
+        .replace(/[’‘ʼ]/gu, "'")
+        .replace(/\p{Pd}/gu, "-"))
+      .join(" ");
   }
 
   function tokenize(value) {

@@ -32,16 +32,17 @@
       }
     </script>
     <link rel="stylesheet" href="./pwa-splash.css?v=2026-08-30-pwa-splash-v1" />
-    <link rel="stylesheet" href="./styles.css?v=2026-09-08-practice-free-swipe-v1" />
+    <link rel="stylesheet" href="./styles.css?v=2026-09-10-test-result-v1" />
     <link rel="stylesheet" href="./ui-motion.css?v=2026-08-30-ui-motion-v1" />
     <script src="./pwa.js?v=2026-08-30-pwa-splash-v3" defer></script>
     <script src="./ui-motion.js?v=2026-08-30-ui-motion-v1" defer></script>
     <script src="./tafelraum-embed.js?v=2026-09-08-content-zoom-layout-v2" defer></script>
-    <script src="./answer-rules.js?v=2026-09-08-answer-rules-v1" defer></script>
+    <script src="./answer-rules.js?v=2026-09-08-answer-rules-v2" defer></script>
+    <script src="./grading-rules.js?v=2026-09-10-ihk-v1" defer></script>
     <script src="./irregular-verbs.js?v=2026-09-06-optional-to-v2" defer></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js" defer></script>
-    <script src="./app.js?v=2026-09-09-live-visual-refresh-v1" defer></script>
+    <script src="./app.js?v=2026-09-10-test-result-v1" defer></script>
   </head>
   <body>
     <div class="pwa-splash" role="status" aria-label="Lerndeck wird geladen">
@@ -669,11 +670,6 @@
         </header>
 
         <main class="test-stage__shell">
-          <section id="test-feedback" class="test-stage__feedback" aria-live="polite" hidden>
-            <strong id="test-feedback-title"></strong>
-            <span id="test-feedback-detail"></span>
-          </section>
-
           <form id="test-form" class="test-stage__form">
             <div class="test-stage__table-shell">
               <table class="test-stage__table">
@@ -687,6 +683,12 @@
                 <tbody id="test-table-body"></tbody>
               </table>
             </div>
+
+            <section id="test-feedback" class="test-stage__feedback" aria-live="polite" hidden>
+              <strong id="test-feedback-title"></strong>
+              <span id="test-feedback-detail"></span>
+              <small id="test-feedback-note" class="test-stage__feedback-note"></small>
+            </section>
 
             <div class="test-stage__actions">
               <button id="test-submit" class="test-stage__submit" type="submit">Antworten prüfen</button>
