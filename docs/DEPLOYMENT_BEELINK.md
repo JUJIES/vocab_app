@@ -15,6 +15,8 @@ C:\Users\Julius Herrmann\Coding Projects\_runtime\Lerndeck
 
 Produktiver App-Port: `127.0.0.1:6000`
 
+Isolierter Lerndeck-Prüfport: `127.0.0.1:6101`. Port `6100` gehört inzwischen dem separaten Schulplan-Dienst und darf für Lerndeck-Preflights nicht mehr verwendet werden.
+
 Healthcheck: `http://127.0.0.1:6000/health`
 
 Öffentlicher Zugang: benannter Cloudflare-Tunnel mit eigenem HTTPS-Hostnamen
@@ -55,13 +57,13 @@ pbpaste | ssh beelink powershell.exe -NoProfile -NonInteractive -ExecutionPolicy
 Nach Review, Commit und Push bereitet der folgende Aufruf einen unveränderlichen Release vor, installiert ausschließlich Produktionsabhängigkeiten, führt Checks, Tests, Audit und einen isolierten Healthcheck auf Port `6100` aus, ändert aber noch keinen laufenden Dienst:
 
 ```powershell
-ssh beelink powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File C:/ProgramData/Beelink/Services/lerndeck/deploy-beelink.ps1 -Commit <vollständige-commit-id>
+ssh beelink powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File C:/ProgramData/Beelink/Services/lerndeck/deploy-beelink.ps1 -Commit <vollständige-commit-id> -CandidatePort 6101
 ```
 
 Erst der erneute Aufruf mit `-Activate` sichert die Runtime, provisioniert fehlende Lehrkraftkonten, stellt den Dienst auf den geprüften Release um und rollt bei einem fehlgeschlagenen Healthcheck automatisch auf den vorherigen Releasepfad zurück:
 
 ```powershell
-ssh beelink powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File C:/ProgramData/Beelink/Services/lerndeck/deploy-beelink.ps1 -Commit <vollständige-commit-id> -Activate
+ssh beelink powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File C:/ProgramData/Beelink/Services/lerndeck/deploy-beelink.ps1 -Commit <vollständige-commit-id> -CandidatePort 6101 -Activate
 ```
 
 Im neuen Release mit dem produktiven `DATA_DIR` einmal ausführen:
