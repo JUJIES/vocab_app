@@ -2239,6 +2239,8 @@ body.has-modal-open {
 .print-panel {
   position: relative;
   z-index: 1;
+  box-sizing: border-box;
+  min-width: 0;
   width: min(100%, 74rem);
   max-height: calc(100vh - 2.4rem);
   padding: clamp(1.2rem, 2.5vw, 1.8rem);
@@ -2255,28 +2257,38 @@ body.has-modal-open {
 }
 
 .print-panel__header {
+  min-width: 0;
   padding-right: 3rem;
 }
 
 .print-panel__header > div {
   min-width: 0;
+  flex: 1 1 0;
 }
 
-.print-panel:has(#print-mode-view:not([hidden])) {
-  width: min(100%, 42rem);
-  grid-template-rows: auto auto;
-}
-
-.print-panel:has(#print-mode-view:not([hidden])) #print-title {
+.print-panel #print-title {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: clamp(1.7rem, 3.3vw, 2.45rem);
+  line-height: 1;
+  letter-spacing: -0.045em;
+}
+
+.print-panel:has(#print-mode-view:not([hidden])) {
+  width: min(calc(100vw - 2.4rem), 38rem);
+  grid-template-rows: auto auto;
 }
 
 .print-mode-view {
   display: grid;
-  grid-template-columns: repeat(2, minmax(10rem, 15rem));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(100%, 30rem);
   justify-content: center;
+  justify-self: center;
   gap: 0.9rem;
 }
 
@@ -2665,12 +2677,41 @@ body.has-modal-open {
 .print-paper__rows { margin-top: 15px; }
 
 .print-paper__row {
+  position: relative;
   min-height: 38px;
   display: grid;
-  grid-template-columns: 30px 172px minmax(0, 1fr) 60px;
+  grid-template-columns: 30px 172px minmax(0, 1fr) 48px;
   align-items: start;
   gap: 0;
 }
+
+.print-paper__handle {
+  position: absolute;
+  top: 3px;
+  left: -22px;
+  width: 20px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: #f4f6f9;
+  color: #68788f;
+  font: 17px/1 Arial, sans-serif;
+  letter-spacing: -0.14em;
+  cursor: grab;
+  touch-action: none;
+}
+
+.print-paper__handle:hover,
+.print-paper__handle:focus-visible {
+  background: #e6ecf5;
+  color: #343f4f;
+  outline: none;
+}
+
+.print-paper__handle:active { cursor: grabbing; }
+.print-paper__row.is-dragging { opacity: 0.55; }
+.print-paper__row.is-drop-target { background: #edf3fb; }
 
 .print-paper__number {
   padding-top: 8px;
@@ -2691,14 +2732,13 @@ body.has-modal-open {
 
 .print-paper__row-actions {
   padding-left: 3px;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  display: flex;
   gap: 1px;
 }
 
 .print-paper__row-actions button {
-  width: 25px;
-  height: 19px;
+  width: 21px;
+  height: 26px;
   padding: 0;
   border: 0;
   border-radius: 3px;
@@ -2797,8 +2837,13 @@ body.has-modal-open {
   }
 
   .print-panel {
+    width: min(calc(100vw - 1rem), 74rem);
     max-height: calc(100vh - 1rem);
     padding: 1rem;
+  }
+
+  .print-panel:has(#print-mode-view:not([hidden])) {
+    width: min(calc(100vw - 1rem), 38rem);
   }
 
   .print-mode-view {

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Im editierbaren Vokabeltest sitzt der Verschiebegriff direkt vor der Aufgabennummer. Aufgaben lassen sich per Maus oder Touch ziehen und für die Tastatur mit Pfeil hoch/runter verschieben; die bisherigen zwei Pfeilknöpfe neben der Antwort entfallen, wodurch die Schreiblinie mehr Platz erhält.
+- Das Druckauswahl-Modal bleibt als kompakte, mittige Zweierauswahl sauber ausbalanciert: Der Settitel ist bewusst kleiner, nutzt seine verfügbare Breite und endet bei langen Namen mit Auslassungspunkten statt abgeschnitten zu werden.
 - Der Vokabeltest wird jetzt auf einer bearbeitbaren HTML-Blattvorschau zusammengestellt: Links bleiben alle unveränderten Set-Vokabeln sichtbar, ein Klick fügt eine temporäre Kopie am Blattende hinzu oder entfernt sie wieder. Klasse, Titel, Arbeitsauftrag und einzelne Begriffe lassen sich direkt auf dem Blatt ändern; ein X entfernt Aufgaben, die kleinen Blattaktionen ordnen oder tauschen die Anzeigeseite. Der PDF-Export nutzt genau diesen validierten Entwurf, ohne das Set oder einen Test zu speichern. Die Vokabelliste bleibt beim bisherigen PDF-Vorschauweg.
 - Das Druckauswahl-Modal ist auf die zwei kompakten Optionen zugeschnitten. Lange Setnamen kürzt der Titel dort einzeilig mit Auslassungspunkten; im anschließenden Druckarbeitsbereich öffnet sich weiterhin die volle Vorschaufläche.
 - Die Auswahl zwischen Vokabelliste und Vokabeltest ist jetzt als zwei kompakte, mittig platzierte Karten umgesetzt. Die unnötigen Richtungspfeile entfallen; beide Optionen bleiben auf Desktop und Tablet direkt als Klickziel erkennbar.

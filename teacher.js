@@ -1813,6 +1813,14 @@ function renderPrintPaper() {
     const item = draft.items.get(cardId);
     const row = document.createElement("div");
     row.className = "print-paper__row";
+    row.dataset.cardId = cardId;
+    const handle = document.createElement("button");
+    handle.className = "print-paper__handle";
+    handle.type = "button";
+    handle.textContent = "⋮⋮";
+    handle.setAttribute("aria-label", `Begriff ${index + 1} verschieben; mit Pfeiltasten nach oben oder unten`);
+    handle.title = "Ziehen oder mit Pfeiltasten verschieben";
+    bindPrintRowDragHandle(handle, row, cardId);
     const number = document.createElement("span");
     number.className = "print-paper__number";
     number.textContent = `${index + 1}.`;
@@ -1831,11 +1839,9 @@ function renderPrintPaper() {
       item.edited = false;
       renderPrintPaper();
     });
-    const up = createPrintOrderButton("↑", `Begriff ${index + 1} nach oben`, index === 0, () => moveSelectedPrintCard(cardId, -1));
-    const down = createPrintOrderButton("↓", `Begriff ${index + 1} nach unten`, index === state.printSelectedCardIds.length - 1, () => moveSelectedPrintCard(cardId, 1));
     const remove = createPrintOrderButton("×", `Begriff ${index + 1} entfernen`, false, () => togglePrintCard(cardId));
-    actions.append(swap, up, down, remove);
-    row.append(number, prompt, answerLine, actions);
+    actions.append(swap, remove);
+    row.append(handle, number, prompt, answerLine, actions);
     rows.append(row);
   });
   if (state.printSelectedCardIds.length === 0) {
@@ -1849,6 +1855,60 @@ function renderPrintPaper() {
   score.innerHTML = '<span>Punkte: <i></i></span><span>Prozent: <i></i></span><span>Note: <i></i></span>';
   paper.append(heading, header, instruction, columns, rows, score);
   updatePrintTestValidity();
+}
+
+function bindPrintRowDragHandle(handle, row, cardId) {
+  let targetId = "";
+  const clearTarget = () => {
+    elements.printPaper.querySelector(".print-paper__row.is-drop-target")?.classList.remove("is-drop-target");
+    row.classList.remove("is-dragging");
+    targetId = "";
+  };
+  handle.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    handle.setPointerCapture(event.pointerId);
+    row.classList.add("is-dragging");
+  });
+  handle.addEventListener("pointermove", (event) => {
+    if (!handle.hasPointerCapture(event.pointerId)) return;
+    const preview = elements.printPaper.parentElement;
+    const bounds = preview.getBoundingClientRect();
+    if (event.clientY > bounds.bottom - 32) preview.scrollTop += 16;
+    else if (event.clientY < bounds.top + 32) preview.scrollTop -= 16;
+    const target = document.elementFromPoint(event.clientX, event.clientY)?.closest(".print-paper__row");
+    const nextId = target?.dataset.cardId !== cardId ? target?.dataset.cardId || "" : "";
+    if (nextId === targetId) return;
+    elements.printPaper.querySelector(".print-paper__row.is-drop-target")?.classList.remove("is-drop-target");
+    targetId = nextId;
+    if (targetId) target.classList.add("is-drop-target");
+  });
+  handle.addEventListener("pointerup", () => {
+    const droppedOn = targetId;
+    clearTarget();
+    if (droppedOn) reorderSelectedPrintCard(cardId, droppedOn);
+  });
+  handle.addEventListener("pointercancel", clearTarget);
+  handle.addEventListener("keydown", (event) => {
+    const offset = event.key === "ArrowUp" ? -1 : event.key === "ArrowDown" ? 1 : 0;
+    if (!offset) return;
+    event.preventDefault();
+    moveSelectedPrintCard(cardId, offset);
+    requestAnimationFrame(() => {
+      [...elements.printPaper.querySelectorAll(".print-paper__row")]
+        .find((candidate) => candidate.dataset.cardId === cardId)
+        ?.querySelector(".print-paper__handle")?.focus();
+    });
+  });
+}
+
+function reorderSelectedPrintCard(draggedId, targetId) {
+  const fromIndex = state.printSelectedCardIds.indexOf(draggedId);
+  const toIndex = state.printSelectedCardIds.indexOf(targetId);
+  if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return;
+  state.printSelectedCardIds.splice(fromIndex, 1);
+  state.printSelectedCardIds.splice(toIndex, 0, draggedId);
+  renderPrintPaper();
 }
 
 function updatePrintTestValidity() {

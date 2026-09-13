@@ -17,7 +17,7 @@ function buildEditableSet() {
     status: "published",
     editable: true,
     deletable: true,
-    title: "Means of transport",
+    title: "Means of transport – Klasse 9/10 mit besonders langem Reihentitel",
     subject: "Englisch",
     description: "Important words from the lessons",
     sourceLanguage: "en",
@@ -70,7 +70,7 @@ test("teacher creates a temporary list or test PDF from one set", async ({ page 
   await page.route("**/api/teacher/sets/set-1", (route) => route.fulfill({ json: { set: editableSet } }));
 
   await page.goto("/teacher", { waitUntil: "networkidle" });
-  const printButton = page.getByRole("button", { name: "Set Means of transport ausdrucken" });
+  const printButton = page.getByRole("button", { name: /Set Means of transport.*ausdrucken/ });
   await expect(printButton).toBeVisible();
   await expect(printButton.locator("img")).toHaveAttribute("src", "./assets/icons/print.svg");
   await page.locator(".teacher-set-row").first().screenshot({ path: testInfo.outputPath("set-actions-desktop.png") });
@@ -79,7 +79,7 @@ test("teacher creates a temporary list or test PDF from one set", async ({ page 
   await page.setViewportSize({ width: 1150, height: 780 });
   await printButton.click();
 
-  const dialog = page.getByRole("dialog", { name: "Means of transport" });
+  const dialog = page.getByRole("dialog", { name: /Means of transport/ });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole("button", { name: /Vokabelliste/ })).toBeVisible();
   await expect(dialog.getByRole("button", { name: /Vokabeltest/ })).toBeVisible();
@@ -90,6 +90,9 @@ test("teacher creates a temporary list or test PDF from one set", async ({ page 
   await expect(dialog.locator(".print-mode-card__arrow")).toHaveCount(0);
   const choicePanelBounds = await dialog.boundingBox();
   expect(choicePanelBounds.width).toBeLessThan(700);
+  const printTitle = dialog.locator("#print-title");
+  await expect(printTitle).toHaveCSS("text-overflow", "ellipsis");
+  expect(await printTitle.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
   const listChoice = dialog.locator('[data-print-kind="list"]');
   const testChoice = dialog.locator('[data-print-kind="test"]');
   const [listChoiceBounds, testChoiceBounds] = await Promise.all([
@@ -141,11 +144,25 @@ test("teacher creates a temporary list or test PDF from one set", async ({ page 
   await expect(page.locator(".print-paper__prompt").last()).toHaveValue("Deutsche Übersetzung 1");
   await page.locator(".print-card-row").last().getByRole("button").click();
   await expect(page.locator(".print-paper__row")).toHaveCount(11);
+  await expect(page.locator(".print-paper__row-actions button").first()).toBeVisible();
+  await expect(page.locator(".print-paper__row-actions").first().getByRole("button")).toHaveCount(2);
+  const firstHandle = page.locator(".print-paper__handle").first();
+  const dragFrom = await firstHandle.boundingBox();
+  const dragTo = await page.locator(".print-paper__row").nth(2).boundingBox();
+  await page.mouse.move(dragFrom.x + dragFrom.width / 2, dragFrom.y + dragFrom.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(dragTo.x + 12, dragTo.y + dragTo.height / 2, { steps: 5 });
+  await page.mouse.up();
+  await expect(page.locator(".print-paper__prompt").first()).toHaveValue("Deutsche Übersetzung 3");
+  await page.locator(".print-paper__handle").first().focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.locator(".print-paper__prompt").first()).toHaveValue("Deutsche Übersetzung 4");
   await page.getByRole("button", { name: "Begriff 1: Anzeigeseite tauschen" }).click();
-  await expect(page.locator(".print-paper__prompt").first()).toHaveValue("English phrase 2");
+  await expect(page.locator(".print-paper__prompt").first()).toHaveValue("English phrase 4");
   await page.locator("#print-download-button").click();
   await expect.poll(() => printBodies.at(-1)?.kind).toBe("test");
   expect(printBodies.at(-1).cardIds).toHaveLength(11);
+  expect(printBodies.at(-1).cardIds[0]).toBe("card-4");
   expect(printBodies.at(-1).testDraft.title).toBe("Mein Testtitel");
   expect(printBodies.at(-1).testDraft.className).toBe("9b");
   expect(printBodies.at(-1).testDraft.instruction).toBe("Übersetze passend.");
@@ -159,6 +176,19 @@ test("teacher creates a temporary list or test PDF from one set", async ({ page 
   expect(dialogBox.x + dialogBox.width).toBeLessThanOrEqual(769);
   expect(dialogBox.y + dialogBox.height).toBeLessThanOrEqual(1025);
   await page.screenshot({ path: testInfo.outputPath("print-test-tablet.png"), fullPage: true });
+  const tabletHandle = await page.locator(".print-paper__handle").first().boundingBox();
+  const tabletTarget = await page.locator(".print-paper__row").nth(2).boundingBox();
+  const touch = await page.context().newCDPSession(page);
+  await touch.send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 1 });
+  await touch.send("Input.dispatchTouchEvent", {
+    type: "touchStart", touchPoints: [{ x: tabletHandle.x + 8, y: tabletHandle.y + 12, id: 1 }],
+  });
+  await touch.send("Input.dispatchTouchEvent", {
+    type: "touchMove", touchPoints: [{ x: tabletTarget.x + 12, y: tabletTarget.y + 15, id: 1 }],
+  });
+  await touch.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await touch.send("Emulation.setTouchEmulationEnabled", { enabled: false });
+  await expect(page.locator(".print-paper__prompt").first()).toHaveValue("Deutsche Übersetzung 3");
   await page.setViewportSize({ width: 390, height: 780 });
   await expect(page.locator("#print-paper")).toBeVisible();
   expect(await page.locator(".print-preview-shell").evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
