@@ -81,6 +81,20 @@ test("admins can inspect and edit other teachers' sets without taking ownership"
   assert.equal((await setService.getOwnedSet("aksana", aksanaSet.id)).title, "Von Julius geprüft");
   assert.equal(await setService.getOwnedSet("julius", aksanaSet.id), null);
 
+  const printResponse = await fetch(`${origin}/api/teacher/sets/${aksanaSet.id}/print`, {
+    method: "POST",
+    headers: { Cookie: juliusCookie, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      kind: "test",
+      direction: "source-target",
+      cardIds: [aksanaSet.cards[0].id],
+      className: "6a",
+    }),
+  });
+  assert.equal(printResponse.status, 200);
+  assert.equal(printResponse.headers.get("content-type"), "application/pdf");
+  assert.equal(Buffer.from(await printResponse.arrayBuffer()).subarray(0, 5).toString("ascii"), "%PDF-");
+
   const forbiddenDelete = await fetch(`${origin}/api/teacher/sets/${aksanaSet.id}`, {
     method: "DELETE",
     headers: { Cookie: juliusCookie },

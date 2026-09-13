@@ -5,6 +5,7 @@ certs/dev-local-ca-key.pem
 certs/dev-server-cert.pem
 certs/dev-server-key.pem
 /tmp/
+/output/
 artifacts/
 test-results/
 data/tablet-sessions.json

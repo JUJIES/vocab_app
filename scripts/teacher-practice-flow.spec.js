@@ -85,6 +85,7 @@ test("teacher opens shared learning modes without writing tablet progress", asyn
   });
   const practiceButton = page.getByRole("button", { name: "Lernmodi für Set Means of transport öffnen" });
   await expect(practiceButton).toBeVisible();
+  await expect(practiceButton.locator("img")).toHaveAttribute("src", "./assets/icons/learning-modes-open.svg");
   await page.locator(".teacher-set-row").first().screenshot({ path: testInfo.outputPath("teacher-set-practice-icon.png") });
   await practiceButton.click();
 
@@ -110,7 +111,8 @@ test("teacher opens shared learning modes without writing tablet progress", asyn
     await row.locator(".test-stage__input").fill(`answer ${number}`);
   }
   await page.locator("#test-submit").click();
-  await expect(page.locator("#test-feedback-title")).toHaveText("Alles richtig");
+  await expect(page.locator("#test-feedback-title")).toHaveText("6/6 richtig");
+  await expect(page.locator("#test-feedback-detail")).toHaveText("100 % · ungefähr Note 1");
   expect(tabletProgressWrites).toBe(0);
 
   await page.locator("#test-home-link").click();

@@ -1,0 +1,84 @@
+const test = require("node:test");
+const assert = require("node:assert/strict");
+
+const {
+  PrintRequestError,
+  buildPrintFilename,
+  createVocabularyPrintPdf,
+} = require("../lib/print-service");
+
+function createSet(cardCount = 12) {
+  return {
+    id: "test-set",
+    title: "Unit 4 – Über Schule sprechen",
+    subject: "Englisch",
+    sourceLanguage: "en",
+    targetLanguage: "de",
+    sourceLabel: "Englisch",
+    targetLabel: "Deutsch",
+    cards: Array.from({ length: cardCount }, (_, index) => ({
+      id: `card-${index + 1}`,
+      front: index % 7 === 0 ? `a longer vocabulary phrase number ${index + 1}` : `word ${index + 1}`,
+      back: `Übersetzung ${index + 1}`,
+    })),
+  };
+}
+
+test("creates vector A4 PDFs for vocabulary tests and lists", async () => {
+  const set = createSet(45);
+  const cardIds = set.cards.map((card) => card.id);
+
+  for (const kind of ["test", "list"]) {
+    const pdf = await createVocabularyPrintPdf({
+      set,
+      kind,
+      direction: "source-target",
+      cardIds,
+      className: "6a",
+    });
+
+    assert.equal(pdf.subarray(0, 5).toString("ascii"), "%PDF-");
+    assert.ok(pdf.length > 4_000);
+    const pageCount = (pdf.toString("latin1").match(/\/Type \/Page\b/g) || []).length;
+    assert.ok(pageCount >= 2 && pageCount <= 3, `unexpected ${kind} page count: ${pageCount}`);
+  }
+});
+
+test("uses the requested card order without persisting a print document", async () => {
+  const set = createSet(3);
+  const before = structuredClone(set);
+  const pdf = await createVocabularyPrintPdf({
+    set,
+    kind: "test",
+    direction: "target-source",
+    cardIds: ["card-3", "card-1"],
+    className: "",
+  });
+
+  assert.equal((pdf.toString("latin1").match(/\/Type \/Page\b/g) || []).length, 1);
+  assert.deepEqual(set, before);
+});
+
+test("rejects empty, duplicated, and foreign card selections", async () => {
+  const set = createSet(3);
+  const requests = [
+    [],
+    ["card-1", "card-1"],
+    ["card-1", "foreign-card"],
+  ];
+
+  for (const cardIds of requests) {
+    await assert.rejects(
+      createVocabularyPrintPdf({ set, kind: "test", direction: "source-target", cardIds }),
+      PrintRequestError,
+    );
+  }
+});
+
+test("builds a stable ASCII download filename", () => {
+  assert.equal(
+    buildPrintFilename("Unit 4 – Über Schule sprechen", "test"),
+    "vokabeltest-unit-4-uber-schule-sprechen.pdf",
+  );
+  assert.equal(buildPrintFilename("", "list"), "vokabelliste-lernset.pdf");
+});

@@ -9,7 +9,8 @@ const EXTERNAL_LINK_ICON_PATH = "./assets/icons/external-link.svg";
 const DELETE_ICON_PATH = "./assets/icons/trash-2.svg";
 const REMOVE_ICON_PATH = "./assets/icons/x.svg";
 const IMAGE_PLUS_ICON_PATH = "./assets/icons/image-plus.svg";
-const TEACHER_PRACTICE_ICON_PATH = "./assets/icons/learn-mode.svg";
+const TEACHER_PRACTICE_ICON_PATH = "./assets/icons/learning-modes-open.svg";
+const PRINT_ICON_PATH = "./assets/icons/print.svg";
 const BROKEN_LINK_ICON_PATH = "./assets/icons/broken-link.svg";
 const TIMEOUT_ICON_PATH = "./assets/icons/timeout.svg";
 const PASSWORD_ICON_PATH = "./assets/icons/password-svgrepo-com.svg";
@@ -52,6 +53,16 @@ const state = {
     sourceLanguage: "de",
     targetLanguage: "en",
   },
+  printSet: null,
+  printKind: "",
+  printDirection: "source-target",
+  printSelectedCardIds: [],
+  printPdfBlob: null,
+  printPdfUrl: "",
+  printPreviewTimerId: null,
+  printPreviewRequestId: 0,
+  printPreviewAbortController: null,
+  printDraggedCardId: "",
 };
 
 const TEACHER_TAB_COPY = {
@@ -115,6 +126,30 @@ const elements = {
   shareFeedback: document.getElementById("share-feedback"),
   shareCloseButton: document.getElementById("share-close-button"),
   closeShareTriggers: document.querySelectorAll("[data-close-share]"),
+  printOverlay: document.getElementById("print-overlay"),
+  printTitle: document.getElementById("print-title"),
+  printCloseButton: document.getElementById("print-close-button"),
+  closePrintTriggers: document.querySelectorAll("[data-close-print]"),
+  printModeView: document.getElementById("print-mode-view"),
+  printModeButtons: document.querySelectorAll("[data-print-kind]"),
+  printModeFeedback: document.getElementById("print-mode-feedback"),
+  printWorkspace: document.getElementById("print-workspace"),
+  printBackButton: document.getElementById("print-back-button"),
+  printDirectionSelect: document.getElementById("print-direction-select"),
+  printSwapDirection: document.getElementById("print-swap-direction"),
+  printLayout: document.getElementById("print-layout"),
+  printConfig: document.getElementById("print-config"),
+  printClassField: document.getElementById("print-class-field"),
+  printClassInput: document.getElementById("print-class-input"),
+  printSelectionCount: document.getElementById("print-selection-count"),
+  printSelectTen: document.getElementById("print-select-ten"),
+  printSelectAll: document.getElementById("print-select-all"),
+  printSelectNone: document.getElementById("print-select-none"),
+  printCardList: document.getElementById("print-card-list"),
+  printPreviewLoading: document.getElementById("print-preview-loading"),
+  printPreview: document.getElementById("print-preview"),
+  printFeedback: document.getElementById("print-feedback"),
+  printDownloadButton: document.getElementById("print-download-button"),
   deleteSetOverlay: document.getElementById("delete-set-overlay"),
   deleteSetCopy: document.getElementById("delete-set-copy"),
   deleteSetFeedback: document.getElementById("delete-set-feedback"),
@@ -287,6 +322,19 @@ function bindEvents() {
   elements.passwordDialogCancel.addEventListener("click", closePasswordDialog);
   elements.copyLinkButton.addEventListener("click", handleCopyLink);
   elements.shareCloseButton.addEventListener("click", closeShareOverlay);
+  elements.printCloseButton.addEventListener("click", closePrintOverlay);
+  elements.printBackButton.addEventListener("click", showPrintModeChoice);
+  elements.printDirectionSelect.addEventListener("change", () => {
+    state.printDirection = elements.printDirectionSelect.value;
+    renderPrintCardList();
+    schedulePrintPreview();
+  });
+  elements.printSwapDirection.addEventListener("click", swapPrintDirection);
+  elements.printClassInput.addEventListener("input", () => schedulePrintPreview(450));
+  elements.printSelectTen.addEventListener("click", selectTenRandomPrintCards);
+  elements.printSelectAll.addEventListener("click", selectAllPrintCards);
+  elements.printSelectNone.addEventListener("click", clearPrintCardSelection);
+  elements.printDownloadButton.addEventListener("click", downloadPrintPdf);
   elements.deleteSetCancel.addEventListener("click", closeDeleteSetDialog);
   elements.deleteSetConfirm.addEventListener("click", handleDeleteSet);
   elements.createSetButton.addEventListener("click", openNewSetEditor);
@@ -336,6 +384,14 @@ function bindEvents() {
     trigger.addEventListener("click", closeShareOverlay);
   }
 
+  for (const trigger of elements.closePrintTriggers) {
+    trigger.addEventListener("click", closePrintOverlay);
+  }
+
+  for (const button of elements.printModeButtons) {
+    button.addEventListener("click", () => selectPrintKind(button.dataset.printKind));
+  }
+
   for (const trigger of elements.closeDeleteSetTriggers) {
     trigger.addEventListener("click", closeDeleteSetDialog);
   }
@@ -352,6 +408,11 @@ function bindEvents() {
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
+      if (!elements.printOverlay.hidden) {
+        closePrintOverlay();
+        return;
+      }
+
       if (!elements.passwordOverlay.hidden) {
         closePasswordDialog();
         return;
@@ -912,6 +973,17 @@ function createSetRow(setEntry) {
     });
     actions.append(practiceAction);
 
+    const printAction = document.createElement("button");
+    printAction.className = "teacher-set-row__print";
+    printAction.type = "button";
+    printAction.setAttribute("aria-label", `Set ${setEntry.title} ausdrucken`);
+    printAction.title = "Ausdrucken";
+    printAction.append(createButtonIcon(PRINT_ICON_PATH));
+    printAction.addEventListener("click", () => {
+      void openPrintOverlay(setEntry);
+    });
+    actions.append(printAction);
+
     const shareAction = document.createElement("button");
     shareAction.className = "teacher-set-row__share";
     shareAction.type = "button";
@@ -1326,6 +1398,7 @@ function createTeacherRequestError(response, fallbackMessage) {
 
 function showTeacherAuth(feedback = "") {
   closeShareOverlay();
+  closePrintOverlay();
   closeDeleteSetDialog();
   closeSetEditor();
   closePasswordDialog();
@@ -1383,6 +1456,7 @@ function syncTeacherModalLock() {
   const hasOpenModal = [
     elements.passwordOverlay,
     elements.shareOverlay,
+    elements.printOverlay,
     elements.deleteSetOverlay,
     elements.setEditorOverlay,
   ].some((overlay) => !overlay.hidden);
@@ -1435,6 +1509,392 @@ function closeShareOverlay() {
       syncTeacherModalLock();
     },
   });
+}
+
+async function openPrintOverlay(setEntry) {
+  resetPrintState();
+  elements.printTitle.textContent = setEntry.title;
+  elements.printModeFeedback.textContent = "Set wird geladen …";
+  elements.printModeView.hidden = false;
+  elements.printWorkspace.hidden = true;
+  for (const button of elements.printModeButtons) {
+    button.disabled = true;
+  }
+  window.LerndeckUiMotion.show(elements.printOverlay);
+  syncTeacherModalLock();
+  const requestId = ++state.printPreviewRequestId;
+
+  try {
+    const response = await requestJson(`/api/teacher/sets/${encodeURIComponent(setEntry.id)}`, {
+      auth: "teacher",
+    });
+    if (!response.ok) {
+      throw createTeacherRequestError(response, "Set konnte nicht geladen werden.");
+    }
+    if (requestId !== state.printPreviewRequestId || elements.printOverlay.hidden) {
+      return;
+    }
+
+    state.printSet = response.data?.set || null;
+    if (!state.printSet || !Array.isArray(state.printSet.cards) || state.printSet.cards.length === 0) {
+      throw new Error("Dieses Set enthält keine druckbaren Karten.");
+    }
+    elements.printTitle.textContent = state.printSet.title || setEntry.title;
+    configurePrintDirectionOptions();
+    elements.printModeFeedback.textContent = "";
+    for (const button of elements.printModeButtons) {
+      button.disabled = false;
+    }
+  } catch (error) {
+    if (requestId !== state.printPreviewRequestId) {
+      return;
+    }
+    if (error?.requiresAuth) {
+      showTeacherAuth(error.message);
+      return;
+    }
+    elements.printModeFeedback.textContent = error.message || "Set konnte nicht geladen werden.";
+  }
+}
+
+function closePrintOverlay() {
+  if (state.printPreviewTimerId !== null) {
+    window.clearTimeout(state.printPreviewTimerId);
+    state.printPreviewTimerId = null;
+  }
+  state.printPreviewRequestId += 1;
+  state.printPreviewAbortController?.abort();
+  state.printPreviewAbortController = null;
+  window.LerndeckUiMotion.hide(elements.printOverlay, {
+    after: () => {
+      resetPrintState();
+      syncTeacherModalLock();
+    },
+  });
+}
+
+function resetPrintState() {
+  if (state.printPdfUrl) {
+    URL.revokeObjectURL(state.printPdfUrl);
+  }
+  state.printSet = null;
+  state.printKind = "";
+  state.printDirection = "source-target";
+  state.printSelectedCardIds = [];
+  state.printPdfBlob = null;
+  state.printPdfUrl = "";
+  state.printDraggedCardId = "";
+  elements.printClassInput.value = "";
+  elements.printCardList.replaceChildren();
+  elements.printModeFeedback.textContent = "";
+  elements.printFeedback.textContent = "";
+  elements.printPreview.removeAttribute("src");
+  elements.printPreview.hidden = true;
+  elements.printPreviewLoading.hidden = false;
+  elements.printDownloadButton.disabled = true;
+}
+
+function showPrintModeChoice() {
+  state.printKind = "";
+  clearPrintPreview();
+  elements.printWorkspace.hidden = true;
+  elements.printModeView.hidden = false;
+  elements.printFeedback.textContent = "";
+  requestAnimationFrame(() => elements.printModeButtons[0]?.focus());
+}
+
+function selectPrintKind(kind) {
+  if (!state.printSet || (kind !== "list" && kind !== "test")) {
+    return;
+  }
+  state.printKind = kind;
+  state.printSelectedCardIds = kind === "list"
+    ? state.printSet.cards.map((card) => String(card.id))
+    : state.printSet.cards.slice(0, 10).map((card) => String(card.id));
+  elements.printModeView.hidden = true;
+  elements.printWorkspace.hidden = false;
+  elements.printConfig.hidden = kind === "list";
+  elements.printLayout.classList.toggle("print-layout--list", kind === "list");
+  elements.printClassField.hidden = kind !== "test";
+  renderPrintCardList();
+  schedulePrintPreview(0);
+}
+
+function configurePrintDirectionOptions() {
+  const { sourceLabel, targetLabel } = getPrintSideLabels();
+  elements.printDirectionSelect.replaceChildren(
+    new Option(`${sourceLabel} → ${targetLabel}`, "source-target"),
+    new Option(`${targetLabel} → ${sourceLabel}`, "target-source"),
+  );
+  elements.printDirectionSelect.value = state.printDirection;
+}
+
+function swapPrintDirection() {
+  state.printDirection = state.printDirection === "source-target"
+    ? "target-source"
+    : "source-target";
+  elements.printDirectionSelect.value = state.printDirection;
+  renderPrintCardList();
+  schedulePrintPreview();
+}
+
+function getPrintSideLabels() {
+  return {
+    sourceLabel: String(state.printSet?.sourceLabel || "Vorderseite").trim() || "Vorderseite",
+    targetLabel: String(state.printSet?.targetLabel || "Rückseite").trim() || "Rückseite",
+  };
+}
+
+function renderPrintCardList() {
+  if (state.printKind !== "test" || !state.printSet) {
+    elements.printCardList.replaceChildren();
+    return;
+  }
+
+  const cardsById = new Map(state.printSet.cards.map((card) => [String(card.id), card]));
+  const selectedIds = state.printSelectedCardIds.filter((id) => cardsById.has(id));
+  const selectedSet = new Set(selectedIds);
+  const orderedCards = [
+    ...selectedIds.map((id) => cardsById.get(id)),
+    ...state.printSet.cards.filter((card) => !selectedSet.has(String(card.id))),
+  ];
+  const sourceFirst = state.printDirection === "source-target";
+  elements.printCardList.replaceChildren();
+  elements.printSelectionCount.textContent = `${selectedIds.length} ausgewählt`;
+
+  for (const card of orderedCards) {
+    const cardId = String(card.id);
+    const selectedIndex = selectedIds.indexOf(cardId);
+    const isSelected = selectedIndex !== -1;
+    const row = document.createElement("article");
+    row.className = "print-card-row";
+    row.classList.toggle("is-selected", isSelected);
+    row.setAttribute("role", "listitem");
+    row.draggable = isSelected;
+    row.dataset.cardId = cardId;
+
+    const toggle = document.createElement("button");
+    toggle.className = "print-card-row__toggle";
+    toggle.type = "button";
+    toggle.setAttribute("aria-pressed", isSelected ? "true" : "false");
+    toggle.setAttribute("aria-label", `${card.front} ${isSelected ? "abwählen" : "auswählen"}`);
+
+    const position = document.createElement("span");
+    position.className = "print-card-row__position";
+    position.textContent = isSelected ? String(selectedIndex + 1) : "+";
+    position.setAttribute("aria-hidden", "true");
+
+    const copy = document.createElement("span");
+    copy.className = "print-card-row__copy";
+    const prompt = document.createElement("strong");
+    prompt.textContent = sourceFirst ? card.front : card.back;
+    const answer = document.createElement("small");
+    answer.textContent = sourceFirst ? card.back : card.front;
+    copy.append(prompt, answer);
+    toggle.append(position, copy);
+    toggle.addEventListener("click", () => togglePrintCard(cardId));
+    row.append(toggle);
+
+    if (isSelected) {
+      const controls = document.createElement("span");
+      controls.className = "print-card-row__order";
+      controls.append(
+        createPrintOrderButton("↑", "Nach oben", selectedIndex === 0, () => moveSelectedPrintCard(cardId, -1)),
+        createPrintOrderButton("↓", "Nach unten", selectedIndex === selectedIds.length - 1, () => moveSelectedPrintCard(cardId, 1)),
+      );
+      row.append(controls);
+      row.addEventListener("dragstart", (event) => {
+        state.printDraggedCardId = cardId;
+        row.classList.add("is-dragging");
+        event.dataTransfer?.setData("text/plain", cardId);
+        if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+      });
+      row.addEventListener("dragend", () => {
+        state.printDraggedCardId = "";
+        row.classList.remove("is-dragging");
+      });
+      row.addEventListener("dragover", (event) => {
+        if (!state.printDraggedCardId || state.printDraggedCardId === cardId) return;
+        event.preventDefault();
+        if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+      });
+      row.addEventListener("drop", (event) => {
+        event.preventDefault();
+        reorderSelectedPrintCard(state.printDraggedCardId, cardId);
+      });
+    }
+
+    elements.printCardList.append(row);
+  }
+}
+
+function createPrintOrderButton(label, accessibleLabel, disabled, onClick) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.textContent = label;
+  button.disabled = disabled;
+  button.setAttribute("aria-label", accessibleLabel);
+  button.addEventListener("click", onClick);
+  return button;
+}
+
+function togglePrintCard(cardId) {
+  const index = state.printSelectedCardIds.indexOf(cardId);
+  if (index === -1) {
+    state.printSelectedCardIds.push(cardId);
+  } else {
+    state.printSelectedCardIds.splice(index, 1);
+  }
+  renderPrintCardList();
+  schedulePrintPreview();
+}
+
+function moveSelectedPrintCard(cardId, offset) {
+  const fromIndex = state.printSelectedCardIds.indexOf(cardId);
+  const toIndex = fromIndex + offset;
+  if (fromIndex < 0 || toIndex < 0 || toIndex >= state.printSelectedCardIds.length) return;
+  state.printSelectedCardIds.splice(fromIndex, 1);
+  state.printSelectedCardIds.splice(toIndex, 0, cardId);
+  renderPrintCardList();
+  schedulePrintPreview();
+}
+
+function reorderSelectedPrintCard(draggedId, targetId) {
+  const fromIndex = state.printSelectedCardIds.indexOf(draggedId);
+  const toIndex = state.printSelectedCardIds.indexOf(targetId);
+  if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return;
+  state.printSelectedCardIds.splice(fromIndex, 1);
+  state.printSelectedCardIds.splice(toIndex, 0, draggedId);
+  state.printDraggedCardId = "";
+  renderPrintCardList();
+  schedulePrintPreview();
+}
+
+function selectTenRandomPrintCards() {
+  if (!state.printSet) return;
+  const ids = state.printSet.cards.map((card) => String(card.id));
+  for (let index = ids.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [ids[index], ids[swapIndex]] = [ids[swapIndex], ids[index]];
+  }
+  state.printSelectedCardIds = ids.slice(0, 10);
+  renderPrintCardList();
+  schedulePrintPreview();
+}
+
+function selectAllPrintCards() {
+  if (!state.printSet) return;
+  state.printSelectedCardIds = state.printSet.cards.map((card) => String(card.id));
+  renderPrintCardList();
+  schedulePrintPreview();
+}
+
+function clearPrintCardSelection() {
+  state.printSelectedCardIds = [];
+  renderPrintCardList();
+  schedulePrintPreview();
+}
+
+function schedulePrintPreview(delay = 280) {
+  if (state.printPreviewTimerId !== null) {
+    window.clearTimeout(state.printPreviewTimerId);
+  }
+  state.printPreviewTimerId = window.setTimeout(() => {
+    state.printPreviewTimerId = null;
+    void refreshPrintPreview();
+  }, delay);
+}
+
+async function refreshPrintPreview() {
+  if (!state.printSet || !state.printKind) return;
+  if (state.printSelectedCardIds.length === 0) {
+    clearPrintPreview();
+    elements.printFeedback.textContent = "Wähle mindestens eine Vokabel aus.";
+    elements.printPreviewLoading.textContent = "Keine Vokabel ausgewählt";
+    elements.printPreviewLoading.hidden = false;
+    return;
+  }
+
+  state.printPreviewAbortController?.abort();
+  const abortController = new AbortController();
+  state.printPreviewAbortController = abortController;
+  const requestId = ++state.printPreviewRequestId;
+  clearPrintPreview({ keepRequest: true });
+  elements.printFeedback.textContent = "";
+  elements.printPreviewLoading.textContent = "Vorschau wird erstellt …";
+  elements.printPreviewLoading.hidden = false;
+
+  try {
+    const headers = { "Content-Type": "application/json" };
+    if (TAFELRAUM_EMBED) headers["X-Lerndeck-Embed"] = "tafelraum";
+    const response = await fetch(`/api/teacher/sets/${encodeURIComponent(state.printSet.id)}/print`, {
+      method: "POST",
+      headers,
+      credentials: "same-origin",
+      signal: abortController.signal,
+      body: JSON.stringify({
+        kind: state.printKind,
+        direction: state.printDirection,
+        cardIds: state.printSelectedCardIds,
+        className: elements.printClassInput.value,
+      }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      const error = new Error(data.error || "PDF konnte nicht erstellt werden.");
+      error.requiresAuth = response.status === 401 || response.status === 403;
+      throw error;
+    }
+
+    const blob = await response.blob();
+    if (requestId !== state.printPreviewRequestId || abortController.signal.aborted) return;
+    state.printPdfBlob = blob;
+    state.printPdfUrl = URL.createObjectURL(blob);
+    elements.printPreview.src = state.printPdfUrl;
+    elements.printPreview.hidden = false;
+    elements.printPreviewLoading.hidden = true;
+    elements.printDownloadButton.disabled = false;
+  } catch (error) {
+    if (error?.name === "AbortError" || requestId !== state.printPreviewRequestId) return;
+    if (error?.requiresAuth) {
+      showTeacherAuth(error.message);
+      return;
+    }
+    elements.printFeedback.textContent = error.message || "PDF konnte nicht erstellt werden.";
+    elements.printPreviewLoading.textContent = "Vorschau nicht verfügbar";
+    elements.printPreviewLoading.hidden = false;
+  } finally {
+    if (state.printPreviewAbortController === abortController) {
+      state.printPreviewAbortController = null;
+    }
+  }
+}
+
+function clearPrintPreview({ keepRequest = false } = {}) {
+  if (!keepRequest) state.printPreviewRequestId += 1;
+  if (state.printPdfUrl) URL.revokeObjectURL(state.printPdfUrl);
+  state.printPdfBlob = null;
+  state.printPdfUrl = "";
+  elements.printPreview.removeAttribute("src");
+  elements.printPreview.hidden = true;
+  elements.printDownloadButton.disabled = true;
+}
+
+function downloadPrintPdf() {
+  if (!state.printPdfUrl || !state.printSet || !state.printKind) return;
+  const titleSlug = String(state.printSet.title || "lernset")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "lernset";
+  const link = document.createElement("a");
+  link.href = state.printPdfUrl;
+  link.download = `${state.printKind === "test" ? "vokabeltest" : "vokabelliste"}-${titleSlug}.pdf`;
+  document.body.append(link);
+  link.click();
+  link.remove();
 }
 
 function openDeleteSetDialog(setEntry) {

@@ -11,6 +11,7 @@ const { ImportService } = require("./lib/import-service");
 const { SetService } = require("./lib/set-service");
 const { TeacherService } = require("./lib/teacher-service");
 const { VisualService } = require("./lib/visual-service");
+const { buildPrintFilename, createVocabularyPrintPdf } = require("./lib/print-service");
 
 const app = express();
 app.set("trust proxy", true);
@@ -262,6 +263,43 @@ app.get("/api/teacher/sets/:setId", async (request, response) => {
     response.json({ set: setEntry });
   } catch (error) {
     handleApiError(response, error, "Set konnte nicht geladen werden.");
+  }
+});
+
+app.post("/api/teacher/sets/:setId/print", async (request, response) => {
+  const sessionResult = requireTeacherSession(request);
+  if (!sessionResult.ok) {
+    response.status(sessionResult.status).json({ error: sessionResult.error });
+    return;
+  }
+
+  try {
+    const access = await resolveManagedSetAccess(sessionResult, request.params.setId);
+    const setEntry = access
+      ? await setService.getOwnedSet(access.ownerTeacherId, request.params.setId)
+      : null;
+    if (!setEntry) {
+      response.status(404).json({ error: "Set nicht gefunden." });
+      return;
+    }
+
+    const pdf = await createVocabularyPrintPdf({
+      set: setEntry,
+      kind: request.body?.kind,
+      direction: request.body?.direction,
+      cardIds: request.body?.cardIds,
+      className: request.body?.className,
+    });
+    const filename = buildPrintFilename(setEntry.title, request.body?.kind);
+    response.set({
+      "Cache-Control": "no-store",
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `inline; filename="${filename}"`,
+      "Content-Length": String(pdf.length),
+    });
+    response.send(pdf);
+  } catch (error) {
+    handleApiError(response, error, "PDF konnte nicht erstellt werden.");
   }
 });
 

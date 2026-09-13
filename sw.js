@@ -1,4 +1,4 @@
-const CACHE_NAME = "lerndeck-shell-v134";
+const CACHE_NAME = "lerndeck-shell-v137";
 const APP_SHELL_URLS = [
   "/",
   "/index.html",
@@ -9,8 +9,8 @@ const APP_SHELL_URLS = [
   "/answer-rules.js?v=2026-09-08-answer-rules-v2",
   "/grading-rules.js?v=2026-09-10-ihk-v1",
   "/app.js?v=2026-09-10-test-result-v1",
-  "/teacher.css?v=2026-09-06-teacher-practice-v1",
-  "/teacher.js?v=2026-09-07-tafelraum-shortcuts-v1",
+  "/teacher.css?v=2026-09-13-print-polish-v1",
+  "/teacher.js?v=2026-09-13-print-polish-v1",
   "/tafelraum-embed.js?v=2026-09-08-content-zoom-layout-v2",
   "/ui-motion.css?v=2026-08-30-ui-motion-v1",
   "/ui-motion.js?v=2026-08-30-ui-motion-v1",
@@ -21,6 +21,9 @@ const APP_SHELL_URLS = [
   "/assets/icons/lerndeck-stack.svg",
   "/assets/icons/image-plus.svg",
   "/assets/icons/learn-mode.svg",
+  "/assets/icons/learning-modes-open.svg",
+  "/assets/icons/print.svg",
+  "/assets/icons/swap-horizontal.svg",
   "/icons/favicon-32.png?v=2026-08-30-app-icon-v1",
   "/icons/icon-192.png?v=2026-08-30-app-icon-v1",
   "/icons/icon-512.png?v=2026-08-30-app-icon-v1",

@@ -76,6 +76,7 @@ body.has-modal-open {
   display: inline-flex;
   align-items: center;
   gap: 0.48rem;
+  padding-right: 0.08em;
   width: fit-content;
   max-width: 100%;
   color: var(--heading-text);
@@ -90,6 +91,12 @@ body.has-modal-open {
   width: 0.9em;
   height: 0.9em;
   flex: 0 0 auto;
+  box-sizing: border-box;
+  padding: 0.09em;
+  border: 1px solid rgba(214, 224, 246, 0.08);
+  border-radius: 0.2em;
+  background: rgba(214, 224, 246, 0.05);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   transform: translateY(0.05em);
 }
 
@@ -1004,6 +1011,7 @@ body.has-modal-open {
 
 .teacher-set-row__edit,
 .teacher-set-row__practice,
+.teacher-set-row__print,
 .teacher-set-row__share,
 .teacher-set-row__delete {
   width: 2.25rem;
@@ -1037,6 +1045,8 @@ body.has-modal-open {
 .teacher-set-row__edit:focus-visible,
 .teacher-set-row__practice:hover,
 .teacher-set-row__practice:focus-visible,
+.teacher-set-row__print:hover,
+.teacher-set-row__print:focus-visible,
 .teacher-set-row__share:hover,
 .teacher-set-row__share:focus-visible {
   background: rgba(214, 224, 246, 0.12);
@@ -2158,6 +2168,377 @@ body.has-modal-open {
   font-size: 0.9rem;
 }
 
+.print-panel {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 74rem);
+  max-height: calc(100vh - 2.4rem);
+  padding: clamp(1.2rem, 2.5vw, 1.8rem);
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 1rem;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(circle at 82% 18%, rgba(71, 82, 113, 0.18), transparent 28%),
+    linear-gradient(180deg, rgba(32, 41, 58, 0.99), rgba(22, 29, 41, 0.99));
+  box-shadow: var(--shadow);
+}
+
+.print-panel__header {
+  padding-right: 3rem;
+}
+
+.print-mode-view {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.print-mode-card {
+  min-height: 9rem;
+  padding: 1.15rem;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto 1fr;
+  gap: 0.2rem 0.8rem;
+  text-align: left;
+  border: 1px solid rgba(214, 224, 246, 0.1);
+  border-radius: 1rem;
+  background: rgba(214, 224, 246, 0.045);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.print-mode-card--accent {
+  background: linear-gradient(145deg, rgba(99, 132, 191, 0.16), rgba(214, 224, 246, 0.04));
+}
+
+.print-mode-card:hover,
+.print-mode-card:focus-visible {
+  border-color: rgba(161, 188, 235, 0.34);
+  background-color: rgba(214, 224, 246, 0.08);
+  transform: translateY(-1px);
+}
+
+.print-mode-card:disabled {
+  opacity: 0.45;
+  cursor: wait;
+  transform: none;
+}
+
+.print-mode-card__mark {
+  grid-column: 1 / -1;
+  width: fit-content;
+  margin-bottom: 0.65rem;
+  padding: 0.38rem 0.58rem;
+  border: 1px solid rgba(214, 224, 246, 0.1);
+  border-radius: 0.55rem;
+  color: rgba(213, 224, 244, 0.88);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.76rem;
+  letter-spacing: 0.02em;
+}
+
+.print-mode-card strong {
+  font-size: 1.08rem;
+}
+
+.print-mode-card small {
+  grid-column: 1;
+  color: var(--text-muted);
+}
+
+.print-mode-card__arrow {
+  grid-column: 2;
+  grid-row: 2 / span 2;
+  align-self: end;
+  color: rgba(213, 224, 244, 0.75);
+  font-size: 1.15rem;
+}
+
+.print-mode-feedback {
+  grid-column: 1 / -1;
+}
+
+.print-workspace {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 0.85rem;
+  overflow: hidden;
+}
+
+.print-toolbar,
+.print-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.print-direction-field {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.print-direction-field select {
+  min-height: 2.55rem;
+  padding: 0.55rem 2.2rem 0.55rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 0.72rem;
+  background: rgba(214, 224, 246, 0.055);
+  color: var(--text);
+}
+
+.print-direction-control {
+  display: flex;
+  align-items: center;
+  gap: 0.38rem;
+}
+
+.print-direction-control button {
+  width: 2.55rem;
+  height: 2.55rem;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 0.72rem;
+  background: rgba(214, 224, 246, 0.055);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.print-direction-control button:hover,
+.print-direction-control button:focus-visible {
+  background: rgba(214, 224, 246, 0.12);
+}
+
+.print-direction-control img {
+  width: 1rem;
+  height: 1rem;
+  display: block;
+  filter: brightness(0) saturate(100%) invert(92%) sepia(12%) saturate(342%) hue-rotate(183deg) brightness(102%) contrast(95%);
+}
+
+.print-layout {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(17rem, 20rem) minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.print-layout--list {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.print-config {
+  min-height: 0;
+  max-height: min(64vh, 46rem);
+  padding: 0.85rem;
+  display: grid;
+  align-content: start;
+  gap: 0.75rem;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: rgba(214, 224, 246, 0.025);
+}
+
+.print-class-field input {
+  min-height: 2.75rem;
+}
+
+.print-selection-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.print-selection-heading strong {
+  font-size: 0.9rem;
+}
+
+.print-selection-heading span {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+
+.print-selection-actions {
+  display: flex;
+  gap: 0.42rem;
+  flex-wrap: wrap;
+}
+
+.print-selection-actions button {
+  min-height: 2rem;
+  padding: 0.35rem 0.58rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: rgba(214, 224, 246, 0.045);
+  color: rgba(226, 234, 248, 0.86);
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.print-selection-actions button:hover,
+.print-selection-actions button:focus-visible {
+  background: rgba(214, 224, 246, 0.1);
+}
+
+.print-card-list {
+  display: grid;
+  gap: 0.38rem;
+}
+
+.print-card-row {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: 0.78rem;
+  background: rgba(214, 224, 246, 0.025);
+}
+
+.print-card-row.is-selected {
+  border-color: rgba(137, 173, 229, 0.2);
+  background: rgba(99, 132, 191, 0.11);
+  cursor: grab;
+}
+
+.print-card-row.is-dragging {
+  opacity: 0.55;
+}
+
+.print-card-row__toggle {
+  min-width: 0;
+  padding: 0.58rem;
+  display: grid;
+  grid-template-columns: 1.55rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.58rem;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.print-card-row__position {
+  width: 1.55rem;
+  height: 1.55rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(214, 224, 246, 0.12);
+  border-radius: 0.48rem;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.print-card-row.is-selected .print-card-row__position {
+  border-color: rgba(147, 184, 239, 0.3);
+  background: rgba(97, 137, 202, 0.18);
+  color: rgba(233, 240, 252, 0.94);
+}
+
+.print-card-row__copy {
+  min-width: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.print-card-row__copy strong,
+.print-card-row__copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.print-card-row__copy strong {
+  font-size: 0.82rem;
+}
+
+.print-card-row__copy small {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.print-card-row__order {
+  padding-right: 0.42rem;
+  display: inline-flex;
+  gap: 0.18rem;
+}
+
+.print-card-row__order button {
+  width: 1.7rem;
+  height: 1.7rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0.48rem;
+  background: transparent;
+  color: rgba(222, 232, 248, 0.82);
+  cursor: pointer;
+}
+
+.print-card-row__order button:hover,
+.print-card-row__order button:focus-visible {
+  background: rgba(214, 224, 246, 0.1);
+}
+
+.print-card-row__order button:disabled {
+  opacity: 0.2;
+  cursor: default;
+}
+
+.print-preview-shell {
+  min-height: 30rem;
+  height: min(64vh, 46rem);
+  padding: 0.75rem;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(214, 224, 246, 0.1);
+  border-radius: 1rem;
+  background: rgba(6, 10, 18, 0.34);
+}
+
+.print-preview,
+.print-preview-loading {
+  grid-area: 1 / 1;
+}
+
+.print-preview {
+  width: min(100%, 34rem);
+  height: 100%;
+  border: 0;
+  border-radius: 0.28rem;
+  background: #ffffff;
+  box-shadow: 0 18px 48px -24px rgba(0, 0, 0, 0.85);
+}
+
+.print-preview-loading {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+}
+
+.print-footer {
+  min-height: 2.8rem;
+}
+
+.print-footer .teacher-auth__feedback {
+  flex: 1;
+}
+
 .delete-set-panel {
   position: relative;
   z-index: 1;
@@ -2190,6 +2571,22 @@ body.has-modal-open {
   margin-top: 0.15rem;
 }
 
+@media (max-width: 900px) {
+  .print-layout {
+    grid-template-columns: 1fr;
+    overflow: auto;
+  }
+
+  .print-config {
+    max-height: 18rem;
+  }
+
+  .print-preview-shell {
+    height: 52vh;
+    min-height: 24rem;
+  }
+}
+
 @media (max-width: 720px) {
   .set-import-preview-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2197,6 +2594,45 @@ body.has-modal-open {
 
   .teacher-set-row {
     grid-template-columns: 1fr;
+  }
+
+  .print-panel {
+    max-height: calc(100vh - 1rem);
+    padding: 1rem;
+  }
+
+  .print-mode-view {
+    grid-template-columns: 1fr;
+    overflow: auto;
+  }
+
+  .print-mode-card {
+    min-height: 7.4rem;
+  }
+
+  .print-toolbar,
+  .print-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .print-direction-field {
+    justify-content: space-between;
+  }
+
+  .print-direction-control,
+  .print-direction-field select,
+  .print-download-button {
+    flex: 1;
+  }
+
+  .print-preview-shell {
+    min-height: 21rem;
+    height: 48vh;
+  }
+
+  .print-footer .teacher-button {
+    width: 100%;
   }
 
   .teacher-set-row__tablet {
@@ -2330,6 +2766,7 @@ body.has-modal-open {
   .teacher-set-row__toggle-chevron,
   .teacher-set-row__tablets-panel,
   .teacher-set-row__practice,
+  .teacher-set-row__print,
   .teacher-set-row__share,
   .teacher-set-row__delete {
     transition: none;
