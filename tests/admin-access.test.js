@@ -38,10 +38,12 @@ test("admins can inspect and edit other teachers' sets without taking ownership"
   const aksana = credentials.find((entry) => entry.id === "aksana");
   const setService = new SetService({ dataDir });
   const juliusSet = await setService.createSet("julius", {
+    sidePreset: "languages", sourceLabel: "Deutsch", targetLabel: "Englisch", sourceLanguage: "de", targetLanguage: "en",
     title: "Julius Set",
     cards: [{ front: "Haus", back: "house" }],
   });
   const aksanaSet = await setService.createSet("aksana", {
+    sidePreset: "languages", sourceLabel: "Deutsch", targetLabel: "Englisch", sourceLanguage: "de", targetLanguage: "en",
     title: "Aksana Set",
     cards: [{ front: "Hund", back: "dog" }],
   });

@@ -119,3 +119,47 @@ test("teacher opens shared learning modes without writing tablet progress", asyn
   await expect(page).toHaveURL(/\/teacher$/);
   await expect(practiceButton).toBeVisible();
 });
+
+test("generic sets show readable words instead of flags in direction choices", async ({ page }, testInfo) => {
+  const setDocument = buildSetDocument();
+  setDocument.set.title = "Begriffe";
+  setDocument.set.languages = { source: "und", target: "und" };
+  setDocument.set.labels = { source: "Begriff", target: "Definition" };
+  const editableSet = {
+    id: "set-1", path: "sets/user/set-1.json", status: "published", editable: true,
+    title: "Begriffe", cardCount: setDocument.cards.length,
+    sourceLanguage: "und", targetLanguage: "und", sourceLabel: "Begriff", targetLabel: "Definition",
+    cards: setDocument.cards, tablets: [],
+  };
+  await page.route("**/api/runtime-info", (route) => route.fulfill({ json: { publicOrigin: BASE_URL } }));
+  await page.route("**/api/teacher/accounts", (route) => route.fulfill({
+    json: { accounts: [{ id: "julius", displayName: "Julius" }] },
+  }));
+  await page.route("**/api/teacher/session", (route) => route.fulfill({
+    json: { session: { teacherId: "julius" }, teacher: { id: "julius", displayName: "Julius" } },
+  }));
+  await page.route("**/api/sets", (route) => route.fulfill({
+    json: { sets: [{ ...editableSet, cards: undefined }], teacher: { id: "julius" } },
+  }));
+  await page.route("**/api/tablets", (route) => route.fulfill({ json: { tablets: [] } }));
+  await page.route("**/api/teacher/visual-jobs", (route) => route.fulfill({ json: { jobs: [] } }));
+  await page.route("**/api/teacher/sets/set-1", (route) => route.fulfill({ json: { set: editableSet } }));
+  await page.route("**/sets/user/set-1.json*", (route) => route.fulfill({ json: setDocument }));
+
+  await page.goto("/teacher", { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "Lernmodi für Set Begriffe öffnen" }).click();
+  await page.locator('.launch-mode-modal__mode-card[data-mode-key="practice"]').click();
+  await page.locator("#launch-mode-start").click();
+  const directions = page.locator('[data-learning-direction-group="launch"]');
+  await expect(directions).toContainText("Begriff");
+  await expect(directions).toContainText("Definition");
+  await expect(directions).not.toContainText("🌐");
+  await page.setViewportSize({ width: 390, height: 760 });
+  await directions.screenshot({ path: testInfo.outputPath("generic-direction-mobile.png") });
+  const bounds = await directions.boundingBox();
+  expect(bounds.x).toBeGreaterThanOrEqual(0);
+  expect(bounds.x + bounds.width).toBeLessThanOrEqual(390);
+  for (const choice of await directions.locator(".learning-direction-control__choice").all()) {
+    expect(await choice.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+  }
+});

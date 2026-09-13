@@ -73,12 +73,25 @@ test("teacher creates a temporary list or test PDF from one set", async ({ page 
   const printButton = page.getByRole("button", { name: "Set Means of transport ausdrucken" });
   await expect(printButton).toBeVisible();
   await expect(printButton.locator("img")).toHaveAttribute("src", "./assets/icons/print.svg");
+  await page.locator(".teacher-set-row").first().screenshot({ path: testInfo.outputPath("set-actions-desktop.png") });
+  await page.setViewportSize({ width: 390, height: 780 });
+  await page.locator(".teacher-set-row").first().screenshot({ path: testInfo.outputPath("set-actions-mobile.png") });
+  await page.setViewportSize({ width: 1150, height: 780 });
   await printButton.click();
 
   const dialog = page.getByRole("dialog", { name: "Means of transport" });
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole("button", { name: /Vokabelliste/ })).toBeVisible();
   await expect(dialog.getByRole("button", { name: /Vokabeltest/ })).toBeVisible();
+  await expect(dialog.locator('[data-print-kind="list"] .print-mode-card__icon'))
+    .toHaveAttribute("src", "./assets/icons/print-vocabulary-list.png");
+  await expect(dialog.locator('[data-print-kind="test"] .print-mode-card__icon'))
+    .toHaveAttribute("src", "./assets/icons/print-vocabulary-test.png");
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: testInfo.outputPath("print-mode-desktop.png"), fullPage: true });
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await page.screenshot({ path: testInfo.outputPath("print-mode-tablet.png"), fullPage: true });
+  await page.setViewportSize({ width: 1150, height: 780 });
   await dialog.getByRole("button", { name: /Vokabeltest/ }).click();
 
   await expect(page.locator("#print-selection-count")).toHaveText("10 ausgewählt");

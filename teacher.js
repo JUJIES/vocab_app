@@ -49,10 +49,8 @@ const state = {
   editorFiles: [],
   editorFilePreviewUrls: [],
   editorCards: [],
-  editorMetadata: {
-    sourceLanguage: "de",
-    targetLanguage: "en",
-  },
+  editorMetadata: { sourceLanguage: "", targetLanguage: "" },
+  editorSideSelection: { front: "", back: "" },
   printSet: null,
   printKind: "",
   printDirection: "source-target",
@@ -173,6 +171,7 @@ const elements = {
   setSubjectInput: document.getElementById("set-subject-input"),
   setSourceLabelInput: document.getElementById("set-source-label-input"),
   setTargetLabelInput: document.getElementById("set-target-label-input"),
+  setSideFeedback: document.getElementById("set-side-feedback"),
   setDescriptionInput: document.getElementById("set-description-input"),
   setCardList: document.getElementById("set-card-editor-list"),
   setCardCount: document.getElementById("set-card-count"),
@@ -350,8 +349,6 @@ function bindEvents() {
   elements.setImportBack.addEventListener("click", returnFromSetImport);
   elements.setEditorForm.addEventListener("submit", handleSaveSet);
   elements.setEditorForm.addEventListener("input", scheduleEditorDraftSave);
-  elements.setSourceLabelInput.addEventListener("input", updateEditorCardSideLabels);
-  elements.setTargetLabelInput.addEventListener("input", updateEditorCardSideLabels);
   elements.addCardButton.addEventListener("click", () => addEditorCard());
   elements.generateVisualsButton.addEventListener("click", handleGenerateMissingVisuals);
   elements.regenerateAllVisualsButton.addEventListener("click", handleRegenerateAllVisuals);
@@ -934,7 +931,7 @@ function createSetRow(setEntry) {
   meta.className = "teacher-set-row__meta";
   meta.textContent = [
     setEntry.subject,
-    `${setEntry.cardCount} Karte${setEntry.cardCount === 1 ? "" : "n"}`,
+    `${setEntry.cardCount} Vokabel${setEntry.cardCount === 1 ? "" : "n"}`,
     setEntry.description,
   ]
     .filter(Boolean)
@@ -1537,7 +1534,7 @@ async function openPrintOverlay(setEntry) {
 
     state.printSet = response.data?.set || null;
     if (!state.printSet || !Array.isArray(state.printSet.cards) || state.printSet.cards.length === 0) {
-      throw new Error("Dieses Set enthält keine druckbaren Karten.");
+      throw new Error("Dieses Set enthält keine druckbaren Vokabeln.");
     }
     elements.printTitle.textContent = state.printSet.title || setEntry.title;
     configurePrintDirectionOptions();
@@ -2357,14 +2354,16 @@ function openNewSetEditor() {
   state.editorSetId = "";
   state.editorCards = [];
   state.visualAssetsByCard = {};
-  state.editorMetadata = { sourceLanguage: "de", targetLanguage: "en" };
+  state.editorMetadata = { sourceLanguage: "", targetLanguage: "" };
+  state.editorSideSelection = { front: "", back: "" };
   elements.setEditorTitle.textContent = "Neues Set";
   updateEditorStatusUi();
   elements.setTitleInput.value = "";
   elements.setSubjectInput.value = "";
   elements.setDescriptionInput.value = "";
-  elements.setSourceLabelInput.value = "Begriff";
-  elements.setTargetLabelInput.value = "Übersetzung oder Definition";
+  elements.setSourceLabelInput.value = "";
+  elements.setTargetLabelInput.value = "";
+  clearEditorSideError();
   elements.setEditorFeedback.textContent = "";
   resetSetImportInputs();
   window.LerndeckUiMotion.show(elements.setEditorOverlay);
@@ -2388,17 +2387,13 @@ async function openEditSetEditor(setEntry) {
     state.editorCards = Array.isArray(editableSet.cards)
       ? editableSet.cards.map(normalizeEditorCard).filter(Boolean)
       : [];
-    state.editorMetadata = {
-      sourceLanguage: editableSet.sourceLanguage || "de",
-      targetLanguage: editableSet.targetLanguage || "en",
-    };
+    restoreEditorSideSelection(editableSet);
     elements.setEditorTitle.textContent = editableSet.status === "draft" ? "Entwurf bearbeiten" : "Set bearbeiten";
     updateEditorStatusUi();
     elements.setTitleInput.value = editableSet.title || "";
     elements.setSubjectInput.value = editableSet.subject || "";
     elements.setDescriptionInput.value = editableSet.description || "";
-    elements.setSourceLabelInput.value = editableSet.sourceLabel || "Begriff";
-    elements.setTargetLabelInput.value = editableSet.targetLabel || "Übersetzung oder Definition";
+    clearEditorSideError();
     elements.setEditorFeedback.textContent = "";
     resetSetImportInputs();
     if (state.editorCards.length === 0) {
@@ -2575,20 +2570,19 @@ function addEditorCard(card = createEmptyEditorCard()) {
 
 function renderEditorCards() {
   elements.setCardList.replaceChildren();
-  elements.setCardCount.textContent = `${state.editorCards.length} Karte${state.editorCards.length === 1 ? "" : "n"}`;
+  elements.setCardCount.textContent = `${state.editorCards.length} Vokabel${state.editorCards.length === 1 ? "" : "n"}`;
   const sideLabels = getEditorCardSideLabels();
 
   const columns = document.createElement("div");
   columns.className = "set-card-editor-columns";
-  columns.setAttribute("aria-hidden", "true");
-  for (const [side, labelText] of [["", ""], ["front", sideLabels.front], ["back", sideLabels.back], ["", "Bild"], ["", ""]]) {
-    const label = document.createElement("span");
-    label.textContent = labelText;
-    if (side) {
-      label.dataset.cardSideLabel = side;
-    }
-    columns.append(label);
-  }
+  const spacer = document.createElement("span");
+  spacer.setAttribute("aria-hidden", "true");
+  const imageLabel = document.createElement("span");
+  imageLabel.className = "set-card-editor-columns__image";
+  imageLabel.textContent = "Bild";
+  const endSpacer = document.createElement("span");
+  endSpacer.setAttribute("aria-hidden", "true");
+  columns.append(spacer, createEditorSideSelect("front"), createEditorSideSelect("back"), imageLabel, endSpacer);
   elements.setCardList.append(columns);
 
   state.editorCards.forEach((card, index) => {
@@ -2610,8 +2604,8 @@ function renderEditorCards() {
     const remove = document.createElement("button");
     remove.className = "set-card-editor-row__remove";
     remove.type = "button";
-    remove.setAttribute("aria-label", `Karte ${index + 1} entfernen`);
-    remove.title = "Karte entfernen";
+    remove.setAttribute("aria-label", `Vokabel ${index + 1} entfernen`);
+    remove.title = "Vokabel entfernen";
     remove.append(createButtonIcon(REMOVE_ICON_PATH));
     remove.addEventListener("click", () => {
       state.editorCards.splice(index, 1);
@@ -2625,7 +2619,111 @@ function renderEditorCards() {
     row.append(number, front, back, visual, remove);
     elements.setCardList.append(row);
   });
+  const addRow = document.createElement("button");
+  addRow.className = "set-card-editor-add";
+  addRow.type = "button";
+  addRow.setAttribute("aria-label", "Neue Vokabel hinzufügen");
+  const addIcon = document.createElement("span");
+  addIcon.className = "set-card-editor-add__icon";
+  addIcon.setAttribute("aria-hidden", "true");
+  addIcon.textContent = "+";
+  const addLabel = document.createElement("span");
+  addLabel.className = "set-card-editor-add__label";
+  addLabel.textContent = "Neue Vokabel hinzufügen";
+  addRow.append(addIcon, addLabel);
+  addRow.addEventListener("click", () => addEditorCard());
+  elements.setCardList.append(addRow);
   renderVisualControls();
+}
+
+function createEditorSideSelect(side) {
+  const field = document.createElement("label");
+  field.className = "set-card-editor-columns__side";
+  const title = document.createElement("span");
+  title.textContent = side === "front" ? "Vorderseite *" : "Rückseite *";
+  const select = document.createElement("select");
+  select.dataset.editorSideSelect = side;
+  select.required = true;
+  const placeholder = new Option("Auswählen …", "");
+  select.add(placeholder);
+  if (side === "front") {
+    for (const [groupLabel, keys] of [
+      ["Sprachen", ["en", "de"]],
+      ["Begriff und Definition", ["term", "definition"]],
+      ["Frage und Antwort", ["question", "answer"]],
+    ]) {
+      const group = document.createElement("optgroup");
+      group.label = groupLabel;
+      for (const key of keys) {
+        const choice = window.LerndeckSetSides.choices[key];
+        group.append(new Option(`${choice.symbol}  ${choice.label}`, key));
+      }
+      select.append(group);
+    }
+  } else if (state.editorSideSelection.front) {
+    const key = window.LerndeckSetSides.choices[state.editorSideSelection.front].partner;
+    const choice = window.LerndeckSetSides.choices[key];
+    select.add(new Option(`${choice.symbol}  ${choice.label}`, key));
+  }
+  select.value = state.editorSideSelection[side];
+  select.disabled = side === "back" && !state.editorSideSelection.front;
+  select.addEventListener("change", () => {
+    state.editorSideSelection[side] = select.value;
+    if (side === "front") {
+      state.editorSideSelection.back = "";
+    }
+    applyEditorSideSelection();
+    renderEditorCards();
+    requestAnimationFrame(() => {
+      if (side === "front") {
+        elements.setCardList.querySelector('[data-editor-side-select="back"]')?.focus();
+      } else {
+        elements.setCardList.querySelector(".set-card-editor-row input")?.focus();
+      }
+    });
+    scheduleEditorDraftSave();
+  });
+  field.append(title, select);
+  return field;
+}
+
+function applyEditorSideSelection() {
+  const configuration = window.LerndeckSetSides.resolve(
+    state.editorSideSelection.front, state.editorSideSelection.back,
+  );
+  elements.setSourceLabelInput.value = configuration?.sourceLabel || "";
+  elements.setTargetLabelInput.value = configuration?.targetLabel || "";
+  state.editorMetadata = {
+    sourceLanguage: configuration?.sourceLanguage || "",
+    targetLanguage: configuration?.targetLanguage || "",
+  };
+  if (configuration) clearEditorSideError();
+  updateEditorCardSideLabels();
+}
+
+function restoreEditorSideSelection(set) {
+  const inferred = window.LerndeckSetSides.infer(set);
+  const useExisting = set.status === "published" || Boolean(set.sidePreset);
+  const selected = useExisting && inferred && (!set.sidePreset || inferred.preset === set.sidePreset)
+    ? inferred : null;
+  state.editorSideSelection = { front: selected?.front || "", back: selected?.back || "" };
+  applyEditorSideSelection();
+}
+
+function clearEditorSideError() {
+  elements.setSideFeedback.hidden = true;
+  elements.setCardList.classList.remove("is-side-invalid");
+}
+
+function requireEditorSideSelection() {
+  if (window.LerndeckSetSides.resolve(state.editorSideSelection.front, state.editorSideSelection.back)) return true;
+  elements.setSideFeedback.hidden = false;
+  elements.setCardList.classList.add("is-side-invalid");
+  const missingSide = state.editorSideSelection.front ? "back" : "front";
+  const select = elements.setCardList.querySelector(`[data-editor-side-select="${missingSide}"]`);
+  select?.scrollIntoView({ behavior: "smooth", block: "center" });
+  select?.focus({ preventScroll: true });
+  return false;
 }
 
 function createEditorVisualControl(card, index) {
@@ -2639,7 +2737,7 @@ function createEditorVisualControl(card, index) {
   trigger.className = "set-card-visual__trigger";
   trigger.type = "button";
   trigger.disabled = !card.id || state.editorSetStatus !== "published";
-  trigger.setAttribute("aria-label", activeAsset ? `Bild zu Karte ${index + 1} ansehen` : `Bild zu Karte ${index + 1} erstellen`);
+  trigger.setAttribute("aria-label", activeAsset ? `Bild zu Vokabel ${index + 1} ansehen` : `Bild zu Vokabel ${index + 1} erstellen`);
   trigger.setAttribute("aria-expanded", "false");
   if (activeAsset?.url) {
     const thumbnail = document.createElement("img");
@@ -2662,7 +2760,7 @@ function createEditorVisualControl(card, index) {
   if (card.id && state.editorSetStatus === "published") {
     const popover = document.createElement("section");
     popover.className = "set-card-visual__popover";
-    popover.setAttribute("aria-label", `Lernbild für Karte ${index + 1}`);
+    popover.setAttribute("aria-label", `Lernbild für Vokabel ${index + 1}`);
     if (activeAsset?.url) {
       const preview = document.createElement("img");
       preview.className = "set-card-visual__preview";
@@ -2705,7 +2803,7 @@ function createEditorVisualControl(card, index) {
     instructionInput.maxLength = 300;
     instructionInput.value = activeAsset?.instruction || "";
     instructionInput.placeholder = "z. B. roter Bus von der Seite";
-    instructionInput.setAttribute("aria-label", `Bildwunsch für Karte ${index + 1}`);
+    instructionInput.setAttribute("aria-label", `Bildwunsch für Vokabel ${index + 1}`);
     instructionInput.addEventListener("click", (event) => event.stopPropagation());
     instructionLabel.append(instructionText, instructionInput);
     popover.append(instructionLabel);
@@ -2789,7 +2887,7 @@ function renderVisualControls() {
   } else if (job?.status === "completed" && job.skippedCount > 0) {
     elements.visualJobStatus.hidden = false;
     elements.visualJobStatus.className = "visual-job-status";
-    elements.visualJobStatus.textContent = `${job.attachedCount} Bilder zugeordnet · ${job.skippedCount} geänderte Karten übersprungen.`;
+    elements.visualJobStatus.textContent = `${job.attachedCount} Bilder zugeordnet · ${job.skippedCount} geänderte Vokabeln übersprungen.`;
   } else {
     elements.visualJobStatus.hidden = true;
   }
@@ -3148,8 +3246,8 @@ async function handleCreateImportDraft() {
       }
     }
     elements.setEditorFeedback.textContent = response.data?.importMethod === "openai"
-      ? `${importedCardCount} Karte${importedCardCount === 1 ? "" : "n"} automatisch ${wasAppended ? "hinzugefügt" : "erstellt"}. Bitte kurz prüfen.`
-      : `${importedCardCount} Karte${importedCardCount === 1 ? "" : "n"} ${wasAppended ? "hinzugefügt" : "übernommen"}. Bitte kurz prüfen.`;
+      ? `${importedCardCount} Vokabel${importedCardCount === 1 ? "" : "n"} automatisch ${wasAppended ? "hinzugefügt" : "erstellt"}. Bitte kurz prüfen.`
+      : `${importedCardCount} Vokabel${importedCardCount === 1 ? "" : "n"} ${wasAppended ? "hinzugefügt" : "übernommen"}. Bitte kurz prüfen.`;
   } catch (error) {
     if (error?.requiresAuth) {
       showTeacherAuth(error.message);
@@ -3164,12 +3262,12 @@ async function handleCreateImportDraft() {
 
 function applyImportDraft(draft) {
   if (!draft || !Array.isArray(draft.cards)) {
-    throw new Error("Der Entwurf enthält keine Karten.");
+    throw new Error("Der Entwurf enthält keine Vokabeln.");
   }
   const importedCards = draft.cards.map(normalizeEditorCard).filter(Boolean);
 
   if (importedCards.length === 0) {
-    throw new Error("Der Entwurf enthält keine vollständigen Karten.");
+    throw new Error("Der Entwurf enthält keine vollständigen Vokabeln.");
   }
 
   const shouldAppend = state.editorImportMode === "append";
@@ -3182,27 +3280,13 @@ function applyImportDraft(draft) {
       elements.setTitleInput.value = elements.setTitleInput.value || draft.title || "Neues Lernset";
       elements.setSubjectInput.value = elements.setSubjectInput.value || draft.subject || "";
       elements.setDescriptionInput.value = elements.setDescriptionInput.value || draft.description || "";
-      if (elements.setSourceLabelInput.value === "Begriff") {
-        elements.setSourceLabelInput.value = draft.sourceLabel || "Begriff";
-      }
-      if (elements.setTargetLabelInput.value === "Übersetzung oder Definition") {
-        elements.setTargetLabelInput.value = draft.targetLabel || "Übersetzung oder Definition";
-      }
-      state.editorMetadata = {
-        sourceLanguage: draft.sourceLanguage || state.editorMetadata.sourceLanguage || "de",
-        targetLanguage: draft.targetLanguage || state.editorMetadata.targetLanguage || "en",
-      };
     }
   } else {
     elements.setTitleInput.value = draft.title || elements.setTitleInput.value || "Neues Lernset";
     elements.setSubjectInput.value = draft.subject || "";
     elements.setDescriptionInput.value = draft.description || "";
-    elements.setSourceLabelInput.value = draft.sourceLabel || "Begriff";
-    elements.setTargetLabelInput.value = draft.targetLabel || "Übersetzung oder Definition";
-    state.editorMetadata = {
-      sourceLanguage: draft.sourceLanguage || "de",
-      targetLanguage: draft.targetLanguage || "en",
-    };
+    state.editorSideSelection = { front: "", back: "" };
+    applyEditorSideSelection();
     state.editorCards = importedCards;
   }
 
@@ -3300,6 +3384,7 @@ function buildEditorDraftPayload() {
       targetLabel: elements.setTargetLabelInput.value,
       sourceLanguage: state.editorMetadata.sourceLanguage,
       targetLanguage: state.editorMetadata.targetLanguage,
+      sidePreset: window.LerndeckSetSides.resolve(state.editorSideSelection.front, state.editorSideSelection.back)?.preset || null,
       cards,
     },
   };
@@ -3400,6 +3485,7 @@ async function persistEditorDraft({ immediate = false } = {}) {
 
 async function handleSaveSet(event) {
   event.preventDefault();
+  if (!requireEditorSideSelection()) return;
   const preparedCards = state.editorCards.map((card) => ({
       id: card.id,
       front: card.front.trim(),
@@ -3413,7 +3499,7 @@ async function handleSaveSet(event) {
     }));
   const incompleteCardIndex = preparedCards.findIndex((card) => Boolean(card.front) !== Boolean(card.back));
   if (incompleteCardIndex >= 0) {
-    elements.setEditorFeedback.textContent = `Karte ${incompleteCardIndex + 1} ist noch unvollständig.`;
+    elements.setEditorFeedback.textContent = `Vokabel ${incompleteCardIndex + 1} ist noch unvollständig.`;
     return;
   }
   const cards = preparedCards.filter((card) => card.front && card.back);
@@ -3424,7 +3510,7 @@ async function handleSaveSet(event) {
     return;
   }
   if (cards.length === 0) {
-    elements.setEditorFeedback.textContent = "Mindestens eine vollständige Karte ist erforderlich.";
+    elements.setEditorFeedback.textContent = "Mindestens eine vollständige Vokabel ist erforderlich.";
     return;
   }
 
@@ -3443,6 +3529,7 @@ async function handleSaveSet(event) {
     targetLabel: elements.setTargetLabelInput.value,
     sourceLanguage: state.editorMetadata.sourceLanguage,
     targetLanguage: state.editorMetadata.targetLanguage,
+    sidePreset: window.LerndeckSetSides.resolve(state.editorSideSelection.front, state.editorSideSelection.back).preset,
     cards,
   };
   const path = state.editorSetId

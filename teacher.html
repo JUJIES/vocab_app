@@ -19,13 +19,14 @@
       }
     </script>
     <link rel="stylesheet" href="./pwa-splash.css?v=2026-08-30-pwa-splash-v1" />
-    <link rel="stylesheet" href="./teacher.css?v=2026-09-13-print-polish-v1" />
+    <link rel="stylesheet" href="./teacher.css?v=2026-09-13-side-selection-v1" />
     <link rel="stylesheet" href="./ui-motion.css?v=2026-08-30-ui-motion-v1" />
     <script src="./pwa.js?v=2026-08-30-pwa-splash-v3" defer></script>
     <script src="./ui-motion.js?v=2026-08-30-ui-motion-v1" defer></script>
     <script src="./tafelraum-embed.js?v=2026-09-08-content-zoom-layout-v2" defer></script>
+    <script src="./set-side-options.js?v=2026-09-13-side-selection-v1" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js" defer></script>
-    <script src="./teacher.js?v=2026-09-13-print-polish-v1" defer></script>
+    <script src="./teacher.js?v=2026-09-13-side-selection-v1" defer></script>
   </head>
   <body>
     <div class="pwa-splash" role="status" aria-label="Lerndeck wird geladen">
@@ -281,13 +282,13 @@
 
         <section id="print-mode-view" class="print-mode-view" aria-label="Druckart auswählen">
           <button class="print-mode-card" type="button" data-print-kind="list">
-            <span class="print-mode-card__mark" aria-hidden="true">A · B</span>
+            <img class="print-mode-card__icon" src="./assets/icons/print-vocabulary-list.png" alt="" aria-hidden="true" />
             <strong>Vokabelliste</strong>
             <small>Beide Sprachen</small>
             <span class="print-mode-card__arrow" aria-hidden="true">→</span>
           </button>
           <button class="print-mode-card print-mode-card--accent" type="button" data-print-kind="test">
-            <span class="print-mode-card__mark" aria-hidden="true">A · ___</span>
+            <img class="print-mode-card__icon" src="./assets/icons/print-vocabulary-test.png" alt="" aria-hidden="true" />
             <strong>Vokabeltest</strong>
             <small>Auswahl mit Schreiblinien</small>
             <span class="print-mode-card__arrow" aria-hidden="true">→</span>
@@ -435,7 +436,7 @@
           <div class="set-editor-choice__grid">
             <button id="set-editor-choose-manual" class="set-editor-choice-card" type="button">
               <strong>Manuell erstellen</strong>
-              <small>Karten selbst eingeben</small>
+              <small>Vokabeln selbst eingeben</small>
               <span class="set-editor-choice-card__arrow" aria-hidden="true">→</span>
             </button>
             <button id="set-editor-choose-import" class="set-editor-choice-card set-editor-choice-card--accent" type="button">
@@ -477,7 +478,7 @@
           <div class="set-editor-mode-bar">
             <div>
               <p class="share-panel__kicker">Manuelle Bearbeitung</p>
-              <p class="set-editor-help">Set-Daten und Karten prüfen oder direkt anpassen.</p>
+              <p class="set-editor-help">Set-Daten und Vokabeln prüfen oder direkt anpassen.</p>
             </div>
             <button id="set-open-import-button" class="teacher-button teacher-button--secondary" type="button">
               Automatisch hinzufügen
@@ -493,15 +494,9 @@
               <span>Fach</span>
               <input id="set-subject-input" name="subject" type="text" maxlength="120" placeholder="z. B. Englisch" />
             </label>
-            <label class="set-editor-field">
-              <span>Vorderseite</span>
-              <input id="set-source-label-input" name="sourceLabel" type="text" maxlength="80" value="Begriff" />
-            </label>
-            <label class="set-editor-field">
-              <span>Rückseite</span>
-              <input id="set-target-label-input" name="targetLabel" type="text" maxlength="80" value="Übersetzung oder Definition" />
-            </label>
           </div>
+          <input id="set-source-label-input" name="sourceLabel" type="hidden" />
+          <input id="set-target-label-input" name="targetLabel" type="hidden" />
 
           <label class="set-editor-field">
             <span>Beschreibung <small>optional</small></span>
@@ -510,8 +505,8 @@
 
           <div class="set-card-editor-heading">
             <div>
-              <h3 class="set-editor-section-title">Karten</h3>
-              <p id="set-card-count" class="teacher-section__meta">0 Karten</p>
+              <h3 class="set-editor-section-title">Vokabeln</h3>
+              <p id="set-card-count" class="teacher-section__meta">0 Vokabeln</p>
             </div>
             <div class="set-card-editor-heading__actions">
               <button id="generate-visuals-button" class="teacher-button teacher-button--secondary" type="button" hidden>
@@ -524,11 +519,12 @@
               </button>
               <button id="add-card-button" class="teacher-button teacher-button--secondary" type="button">
                 <img class="teacher-button__icon" src="./assets/icons/square-plus.svg" alt="" decoding="async" />
-                <span>Karte hinzufügen</span>
+                <span>Vokabel hinzufügen</span>
               </button>
             </div>
           </div>
           <div id="visual-job-status" class="visual-job-status" role="status" aria-live="polite" hidden></div>
+          <p id="set-side-feedback" class="set-side-feedback" role="alert" hidden>Bitte Vorder- und Rückseite auswählen.</p>
           <div id="set-card-editor-list" class="set-card-editor-list"></div>
 
           <p id="set-editor-feedback" class="teacher-auth__feedback" aria-live="polite"></p>

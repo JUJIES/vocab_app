@@ -7,6 +7,10 @@ const { ImportService, parseStructuredText } = require("../lib/import-service");
 const { RuntimeJsonStore } = require("../lib/runtime-json-store");
 const { SetService } = require("../lib/set-service");
 const { TeacherService } = require("../lib/teacher-service");
+const germanEnglishSides = {
+  sidePreset: "languages", sourceLabel: "Deutsch", targetLabel: "Englisch",
+  sourceLanguage: "de", targetLanguage: "en",
+};
 
 async function withTempDirectory(run) {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "lerndeck-test-"));
@@ -130,6 +134,7 @@ test("private sets keep their path and share code while revisions update", async
   await withTempDirectory(async (directory) => {
     const service = new SetService({ dataDir: directory });
     const created = await service.createSet("julius", {
+      ...germanEnglishSides,
       title: "Tiere",
       cards: [
         { front: "Hund", back: "dog", acceptedAnswers: ["dog"] },
@@ -166,6 +171,7 @@ test("teacher sets stay private while public codes remain resolvable", async () 
   await withTempDirectory(async (directory) => {
     const service = new SetService({ dataDir: directory });
     const juliusSet = await service.createSet("julius", {
+      ...germanEnglishSides,
       title: "Privat",
       cards: [{ front: "A", back: "B" }],
     });
@@ -211,6 +217,7 @@ test("publishing a draft keeps its identity and creates its first share code", a
       cards: [{ id: createdDraft.cards[0].id, front: "Hund", back: "dog" }],
     });
     const published = await service.updateSet("julius", createdDraft.id, {
+      ...germanEnglishSides,
       title: "Tiere auf Englisch",
       cards: updatedDraft.cards,
     });
@@ -232,10 +239,46 @@ test("publishing a draft keeps its identity and creates its first share code", a
   });
 });
 
+test("new sets cannot publish without an explicit, matching side pair", async () => {
+  await withTempDirectory(async (directory) => {
+    const service = new SetService({ dataDir: directory });
+    await assert.rejects(
+      () => service.createSet("julius", { title: "Ohne Zuordnung", cards: [{ front: "cat", back: "Katze" }] }),
+      { code: "SIDE_CONFIGURATION_REQUIRED" },
+    );
+    const draft = await service.createDraft("julius", {
+      title: "Fragen", cards: [{ front: "Was?", back: "Das." }],
+    });
+    assert.equal(draft.sidePreset, null);
+    await assert.rejects(
+      () => service.updateSet("julius", draft.id, { title: "Fragen", cards: draft.cards }),
+      { code: "SIDE_CONFIGURATION_REQUIRED" },
+    );
+    const selectedDraft = await service.updateDraft("julius", draft.id, {
+      title: "Fragen", cards: draft.cards, sidePreset: "question-answer",
+      sourceLabel: "Frage", targetLabel: "Antwort", sourceLanguage: "und", targetLanguage: "und",
+    });
+    assert.equal((await service.getOwnedSet("julius", draft.id)).sidePreset, "question-answer");
+    const published = await service.updateSet("julius", draft.id, {
+      title: "Fragen", cards: selectedDraft.cards,
+    });
+    assert.equal(published.sidePreset, "question-answer");
+    assert.equal(service.toSetDocument(await service.findPublishedSetById(draft.id)).set.labels.source, "Frage");
+    await assert.rejects(
+      () => service.createSet("julius", {
+        ...germanEnglishSides, sourceLanguage: "en", title: "Falsche Flagge",
+        cards: [{ front: "cat", back: "Katze" }],
+      }),
+      { code: "SIDE_CONFIGURATION_REQUIRED" },
+    );
+  });
+});
+
 test("teachers can delete their own sets and drafts without touching another account", async () => {
   await withTempDirectory(async (directory) => {
     const service = new SetService({ dataDir: directory });
     const published = await service.createSet("julius", {
+      ...germanEnglishSides,
       title: "Zum Löschen",
       cards: [{ front: "Hund", back: "dog" }],
     });

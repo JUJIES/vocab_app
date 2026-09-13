@@ -32,7 +32,7 @@ async function login(page) {
   }
 }
 
-test("teacher login brand uses the framed main-menu icon language", async ({ page }) => {
+test("teacher login brand uses an unframed icon beside the wordmark", async ({ page }) => {
   for (const viewport of [
     { name: "tablet", width: 1024, height: 768 },
     { name: "mobile", width: 390, height: 760 },
@@ -47,9 +47,9 @@ test("teacher login brand uses the framed main-menu icon language", async ({ pag
         borderRadius: Number.parseFloat(style.borderRadius),
       };
     });
-    expect(iconStyle.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
-    expect(iconStyle.borderWidth).toBe("1px");
-    expect(iconStyle.borderRadius).toBeGreaterThan(0);
+    expect(iconStyle.backgroundColor).toBe("rgba(0, 0, 0, 0)");
+    expect(iconStyle.borderWidth).toBe("0px");
+    expect(iconStyle.borderRadius).toBe(0);
     const brandBox = await page.locator(".teacher-auth__brand").boundingBox();
     expect(brandBox.x).toBeGreaterThanOrEqual(0);
     expect(brandBox.x + brandBox.width).toBeLessThanOrEqual(viewport.width + 1);

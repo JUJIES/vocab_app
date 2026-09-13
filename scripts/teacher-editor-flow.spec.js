@@ -103,6 +103,14 @@ test("teacher editor separates creation, manual editing and automatic additions"
   await page.getByRole("button", { name: /Manuell erstellen/ }).click();
   await expect(page.locator("#set-editor-form")).toBeVisible();
   await expect(page.locator("#set-import-section")).toBeHidden();
+  await expect(page.getByRole("heading", { name: "Vokabeln" })).toBeVisible();
+  const appendVocabulary = page.getByRole("button", { name: "Neue Vokabel hinzufügen" });
+  await expect(appendVocabulary).toBeVisible();
+  await appendVocabulary.click();
+  await expect(page.locator(".set-card-editor-row")).toHaveCount(2);
+  await expect(page.locator(".set-card-editor-row").last().locator("input").first()).toBeFocused();
+  await expect(appendVocabulary).toBeVisible();
+  await page.getByRole("button", { name: "Vokabel 2 entfernen" }).click();
   await page.locator("#set-title-input").fill("Manueller Entwurf bleibt erhalten");
   const firstCardInputs = page.locator(".set-card-editor-row").first().locator("input");
   await firstCardInputs.nth(0).fill("bestehend");
@@ -138,15 +146,14 @@ test("teacher editor separates creation, manual editing and automatic additions"
   await expect(page.locator("#set-title-input")).toHaveValue("Tiere auf Englisch");
   await expect(page.locator("#set-subject-input")).toHaveValue("Englisch");
   await expect(page.locator("#set-description-input")).toHaveValue("Grundwortschatz zu Tieren");
+  const frontSide = page.locator('[data-editor-side-select="front"]');
+  const backSide = page.locator('[data-editor-side-select="back"]');
+  await expect(frontSide).toHaveValue("");
+  await expect(backSide).toBeDisabled();
+  await frontSide.selectOption("de");
+  await backSide.selectOption("en");
   await expect(page.locator("#set-source-label-input")).toHaveValue("Deutsch");
   await expect(page.locator("#set-target-label-input")).toHaveValue("Englisch");
-  const cardColumns = page.locator(".set-card-editor-columns > span");
-  await expect(cardColumns.nth(1)).toHaveText("Deutsch");
-  await expect(cardColumns.nth(2)).toHaveText("Englisch");
-  await page.locator("#set-source-label-input").fill("");
-  await expect(cardColumns.nth(1)).toHaveText("Vorderseite");
-  await page.locator("#set-source-label-input").fill("Deutsch");
-  await expect(cardColumns.nth(1)).toHaveText("Deutsch");
   await expect(page.locator("#set-import-section")).toBeHidden();
 
   await page.reload({ waitUntil: "networkidle" });
@@ -158,6 +165,8 @@ test("teacher editor separates creation, manual editing and automatic additions"
   await reloadedDraft.getByRole("button", { name: /bearbeiten/i }).click();
   await expect(page.locator("#set-title-input")).toHaveValue("Tiere auf Englisch");
   await expect(page.locator(".set-card-editor-row")).toHaveCount(2);
+  await expect(page.locator('[data-editor-side-select="front"]')).toHaveValue("de");
+  await expect(page.locator('[data-editor-side-select="back"]')).toHaveValue("en");
   await page.getByRole("button", { name: "Set veröffentlichen" }).click();
   await expect(page.locator("#share-overlay")).toBeVisible();
   const publishedShareCode = (await page.locator("#share-code").textContent()).trim();
@@ -169,13 +178,13 @@ test("teacher editor separates creation, manual editing and automatic additions"
   await expect(page.locator("#set-editor-form")).toBeVisible();
   await expect(page.locator("#set-editor-choice")).toBeHidden();
   await expect(page.locator("#set-import-section")).toBeHidden();
-  await page.getByRole("button", { name: "Bild zu Karte 1 erstellen" }).click();
-  await expect(page.getByLabel("Bildwunsch für Karte 1")).toBeVisible();
-  await expect(page.getByLabel("Bildwunsch für Karte 1")).toHaveAttribute(
+  await page.getByRole("button", { name: "Bild zu Vokabel 1 erstellen" }).click();
+  await expect(page.getByLabel("Bildwunsch für Vokabel 1")).toBeVisible();
+  await expect(page.getByLabel("Bildwunsch für Vokabel 1")).toHaveAttribute(
     "placeholder",
     "z. B. roter Bus von der Seite",
   );
-  await page.getByRole("button", { name: "Bild zu Karte 1 erstellen" }).click();
+  await page.getByRole("button", { name: "Bild zu Vokabel 1 erstellen" }).click();
 
   const originalTitle = await page.locator("#set-title-input").inputValue();
   const originalCardCount = await page.locator(".set-card-editor-row").count();
@@ -207,4 +216,102 @@ test("teacher editor separates creation, manual editing and automatic additions"
   await page.locator("#delete-set-confirm").click();
   await expect(savedDraft).toHaveCount(0);
   await expect(page.getByRole("heading", { name: /^Entwürfe/ })).toHaveCount(0);
+});
+
+test("teacher editor keeps a usable add-vocabulary row after every entry", async ({ page }, testInfo) => {
+  const editableSet = {
+    id: "set-1", path: "sets/user/set-1.json", status: "published", editable: true, title: "Zoom in",
+    ownerTeacherId: "julius", ownerDisplayName: "Julius",
+    sourceLanguage: "en", targetLanguage: "de", sourceLabel: "Englisch", targetLabel: "Deutsch",
+    cardCount: 2, cards: [
+      { id: "card-1", front: "street gangs", back: "Straßenbanden", acceptedAnswers: [] },
+      { id: "card-2", front: "mural", back: "Wandbild", acceptedAnswers: [] },
+    ],
+    tablets: [],
+  };
+  await page.route("**/api/runtime-info", (route) => route.fulfill({ json: { publicOrigin: BASE_URL } }));
+  await page.route("**/api/teacher/accounts", (route) => route.fulfill({
+    json: { accounts: [{ id: "julius", displayName: "Julius" }] },
+  }));
+  await page.route("**/api/teacher/session", (route) => route.fulfill({
+    json: { session: { teacherId: "julius" }, teacher: { id: "julius", displayName: "Julius" } },
+  }));
+  await page.route("**/api/sets", (route) => route.fulfill({
+    json: { sets: [{ ...editableSet, cards: undefined }], teacher: { id: "julius" }, importConfigured: true },
+  }));
+  await page.route("**/api/tablets", (route) => route.fulfill({ json: { tablets: [] } }));
+  await page.route("**/api/teacher/visual-jobs", (route) => route.fulfill({ json: { jobs: [] } }));
+  await page.route("**/api/teacher/sets/set-1/visual-assets", (route) => route.fulfill({ json: { assets: [], jobs: [] } }));
+  await page.route("**/api/teacher/sets/set-1", (route) => route.fulfill({ json: { set: editableSet } }));
+
+  await page.goto("/teacher", { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "Set Zoom in bearbeiten" }).click();
+  const addRow = page.getByRole("button", { name: "Neue Vokabel hinzufügen" });
+  await expect(page.getByRole("heading", { name: "Vokabeln" })).toBeVisible();
+  await expect(page.locator("#set-card-count")).toHaveText("2 Vokabeln");
+  await expect(addRow).toBeVisible();
+  await page.locator(".set-card-editor-list").screenshot({ path: testInfo.outputPath("editor-add-desktop.png") });
+
+  await addRow.click();
+  await expect(page.locator(".set-card-editor-row")).toHaveCount(3);
+  await expect(page.locator("#set-card-count")).toHaveText("3 Vokabeln");
+  await expect(page.locator(".set-card-editor-row").last().locator("input").first()).toBeFocused();
+  await expect(addRow).toBeVisible();
+  await page.locator(".set-card-editor-row").last().locator("input").first().fill("school");
+  await page.locator(".set-card-editor-row").last().locator("input").nth(1).fill("Schule");
+  await page.getByRole("button", { name: "Vokabel hinzufügen", exact: true }).click();
+  await expect(page.locator(".set-card-editor-row")).toHaveCount(4);
+  await expect(addRow).toBeVisible();
+
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await addRow.scrollIntoViewIfNeeded();
+  await page.locator(".set-card-editor-list").screenshot({ path: testInfo.outputPath("editor-add-tablet.png") });
+  const addBounds = await addRow.boundingBox();
+  expect(addBounds.x).toBeGreaterThanOrEqual(0);
+  expect(addBounds.x + addBounds.width).toBeLessThanOrEqual(768);
+
+  const saveRequest = page.waitForRequest((request) =>
+    request.url().endsWith("/api/teacher/sets/set-1") && request.method() === "PUT");
+  await page.getByRole("button", { name: "Änderungen speichern" }).click();
+  const savedPayload = (await saveRequest).postDataJSON();
+  const savedCards = savedPayload.cards;
+  expect(savedCards).toHaveLength(3);
+  expect(savedCards.at(-1)).toMatchObject({ front: "school", back: "Schule" });
+  expect(savedPayload.sidePreset).toBe("languages");
+});
+
+test("a new set requires a deliberate front and back choice", async ({ page }, testInfo) => {
+  await page.route("**/api/runtime-info", (route) => route.fulfill({ json: { publicOrigin: BASE_URL } }));
+  await page.route("**/api/teacher/accounts", (route) => route.fulfill({
+    json: { accounts: [{ id: "julius", displayName: "Julius" }] },
+  }));
+  await page.route("**/api/teacher/session", (route) => route.fulfill({
+    json: { session: { teacherId: "julius" }, teacher: { id: "julius", displayName: "Julius" } },
+  }));
+  await page.route("**/api/sets", (route) => route.fulfill({
+    json: { sets: [], teacher: { id: "julius" }, importConfigured: true },
+  }));
+  await page.route("**/api/tablets", (route) => route.fulfill({ json: { tablets: [] } }));
+  await page.route("**/api/teacher/visual-jobs", (route) => route.fulfill({ json: { jobs: [] } }));
+
+  await page.goto("/teacher", { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "Neues Set" }).click();
+  await page.getByRole("button", { name: /Manuell erstellen/ }).click();
+  const front = page.locator('[data-editor-side-select="front"]');
+  const back = page.locator('[data-editor-side-select="back"]');
+  await expect(front).toHaveValue("");
+  await expect(back).toBeDisabled();
+  await page.getByRole("button", { name: "Set veröffentlichen" }).click();
+  await expect(page.locator("#set-side-feedback")).toBeVisible();
+  await expect(front).toBeFocused();
+  await page.locator(".set-card-editor-columns").screenshot({ path: testInfo.outputPath("side-choice-desktop.png") });
+  await front.selectOption("question");
+  await expect(back).toBeEnabled();
+  await expect(back.locator("option")).toHaveCount(2);
+  await back.selectOption("answer");
+  await expect(page.locator("#set-source-label-input")).toHaveValue("Frage");
+  await expect(page.locator("#set-target-label-input")).toHaveValue("Antwort");
+  await expect(page.locator("#set-side-feedback")).toBeHidden();
+  await page.setViewportSize({ width: 390, height: 760 });
+  await page.locator(".set-card-editor-columns").screenshot({ path: testInfo.outputPath("side-choice-mobile.png") });
 });

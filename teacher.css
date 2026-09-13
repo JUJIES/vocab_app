@@ -88,16 +88,11 @@ body.has-modal-open {
 }
 
 .teacher-auth__brand-icon {
-  width: 0.9em;
-  height: 0.9em;
+  width: 0.96em;
+  height: 0.96em;
   flex: 0 0 auto;
-  box-sizing: border-box;
-  padding: 0.09em;
-  border: 1px solid rgba(214, 224, 246, 0.08);
-  border-radius: 0.2em;
-  background: rgba(214, 224, 246, 0.05);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  transform: translateY(0.05em);
+  object-fit: contain;
+  transform: translateY(0.025em);
 }
 
 .teacher-auth__brand-name {
@@ -250,19 +245,14 @@ body.has-modal-open {
 .teacher-header__title-row {
   display: flex;
   align-items: center;
-  gap: 0.72rem;
+  gap: 0.52rem;
 }
 
 .teacher-header__brand-icon {
-  width: clamp(2.65rem, 4vw, 2.9rem);
-  height: clamp(2.65rem, 4vw, 2.9rem);
+  width: clamp(2.8rem, 4.5vw, 3.25rem);
+  height: clamp(2.8rem, 4.5vw, 3.25rem);
   flex: 0 0 auto;
-  padding: 0.16rem;
-  border: 1px solid rgba(214, 224, 246, 0.07);
-  border-radius: 0.82rem;
-  background: rgba(214, 224, 246, 0.045);
   object-fit: contain;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
 }
 
 .teacher-header__brand-icon[data-section-icon="tablets"] {
@@ -1014,8 +1004,8 @@ body.has-modal-open {
 .teacher-set-row__print,
 .teacher-set-row__share,
 .teacher-set-row__delete {
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2.5rem;
+  height: 2.5rem;
   padding: 0;
   display: inline-flex;
   align-items: center;
@@ -1027,7 +1017,7 @@ body.has-modal-open {
   color: var(--text);
   box-shadow: none;
   cursor: pointer;
-  opacity: 0.86;
+  opacity: 0.96;
   transition:
     opacity 180ms ease,
     transform 180ms ease,
@@ -1038,7 +1028,17 @@ body.has-modal-open {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.4rem;
+  gap: 0.25rem;
+}
+
+.teacher-set-row__actions .teacher-button__icon {
+  width: 1.3rem;
+  height: 1.3rem;
+}
+
+.teacher-set-row__practice .teacher-button__icon {
+  width: 1.5rem;
+  height: 1.5rem;
 }
 
 .teacher-set-row__edit:hover,
@@ -1065,8 +1065,6 @@ body.has-modal-open {
 }
 
 .teacher-set-row__delete .teacher-button__icon {
-  width: 1.05rem;
-  height: 1.05rem;
   filter: brightness(0) saturate(100%) invert(75%) sepia(27%) saturate(997%) hue-rotate(309deg) brightness(105%) contrast(101%);
 }
 
@@ -1519,33 +1517,110 @@ body.has-modal-open {
 }
 
 .set-card-editor-columns,
-.set-card-editor-row {
+.set-card-editor-row,
+.set-card-editor-add {
   display: grid;
   grid-template-columns: 2rem minmax(0, 1fr) minmax(0, 1fr) 2.75rem 2.75rem;
   gap: 0.65rem;
 }
 
 .set-card-editor-columns {
-  align-items: end;
-  padding: 0.7rem 0.75rem 0.45rem;
+  align-items: center;
+  padding: 0.7rem 0.75rem;
   color: var(--text-muted);
   font-size: 0.76rem;
   font-weight: 750;
 }
 
-.set-card-editor-columns > span:nth-child(2),
-.set-card-editor-columns > span:nth-child(3) {
+.set-card-editor-columns__side {
+  min-width: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.set-card-editor-columns__side select {
+  width: 100%;
+  min-height: 2.65rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid rgba(214, 224, 246, 0.16);
+  border-radius: 0.7rem;
+  background: var(--surface-soft);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.set-card-editor-columns__side select:focus-visible {
+  outline: 2px solid rgba(164, 190, 234, 0.8);
+  outline-offset: 2px;
+}
+
+.set-card-editor-columns__side select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.set-card-editor-columns__image {
   text-align: center;
 }
 
-.set-card-editor-columns > span:nth-child(4) {
-  text-align: center;
+.set-side-feedback {
+  margin: 0;
+  color: #f3a4a4;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.set-card-editor-list.is-side-invalid .set-card-editor-columns__side select:invalid {
+  border-color: #e78f8f;
 }
 
 .set-card-editor-row {
   align-items: center;
   padding: 0.6rem 0.75rem;
   border-top: 1px solid rgba(214, 224, 246, 0.09);
+}
+
+.set-card-editor-add {
+  width: 100%;
+  min-height: 3.75rem;
+  align-items: center;
+  padding: 0.6rem 0.75rem;
+  border: 0;
+  border-top: 1px solid rgba(214, 224, 246, 0.14);
+  border-radius: 0 0 1rem 1rem;
+  background: rgba(214, 224, 246, 0.025);
+  color: var(--text-muted);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.set-card-editor-add:hover,
+.set-card-editor-add:focus-visible {
+  background: rgba(214, 224, 246, 0.085);
+  color: var(--text);
+}
+
+.set-card-editor-add__icon {
+  display: grid;
+  place-items: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  margin-inline: auto;
+  border: 1px solid currentColor;
+  border-radius: 0.55rem;
+  font-size: 1.25rem;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.set-card-editor-add__label {
+  grid-column: 2 / 4;
+  font-size: 0.86rem;
+  font-weight: 700;
 }
 
 .set-card-editor-row .set-editor-field input {
@@ -1846,13 +1921,6 @@ body.has-modal-open {
   opacity: 1;
   transform: translateY(-1px);
   background: rgba(214, 224, 246, 0.12);
-}
-
-.teacher-set-row__edit .teacher-button__icon,
-.teacher-set-row__practice .teacher-button__icon,
-.teacher-set-row__share .teacher-button__icon {
-  width: 1.05rem;
-  height: 1.05rem;
 }
 
 .device-pill {
@@ -2229,17 +2297,13 @@ body.has-modal-open {
   transform: none;
 }
 
-.print-mode-card__mark {
+.print-mode-card__icon {
   grid-column: 1 / -1;
-  width: fit-content;
-  margin-bottom: 0.65rem;
-  padding: 0.38rem 0.58rem;
-  border: 1px solid rgba(214, 224, 246, 0.1);
-  border-radius: 0.55rem;
-  color: rgba(213, 224, 244, 0.88);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.76rem;
-  letter-spacing: 0.02em;
+  width: 4.5rem;
+  height: 4.5rem;
+  margin-bottom: 0.7rem;
+  display: block;
+  object-fit: contain;
 }
 
 .print-mode-card strong {
@@ -2694,6 +2758,15 @@ body.has-modal-open {
   }
 
   .set-card-editor-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.7rem;
+    padding: 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    background: rgba(214, 224, 246, 0.035);
+  }
+
+  .set-card-editor-columns > span {
     display: none;
   }
 
@@ -2703,6 +2776,13 @@ body.has-modal-open {
     border: 1px solid var(--line);
     border-radius: 1rem;
     background: rgba(214, 224, 246, 0.035);
+  }
+
+  .set-card-editor-add {
+    grid-template-columns: 1.5rem minmax(0, 1fr) 2.5rem 2.5rem;
+    min-height: 3.5rem;
+    border: 1px solid var(--line);
+    border-radius: 1rem;
   }
 
   .set-card-editor-row__number {

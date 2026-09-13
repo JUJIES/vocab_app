@@ -3904,6 +3904,16 @@ button.student-screen__device-card {
   line-height: 1;
 }
 
+.learning-direction-control__choice.is-generic {
+  gap: 0.35rem;
+}
+
+.learning-direction-control__flag--word {
+  font-size: 0.78rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
 .learning-direction-control__arrow {
   color: rgba(218, 227, 243, 0.54);
   font-size: 1.2rem;
@@ -5307,6 +5317,10 @@ button.student-screen__device-card {
 
 .launch-settings-modal__direction .learning-direction-control__flag {
   font-size: 2rem;
+}
+
+.launch-settings-modal__direction .learning-direction-control__choice.is-generic .learning-direction-control__flag--word {
+  font-size: 0.78rem;
 }
 
 .launch-settings-modal__start {

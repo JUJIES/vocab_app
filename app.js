@@ -1156,15 +1156,19 @@ function getLanguageFlag(languageCode, languageLabel = "") {
 function getLearningDirectionChoice(direction, labels = state.currentSetLanguageLabels) {
   const resolvedLabels = getLearningDirectionLabels(labels);
   const usesTargetFirst = normalizeLearningDirection(direction) === LEARNING_DIRECTIONS.TARGET_SOURCE;
+  const isGeneric = [resolvedLabels.sourceLabel, resolvedLabels.targetLabel]
+    .every((label) => ["Begriff", "Definition", "Frage", "Antwort"].includes(label));
 
   return usesTargetFirst
     ? {
+        isGeneric,
         firstLabel: resolvedLabels.targetLabel,
         secondLabel: resolvedLabels.sourceLabel,
         firstFlag: getLanguageFlag(resolvedLabels.targetLanguage, resolvedLabels.targetLabel),
         secondFlag: getLanguageFlag(resolvedLabels.sourceLanguage, resolvedLabels.sourceLabel),
       }
     : {
+        isGeneric,
         firstLabel: resolvedLabels.sourceLabel,
         secondLabel: resolvedLabels.targetLabel,
         firstFlag: getLanguageFlag(resolvedLabels.sourceLanguage, resolvedLabels.sourceLabel),
@@ -1188,18 +1192,23 @@ function syncLearningDirectionGroup(groupName, selectedDirection, labels) {
     const isSelected = direction === normalizeLearningDirection(selectedDirection);
     const choice = getLearningDirectionChoice(direction, labels);
     const firstFlag = document.createElement("span");
-    firstFlag.className = "learning-direction-control__flag";
+    firstFlag.className = choice.isGeneric
+      ? "learning-direction-control__flag learning-direction-control__flag--word"
+      : "learning-direction-control__flag";
     firstFlag.setAttribute("aria-hidden", "true");
-    firstFlag.textContent = choice.firstFlag;
+    firstFlag.textContent = choice.isGeneric ? choice.firstLabel : choice.firstFlag;
     const arrow = document.createElement("span");
     arrow.className = "learning-direction-control__arrow";
     arrow.setAttribute("aria-hidden", "true");
     arrow.textContent = "→";
     const secondFlag = document.createElement("span");
-    secondFlag.className = "learning-direction-control__flag";
+    secondFlag.className = choice.isGeneric
+      ? "learning-direction-control__flag learning-direction-control__flag--word"
+      : "learning-direction-control__flag";
     secondFlag.setAttribute("aria-hidden", "true");
-    secondFlag.textContent = choice.secondFlag;
+    secondFlag.textContent = choice.isGeneric ? choice.secondLabel : choice.secondFlag;
     button.replaceChildren(firstFlag, arrow, secondFlag);
+    button.classList.toggle("is-generic", choice.isGeneric);
     button.classList.toggle("is-selected", isSelected);
     button.setAttribute("aria-pressed", String(isSelected));
     button.setAttribute("aria-label", `${choice.firstLabel} wird gezeigt, ${choice.secondLabel} eingeben`);

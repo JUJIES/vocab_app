@@ -313,6 +313,7 @@ test("active legacy sheet assets are safely derived once without image generatio
   };
   const visualService = new VisualService({ dataDir, setService, client });
   const createdSet = await setService.createSet("julius", {
+    sidePreset: "languages", sourceLabel: "Deutsch", targetLabel: "Englisch", sourceLanguage: "de", targetLanguage: "en",
     title: "Legacy sheet normalization",
     cards: [{ front: "Feld", back: "field" }],
   });
@@ -431,6 +432,7 @@ test("sheet jobs persist reusable assets, attach them, regenerate one and retain
   };
   const visualService = new VisualService({ dataDir, setService, client });
   const createdSet = await setService.createSet("julius", {
+    sidePreset: "languages", sourceLanguage: "de", targetLanguage: "en",
     title: "Visual test",
     sourceLabel: "Deutsch",
     targetLabel: "Englisch",
