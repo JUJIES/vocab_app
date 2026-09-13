@@ -2260,18 +2260,19 @@ body.has-modal-open {
 
 .print-mode-view {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(10rem, 15rem));
+  justify-content: center;
   gap: 0.9rem;
 }
 
 .print-mode-card {
-  min-height: 9rem;
-  padding: 1.15rem;
+  min-height: 7.6rem;
+  padding: 0.8rem 0.9rem;
   display: grid;
-  grid-template-columns: 1fr auto;
-  grid-template-rows: auto auto 1fr;
-  gap: 0.2rem 0.8rem;
-  text-align: left;
+  justify-items: center;
+  align-content: center;
+  gap: 0.18rem;
+  text-align: center;
   border: 1px solid rgba(214, 224, 246, 0.1);
   border-radius: 1rem;
   background: rgba(214, 224, 246, 0.045);
@@ -2298,29 +2299,20 @@ body.has-modal-open {
 }
 
 .print-mode-card__icon {
-  grid-column: 1 / -1;
-  width: 4.5rem;
-  height: 4.5rem;
-  margin-bottom: 0.7rem;
+  width: 3.3rem;
+  height: 3.3rem;
+  margin-bottom: 0.32rem;
   display: block;
   object-fit: contain;
 }
 
 .print-mode-card strong {
-  font-size: 1.08rem;
+  font-size: 1rem;
 }
 
 .print-mode-card small {
-  grid-column: 1;
   color: var(--text-muted);
-}
-
-.print-mode-card__arrow {
-  grid-column: 2;
-  grid-row: 2 / span 2;
-  align-self: end;
-  color: rgba(213, 224, 244, 0.75);
-  font-size: 1.15rem;
+  font-size: 0.78rem;
 }
 
 .print-mode-feedback {
@@ -2666,12 +2658,18 @@ body.has-modal-open {
   }
 
   .print-mode-view {
-    grid-template-columns: 1fr;
-    overflow: auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
   }
 
   .print-mode-card {
-    min-height: 7.4rem;
+    min-height: 6.8rem;
+    padding: 0.72rem 0.5rem;
+  }
+
+  .print-mode-card__icon {
+    width: 2.85rem;
+    height: 2.85rem;
   }
 
   .print-toolbar,

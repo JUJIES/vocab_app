@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Die Auswahl zwischen Vokabelliste und Vokabeltest ist jetzt als zwei kompakte, mittig platzierte Karten umgesetzt. Die unnötigen Richtungspfeile entfallen; beide Optionen bleiben auf Desktop und Tablet direkt als Klickziel erkennbar.
 - Neue Sets verlangen vor der Veröffentlichung eine bewusste Auswahl von Vorder- und Rückseite direkt über den Vokabeln: Deutsch/Englisch mit Flaggen, Begriff/Definition oder Frage/Antwort. Die Rückseite ist auf das passende Gegenstück begrenzt; bei fehlender Auswahl führt Speichern zur Pflichtstelle. Entwürfe behalten den Auswahlstatus, auch nach Import und Reload, und die Schüler-Abfragerichtung zeigt für allgemeine Paare passende Symbole. Bestehende veröffentlichte Sets werden nicht automatisch geändert.
 - Der Set-Editor bietet unter der letzten Vokabel dauerhaft eine zurückhaltende Plus-Zeile zum direkten Anhängen; nach dem Klick beginnt die Eingabe in der neuen Zeile. Sichtbare Bezeichnungen im Lehrerbereich sprechen einheitlich von Vokabeln statt Karten.
 - Die fünf Aktionsicons pro Lernset sind größer und optisch angeglichen; insbesondere das bisher kleinere Drucksymbol erhält dieselbe Grundgröße. Die Klickflächen wachsen mit, ohne die kompakte Leiste zu verlieren.

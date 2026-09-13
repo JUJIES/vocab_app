@@ -87,10 +87,24 @@ test("teacher creates a temporary list or test PDF from one set", async ({ page 
     .toHaveAttribute("src", "./assets/icons/print-vocabulary-list.png");
   await expect(dialog.locator('[data-print-kind="test"] .print-mode-card__icon'))
     .toHaveAttribute("src", "./assets/icons/print-vocabulary-test.png");
+  await expect(dialog.locator(".print-mode-card__arrow")).toHaveCount(0);
+  const listChoice = dialog.locator('[data-print-kind="list"]');
+  const testChoice = dialog.locator('[data-print-kind="test"]');
+  const [listChoiceBounds, testChoiceBounds] = await Promise.all([
+    listChoice.boundingBox(), testChoice.boundingBox(),
+  ]);
+  expect(listChoiceBounds.width).toBeLessThan(260);
+  expect(testChoiceBounds.width).toBeLessThan(260);
+  expect(Math.abs((listChoiceBounds.x + listChoiceBounds.width / 2) - (testChoiceBounds.x + testChoiceBounds.width / 2)))
+    .toBeLessThan(350);
   await page.waitForTimeout(500);
   await page.screenshot({ path: testInfo.outputPath("print-mode-desktop.png"), fullPage: true });
   await page.setViewportSize({ width: 768, height: 1024 });
   await page.screenshot({ path: testInfo.outputPath("print-mode-tablet.png"), fullPage: true });
+  const tabletListChoice = await listChoice.boundingBox();
+  const tabletTestChoice = await testChoice.boundingBox();
+  expect(tabletListChoice.x).toBeGreaterThanOrEqual(0);
+  expect(tabletTestChoice.x + tabletTestChoice.width).toBeLessThanOrEqual(768);
   await page.setViewportSize({ width: 1150, height: 780 });
   await dialog.getByRole("button", { name: /Vokabeltest/ }).click();
 
