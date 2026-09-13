@@ -55,12 +55,11 @@ const state = {
   printKind: "",
   printDirection: "source-target",
   printSelectedCardIds: [],
-  printPdfBlob: null,
   printPdfUrl: "",
   printPreviewTimerId: null,
   printPreviewRequestId: 0,
   printPreviewAbortController: null,
-  printDraggedCardId: "",
+  printTestDraft: null,
 };
 
 const TEACHER_TAB_COPY = {
@@ -137,15 +136,11 @@ const elements = {
   printSwapDirection: document.getElementById("print-swap-direction"),
   printLayout: document.getElementById("print-layout"),
   printConfig: document.getElementById("print-config"),
-  printClassField: document.getElementById("print-class-field"),
-  printClassInput: document.getElementById("print-class-input"),
   printSelectionCount: document.getElementById("print-selection-count"),
-  printSelectTen: document.getElementById("print-select-ten"),
-  printSelectAll: document.getElementById("print-select-all"),
-  printSelectNone: document.getElementById("print-select-none"),
   printCardList: document.getElementById("print-card-list"),
   printPreviewLoading: document.getElementById("print-preview-loading"),
   printPreview: document.getElementById("print-preview"),
+  printPaper: document.getElementById("print-paper"),
   printFeedback: document.getElementById("print-feedback"),
   printDownloadButton: document.getElementById("print-download-button"),
   deleteSetOverlay: document.getElementById("delete-set-overlay"),
@@ -325,15 +320,10 @@ function bindEvents() {
   elements.printBackButton.addEventListener("click", showPrintModeChoice);
   elements.printDirectionSelect.addEventListener("change", () => {
     state.printDirection = elements.printDirectionSelect.value;
-    renderPrintCardList();
-    schedulePrintPreview();
+    updatePrintDirection();
   });
   elements.printSwapDirection.addEventListener("click", swapPrintDirection);
-  elements.printClassInput.addEventListener("input", () => schedulePrintPreview(450));
-  elements.printSelectTen.addEventListener("click", selectTenRandomPrintCards);
-  elements.printSelectAll.addEventListener("click", selectAllPrintCards);
-  elements.printSelectNone.addEventListener("click", clearPrintCardSelection);
-  elements.printDownloadButton.addEventListener("click", downloadPrintPdf);
+  elements.printDownloadButton.addEventListener("click", () => { void downloadPrintPdf(); });
   elements.deleteSetCancel.addEventListener("click", closeDeleteSetDialog);
   elements.deleteSetConfirm.addEventListener("click", handleDeleteSet);
   elements.createSetButton.addEventListener("click", openNewSetEditor);
@@ -1578,11 +1568,11 @@ function resetPrintState() {
   state.printKind = "";
   state.printDirection = "source-target";
   state.printSelectedCardIds = [];
-  state.printPdfBlob = null;
   state.printPdfUrl = "";
-  state.printDraggedCardId = "";
-  elements.printClassInput.value = "";
+  state.printTestDraft = null;
   elements.printCardList.replaceChildren();
+  elements.printPaper.replaceChildren();
+  elements.printPaper.hidden = true;
   elements.printModeFeedback.textContent = "";
   elements.printFeedback.textContent = "";
   elements.printPreview.removeAttribute("src");
@@ -1608,13 +1598,30 @@ function selectPrintKind(kind) {
   state.printSelectedCardIds = kind === "list"
     ? state.printSet.cards.map((card) => String(card.id))
     : state.printSet.cards.slice(0, 10).map((card) => String(card.id));
+  state.printTestDraft = kind === "test" ? {
+    title: state.printSet.title || "",
+    className: "",
+    instruction: "Übersetze die folgenden Begriffe in die jeweils korrekte Sprache. Formuliere vollständig und achte auf saubere Schrift.",
+    items: new Map(),
+  } : null;
+  if (kind === "test") {
+    for (const cardId of state.printSelectedCardIds) {
+      state.printTestDraft.items.set(cardId, createPrintTestItem(cardId));
+    }
+  }
   elements.printModeView.hidden = true;
   elements.printWorkspace.hidden = false;
   elements.printConfig.hidden = kind === "list";
   elements.printLayout.classList.toggle("print-layout--list", kind === "list");
-  elements.printClassField.hidden = kind !== "test";
+  elements.printPaper.hidden = kind !== "test";
+  elements.printPreview.hidden = kind === "test";
+  elements.printPreviewLoading.hidden = kind === "test";
   renderPrintCardList();
-  schedulePrintPreview(0);
+  if (kind === "test") {
+    renderPrintPaper();
+  } else {
+    schedulePrintPreview(0);
+  }
 }
 
 function configurePrintDirectionOptions() {
@@ -1631,8 +1638,23 @@ function swapPrintDirection() {
     ? "target-source"
     : "source-target";
   elements.printDirectionSelect.value = state.printDirection;
-  renderPrintCardList();
-  schedulePrintPreview();
+  updatePrintDirection();
+}
+
+function updatePrintDirection() {
+  if (state.printKind === "test") {
+    for (const cardId of state.printSelectedCardIds) {
+      const item = state.printTestDraft.items.get(cardId);
+      if (item && !item.edited) {
+        item.side = state.printDirection;
+        item.prompt = getPrintCardPrompt(cardId, item.side);
+      }
+    }
+    renderPrintCardList();
+    renderPrintPaper();
+  } else {
+    schedulePrintPreview();
+  }
 }
 
 function getPrintSideLabels() {
@@ -1647,79 +1669,38 @@ function renderPrintCardList() {
     elements.printCardList.replaceChildren();
     return;
   }
-
-  const cardsById = new Map(state.printSet.cards.map((card) => [String(card.id), card]));
-  const selectedIds = state.printSelectedCardIds.filter((id) => cardsById.has(id));
-  const selectedSet = new Set(selectedIds);
-  const orderedCards = [
-    ...selectedIds.map((id) => cardsById.get(id)),
-    ...state.printSet.cards.filter((card) => !selectedSet.has(String(card.id))),
-  ];
-  const sourceFirst = state.printDirection === "source-target";
   elements.printCardList.replaceChildren();
-  elements.printSelectionCount.textContent = `${selectedIds.length} ausgewählt`;
-
-  for (const card of orderedCards) {
+  elements.printSelectionCount.textContent = `${state.printSelectedCardIds.length} ausgewählt`;
+  for (const card of state.printSet.cards) {
     const cardId = String(card.id);
-    const selectedIndex = selectedIds.indexOf(cardId);
-    const isSelected = selectedIndex !== -1;
+    const isSelected = state.printSelectedCardIds.includes(cardId);
     const row = document.createElement("article");
     row.className = "print-card-row";
     row.classList.toggle("is-selected", isSelected);
     row.setAttribute("role", "listitem");
-    row.draggable = isSelected;
     row.dataset.cardId = cardId;
 
     const toggle = document.createElement("button");
     toggle.className = "print-card-row__toggle";
     toggle.type = "button";
     toggle.setAttribute("aria-pressed", isSelected ? "true" : "false");
-    toggle.setAttribute("aria-label", `${card.front} ${isSelected ? "abwählen" : "auswählen"}`);
+    toggle.setAttribute("aria-label", `${card.front} ${isSelected ? "aus Test entfernen" : "zum Test hinzufügen"}`);
 
     const position = document.createElement("span");
     position.className = "print-card-row__position";
-    position.textContent = isSelected ? String(selectedIndex + 1) : "+";
+    position.textContent = isSelected ? "✓" : "+";
     position.setAttribute("aria-hidden", "true");
 
     const copy = document.createElement("span");
     copy.className = "print-card-row__copy";
     const prompt = document.createElement("strong");
-    prompt.textContent = sourceFirst ? card.front : card.back;
+    prompt.textContent = card.front;
     const answer = document.createElement("small");
-    answer.textContent = sourceFirst ? card.back : card.front;
+    answer.textContent = card.back;
     copy.append(prompt, answer);
     toggle.append(position, copy);
     toggle.addEventListener("click", () => togglePrintCard(cardId));
     row.append(toggle);
-
-    if (isSelected) {
-      const controls = document.createElement("span");
-      controls.className = "print-card-row__order";
-      controls.append(
-        createPrintOrderButton("↑", "Nach oben", selectedIndex === 0, () => moveSelectedPrintCard(cardId, -1)),
-        createPrintOrderButton("↓", "Nach unten", selectedIndex === selectedIds.length - 1, () => moveSelectedPrintCard(cardId, 1)),
-      );
-      row.append(controls);
-      row.addEventListener("dragstart", (event) => {
-        state.printDraggedCardId = cardId;
-        row.classList.add("is-dragging");
-        event.dataTransfer?.setData("text/plain", cardId);
-        if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
-      });
-      row.addEventListener("dragend", () => {
-        state.printDraggedCardId = "";
-        row.classList.remove("is-dragging");
-      });
-      row.addEventListener("dragover", (event) => {
-        if (!state.printDraggedCardId || state.printDraggedCardId === cardId) return;
-        event.preventDefault();
-        if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
-      });
-      row.addEventListener("drop", (event) => {
-        event.preventDefault();
-        reorderSelectedPrintCard(state.printDraggedCardId, cardId);
-      });
-    }
 
     elements.printCardList.append(row);
   }
@@ -1739,11 +1720,13 @@ function togglePrintCard(cardId) {
   const index = state.printSelectedCardIds.indexOf(cardId);
   if (index === -1) {
     state.printSelectedCardIds.push(cardId);
+    state.printTestDraft.items.set(cardId, createPrintTestItem(cardId));
   } else {
     state.printSelectedCardIds.splice(index, 1);
+    state.printTestDraft.items.delete(cardId);
   }
   renderPrintCardList();
-  schedulePrintPreview();
+  renderPrintPaper();
 }
 
 function moveSelectedPrintCard(cardId, offset) {
@@ -1752,47 +1735,132 @@ function moveSelectedPrintCard(cardId, offset) {
   if (fromIndex < 0 || toIndex < 0 || toIndex >= state.printSelectedCardIds.length) return;
   state.printSelectedCardIds.splice(fromIndex, 1);
   state.printSelectedCardIds.splice(toIndex, 0, cardId);
-  renderPrintCardList();
-  schedulePrintPreview();
+  renderPrintPaper();
 }
 
-function reorderSelectedPrintCard(draggedId, targetId) {
-  const fromIndex = state.printSelectedCardIds.indexOf(draggedId);
-  const toIndex = state.printSelectedCardIds.indexOf(targetId);
-  if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return;
-  state.printSelectedCardIds.splice(fromIndex, 1);
-  state.printSelectedCardIds.splice(toIndex, 0, draggedId);
-  state.printDraggedCardId = "";
-  renderPrintCardList();
-  schedulePrintPreview();
+function getPrintCardPrompt(cardId, direction) {
+  const card = state.printSet.cards.find((entry) => String(entry.id) === cardId);
+  return direction === "source-target" ? card.front : card.back;
 }
 
-function selectTenRandomPrintCards() {
-  if (!state.printSet) return;
-  const ids = state.printSet.cards.map((card) => String(card.id));
-  for (let index = ids.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(Math.random() * (index + 1));
-    [ids[index], ids[swapIndex]] = [ids[swapIndex], ids[index]];
+function createPrintTestItem(cardId) {
+  return { side: state.printDirection, prompt: getPrintCardPrompt(cardId, state.printDirection), edited: false };
+}
+
+function createPrintPaperField({ value, label, maxLength, placeholder = "", multiline = false, onInput }) {
+  const field = document.createElement(multiline ? "textarea" : "input");
+  field.className = "print-paper__field";
+  field.setAttribute("aria-label", label);
+  field.maxLength = maxLength;
+  field.value = value;
+  field.placeholder = placeholder;
+  if (multiline) {
+    field.rows = 1;
+    field.addEventListener("input", () => {
+      field.style.height = "auto";
+      field.style.height = `${field.scrollHeight}px`;
+    });
+    requestAnimationFrame(() => {
+      field.style.height = `${field.scrollHeight}px`;
+    });
   }
-  state.printSelectedCardIds = ids.slice(0, 10);
-  renderPrintCardList();
-  schedulePrintPreview();
+  field.addEventListener("input", () => onInput(field.value));
+  return field;
 }
 
-function selectAllPrintCards() {
-  if (!state.printSet) return;
-  state.printSelectedCardIds = state.printSet.cards.map((card) => String(card.id));
-  renderPrintCardList();
-  schedulePrintPreview();
+function renderPrintPaper() {
+  if (state.printKind !== "test" || !state.printTestDraft) return;
+  const draft = state.printTestDraft;
+  const paper = elements.printPaper;
+  paper.replaceChildren();
+  const heading = document.createElement("div");
+  heading.className = "print-paper__eyebrow";
+  heading.textContent = "VOKABELTEST";
+  const header = document.createElement("div");
+  header.className = "print-paper__header";
+  const metadata = document.createElement("div");
+  metadata.className = "print-paper__metadata";
+  const classLine = document.createElement("label");
+  classLine.className = "print-paper__class";
+  classLine.append("Klasse: ", createPrintPaperField({
+    value: draft.className, label: "Klasse auf dem Blatt", maxLength: 80, placeholder: "__________",
+    onInput: (value) => { draft.className = value; },
+  }));
+  const title = createPrintPaperField({
+    value: draft.title, label: "Titel auf dem Blatt", maxLength: 160,
+    onInput: (value) => { draft.title = value; },
+  });
+  title.classList.add("print-paper__title");
+  metadata.append(classLine, title);
+  const identity = document.createElement("div");
+  identity.className = "print-paper__identity";
+  identity.innerHTML = '<span>Name: <i></i></span><span>Datum: <i></i></span>';
+  header.append(metadata, identity);
+  const instruction = document.createElement("div");
+  instruction.className = "print-paper__instruction";
+  const instructionLabel = document.createElement("span");
+  instructionLabel.textContent = "ARBEITSAUFTRAG";
+  instruction.append(instructionLabel, createPrintPaperField({
+    value: draft.instruction, label: "Arbeitsauftrag auf dem Blatt", maxLength: 240, multiline: true,
+    onInput: (value) => { draft.instruction = value; },
+  }));
+  const columns = document.createElement("div");
+  columns.className = "print-paper__columns";
+  columns.innerHTML = '<span>BEGRIFF</span><span>ANTWORT</span>';
+  const rows = document.createElement("div");
+  rows.className = "print-paper__rows";
+  state.printSelectedCardIds.forEach((cardId, index) => {
+    const item = draft.items.get(cardId);
+    const row = document.createElement("div");
+    row.className = "print-paper__row";
+    const number = document.createElement("span");
+    number.className = "print-paper__number";
+    number.textContent = `${index + 1}.`;
+    const prompt = createPrintPaperField({
+      value: item.prompt, label: `Begriff ${index + 1} auf dem Blatt`, maxLength: 500, multiline: true,
+      onInput: (value) => { item.prompt = value; item.edited = true; updatePrintTestValidity(); },
+    });
+    prompt.classList.add("print-paper__prompt");
+    const answerLine = document.createElement("span");
+    answerLine.className = "print-paper__answer-line";
+    const actions = document.createElement("span");
+    actions.className = "print-paper__row-actions";
+    const swap = createPrintOrderButton("⇄", `Begriff ${index + 1}: Anzeigeseite tauschen`, false, () => {
+      item.side = item.side === "source-target" ? "target-source" : "source-target";
+      item.prompt = getPrintCardPrompt(cardId, item.side);
+      item.edited = false;
+      renderPrintPaper();
+    });
+    const up = createPrintOrderButton("↑", `Begriff ${index + 1} nach oben`, index === 0, () => moveSelectedPrintCard(cardId, -1));
+    const down = createPrintOrderButton("↓", `Begriff ${index + 1} nach unten`, index === state.printSelectedCardIds.length - 1, () => moveSelectedPrintCard(cardId, 1));
+    const remove = createPrintOrderButton("×", `Begriff ${index + 1} entfernen`, false, () => togglePrintCard(cardId));
+    actions.append(swap, up, down, remove);
+    row.append(number, prompt, answerLine, actions);
+    rows.append(row);
+  });
+  if (state.printSelectedCardIds.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "print-paper__empty";
+    empty.textContent = "Links eine Vokabel anklicken, um sie hier einzufügen.";
+    rows.append(empty);
+  }
+  const score = document.createElement("div");
+  score.className = "print-paper__score";
+  score.innerHTML = '<span>Punkte: <i></i></span><span>Prozent: <i></i></span><span>Note: <i></i></span>';
+  paper.append(heading, header, instruction, columns, rows, score);
+  updatePrintTestValidity();
 }
 
-function clearPrintCardSelection() {
-  state.printSelectedCardIds = [];
-  renderPrintCardList();
-  schedulePrintPreview();
+function updatePrintTestValidity() {
+  const hasItems = state.printSelectedCardIds.length > 0;
+  const hasEmptyPrompt = state.printSelectedCardIds.some((id) => !state.printTestDraft.items.get(id).prompt.trim());
+  elements.printDownloadButton.disabled = !hasItems || hasEmptyPrompt;
+  elements.printFeedback.textContent = !hasItems ? "Wähle mindestens eine Vokabel aus."
+    : hasEmptyPrompt ? "Bitte leere Begriffe auf dem Blatt ausfüllen." : "";
 }
 
 function schedulePrintPreview(delay = 280) {
+  if (state.printKind !== "list") return;
   if (state.printPreviewTimerId !== null) {
     window.clearTimeout(state.printPreviewTimerId);
   }
@@ -1822,31 +1890,8 @@ async function refreshPrintPreview() {
   elements.printPreviewLoading.hidden = false;
 
   try {
-    const headers = { "Content-Type": "application/json" };
-    if (TAFELRAUM_EMBED) headers["X-Lerndeck-Embed"] = "tafelraum";
-    const response = await fetch(`/api/teacher/sets/${encodeURIComponent(state.printSet.id)}/print`, {
-      method: "POST",
-      headers,
-      credentials: "same-origin",
-      signal: abortController.signal,
-      body: JSON.stringify({
-        kind: state.printKind,
-        direction: state.printDirection,
-        cardIds: state.printSelectedCardIds,
-        className: elements.printClassInput.value,
-      }),
-    });
-
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      const error = new Error(data.error || "PDF konnte nicht erstellt werden.");
-      error.requiresAuth = response.status === 401 || response.status === 403;
-      throw error;
-    }
-
-    const blob = await response.blob();
+    const blob = await requestPrintPdf(abortController.signal);
     if (requestId !== state.printPreviewRequestId || abortController.signal.aborted) return;
-    state.printPdfBlob = blob;
     state.printPdfUrl = URL.createObjectURL(blob);
     elements.printPreview.src = state.printPdfUrl;
     elements.printPreview.hidden = false;
@@ -1868,30 +1913,90 @@ async function refreshPrintPreview() {
   }
 }
 
+function buildPrintRequestBody() {
+  const testDraft = state.printTestDraft;
+  return {
+    kind: state.printKind,
+    direction: state.printDirection,
+    cardIds: [...state.printSelectedCardIds],
+    ...(state.printKind === "test" ? { testDraft: {
+      title: testDraft.title,
+      className: testDraft.className,
+      instruction: testDraft.instruction,
+      items: state.printSelectedCardIds.map((id) => ({ id, prompt: testDraft.items.get(id).prompt })),
+    } } : {}),
+  };
+}
+
+async function requestPrintPdf(signal, body = buildPrintRequestBody()) {
+  const headers = { "Content-Type": "application/json" };
+  if (TAFELRAUM_EMBED) headers["X-Lerndeck-Embed"] = "tafelraum";
+  const response = await fetch(`/api/teacher/sets/${encodeURIComponent(state.printSet.id)}/print`, {
+    method: "POST",
+    headers,
+    credentials: "same-origin",
+    signal,
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    const error = new Error(data.error || "PDF konnte nicht erstellt werden.");
+    error.requiresAuth = response.status === 401 || response.status === 403;
+    throw error;
+  }
+  return response.blob();
+}
+
 function clearPrintPreview({ keepRequest = false } = {}) {
   if (!keepRequest) state.printPreviewRequestId += 1;
   if (state.printPdfUrl) URL.revokeObjectURL(state.printPdfUrl);
-  state.printPdfBlob = null;
   state.printPdfUrl = "";
   elements.printPreview.removeAttribute("src");
   elements.printPreview.hidden = true;
   elements.printDownloadButton.disabled = true;
 }
 
-function downloadPrintPdf() {
-  if (!state.printPdfUrl || !state.printSet || !state.printKind) return;
-  const titleSlug = String(state.printSet.title || "lernset")
+async function downloadPrintPdf() {
+  if (!state.printSet || !state.printKind || state.printSelectedCardIds.length === 0) return;
+  let downloadUrl = state.printPdfUrl;
+  if (state.printKind === "test") {
+    elements.printDownloadButton.disabled = true;
+    elements.printFeedback.textContent = "PDF wird erstellt …";
+    try {
+      const body = buildPrintRequestBody();
+      const blob = await requestPrintPdf(undefined, body);
+      if (state.printKind !== "test" || elements.printOverlay.hidden) return;
+      if (JSON.stringify(buildPrintRequestBody()) !== JSON.stringify(body)) {
+        elements.printFeedback.textContent = "Das Blatt wurde während der PDF-Erstellung geändert. Bitte erneut herunterladen.";
+        return;
+      }
+      downloadUrl = URL.createObjectURL(blob);
+      elements.printFeedback.textContent = "";
+    } catch (error) {
+      if (error?.requiresAuth) showTeacherAuth(error.message);
+      else elements.printFeedback.textContent = error.message || "PDF konnte nicht erstellt werden.";
+      return;
+    } finally {
+      if (state.printKind === "test" && state.printTestDraft) {
+        elements.printDownloadButton.disabled = state.printSelectedCardIds.length === 0
+          || state.printSelectedCardIds.some((id) => !state.printTestDraft.items.get(id).prompt.trim());
+      }
+    }
+  }
+  if (!downloadUrl) return;
+  const titleSlug = String((state.printKind === "test" ? state.printTestDraft?.title : "") || state.printSet.title || "lernset")
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "") || "lernset";
   const link = document.createElement("a");
-  link.href = state.printPdfUrl;
+  link.href = downloadUrl;
   link.download = `${state.printKind === "test" ? "vokabeltest" : "vokabelliste"}-${titleSlug}.pdf`;
   document.body.append(link);
   link.click();
   link.remove();
+  if (state.printKind === "test") window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 60_000);
 }
 
 function openDeleteSetDialog(setEntry) {

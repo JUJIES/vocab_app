@@ -88,6 +88,8 @@ test("teacher creates a temporary list or test PDF from one set", async ({ page 
   await expect(dialog.locator('[data-print-kind="test"] .print-mode-card__icon'))
     .toHaveAttribute("src", "./assets/icons/print-vocabulary-test.png");
   await expect(dialog.locator(".print-mode-card__arrow")).toHaveCount(0);
+  const choicePanelBounds = await dialog.boundingBox();
+  expect(choicePanelBounds.width).toBeLessThan(700);
   const listChoice = dialog.locator('[data-print-kind="list"]');
   const testChoice = dialog.locator('[data-print-kind="test"]');
   const [listChoiceBounds, testChoiceBounds] = await Promise.all([
@@ -107,36 +109,48 @@ test("teacher creates a temporary list or test PDF from one set", async ({ page 
   expect(tabletTestChoice.x + tabletTestChoice.width).toBeLessThanOrEqual(768);
   await page.setViewportSize({ width: 1150, height: 780 });
   await dialog.getByRole("button", { name: /Vokabeltest/ }).click();
+  const workspacePanelBounds = await dialog.boundingBox();
+  expect(workspacePanelBounds.width).toBeGreaterThan(choicePanelBounds.width + 100);
 
   await expect(page.locator("#print-selection-count")).toHaveText("10 ausgewählt");
-  await expect.poll(() => printBodies.length).toBeGreaterThan(0);
-  expect(printBodies.at(-1).kind).toBe("test");
-  expect(printBodies.at(-1).cardIds).toHaveLength(10);
-  await expect(page.locator("#print-preview")).toBeVisible();
+  await expect(page.locator("#print-paper")).toBeVisible();
+  await expect(page.locator("#print-preview")).toBeHidden();
+  await expect(page.locator(".print-card-row")).toHaveCount(15);
+  await expect(page.locator(".print-paper__row")).toHaveCount(10);
   await expect(page.locator("#print-download-button")).toBeEnabled();
   const swapDirection = page.getByRole("button", { name: "Eingabe- und Anzeigesprache tauschen" });
   await expect(swapDirection.locator("img")).toHaveAttribute("src", "./assets/icons/swap-horizontal.svg");
   await swapDirection.click();
   await expect(page.locator("#print-direction-select")).toHaveValue("target-source");
-  await expect.poll(() => printBodies.at(-1)?.direction).toBe("target-source");
-  await expect(page.locator(".print-card-row.is-selected .print-card-row__copy strong").first())
-    .toHaveText("Deutsche Übersetzung 1");
-  await page.waitForTimeout(800);
+  await expect(page.locator(".print-paper__prompt").first()).toHaveValue("Deutsche Übersetzung 1");
+  await page.getByRole("textbox", { name: "Klasse auf dem Blatt" }).fill("9b");
+  await page.getByRole("textbox", { name: "Titel auf dem Blatt" }).fill("Mein Testtitel");
+  await page.getByRole("textbox", { name: "Arbeitsauftrag auf dem Blatt" }).fill("Übersetze passend.");
+  await page.getByRole("textbox", { name: "Begriff 1 auf dem Blatt" }).fill("");
+  await expect(page.locator("#print-download-button")).toBeDisabled();
+  await page.getByRole("textbox", { name: "Begriff 1 auf dem Blatt" }).fill("Nur auf diesem Blatt");
+  await expect(page.locator("#print-download-button")).toBeEnabled();
+  await expect(page.locator(".print-card-row").first()).toContainText("English phrase 1");
   await page.screenshot({ path: testInfo.outputPath("print-test-desktop.png"), fullPage: true });
 
-  const firstPromptBefore = await page.locator(".print-card-row.is-selected .print-card-row__copy strong").first().textContent();
-  await page.locator(".print-card-row.is-selected").first().getByRole("button", { name: "Nach unten" }).click();
-  const firstPromptAfter = await page.locator(".print-card-row.is-selected .print-card-row__copy strong").first().textContent();
-  expect(firstPromptAfter).not.toBe(firstPromptBefore);
-
-  await page.locator("#print-select-none").click();
-  await expect(page.locator("#print-selection-count")).toHaveText("0 ausgewählt");
-  await expect(page.locator("#print-download-button")).toBeDisabled();
-  await expect(page.locator("#print-feedback")).toContainText("mindestens eine");
-  await page.locator("#print-select-all").click();
-  await expect(page.locator("#print-selection-count")).toHaveText("15 ausgewählt");
-  await expect.poll(() => printBodies.at(-1)?.cardIds?.length).toBe(15);
-  await expect(page.locator("#print-download-button")).toBeEnabled();
+  await page.getByRole("button", { name: "Begriff 1 entfernen" }).click();
+  await expect(page.locator(".print-paper__row")).toHaveCount(9);
+  await expect(page.locator(".print-card-row").first().getByRole("button")).toHaveAttribute("aria-pressed", "false");
+  await page.locator(".print-card-row").first().getByRole("button").click();
+  await expect(page.locator(".print-paper__row")).toHaveCount(10);
+  await expect(page.locator(".print-paper__prompt").last()).toHaveValue("Deutsche Übersetzung 1");
+  await page.locator(".print-card-row").last().getByRole("button").click();
+  await expect(page.locator(".print-paper__row")).toHaveCount(11);
+  await page.getByRole("button", { name: "Begriff 1: Anzeigeseite tauschen" }).click();
+  await expect(page.locator(".print-paper__prompt").first()).toHaveValue("English phrase 2");
+  await page.locator("#print-download-button").click();
+  await expect.poll(() => printBodies.at(-1)?.kind).toBe("test");
+  expect(printBodies.at(-1).cardIds).toHaveLength(11);
+  expect(printBodies.at(-1).testDraft.title).toBe("Mein Testtitel");
+  expect(printBodies.at(-1).testDraft.className).toBe("9b");
+  expect(printBodies.at(-1).testDraft.instruction).toBe("Übersetze passend.");
+  expect(printBodies.at(-1).testDraft.items.at(-2).prompt).toBe("Deutsche Übersetzung 1");
+  expect(editableSet.cards[0].back).toBe("Deutsche Übersetzung 1");
 
   await page.setViewportSize({ width: 768, height: 1024 });
   await expect(dialog).toBeVisible();
@@ -145,6 +159,11 @@ test("teacher creates a temporary list or test PDF from one set", async ({ page 
   expect(dialogBox.x + dialogBox.width).toBeLessThanOrEqual(769);
   expect(dialogBox.y + dialogBox.height).toBeLessThanOrEqual(1025);
   await page.screenshot({ path: testInfo.outputPath("print-test-tablet.png"), fullPage: true });
+  await page.setViewportSize({ width: 390, height: 780 });
+  await expect(page.locator("#print-paper")).toBeVisible();
+  expect(await page.locator(".print-preview-shell").evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath("print-test-mobile.png"), fullPage: true });
+  await page.setViewportSize({ width: 1150, height: 780 });
 
   await page.locator("#print-back-button").click();
   await dialog.getByRole("button", { name: /Vokabelliste/ }).click();

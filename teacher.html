@@ -19,14 +19,14 @@
       }
     </script>
     <link rel="stylesheet" href="./pwa-splash.css?v=2026-08-30-pwa-splash-v1" />
-    <link rel="stylesheet" href="./teacher.css?v=2026-09-13-print-choice-v1" />
+    <link rel="stylesheet" href="./teacher.css?v=2026-09-13-inline-print-v1" />
     <link rel="stylesheet" href="./ui-motion.css?v=2026-08-30-ui-motion-v1" />
     <script src="./pwa.js?v=2026-08-30-pwa-splash-v3" defer></script>
     <script src="./ui-motion.js?v=2026-08-30-ui-motion-v1" defer></script>
     <script src="./tafelraum-embed.js?v=2026-09-08-content-zoom-layout-v2" defer></script>
     <script src="./set-side-options.js?v=2026-09-13-side-selection-v1" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js" defer></script>
-    <script src="./teacher.js?v=2026-09-13-side-selection-v1" defer></script>
+    <script src="./teacher.js?v=2026-09-13-inline-print-v1" defer></script>
   </head>
   <body>
     <div class="pwa-splash" role="status" aria-label="Lerndeck wird geladen">
@@ -313,26 +313,17 @@
 
           <div id="print-layout" class="print-layout">
             <aside id="print-config" class="print-config">
-              <label id="print-class-field" class="set-editor-field print-class-field">
-                <span>Klasse <small>optional</small></span>
-                <input id="print-class-input" type="text" maxlength="80" placeholder="z. B. 6a" autocomplete="off" />
-              </label>
-
               <div class="print-selection-heading">
                 <strong>Vokabeln</strong>
                 <span id="print-selection-count">0 ausgewählt</span>
               </div>
-              <div class="print-selection-actions" aria-label="Vokabelauswahl">
-                <button id="print-select-ten" type="button">10 zufällig</button>
-                <button id="print-select-all" type="button">Alle</button>
-                <button id="print-select-none" type="button">Leeren</button>
-              </div>
               <div id="print-card-list" class="print-card-list" role="list"></div>
             </aside>
 
-            <section class="print-preview-shell" aria-label="PDF-Vorschau">
+            <section class="print-preview-shell" aria-label="Druckvorschau">
               <div id="print-preview-loading" class="print-preview-loading">Vorschau wird erstellt …</div>
               <iframe id="print-preview" class="print-preview" title="PDF-Vorschau" hidden></iframe>
+              <div id="print-paper" class="print-paper" aria-label="Vokabeltest bearbeiten" hidden></div>
             </section>
           </div>
 

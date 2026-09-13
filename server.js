@@ -289,6 +289,7 @@ app.post("/api/teacher/sets/:setId/print", async (request, response) => {
       direction: request.body?.direction,
       cardIds: request.body?.cardIds,
       className: request.body?.className,
+      testDraft: request.body?.testDraft,
     });
     const filename = buildPrintFilename(setEntry.title, request.body?.kind);
     response.set({

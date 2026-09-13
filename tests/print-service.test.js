@@ -59,6 +59,34 @@ test("uses the requested card order without persisting a print document", async 
   assert.deepEqual(set, before);
 });
 
+test("accepts a temporary edited test sheet without changing the source set", async () => {
+  const set = createSet(2);
+  const before = structuredClone(set);
+  const pdf = await createVocabularyPrintPdf({
+    set, kind: "test", direction: "source-target", cardIds: ["card-2"],
+    testDraft: {
+      title: "Klassenarbeit", className: "8b", instruction: "Übersetze passend.",
+      items: [{ id: "card-2", prompt: "Auf dem Blatt geändert" }],
+    },
+  });
+  assert.equal(pdf.subarray(0, 5).toString("ascii"), "%PDF-");
+  assert.deepEqual(set, before);
+});
+
+test("rejects forged or empty temporary test prompts", async () => {
+  const set = createSet(2);
+  for (const items of [
+    [{ id: "foreign", prompt: "fremd" }],
+    [{ id: "card-1", prompt: "  " }],
+    [{ id: "card-1", prompt: "a".repeat(501) }],
+  ]) {
+    await assert.rejects(createVocabularyPrintPdf({
+      set, kind: "test", direction: "source-target", cardIds: ["card-1"],
+      testDraft: { title: "Test", className: "", instruction: "", items },
+    }), PrintRequestError);
+  }
+});
+
 test("rejects empty, duplicated, and foreign card selections", async () => {
   const set = createSet(3);
   const requests = [

@@ -2258,6 +2258,21 @@ body.has-modal-open {
   padding-right: 3rem;
 }
 
+.print-panel__header > div {
+  min-width: 0;
+}
+
+.print-panel:has(#print-mode-view:not([hidden])) {
+  width: min(100%, 42rem);
+  grid-template-rows: auto auto;
+}
+
+.print-panel:has(#print-mode-view:not([hidden])) #print-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .print-mode-view {
   display: grid;
   grid-template-columns: repeat(2, minmax(10rem, 15rem));
@@ -2408,10 +2423,6 @@ body.has-modal-open {
   background: rgba(214, 224, 246, 0.025);
 }
 
-.print-class-field input {
-  min-height: 2.75rem;
-}
-
 .print-selection-heading {
   display: flex;
   align-items: baseline;
@@ -2428,28 +2439,6 @@ body.has-modal-open {
   font-size: 0.74rem;
 }
 
-.print-selection-actions {
-  display: flex;
-  gap: 0.42rem;
-  flex-wrap: wrap;
-}
-
-.print-selection-actions button {
-  min-height: 2rem;
-  padding: 0.35rem 0.58rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-pill);
-  background: rgba(214, 224, 246, 0.045);
-  color: rgba(226, 234, 248, 0.86);
-  font-size: 0.72rem;
-  cursor: pointer;
-}
-
-.print-selection-actions button:hover,
-.print-selection-actions button:focus-visible {
-  background: rgba(214, 224, 246, 0.1);
-}
-
 .print-card-list {
   display: grid;
   gap: 0.38rem;
@@ -2457,9 +2446,7 @@ body.has-modal-open {
 
 .print-card-row {
   min-width: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
+  display: block;
   border: 1px solid transparent;
   border-radius: 0.78rem;
   background: rgba(214, 224, 246, 0.025);
@@ -2468,11 +2455,6 @@ body.has-modal-open {
 .print-card-row.is-selected {
   border-color: rgba(137, 173, 229, 0.2);
   background: rgba(99, 132, 191, 0.11);
-  cursor: grab;
-}
-
-.print-card-row.is-dragging {
-  opacity: 0.55;
 }
 
 .print-card-row__toggle {
@@ -2529,33 +2511,6 @@ body.has-modal-open {
   font-size: 0.7rem;
 }
 
-.print-card-row__order {
-  padding-right: 0.42rem;
-  display: inline-flex;
-  gap: 0.18rem;
-}
-
-.print-card-row__order button {
-  width: 1.7rem;
-  height: 1.7rem;
-  padding: 0;
-  border: 0;
-  border-radius: 0.48rem;
-  background: transparent;
-  color: rgba(222, 232, 248, 0.82);
-  cursor: pointer;
-}
-
-.print-card-row__order button:hover,
-.print-card-row__order button:focus-visible {
-  background: rgba(214, 224, 246, 0.1);
-}
-
-.print-card-row__order button:disabled {
-  opacity: 0.2;
-  cursor: default;
-}
-
 .print-preview-shell {
   min-height: 30rem;
   height: min(64vh, 46rem);
@@ -2585,6 +2540,191 @@ body.has-modal-open {
 .print-preview-loading {
   color: var(--text-muted);
   font-size: 0.84rem;
+}
+
+.print-preview-shell:has(.print-paper:not([hidden])) {
+  display: block;
+  overflow: auto;
+  text-align: center;
+}
+
+.print-paper {
+  box-sizing: border-box;
+  width: min(100%, 595px);
+  min-height: 842px;
+  margin: 0 auto;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  color: #111;
+  text-align: left;
+  background: #fff;
+  border-radius: 0.28rem;
+  box-shadow: 0 18px 48px -24px rgba(0, 0, 0, 0.85);
+}
+
+.print-paper__eyebrow,
+.print-paper__instruction > span,
+.print-paper__columns {
+  font-family: Arial, sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+}
+
+.print-paper__eyebrow { font-size: 11px; }
+
+.print-paper__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 183px;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.print-paper__metadata { min-width: 0; }
+
+.print-paper__class {
+  display: flex;
+  align-items: baseline;
+  font: 700 21px Georgia, serif;
+  white-space: nowrap;
+}
+
+.print-paper__class .print-paper__field {
+  width: 125px;
+  min-width: 0;
+  font: inherit;
+}
+
+.print-paper__title {
+  width: 100%;
+  margin-top: 8px;
+  color: #444;
+  font: 12px Arial, sans-serif;
+}
+
+.print-paper__identity {
+  padding: 12px 10px;
+  display: grid;
+  gap: 9px;
+  border: 1px solid #777;
+  border-radius: 2px;
+  font: 12px Arial, sans-serif;
+}
+
+.print-paper__identity span,
+.print-paper__score span { display: flex; align-items: baseline; gap: 5px; }
+.print-paper__identity i,
+.print-paper__score i { flex: 1; border-bottom: 1px solid #aaa; }
+
+.print-paper__instruction {
+  margin-top: 23px;
+  display: grid;
+  gap: 3px;
+}
+
+.print-paper__instruction > span {
+  color: #555;
+  font-size: 9px;
+}
+
+.print-paper__instruction .print-paper__field {
+  width: 100%;
+  font: 15px/1.25 Georgia, serif;
+}
+
+.print-paper__field {
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 1px 2px;
+  overflow: hidden;
+  resize: none;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.print-paper__field:hover,
+.print-paper__field:focus-visible {
+  border-color: #9ab3d4;
+  background: #f3f7fc;
+}
+
+.print-paper__columns {
+  margin-top: 25px;
+  padding: 7px 16px 7px 22px;
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 0;
+  background: #f4f4f4;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+}
+
+.print-paper__rows { margin-top: 15px; }
+
+.print-paper__row {
+  min-height: 38px;
+  display: grid;
+  grid-template-columns: 30px 172px minmax(0, 1fr) 60px;
+  align-items: start;
+  gap: 0;
+}
+
+.print-paper__number {
+  padding-top: 8px;
+  font: 12px Arial, sans-serif;
+  text-align: right;
+}
+
+.print-paper__prompt {
+  width: calc(100% - 8px);
+  margin-left: 8px;
+  font: 14px/1.25 Georgia, serif;
+}
+
+.print-paper__answer-line {
+  height: 26px;
+  border-bottom: 1px solid #888;
+}
+
+.print-paper__row-actions {
+  padding-left: 3px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+}
+
+.print-paper__row-actions button {
+  width: 25px;
+  height: 19px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.print-paper__row-actions button:hover,
+.print-paper__row-actions button:focus-visible { background: #e6ecf5; color: #111; }
+.print-paper__row-actions button:disabled { opacity: 0.22; cursor: default; }
+
+.print-paper__empty {
+  margin: 8px 0;
+  color: #777;
+  font: 13px Arial, sans-serif;
+}
+
+.print-paper__score {
+  margin-top: auto;
+  padding-top: 30px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 9px;
+  font: 700 12px Arial, sans-serif;
 }
 
 .print-footer {
@@ -2644,6 +2784,10 @@ body.has-modal-open {
 }
 
 @media (max-width: 720px) {
+  .print-paper {
+    min-width: 595px;
+  }
+
   .set-import-preview-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
