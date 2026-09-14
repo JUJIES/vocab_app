@@ -13,6 +13,7 @@ const PLUS_ICON_PATH = "./assets/icons/plus.svg";
 const TEACHER_PRACTICE_ICON_PATH = "./assets/icons/learning-modes-open.svg";
 const PRINT_ICON_PATH = "./assets/icons/print.svg";
 const BROKEN_LINK_ICON_PATH = "./assets/icons/broken-link.svg";
+const PRINT_ZOOM_STEPS = [0.7, 0.85, 1, 1.15];
 const TIMEOUT_ICON_PATH = "./assets/icons/timeout.svg";
 const PASSWORD_ICON_PATH = "./assets/icons/password-svgrepo-com.svg";
 const LAST_TEACHER_STORAGE_KEY = "lerndeck-last-teacher-v1";
@@ -55,6 +56,7 @@ const state = {
   printSet: null,
   printKind: "",
   printDirection: "source-target",
+  printZoom: 0.85,
   printSelectedCardIds: [],
   printPdfUrl: "",
   printPreviewTimerId: null,
@@ -132,13 +134,15 @@ const elements = {
   printModeButtons: document.querySelectorAll("[data-print-kind]"),
   printModeFeedback: document.getElementById("print-mode-feedback"),
   printWorkspace: document.getElementById("print-workspace"),
-  printBackButton: document.getElementById("print-back-button"),
-  printDirectionSelect: document.getElementById("print-direction-select"),
-  printSwapDirection: document.getElementById("print-swap-direction"),
+  printZoomControls: document.getElementById("print-zoom-controls"),
+  printZoomOut: document.getElementById("print-zoom-out"),
+  printZoomValue: document.getElementById("print-zoom-value"),
+  printZoomIn: document.getElementById("print-zoom-in"),
   printLayout: document.getElementById("print-layout"),
   printConfig: document.getElementById("print-config"),
   printSelectionCount: document.getElementById("print-selection-count"),
   printCardList: document.getElementById("print-card-list"),
+  printPreviewShell: document.querySelector(".print-preview-shell"),
   printPreviewLoading: document.getElementById("print-preview-loading"),
   printListPaper: document.getElementById("print-list-paper"),
   printPaper: document.getElementById("print-paper"),
@@ -320,12 +324,8 @@ function bindEvents() {
   elements.copyLinkButton.addEventListener("click", handleCopyLink);
   elements.shareCloseButton.addEventListener("click", closeShareOverlay);
   elements.printCloseButton.addEventListener("click", closePrintOverlay);
-  elements.printBackButton.addEventListener("click", showPrintModeChoice);
-  elements.printDirectionSelect.addEventListener("change", () => {
-    state.printDirection = elements.printDirectionSelect.value;
-    updatePrintDirection();
-  });
-  elements.printSwapDirection.addEventListener("click", swapPrintDirection);
+  elements.printZoomOut.addEventListener("click", () => adjustPrintZoom(-1));
+  elements.printZoomIn.addEventListener("click", () => adjustPrintZoom(1));
   elements.printDownloadButton.addEventListener("click", () => { void downloadPrintPdf(); });
   elements.deleteSetCancel.addEventListener("click", closeDeleteSetDialog);
   elements.deleteSetConfirm.addEventListener("click", handleDeleteSet);
@@ -1530,7 +1530,6 @@ async function openPrintOverlay(setEntry) {
       throw new Error("Dieses Set enthält keine druckbaren Vokabeln.");
     }
     elements.printTitle.textContent = state.printSet.title || setEntry.title;
-    configurePrintDirectionOptions();
     elements.printModeFeedback.textContent = "";
     for (const button of elements.printModeButtons) {
       button.disabled = false;
@@ -1570,6 +1569,7 @@ function resetPrintState() {
   state.printSet = null;
   state.printKind = "";
   state.printDirection = "source-target";
+  state.printZoom = 0.85;
   state.printSelectedCardIds = [];
   state.printPdfUrl = "";
   state.printTestDraft = null;
@@ -1582,15 +1582,8 @@ function resetPrintState() {
   elements.printFeedback.textContent = "";
   elements.printPreviewLoading.hidden = false;
   elements.printDownloadButton.disabled = true;
-}
-
-function showPrintModeChoice() {
-  state.printKind = "";
-  clearPrintPreview();
-  elements.printWorkspace.hidden = true;
-  elements.printModeView.hidden = false;
-  elements.printFeedback.textContent = "";
-  requestAnimationFrame(() => elements.printModeButtons[0]?.focus());
+  elements.printZoomControls.hidden = true;
+  updatePrintZoom();
 }
 
 function selectPrintKind(kind) {
@@ -1616,8 +1609,8 @@ function selectPrintKind(kind) {
   }
   elements.printModeView.hidden = true;
   elements.printWorkspace.hidden = false;
+  elements.printZoomControls.hidden = false;
   elements.printConfig.hidden = kind === "list";
-  elements.printSwapDirection.hidden = kind === "test";
   elements.printLayout.classList.toggle("print-layout--list", kind === "list");
   elements.printPaper.hidden = kind !== "test";
   elements.printListPaper.hidden = kind !== "list";
@@ -1631,20 +1624,24 @@ function selectPrintKind(kind) {
   }
 }
 
-function configurePrintDirectionOptions() {
-  const { sourceLabel, targetLabel } = getPrintSideLabels();
-  elements.printDirectionSelect.replaceChildren(
-    new Option(`${sourceLabel} → ${targetLabel}`, "source-target"),
-    new Option(`${targetLabel} → ${sourceLabel}`, "target-source"),
-  );
-  elements.printDirectionSelect.value = state.printDirection;
+function adjustPrintZoom(direction) {
+  const currentIndex = PRINT_ZOOM_STEPS.indexOf(state.printZoom);
+  const nextIndex = Math.max(0, Math.min(PRINT_ZOOM_STEPS.length - 1, currentIndex + direction));
+  state.printZoom = PRINT_ZOOM_STEPS[nextIndex];
+  updatePrintZoom();
+}
+
+function updatePrintZoom() {
+  elements.printPreviewShell.style.setProperty("--print-zoom", String(state.printZoom));
+  elements.printZoomValue.textContent = `${Math.round(state.printZoom * 100)} %`;
+  elements.printZoomOut.disabled = state.printZoom === PRINT_ZOOM_STEPS[0];
+  elements.printZoomIn.disabled = state.printZoom === PRINT_ZOOM_STEPS.at(-1);
 }
 
 function swapPrintDirection() {
   state.printDirection = state.printDirection === "source-target"
     ? "target-source"
     : "source-target";
-  elements.printDirectionSelect.value = state.printDirection;
   updatePrintDirection();
 }
 
@@ -1692,11 +1689,23 @@ function renderPrintListPaper() {
   ].filter(Boolean).join(" · ");
   const columns = document.createElement("div");
   columns.className = "print-list__columns";
-  for (const label of sourceFirst ? [sourceLabel, targetLabel] : [targetLabel, sourceLabel]) {
+  const [leftLabel, rightLabel] = sourceFirst ? [sourceLabel, targetLabel] : [targetLabel, sourceLabel];
+  for (const label of [leftLabel, rightLabel]) {
     const heading = document.createElement("span");
     heading.textContent = label;
     columns.append(heading);
   }
+  const swapDirection = document.createElement("button");
+  swapDirection.className = "print-list__column-swap";
+  swapDirection.type = "button";
+  swapDirection.setAttribute("aria-label", "Sprachreihenfolge tauschen");
+  swapDirection.title = "Sprachreihenfolge tauschen";
+  const swapIcon = document.createElement("img");
+  swapIcon.src = "./assets/icons/swap-horizontal.svg";
+  swapIcon.alt = "";
+  swapDirection.append(swapIcon);
+  swapDirection.addEventListener("click", swapPrintDirection);
+  columns.append(swapDirection);
   const rows = document.createElement("div");
   rows.className = "print-list__rows";
   const cardsById = new Map(state.printSet.cards.map((card) => [String(card.id), card]));
@@ -1875,8 +1884,8 @@ function renderPrintPaper() {
   const swapDirection = document.createElement("button");
   swapDirection.className = "print-paper__column-swap";
   swapDirection.type = "button";
-  swapDirection.setAttribute("aria-label", "Standardrichtung der Begriffe tauschen");
-  swapDirection.title = "Standardrichtung tauschen";
+  swapDirection.setAttribute("aria-label", "Sprachreihenfolge tauschen");
+  swapDirection.title = "Sprachreihenfolge tauschen";
   const swapIcon = document.createElement("img");
   swapIcon.src = "./assets/icons/swap-horizontal.svg";
   swapIcon.alt = "";

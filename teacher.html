@@ -19,14 +19,14 @@
       }
     </script>
     <link rel="stylesheet" href="./pwa-splash.css?v=2026-08-30-pwa-splash-v1" />
-    <link rel="stylesheet" href="./teacher.css?v=2026-09-13-visual-preview-large-v1" />
+    <link rel="stylesheet" href="./teacher.css?v=2026-09-14-print-preview-zoom-v2" />
     <link rel="stylesheet" href="./ui-motion.css?v=2026-08-30-ui-motion-v1" />
     <script src="./pwa.js?v=2026-08-30-pwa-splash-v3" defer></script>
     <script src="./ui-motion.js?v=2026-08-30-ui-motion-v1" defer></script>
     <script src="./tafelraum-embed.js?v=2026-09-08-content-zoom-layout-v2" defer></script>
     <script src="./set-side-options.js?v=2026-09-13-side-selection-v1" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js" defer></script>
-    <script src="./teacher.js?v=2026-09-13-visual-preview-large-v1" defer></script>
+    <script src="./teacher.js?v=2026-09-14-print-preview-zoom-v2" defer></script>
   </head>
   <body>
     <div class="pwa-splash" role="status" aria-label="Lerndeck wird geladen">
@@ -275,6 +275,11 @@
             <p class="share-panel__kicker">Ausdrucken</p>
             <h2 id="print-title" class="share-panel__title">Lernset</h2>
           </div>
+          <div id="print-zoom-controls" class="print-zoom" role="group" aria-label="Vorschaugröße" hidden>
+            <button id="print-zoom-out" type="button" aria-label="Vorschau verkleinern" title="Vorschau verkleinern">−</button>
+            <output id="print-zoom-value" aria-live="polite">85 %</output>
+            <button id="print-zoom-in" type="button" aria-label="Vorschau vergrößern" title="Vorschau vergrößern">+</button>
+          </div>
           <button id="print-close-button" class="share-panel__close" type="button" aria-label="Schließen">
             <img class="share-panel__close-icon" src="./assets/icons/x-mark.svg" alt="" />
           </button>
@@ -293,22 +298,6 @@
         </section>
 
         <section id="print-workspace" class="print-workspace" hidden>
-          <div class="print-toolbar">
-            <button id="print-back-button" class="set-editor-back" type="button">
-              <span aria-hidden="true">←</span>
-              <span>Zurück</span>
-            </button>
-            <div class="print-direction-field">
-              <span id="print-direction-label">Reihenfolge</span>
-              <div class="print-direction-control">
-                <select id="print-direction-select" aria-labelledby="print-direction-label"></select>
-                <button id="print-swap-direction" type="button" aria-label="Eingabe- und Anzeigesprache tauschen" title="Sprachen tauschen">
-                  <img src="./assets/icons/swap-horizontal.svg" alt="" decoding="async" />
-                </button>
-              </div>
-            </div>
-          </div>
-
           <div id="print-layout" class="print-layout">
             <aside id="print-config" class="print-config">
               <div class="print-selection-heading">

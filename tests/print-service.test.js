@@ -39,7 +39,10 @@ test("creates vector A4 PDFs for vocabulary tests and lists", async () => {
 
     assert.equal(pdf.subarray(0, 5).toString("ascii"), "%PDF-");
     assert.ok(pdf.length > 4_000);
-    const pageCount = (pdf.toString("latin1").match(/\/Type \/Page\b/g) || []).length;
+    const pdfSource = pdf.toString("latin1");
+    assert.match(pdfSource, /\/BaseFont \/Helvetica/);
+    assert.doesNotMatch(pdfSource, /\/BaseFont \/Times/);
+    const pageCount = (pdfSource.match(/\/Type \/Page\b/g) || []).length;
     assert.ok(pageCount >= 2 && pageCount <= 3, `unexpected ${kind} page count: ${pageCount}`);
   }
 });

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Anmeldung und Ersteinrichtung wählen kein Tablet mehr automatisch aus, auch wenn nur eines verfügbar ist. Ohne Auswahl bleibt der eingegebene PIN erhalten und die Oberfläche weist auf die fehlende Auswahl hin. PIN-Felder verwenden weiterhin die native Zifferntastatur, nehmen nur Ziffern an und prüfen 4–8 Stellen vor einem Serverversuch; bestehende PINs bleiben gültig.
+- Nach einer falschen Tablet-PIN kann auf dem Schülergerät nach Ablauf der Wartezeit „Tablet wechseln“ gewählt werden. Die Sitzung verliert nur ihre Tablet-Bindung; Fehlversuche und deren Eskalation bleiben erhalten. Während der Wartezeit sind PIN-Eingabe und Wechsel gesperrt.
+- Das Druckfenster nutzt seinen Platz besser: Der Setname im Arbeitsbereich ist kleiner, die Zurück-Zeile entfällt und die Vorschau startet bei 85 %. Plus/Minus im Kopf zoomen zwischen 70 und 115 %, ohne den PDF-Inhalt zu verändern; die Vokabelliste und der Vokabeltest teilen denselben Zoom.
+- Vokabeltest und Vokabelliste verwenden im PDF durchgehend eine ruhige Sans-Serif-Schrift mit abgestuften Größen statt des bisherigen Wechsels zwischen Times und Helvetica. Die HTML-Blattvorschauen folgen derselben Typografie; Druckstruktur, Schreiblinien und Datenfluss bleiben erhalten.
+- Die separate Auswahl „Reihenfolge“ in der Druckleiste entfällt. Der Doppelpfeil direkt zwischen den Spalten der Blattvorschau tauscht die Richtung nun bei Vokabeltest und Vokabelliste.
 - Die Vokabelliste zeigt ihre Wörter und Übersetzungen jetzt sofort als HTML-Blatt statt in einem eingebetteten PDF-Viewer, der auf manchen Geräten nur eine weiße Fläche zeigte. Der PDF-Download bleibt unverändert; nach einem Richtungswechsel wird er bis zur erneuten Erstellung kurz gesperrt.
 - Die Hover-Vorschau vorhandener Lernbilder im Set-Editor ist mehr als doppelt so breit (28 statt 12,5 rem). Sie wird innerhalb des sichtbaren Editorfensters positioniert und bei wenig Platz scrollbar, damit Bild und Aktionen nicht abgeschnitten werden; leere Bildaktionen bleiben kompakt.
 - Die Zeile „Neue Vokabel hinzufügen“ ist am unteren Rand des Set-Editors mittig ausgerichtet. Das bisher eingerahmte Text-Plus wurde durch das rahmenlose Plus-SVG aus dem Lucide-Iconset ersetzt; die ganze Zeile bleibt anklickbar.
