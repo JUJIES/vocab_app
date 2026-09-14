@@ -1653,6 +1653,12 @@ button.student-screen__device-card {
   transform: translateX(-1px);
 }
 
+.student-screen__access-footer-back:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .student-screen__access-footer-back--icon-only {
   min-height: 2.2rem;
   gap: 0;

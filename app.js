@@ -158,6 +158,7 @@ const DEFAULT_TABLET_ID = "rot-1";
 const DEFAULT_TABLET_LABEL = "Rot 1";
 const TABLET_DIRECTORY_API_PATH = "/api/tablet-directory";
 const ACCESS_SESSION_API_PATH = "/api/access-session";
+const SWITCH_TABLET_SELECTION_API_PATH = "/api/tablets/switch-selection";
 const TABLET_ICON_PATH = "./assets/icons/tablet-device.svg";
 const ACCESS_CONTINUE_ICON_PATH = "./assets/icons/continue-session.svg";
 const ACCESS_REGISTER_ICON_PATH = "./assets/icons/key-access.svg";
@@ -3283,10 +3284,7 @@ function renderAccessState({
     state.accessUseAlternate = true;
     state.accessSelectedFlow = "registration";
     renderAccessState({
-      registrationTabletId: resolveTabletSelection("", {
-        tablets: registrationTablets,
-        preferFirstAvailable: registrationTablets.length === 1,
-      }),
+      registrationTabletId: "",
       showRegistration: true,
     });
   };
@@ -3433,10 +3431,7 @@ function renderAccessState({
           state.accessUseAlternate = true;
           state.accessSelectedFlow = "login";
           renderAccessState({
-            loginTabletId: resolveTabletSelection("", {
-              tablets: loginTablets,
-              preferFirstAvailable: loginTablets.length === 1,
-            }),
+            loginTabletId: "",
             showRegistration: false,
           });
         },
@@ -3504,11 +3499,10 @@ function renderAccessState({
 
     const loginText = document.createElement("p");
     loginText.className = "student-screen__access-section-text";
-    loginText.textContent = "Mit PIN anmelden";
+    loginText.textContent = "Tablet wählen · PIN: 4–8 Ziffern";
 
     const resolvedLoginTabletId = resolveTabletSelection(hasBoundAccessSession ? boundTabletId : loginTabletId, {
       tablets: loginTablets,
-      preferFirstAvailable: !hasBoundAccessSession && loginTablets.length === 1,
     });
 
     loginHeader.append(createAccessSectionHeaderIcon(ACCESS_CONTINUE_ICON_PATH), loginTitle);
@@ -3577,30 +3571,19 @@ function renderAccessState({
     elements.studentScreenForm.replaceChildren(container);
     const loginActions = document.createElement("div");
     loginActions.className = "student-screen__access-inline-actions student-screen__access-inline-actions--chooser";
-    loginActions.append(
-      createAccessBackButton(async () => {
-        if (hasBoundAccessSession) {
-          await ensureAccessSessionLoaded();
-
-          if (state.accessSession?.isBound) {
-            renderAccessState({
-              loginTabletId: state.accessSession.tabletId,
-              loginFeedback: state.accessSession.isCoolingDown
-                ? `Dieses Tablet bleibt aktiv. Neuer Versuch in ${formatAccessSessionRemaining(state.accessSession.remainingMs)}.`
-                : formatAccessBoundTabletMessage(state.accessSession.tabletId),
-              showRegistration: false,
-            });
-            return;
-          }
-        }
-
+    const backButton = createAccessBackButton(hasBoundAccessSession
+      ? handleSwitchTabletSelection
+      : () => {
         state.accessUseAlternate = true;
         state.accessSelectedFlow = "chooser";
         renderAccessState({
           knownDeviceFeedback,
           showRegistration: false,
         });
-      }, "Zurück"),
+      }, hasBoundAccessSession ? "Tablet wechseln" : "Zurück");
+    backButton.disabled = isCoolingDown;
+    loginActions.append(
+      backButton,
       (() => {
         const divider = document.createElement("span");
         divider.className = "student-screen__access-row-divider";
@@ -3630,14 +3613,13 @@ function renderAccessState({
 
   const registrationText = document.createElement("p");
   registrationText.className = "student-screen__access-section-text";
-  registrationText.textContent = "Nur für freie Tablets";
+  registrationText.textContent = "Freies Tablet wählen · PIN: 4–8 Ziffern";
 
   registrationHeader.append(createAccessSectionHeaderIcon(ACCESS_REGISTER_ICON_PATH), registrationTitle, registrationText);
   registrationSection.append(registrationHeader);
 
   const resolvedRegistrationTabletId = resolveTabletSelection(registrationTabletId, {
     tablets: registrationTablets,
-    preferFirstAvailable: registrationTablets.length === 1,
   });
   const registrationForm = document.createElement("form");
   registrationForm.className = "student-screen__access-form";
@@ -4265,20 +4247,6 @@ async function confirmStudentSetUnsubscribe() {
     return;
   }
   await handleRemoveSubscribedSet(setPath);
-}
-
-function renderRegistrationState({
-  selectedTabletId = DEFAULT_TABLET_ID,
-  feedback = "",
-  detail = "Wähle das Tablet und setze einen PIN.",
-} = {}) {
-  void detail;
-  state.accessUseAlternate = true;
-  renderAccessState({
-    registrationTabletId: selectedTabletId,
-    registrationFeedback: feedback,
-    showRegistration: true,
-  });
 }
 
 function renderPinState(tabletId, {
@@ -5006,7 +4974,6 @@ function createHiddenInput(name, value) {
 function createTabletDropdownPicker(name, selectedTabletId = "", {
   tablets = getAvailableTablets(),
   emptyStateText = "Keine Tablets verfügbar.",
-  preferFirstAvailable = true,
   placeholder = "Tablet auswählen",
   disabled = false,
   locked = false,
@@ -5024,10 +4991,9 @@ function createTabletDropdownPicker(name, selectedTabletId = "", {
 
   const resolvedSelection = resolveTabletSelection(selectedTabletId, {
     tablets,
-    preferFirstAvailable,
   });
-  const selectedTablet = tablets.find((tablet) => tablet.id === resolvedSelection) || tablets[0] || null;
-  const tabletGroup = getTabletGroupName(selectedTablet?.label || selectedTablet?.id || selectedTabletId);
+  const selectedTablet = tablets.find((tablet) => tablet.id === resolvedSelection) || null;
+  const tabletGroup = getTabletGroupName(selectedTablet?.label || selectedTablet?.id || "");
 
   const field = document.createElement("div");
   field.className = "student-screen__tablet-input-shell";
@@ -5070,6 +5036,7 @@ function createTabletDropdownPicker(name, selectedTabletId = "", {
   select.addEventListener("change", () => {
     const tablet = tablets.find((entry) => entry.id === select.value) || null;
     field.dataset.tabletGroup = getTabletGroupName(tablet?.label || tablet?.id || "");
+    clearAccessFormValidationFeedback(select.form);
   });
 
   field.append(icon, select);
@@ -5292,7 +5259,8 @@ function createPinInput(name, placeholder) {
   input.name = name;
   input.type = "password";
   input.inputMode = "numeric";
-  input.pattern = "[0-9]*";
+  input.pattern = "[0-9]{4,8}";
+  input.maxLength = 8;
   input.enterKeyHint = "go";
   input.autocomplete = "off";
   input.autocapitalize = "off";
@@ -5300,6 +5268,15 @@ function createPinInput(name, placeholder) {
   input.className = "student-screen__input";
   input.placeholder = placeholder;
   input.required = true;
+  input.addEventListener("input", () => {
+    const digits = input.value.replace(/[^0-9]/g, "").slice(0, 8);
+    if (input.value !== digits) {
+      input.value = digits;
+      showAccessFormValidationFeedback(input.form, "Nur Ziffern eingeben.");
+    } else {
+      clearAccessFormValidationFeedback(input.form);
+    }
+  });
   return input;
 }
 
@@ -5404,6 +5381,26 @@ function createStudentFeedback(message) {
   feedback.textContent = message;
   feedback.hidden = !message;
   return feedback;
+}
+
+function showAccessFormValidationFeedback(form, message, control = null) {
+  const feedback = form?.querySelector(".student-screen__feedback");
+  if (feedback) {
+    feedback.textContent = message;
+    feedback.hidden = false;
+    feedback.dataset.validationError = "true";
+    feedback.setAttribute("role", "alert");
+  }
+  control?.focus();
+}
+
+function clearAccessFormValidationFeedback(form) {
+  const feedback = form?.querySelector('[data-validation-error="true"]');
+  if (!feedback) return;
+  feedback.textContent = "";
+  feedback.hidden = true;
+  delete feedback.dataset.validationError;
+  feedback.removeAttribute("role");
 }
 
 async function ensureAccessSessionLoaded() {
@@ -5519,7 +5516,7 @@ function formatAccessCooldownFeedback(remainingMs, { includeWrongPin = false } =
 }
 
 function formatAccessBoundTabletMessage(tabletId) {
-  return `Bitte zuerst den PIN für ${getTabletLabel(tabletId)} eingeben. Wechsel erst nach erfolgreichem Login möglich.`;
+  return `PIN für ${getTabletLabel(tabletId)} eingeben oder Tablet wechseln.`;
 }
 
 function getAccessPinCooldownDuration(failureCount) {
@@ -7873,26 +7870,17 @@ async function handleRegistrationSubmit(event) {
     : "";
 
   if (!tabletId) {
-    renderRegistrationState({
-      selectedTabletId: DEFAULT_TABLET_ID,
-      feedback: "Bitte wähle ein Tablet aus.",
-    });
+    showAccessFormValidationFeedback(form, "Bitte wähle ein Tablet aus.", form.querySelector('[data-access-tablet-select="true"]'));
     return;
   }
 
   if (!isValidPinFormat(pin)) {
-    renderRegistrationState({
-      selectedTabletId: tabletId,
-      feedback: "Der PIN muss aus 4 bis 8 Ziffern bestehen.",
-    });
+    showAccessFormValidationFeedback(form, "PIN: 4 bis 8 Ziffern eingeben.", form.querySelector('[name="registration-pin"]'));
     return;
   }
 
   if (pin !== pinConfirm) {
-    renderRegistrationState({
-      selectedTabletId: tabletId,
-      feedback: "Die PIN-Eingaben stimmen nicht überein.",
-    });
+    showAccessFormValidationFeedback(form, "Die PIN-Eingaben stimmen nicht überein.", form.querySelector('[name="registration-pin-confirm"]'));
     return;
   }
 
@@ -7942,6 +7930,33 @@ async function handleRegistrationSubmit(event) {
   }
 }
 
+async function handleSwitchTabletSelection() {
+  try {
+    const response = await apiRequest(SWITCH_TABLET_SELECTION_API_PATH, { method: "POST" });
+    syncAccessSessionState(response.data?.accessSession || null);
+
+    if (!response.ok) {
+      renderAccessState({
+        loginTabletId: state.accessSession?.tabletId || "",
+        loginFeedback: getApiErrorMessage(response, "Tablet konnte nicht gewechselt werden."),
+        showRegistration: false,
+      });
+      return;
+    }
+
+    state.accessUseAlternate = true;
+    state.accessSelectedFlow = "login";
+    renderAccessState({ loginTabletId: "", showRegistration: false });
+  } catch (error) {
+    console.error("Unable to change tablet selection:", error);
+    renderAccessState({
+      loginTabletId: state.accessSession?.tabletId || "",
+      loginFeedback: "Server nicht erreichbar. Bitte erneut versuchen.",
+      showRegistration: false,
+    });
+  }
+}
+
 async function handlePinSubmit(event) {
   event.preventDefault();
 
@@ -7950,27 +7965,18 @@ async function handlePinSubmit(event) {
   const formData = new FormData(form);
   const tabletId = typeof formData.get("tabletId") === "string"
     ? normalizeTabletIdInput(formData.get("tabletId"))
-    : (form.dataset.tabletId || loadLocalTabletId() || DEFAULT_TABLET_ID);
+    : (accessVariant === "quick" ? (form.dataset.tabletId || loadLocalTabletId() || "") : "");
   const pin = typeof formData.get("pin-entry") === "string"
     ? formData.get("pin-entry").trim()
     : "";
 
   if (!tabletId) {
-    renderAccessState({
-      loginFeedback: "Bitte wähle dein Tablet aus.",
-      knownDeviceFeedback: state.accessKnownDeviceFeedback,
-      showRegistration: state.accessRegistrationOpen,
-    });
+    showAccessFormValidationFeedback(form, "Bitte wähle ein Tablet aus.", form.querySelector('[data-access-tablet-select="true"]'));
     return;
   }
 
-  if (!pin) {
-    renderAccessState({
-      loginTabletId: tabletId,
-      loginFeedback: accessVariant === "login" ? "Bitte gib den PIN ein." : "",
-      knownDeviceFeedback: accessVariant === "quick" ? "Bitte gib den PIN ein." : "",
-      showRegistration: state.accessRegistrationOpen,
-    });
+  if (!isValidPinFormat(pin)) {
+    showAccessFormValidationFeedback(form, "PIN: 4 bis 8 Ziffern eingeben.", form.querySelector('[name="pin-entry"]'));
     return;
   }
 

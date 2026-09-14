@@ -24,7 +24,7 @@ Bewusst vertagt sind persönliche Schülerkonten, Dino-Lernpässe, Schulen/Grupp
 
 ## Zentrale Produktlogik
 
-1. Das Tablet wählt einmal seinen bekannten Gerätenamen und setzt einen PIN. Browser und Server halten eine widerrufbare Gerätesitzung.
+1. Das Tablet wählt bei Anmeldung und Ersteinrichtung seinen Gerätenamen bewusst selbst; es gibt keine Vorauswahl. Der Geräte-PIN besteht aus 4–8 Ziffern (auch für bestehende Zugänge), ruft auf Mobilgeräten die native Zifferntastatur auf und wird vor der PIN-Prüfung auf Client und Server auf dieses Format geprüft. Browser und Server halten eine widerrufbare Gerätesitzung. Ein fehlgeschlagener PIN-Versuch bindet die Anmeldesitzung zunächst an das ausgewählte Tablet und löst eine Wartezeit aus. Danach kann „Tablet wechseln“ nur die Auswahl lösen; die Fehlversuche der Sitzung und des zuvor gewählten Tablets bleiben bestehen. Lehrkräfte können eine solche Bindung weiterhin im Tablet-Menü aufheben.
 2. Eine Lehrkraft besitzt ihre eigenen Sets. Normale Lehrkraftkonten sehen fremde Sets nicht. Admins sehen sie nach Eigentümer getrennt und dürfen sie bearbeiten sowie Bilder verwalten; Eigentümerschaft und das Löschen fremder Sets bleiben ausgeschlossen.
 3. Ein veröffentlichtes Set erhält genau einen stabilen Pfad und Code. Bearbeitungen erhöhen die Revision, ersetzen aber weder Pfad noch Code.
    Vor der ersten Veröffentlichung müssen Vorder- und Rückseite aus einem passenden Paar gewählt sein: Deutsch/Englisch, Begriff/Definition oder Frage/Antwort. Neue Entwürfe speichern diese bewusste Wahl als `sidePreset`; ein Importvorschlag oder ein Standardwert zählt nicht. Ältere veröffentlichte Sets bleiben ohne Datenmigration erhalten.

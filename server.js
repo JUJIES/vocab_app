@@ -561,6 +561,26 @@ app.get("/api/access-session", (request, response) => {
 
 app.use("/api/tablets", serializeMutatingRequests());
 
+app.post("/api/tablets/switch-selection", (request, response) => {
+  const accessSessionResult = ensureAccessSession(request, response);
+  const accessSession = accessSessionResult.session;
+  const now = Date.now();
+
+  if (isAccessSessionCoolingDown(accessSession, now)) {
+    response.status(429).json({
+      error: buildAccessPinCooldownMessage(accessSession.lockedUntil - now),
+      accessSession: serializeAccessSession(accessSession, now),
+    });
+    return;
+  }
+
+  // Only the selected tablet changes; failed attempts still follow this browser session.
+  accessSession.tabletId = "";
+  accessSession.lockedUntil = 0;
+  commitAccessSession(accessSessionResult.token, accessSession, now);
+  response.json({ accessSession: serializeAccessSession(accessSession, now) });
+});
+
 app.get("/api/tablet-directory", async (_request, response) => {
   try {
     const store = await readTabletStore();
@@ -1134,6 +1154,14 @@ app.post("/api/tablets/:tabletId/verify-pin", async (request, response) => {
     return;
   }
 
+  if (!isValidPin(pin)) {
+    response.status(400).json({
+      error: "PIN muss aus 4 bis 8 Ziffern bestehen.",
+      accessSession: serializeAccessSession(accessSession, now),
+    });
+    return;
+  }
+
   try {
     const store = await readTabletStore();
     const tablet = findTablet(store, request.params.tabletId);
@@ -1168,7 +1196,7 @@ app.post("/api/tablets/:tabletId/verify-pin", async (request, response) => {
     if (accessSession.tabletId && accessSession.tabletId !== tablet.id) {
       const boundTablet = findTablet(store, accessSession.tabletId);
       response.status(423).json({
-        error: `Du bist gerade auf ${boundTablet?.label || accessSession.tabletId} festgelegt. Erst nach erfolgreichem Login kannst du ein anderes Tablet auswählen.`,
+        error: `Du bist gerade auf ${boundTablet?.label || accessSession.tabletId} festgelegt. Wähle zuerst „Tablet wechseln“.`,
         accessSession: serializeAccessSession(accessSession, now),
       });
       return;
@@ -2001,7 +2029,7 @@ function isAccessSessionCoolingDown(session, now = Date.now()) {
 }
 
 function serializeAccessSession(session, now = Date.now()) {
-  if (!session || !session.tabletId) {
+  if (!session) {
     return {
       tabletId: "",
       failureCount: 0,
@@ -2017,9 +2045,9 @@ function serializeAccessSession(session, now = Date.now()) {
     : 0;
 
   return {
-    tabletId: session.tabletId,
+    tabletId: session.tabletId || "",
     failureCount: Math.max(0, Math.trunc(session.failureCount || 0)),
-    isBound: true,
+    isBound: Boolean(session.tabletId),
     isCoolingDown: lockedUntil > now,
     lockedUntil: lockedUntil > now ? new Date(lockedUntil).toISOString() : null,
     remainingMs: lockedUntil > now ? lockedUntil - now : 0,
