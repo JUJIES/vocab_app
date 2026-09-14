@@ -1,5 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const { inflateSync } = require("node:zlib");
 
 const {
   PrintRequestError,
@@ -24,6 +25,16 @@ function createSet(cardCount = 12) {
   };
 }
 
+function extractPageText(pdf) {
+  const source = pdf.toString("latin1");
+  return [...source.matchAll(/stream\r?\n([\s\S]*?)\r?\nendstream/g)].map((match) => {
+    const page = inflateSync(Buffer.from(match[1], "latin1")).toString("latin1");
+    return [...page.matchAll(/<([0-9a-f]+)>/gi)]
+      .map((glyphs) => Buffer.from(glyphs[1], "hex").toString("latin1"))
+      .join("");
+  });
+}
+
 test("creates vector A4 PDFs for vocabulary tests and lists", async () => {
   const set = createSet(45);
   const cardIds = set.cards.map((card) => card.id);
@@ -40,10 +51,27 @@ test("creates vector A4 PDFs for vocabulary tests and lists", async () => {
     assert.equal(pdf.subarray(0, 5).toString("ascii"), "%PDF-");
     assert.ok(pdf.length > 4_000);
     const pdfSource = pdf.toString("latin1");
-    assert.match(pdfSource, /\/BaseFont \/Helvetica/);
-    assert.doesNotMatch(pdfSource, /\/BaseFont \/Times/);
+    assert.match(pdfSource, /\/BaseFont \/Times/);
+    assert.doesNotMatch(pdfSource, /\/BaseFont \/Helvetica/);
     const pageCount = (pdfSource.match(/\/Type \/Page\b/g) || []).length;
     assert.ok(pageCount >= 2 && pageCount <= 3, `unexpected ${kind} page count: ${pageCount}`);
+  }
+});
+
+test("test backsides continue the numbered rows without repeating student fields or instructions", async () => {
+  const set = createSet(25);
+  const pdf = await createVocabularyPrintPdf({
+    set, kind: "test", direction: "source-target",
+    cardIds: set.cards.map((card) => card.id), className: "9b",
+  });
+  const pages = extractPageText(pdf);
+  assert.ok(pages.length >= 2);
+  assert.match(pages[0], /Klasse: 9b/);
+  assert.match(pages[0], /ARBEITSAUFTRAG/);
+  for (const page of pages.slice(1)) {
+    assert.match(page, /FORTSETZUNG/);
+    assert.match(page, /BEGRIFFANTWORT/);
+    assert.doesNotMatch(page, /Klasse:|Name:|Datum:|ARBEITSAUFTRAG/);
   }
 });
 

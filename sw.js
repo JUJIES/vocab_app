@@ -1,4 +1,4 @@
-const CACHE_NAME = "lerndeck-shell-v157";
+const CACHE_NAME = "lerndeck-shell-v158";
 const APP_SHELL_URLS = [
   "/",
   "/index.html",
@@ -9,7 +9,7 @@ const APP_SHELL_URLS = [
   "/answer-rules.js?v=2026-09-08-answer-rules-v2",
   "/grading-rules.js?v=2026-09-10-ihk-v1",
   "/app.js?v=2026-09-14-pin-entry-v1",
-  "/teacher.css?v=2026-09-14-print-preview-zoom-v2",
+  "/teacher.css?v=2026-09-14-print-serif-v1",
   "/set-side-options.js?v=2026-09-13-side-selection-v1",
   "/teacher.js?v=2026-09-14-print-preview-zoom-v2",
   "/tafelraum-embed.js?v=2026-09-08-content-zoom-layout-v2",

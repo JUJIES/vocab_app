@@ -2568,7 +2568,7 @@ body.has-modal-open {
   display: flex;
   flex-direction: column;
   color: #111;
-  font-family: Arial, sans-serif;
+  font-family: "Times New Roman", Times, serif;
   text-align: left;
   background: #fff;
   border-radius: 0.28rem;
@@ -2577,14 +2577,14 @@ body.has-modal-open {
 }
 
 .print-list__eyebrow {
-  font: 700 11px Arial, sans-serif;
-  letter-spacing: 0.15em;
+  font: 700 12px "Times New Roman", Times, serif;
+  letter-spacing: 0.05em;
 }
 
 .print-list__title {
   margin: 12px 0 0;
   overflow: hidden;
-  font: 700 23px/1.1 Arial, sans-serif;
+  font: 700 24px/1.1 "Times New Roman", Times, serif;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2592,7 +2592,7 @@ body.has-modal-open {
 .print-list__meta {
   margin: 7px 0 0;
   color: #4b4b4b;
-  font: 12px Arial, sans-serif;
+  font: 13px "Times New Roman", Times, serif;
 }
 
 .print-list__columns,
@@ -2607,8 +2607,8 @@ body.has-modal-open {
   margin-top: 25px;
   align-items: center;
   background: #f0f0f0;
-  font: 700 11px Arial, sans-serif;
-  letter-spacing: 0.08em;
+  font: 700 12px "Times New Roman", Times, serif;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
 }
 
@@ -2653,7 +2653,7 @@ body.has-modal-open {
 .print-list__row {
   min-height: 30px;
   border-bottom: 1px solid #c5c5c5;
-  font: 14px/1.25 Arial, sans-serif;
+  font: 15px/1.25 "Times New Roman", Times, serif;
 }
 
 .print-list__term,
@@ -2676,7 +2676,7 @@ body.has-modal-open {
 .print-list__number {
   padding-top: 2px;
   color: #555;
-  font: 11px Arial, sans-serif;
+  font: 12px "Times New Roman", Times, serif;
   text-align: right;
 }
 
@@ -2685,9 +2685,9 @@ body.has-modal-open {
 .print-paper__eyebrow,
 .print-paper__instruction > span,
 .print-paper__columns {
-  font-family: Arial, sans-serif;
+  font-family: "Times New Roman", Times, serif;
   font-weight: 700;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.05em;
 }
 
 .print-paper__eyebrow { font-size: 11px; }
@@ -2704,7 +2704,7 @@ body.has-modal-open {
 .print-paper__class {
   display: flex;
   align-items: baseline;
-  font: 700 18px Arial, sans-serif;
+  font: 700 21px "Times New Roman", Times, serif;
   white-space: nowrap;
 }
 
@@ -2718,7 +2718,7 @@ body.has-modal-open {
   width: 100%;
   margin-top: 8px;
   color: #444;
-  font: 12px Arial, sans-serif;
+  font: 13px "Times New Roman", Times, serif;
 }
 
 .print-paper__identity {
@@ -2727,7 +2727,7 @@ body.has-modal-open {
   gap: 9px;
   border: 1px solid #777;
   border-radius: 2px;
-  font: 12px Arial, sans-serif;
+  font: 13px "Times New Roman", Times, serif;
 }
 
 .print-paper__identity span,
@@ -2738,17 +2738,17 @@ body.has-modal-open {
 .print-paper__instruction {
   margin-top: 23px;
   display: grid;
-  gap: 3px;
+  gap: 6px;
 }
 
 .print-paper__instruction > span {
   color: #555;
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .print-paper__instruction .print-paper__field {
   width: 100%;
-  font: 14px/1.3 Arial, sans-serif;
+  font: 15px/1.3 "Times New Roman", Times, serif;
 }
 
 .print-paper__field {
@@ -2777,8 +2777,8 @@ body.has-modal-open {
   grid-template-columns: 156px 24px minmax(0, 1fr);
   gap: 0;
   background: #f4f4f4;
-  font-size: 10px;
-  letter-spacing: 0.1em;
+  font-size: 12px;
+  letter-spacing: 0.03em;
 }
 
 .print-paper__columns .print-paper__field {
@@ -2894,14 +2894,14 @@ body.has-modal-open {
 
 .print-paper__number {
   padding-top: 2px;
-  font: 13px/1.25 Arial, sans-serif;
+  font: 14px/1.25 "Times New Roman", Times, serif;
   text-align: right;
 }
 
 .print-paper__prompt {
   width: calc(100% - 8px);
   margin-left: 8px;
-  font: 14px/1.25 Arial, sans-serif;
+  font: 15px/1.25 "Times New Roman", Times, serif;
 }
 
 .print-paper__answer-line {
@@ -2931,7 +2931,7 @@ body.has-modal-open {
 .print-paper__empty {
   margin: 8px 0;
   color: #777;
-  font: 13px Arial, sans-serif;
+  font: 14px "Times New Roman", Times, serif;
 }
 
 .print-paper__score {
@@ -2940,7 +2940,7 @@ body.has-modal-open {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 9px;
-  font: 700 12px Arial, sans-serif;
+  font: 700 13px "Times New Roman", Times, serif;
 }
 
 .print-footer {

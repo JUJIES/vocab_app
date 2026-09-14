@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Der Vokabeltest druckt auf Rückseiten nur einen knappen Fortsetzungskopf und führt direkt mit Spalten und Aufgaben weiter; Klasse, Name, Datum und Arbeitsauftrag bleiben allein auf Seite 1. PDF und HTML-Blattvorschau nutzen für Test und Liste eine einheitliche, größere klassische Serifenschrift.
 - Anmeldung und Ersteinrichtung wählen kein Tablet mehr automatisch aus, auch wenn nur eines verfügbar ist. Ohne Auswahl bleibt der eingegebene PIN erhalten und die Oberfläche weist auf die fehlende Auswahl hin. PIN-Felder verwenden weiterhin die native Zifferntastatur, nehmen nur Ziffern an und prüfen 4–8 Stellen vor einem Serverversuch; bestehende PINs bleiben gültig.
 - Nach einer falschen Tablet-PIN kann auf dem Schülergerät nach Ablauf der Wartezeit „Tablet wechseln“ gewählt werden. Die Sitzung verliert nur ihre Tablet-Bindung; Fehlversuche und deren Eskalation bleiben erhalten. Während der Wartezeit sind PIN-Eingabe und Wechsel gesperrt.
 - Das Druckfenster nutzt seinen Platz besser: Der Setname im Arbeitsbereich ist kleiner, die Zurück-Zeile entfällt und die Vorschau startet bei 85 %. Plus/Minus im Kopf zoomen zwischen 70 und 115 %, ohne den PDF-Inhalt zu verändern; die Vokabelliste und der Vokabeltest teilen denselben Zoom.
