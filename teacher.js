@@ -9,6 +9,7 @@ const EXTERNAL_LINK_ICON_PATH = "./assets/icons/external-link.svg";
 const DELETE_ICON_PATH = "./assets/icons/trash-2.svg";
 const REMOVE_ICON_PATH = "./assets/icons/x.svg";
 const IMAGE_PLUS_ICON_PATH = "./assets/icons/image-plus.svg";
+const PLUS_ICON_PATH = "./assets/icons/plus.svg";
 const TEACHER_PRACTICE_ICON_PATH = "./assets/icons/learning-modes-open.svg";
 const PRINT_ICON_PATH = "./assets/icons/print.svg";
 const BROKEN_LINK_ICON_PATH = "./assets/icons/broken-link.svg";
@@ -139,7 +140,7 @@ const elements = {
   printSelectionCount: document.getElementById("print-selection-count"),
   printCardList: document.getElementById("print-card-list"),
   printPreviewLoading: document.getElementById("print-preview-loading"),
-  printPreview: document.getElementById("print-preview"),
+  printListPaper: document.getElementById("print-list-paper"),
   printPaper: document.getElementById("print-paper"),
   printFeedback: document.getElementById("print-feedback"),
   printDownloadButton: document.getElementById("print-download-button"),
@@ -304,6 +305,8 @@ function bindEvents() {
       closeEditorVisualPopovers();
     }
   });
+  elements.setEditorPanel.addEventListener("scroll", positionVisibleEditorVisualPopovers);
+  window.addEventListener("resize", positionVisibleEditorVisualPopovers);
   elements.authForm.addEventListener("submit", handleTeacherAuthSubmit);
   elements.authAccountSelect.addEventListener("change", () => {
     elements.authFeedback.textContent = "";
@@ -1571,12 +1574,12 @@ function resetPrintState() {
   state.printPdfUrl = "";
   state.printTestDraft = null;
   elements.printCardList.replaceChildren();
+  elements.printListPaper.replaceChildren();
+  elements.printListPaper.hidden = true;
   elements.printPaper.replaceChildren();
   elements.printPaper.hidden = true;
   elements.printModeFeedback.textContent = "";
   elements.printFeedback.textContent = "";
-  elements.printPreview.removeAttribute("src");
-  elements.printPreview.hidden = true;
   elements.printPreviewLoading.hidden = false;
   elements.printDownloadButton.disabled = true;
 }
@@ -1602,6 +1605,8 @@ function selectPrintKind(kind) {
     title: state.printSet.title || "",
     className: "",
     instruction: "Übersetze die folgenden Begriffe in die jeweils korrekte Sprache. Formuliere vollständig und achte auf saubere Schrift.",
+    leftHeading: "Begriff",
+    rightHeading: "Antwort",
     items: new Map(),
   } : null;
   if (kind === "test") {
@@ -1612,14 +1617,16 @@ function selectPrintKind(kind) {
   elements.printModeView.hidden = true;
   elements.printWorkspace.hidden = false;
   elements.printConfig.hidden = kind === "list";
+  elements.printSwapDirection.hidden = kind === "test";
   elements.printLayout.classList.toggle("print-layout--list", kind === "list");
   elements.printPaper.hidden = kind !== "test";
-  elements.printPreview.hidden = kind === "test";
-  elements.printPreviewLoading.hidden = kind === "test";
+  elements.printListPaper.hidden = kind !== "list";
+  elements.printPreviewLoading.hidden = true;
   renderPrintCardList();
   if (kind === "test") {
     renderPrintPaper();
   } else {
+    renderPrintListPaper();
     schedulePrintPreview(0);
   }
 }
@@ -1653,6 +1660,8 @@ function updatePrintDirection() {
     renderPrintCardList();
     renderPrintPaper();
   } else {
+    renderPrintListPaper();
+    clearPrintPreview({ keepPaper: true });
     schedulePrintPreview();
   }
 }
@@ -1662,6 +1671,55 @@ function getPrintSideLabels() {
     sourceLabel: String(state.printSet?.sourceLabel || "Vorderseite").trim() || "Vorderseite",
     targetLabel: String(state.printSet?.targetLabel || "Rückseite").trim() || "Rückseite",
   };
+}
+
+function renderPrintListPaper() {
+  if (state.printKind !== "list" || !state.printSet) return;
+  const paper = elements.printListPaper;
+  const sourceFirst = state.printDirection === "source-target";
+  const { sourceLabel, targetLabel } = getPrintSideLabels();
+  const eyebrow = document.createElement("div");
+  eyebrow.className = "print-list__eyebrow";
+  eyebrow.textContent = "VOKABELLISTE";
+  const title = document.createElement("h3");
+  title.className = "print-list__title";
+  title.textContent = state.printSet.title || "Lernset";
+  const meta = document.createElement("p");
+  meta.className = "print-list__meta";
+  meta.textContent = [
+    state.printSet.subject,
+    `${state.printSelectedCardIds.length} Vokabel${state.printSelectedCardIds.length === 1 ? "" : "n"}`,
+  ].filter(Boolean).join(" · ");
+  const columns = document.createElement("div");
+  columns.className = "print-list__columns";
+  for (const label of sourceFirst ? [sourceLabel, targetLabel] : [targetLabel, sourceLabel]) {
+    const heading = document.createElement("span");
+    heading.textContent = label;
+    columns.append(heading);
+  }
+  const rows = document.createElement("div");
+  rows.className = "print-list__rows";
+  const cardsById = new Map(state.printSet.cards.map((card) => [String(card.id), card]));
+  state.printSelectedCardIds.forEach((cardId, index) => {
+    const card = cardsById.get(cardId);
+    if (!card) return;
+    const row = document.createElement("div");
+    row.className = "print-list__row";
+    const left = document.createElement("div");
+    left.className = "print-list__term";
+    const number = document.createElement("span");
+    number.className = "print-list__number";
+    number.textContent = `${index + 1}.`;
+    const term = document.createElement("span");
+    term.textContent = sourceFirst ? card.front : card.back;
+    left.append(number, term);
+    const right = document.createElement("div");
+    right.className = "print-list__translation";
+    right.textContent = sourceFirst ? card.back : card.front;
+    row.append(left, right);
+    rows.append(row);
+  });
+  paper.replaceChildren(eyebrow, title, meta, columns, rows);
 }
 
 function renderPrintCardList() {
@@ -1806,7 +1864,25 @@ function renderPrintPaper() {
   }));
   const columns = document.createElement("div");
   columns.className = "print-paper__columns";
-  columns.innerHTML = '<span>BEGRIFF</span><span>ANTWORT</span>';
+  const leftHeading = createPrintPaperField({
+    value: draft.leftHeading, label: "Überschrift der linken Spalte", maxLength: 40,
+    onInput: (value) => { draft.leftHeading = value; updatePrintTestValidity(); },
+  });
+  const rightHeading = createPrintPaperField({
+    value: draft.rightHeading, label: "Überschrift der rechten Spalte", maxLength: 40,
+    onInput: (value) => { draft.rightHeading = value; updatePrintTestValidity(); },
+  });
+  const swapDirection = document.createElement("button");
+  swapDirection.className = "print-paper__column-swap";
+  swapDirection.type = "button";
+  swapDirection.setAttribute("aria-label", "Standardrichtung der Begriffe tauschen");
+  swapDirection.title = "Standardrichtung tauschen";
+  const swapIcon = document.createElement("img");
+  swapIcon.src = "./assets/icons/swap-horizontal.svg";
+  swapIcon.alt = "";
+  swapDirection.append(swapIcon);
+  swapDirection.addEventListener("click", swapPrintDirection);
+  columns.append(leftHeading, swapDirection, rightHeading);
   const rows = document.createElement("div");
   rows.className = "print-paper__rows";
   state.printSelectedCardIds.forEach((cardId, index) => {
@@ -1831,17 +1907,17 @@ function renderPrintPaper() {
     prompt.classList.add("print-paper__prompt");
     const answerLine = document.createElement("span");
     answerLine.className = "print-paper__answer-line";
-    const actions = document.createElement("span");
-    actions.className = "print-paper__row-actions";
     const swap = createPrintOrderButton("⇄", `Begriff ${index + 1}: Anzeigeseite tauschen`, false, () => {
       item.side = item.side === "source-target" ? "target-source" : "source-target";
       item.prompt = getPrintCardPrompt(cardId, item.side);
       item.edited = false;
       renderPrintPaper();
     });
+    swap.className = "print-paper__row-control print-paper__swap";
+    swap.title = "Begriff und Antwort tauschen";
     const remove = createPrintOrderButton("×", `Begriff ${index + 1} entfernen`, false, () => togglePrintCard(cardId));
-    actions.append(swap, remove);
-    row.append(handle, number, prompt, answerLine, actions);
+    remove.className = "print-paper__row-control print-paper__remove";
+    row.append(handle, number, prompt, swap, answerLine, remove);
     rows.append(row);
   });
   if (state.printSelectedCardIds.length === 0) {
@@ -1859,19 +1935,45 @@ function renderPrintPaper() {
 
 function bindPrintRowDragHandle(handle, row, cardId) {
   let targetId = "";
+  let dragPreview = null;
   const clearTarget = () => {
-    elements.printPaper.querySelector(".print-paper__row.is-drop-target")?.classList.remove("is-drop-target");
+    const target = elements.printPaper.querySelector(".print-paper__row.is-drop-target");
+    target?.classList.remove("is-drop-target");
+    target?.removeAttribute("data-drop-position");
     row.classList.remove("is-dragging");
+    dragPreview?.remove();
+    dragPreview = null;
     targetId = "";
+  };
+  const moveDragPreview = (event) => {
+    if (!dragPreview) return;
+    const touch = event.pointerType === "touch";
+    const left = Math.min(
+      Math.max(8, window.innerWidth - dragPreview.offsetWidth - 8),
+      Math.max(8, event.clientX + (touch ? 24 : 14)),
+    );
+    const top = Math.min(
+      Math.max(8, window.innerHeight - dragPreview.offsetHeight - 8),
+      Math.max(8, event.clientY + (touch ? -dragPreview.offsetHeight - 18 : 14)),
+    );
+    dragPreview.style.left = `${left}px`;
+    dragPreview.style.top = `${top}px`;
   };
   handle.addEventListener("pointerdown", (event) => {
     if (event.button !== 0) return;
     event.preventDefault();
     handle.setPointerCapture(event.pointerId);
     row.classList.add("is-dragging");
+    dragPreview = document.createElement("div");
+    dragPreview.className = "print-paper__drag-preview";
+    dragPreview.setAttribute("aria-hidden", "true");
+    dragPreview.textContent = row.querySelector(".print-paper__prompt")?.value || "Vokabel";
+    document.body.append(dragPreview);
+    moveDragPreview(event);
   });
   handle.addEventListener("pointermove", (event) => {
     if (!handle.hasPointerCapture(event.pointerId)) return;
+    moveDragPreview(event);
     const preview = elements.printPaper.parentElement;
     const bounds = preview.getBoundingClientRect();
     if (event.clientY > bounds.bottom - 32) preview.scrollTop += 16;
@@ -1879,9 +1981,15 @@ function bindPrintRowDragHandle(handle, row, cardId) {
     const target = document.elementFromPoint(event.clientX, event.clientY)?.closest(".print-paper__row");
     const nextId = target?.dataset.cardId !== cardId ? target?.dataset.cardId || "" : "";
     if (nextId === targetId) return;
-    elements.printPaper.querySelector(".print-paper__row.is-drop-target")?.classList.remove("is-drop-target");
+    const previousTarget = elements.printPaper.querySelector(".print-paper__row.is-drop-target");
+    previousTarget?.classList.remove("is-drop-target");
+    previousTarget?.removeAttribute("data-drop-position");
     targetId = nextId;
-    if (targetId) target.classList.add("is-drop-target");
+    if (targetId) {
+      target.classList.add("is-drop-target");
+      target.dataset.dropPosition = state.printSelectedCardIds.indexOf(cardId)
+        < state.printSelectedCardIds.indexOf(targetId) ? "after" : "before";
+    }
   });
   handle.addEventListener("pointerup", () => {
     const droppedOn = targetId;
@@ -1889,6 +1997,7 @@ function bindPrintRowDragHandle(handle, row, cardId) {
     if (droppedOn) reorderSelectedPrintCard(cardId, droppedOn);
   });
   handle.addEventListener("pointercancel", clearTarget);
+  handle.addEventListener("lostpointercapture", clearTarget);
   handle.addEventListener("keydown", (event) => {
     const offset = event.key === "ArrowUp" ? -1 : event.key === "ArrowDown" ? 1 : 0;
     if (!offset) return;
@@ -1911,12 +2020,21 @@ function reorderSelectedPrintCard(draggedId, targetId) {
   renderPrintPaper();
 }
 
+function getPrintTestValidationMessage() {
+  if (state.printSelectedCardIds.length === 0) return "Wähle mindestens eine Vokabel aus.";
+  if (!state.printTestDraft.leftHeading.trim() || !state.printTestDraft.rightHeading.trim()) {
+    return "Bitte beide Spaltenüberschriften ausfüllen.";
+  }
+  if (state.printSelectedCardIds.some((id) => !state.printTestDraft.items.get(id).prompt.trim())) {
+    return "Bitte leere Begriffe auf dem Blatt ausfüllen.";
+  }
+  return "";
+}
+
 function updatePrintTestValidity() {
-  const hasItems = state.printSelectedCardIds.length > 0;
-  const hasEmptyPrompt = state.printSelectedCardIds.some((id) => !state.printTestDraft.items.get(id).prompt.trim());
-  elements.printDownloadButton.disabled = !hasItems || hasEmptyPrompt;
-  elements.printFeedback.textContent = !hasItems ? "Wähle mindestens eine Vokabel aus."
-    : hasEmptyPrompt ? "Bitte leere Begriffe auf dem Blatt ausfüllen." : "";
+  const message = getPrintTestValidationMessage();
+  elements.printDownloadButton.disabled = Boolean(message);
+  elements.printFeedback.textContent = message;
 }
 
 function schedulePrintPreview(delay = 280) {
@@ -1944,18 +2062,14 @@ async function refreshPrintPreview() {
   const abortController = new AbortController();
   state.printPreviewAbortController = abortController;
   const requestId = ++state.printPreviewRequestId;
-  clearPrintPreview({ keepRequest: true });
+  clearPrintPreview({ keepRequest: true, keepPaper: true });
   elements.printFeedback.textContent = "";
-  elements.printPreviewLoading.textContent = "Vorschau wird erstellt …";
-  elements.printPreviewLoading.hidden = false;
+  elements.printPreviewLoading.hidden = true;
 
   try {
     const blob = await requestPrintPdf(abortController.signal);
     if (requestId !== state.printPreviewRequestId || abortController.signal.aborted) return;
     state.printPdfUrl = URL.createObjectURL(blob);
-    elements.printPreview.src = state.printPdfUrl;
-    elements.printPreview.hidden = false;
-    elements.printPreviewLoading.hidden = true;
     elements.printDownloadButton.disabled = false;
   } catch (error) {
     if (error?.name === "AbortError" || requestId !== state.printPreviewRequestId) return;
@@ -1964,8 +2078,7 @@ async function refreshPrintPreview() {
       return;
     }
     elements.printFeedback.textContent = error.message || "PDF konnte nicht erstellt werden.";
-    elements.printPreviewLoading.textContent = "Vorschau nicht verfügbar";
-    elements.printPreviewLoading.hidden = false;
+    elements.printPreviewLoading.hidden = true;
   } finally {
     if (state.printPreviewAbortController === abortController) {
       state.printPreviewAbortController = null;
@@ -1983,6 +2096,8 @@ function buildPrintRequestBody() {
       title: testDraft.title,
       className: testDraft.className,
       instruction: testDraft.instruction,
+      leftHeading: testDraft.leftHeading,
+      rightHeading: testDraft.rightHeading,
       items: state.printSelectedCardIds.map((id) => ({ id, prompt: testDraft.items.get(id).prompt })),
     } } : {}),
   };
@@ -2007,17 +2122,20 @@ async function requestPrintPdf(signal, body = buildPrintRequestBody()) {
   return response.blob();
 }
 
-function clearPrintPreview({ keepRequest = false } = {}) {
+function clearPrintPreview({ keepRequest = false, keepPaper = false } = {}) {
   if (!keepRequest) state.printPreviewRequestId += 1;
   if (state.printPdfUrl) URL.revokeObjectURL(state.printPdfUrl);
   state.printPdfUrl = "";
-  elements.printPreview.removeAttribute("src");
-  elements.printPreview.hidden = true;
+  if (!keepPaper) elements.printListPaper.hidden = true;
   elements.printDownloadButton.disabled = true;
 }
 
 async function downloadPrintPdf() {
   if (!state.printSet || !state.printKind || state.printSelectedCardIds.length === 0) return;
+  if (state.printKind === "test" && getPrintTestValidationMessage()) {
+    updatePrintTestValidity();
+    return;
+  }
   let downloadUrl = state.printPdfUrl;
   if (state.printKind === "test") {
     elements.printDownloadButton.disabled = true;
@@ -2038,8 +2156,7 @@ async function downloadPrintPdf() {
       return;
     } finally {
       if (state.printKind === "test" && state.printTestDraft) {
-        elements.printDownloadButton.disabled = state.printSelectedCardIds.length === 0
-          || state.printSelectedCardIds.some((id) => !state.printTestDraft.items.get(id).prompt.trim());
+        elements.printDownloadButton.disabled = Boolean(getPrintTestValidationMessage());
       }
     }
   }
@@ -2788,10 +2905,8 @@ function renderEditorCards() {
   addRow.className = "set-card-editor-add";
   addRow.type = "button";
   addRow.setAttribute("aria-label", "Neue Vokabel hinzufügen");
-  const addIcon = document.createElement("span");
-  addIcon.className = "set-card-editor-add__icon";
-  addIcon.setAttribute("aria-hidden", "true");
-  addIcon.textContent = "+";
+  const addIcon = createButtonIcon(PLUS_ICON_PATH);
+  addIcon.classList.add("set-card-editor-add__icon");
   const addLabel = document.createElement("span");
   addLabel.className = "set-card-editor-add__label";
   addLabel.textContent = "Neue Vokabel hinzufügen";
@@ -2919,12 +3034,14 @@ function createEditorVisualControl(card, index) {
     closeEditorVisualPopovers(shell);
     shell.classList.toggle("is-open", nextOpen);
     trigger.setAttribute("aria-expanded", String(nextOpen));
+    if (nextOpen) positionEditorVisualPopover(shell);
   });
   shell.append(trigger);
 
   if (card.id && state.editorSetStatus === "published") {
     const popover = document.createElement("section");
     popover.className = "set-card-visual__popover";
+    popover.classList.toggle("set-card-visual__popover--with-image", Boolean(activeAsset?.url));
     popover.setAttribute("aria-label", `Lernbild für Vokabel ${index + 1}`);
     if (activeAsset?.url) {
       const preview = document.createElement("img");
@@ -2981,8 +3098,52 @@ function createEditorVisualControl(card, index) {
     regenerate.addEventListener("click", () => void handleRegenerateCardVisual(card, instructionInput.value));
     popover.append(regenerate);
     shell.append(popover);
+    shell.addEventListener("pointerenter", () => positionEditorVisualPopover(shell));
+    shell.addEventListener("focusin", () => positionEditorVisualPopover(shell));
   }
   return shell;
+}
+
+function positionEditorVisualPopover(shell) {
+  const popover = shell.querySelector(".set-card-visual__popover");
+  if (!popover || !popover.getClientRects().length) return;
+  const panel = elements.setEditorPanel.getBoundingClientRect();
+  const anchor = shell.getBoundingClientRect();
+  const inset = 12;
+  popover.style.width = `${Math.min(popover.classList.contains("set-card-visual__popover--with-image") ? 448 : 200, panel.width - 2 * inset)}px`;
+  popover.style.maxHeight = `${panel.height - 2 * inset}px`;
+  let { width, height } = popover.getBoundingClientRect();
+  const minLeft = panel.left + inset;
+  const maxRight = panel.right - inset;
+  const minTop = panel.top + inset;
+  const maxBottom = panel.bottom - inset;
+  let left;
+  let top;
+  if (anchor.left - width >= minLeft) {
+    left = anchor.left - width;
+    top = Math.min(Math.max(anchor.bottom - height, minTop), maxBottom - height);
+  } else if (anchor.right + width <= maxRight) {
+    left = anchor.right;
+    top = Math.min(Math.max(anchor.bottom - height, minTop), maxBottom - height);
+  } else {
+    const spaceAbove = Math.max(0, anchor.top - minTop);
+    const spaceBelow = Math.max(0, maxBottom - anchor.bottom);
+    const placeAbove = spaceAbove >= spaceBelow;
+    popover.style.maxHeight = `${placeAbove ? spaceAbove : spaceBelow}px`;
+    ({ width, height } = popover.getBoundingClientRect());
+    left = Math.min(Math.max(anchor.left + (anchor.width - width) / 2, minLeft), maxRight - width);
+    top = placeAbove ? anchor.top - height : anchor.bottom;
+  }
+  popover.style.left = `${left - anchor.left}px`;
+  popover.style.top = `${top - anchor.top}px`;
+  popover.style.right = "auto";
+  popover.style.bottom = "auto";
+}
+
+function positionVisibleEditorVisualPopovers() {
+  for (const shell of elements.setCardList.querySelectorAll(".set-card-visual:is(:hover, :focus-within, .is-open)")) {
+    positionEditorVisualPopover(shell);
+  }
 }
 
 function closeEditorVisualPopovers(except = null) {

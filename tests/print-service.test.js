@@ -66,11 +66,26 @@ test("accepts a temporary edited test sheet without changing the source set", as
     set, kind: "test", direction: "source-target", cardIds: ["card-2"],
     testDraft: {
       title: "Klassenarbeit", className: "8b", instruction: "Übersetze passend.",
+      leftHeading: "Ausgangssprache", rightHeading: "Zielsprache",
       items: [{ id: "card-2", prompt: "Auf dem Blatt geändert" }],
     },
   });
   assert.equal(pdf.subarray(0, 5).toString("ascii"), "%PDF-");
   assert.deepEqual(set, before);
+});
+
+test("rejects empty or overlong temporary column headings", async () => {
+  const set = createSet(1);
+  for (const leftHeading of [" ", "x".repeat(41), 42]) {
+    await assert.rejects(createVocabularyPrintPdf({
+      set, kind: "test", direction: "source-target", cardIds: ["card-1"],
+      testDraft: {
+        title: "Test", className: "", instruction: "",
+        leftHeading, rightHeading: "Antwort",
+        items: [{ id: "card-1", prompt: "word 1" }],
+      },
+    }), PrintRequestError);
+  }
 });
 
 test("rejects forged or empty temporary test prompts", async () => {

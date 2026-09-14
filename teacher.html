@@ -19,14 +19,14 @@
       }
     </script>
     <link rel="stylesheet" href="./pwa-splash.css?v=2026-08-30-pwa-splash-v1" />
-    <link rel="stylesheet" href="./teacher.css?v=2026-09-13-print-drag-handle-v1" />
+    <link rel="stylesheet" href="./teacher.css?v=2026-09-13-visual-preview-large-v1" />
     <link rel="stylesheet" href="./ui-motion.css?v=2026-08-30-ui-motion-v1" />
     <script src="./pwa.js?v=2026-08-30-pwa-splash-v3" defer></script>
     <script src="./ui-motion.js?v=2026-08-30-ui-motion-v1" defer></script>
     <script src="./tafelraum-embed.js?v=2026-09-08-content-zoom-layout-v2" defer></script>
     <script src="./set-side-options.js?v=2026-09-13-side-selection-v1" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js" defer></script>
-    <script src="./teacher.js?v=2026-09-13-print-drag-handle-v1" defer></script>
+    <script src="./teacher.js?v=2026-09-13-visual-preview-large-v1" defer></script>
   </head>
   <body>
     <div class="pwa-splash" role="status" aria-label="Lerndeck wird geladen">
@@ -284,12 +284,10 @@
           <button class="print-mode-card" type="button" data-print-kind="list">
             <img class="print-mode-card__icon" src="./assets/icons/print-vocabulary-list.png" alt="" aria-hidden="true" />
             <strong>Vokabelliste</strong>
-            <small>Beide Sprachen</small>
           </button>
           <button class="print-mode-card print-mode-card--accent" type="button" data-print-kind="test">
             <img class="print-mode-card__icon" src="./assets/icons/print-vocabulary-test.png" alt="" aria-hidden="true" />
             <strong>Vokabeltest</strong>
-            <small>Auswahl mit Schreiblinien</small>
           </button>
           <p id="print-mode-feedback" class="teacher-auth__feedback print-mode-feedback" aria-live="polite"></p>
         </section>
@@ -322,7 +320,7 @@
 
             <section class="print-preview-shell" aria-label="Druckvorschau">
               <div id="print-preview-loading" class="print-preview-loading">Vorschau wird erstellt …</div>
-              <iframe id="print-preview" class="print-preview" title="PDF-Vorschau" hidden></iframe>
+              <div id="print-list-paper" class="print-paper print-paper--list" aria-label="Vokabelliste" hidden></div>
               <div id="print-paper" class="print-paper" aria-label="Vokabeltest bearbeiten" hidden></div>
             </section>
           </div>

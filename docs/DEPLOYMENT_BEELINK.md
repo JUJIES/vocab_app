@@ -54,7 +54,7 @@ Auf dem Beelink liegen zwei wiederverwendbare Deployment-Helfer im geschützten 
 pbpaste | ssh beelink powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File C:/ProgramData/Beelink/Services/lerndeck/set-beelink-openai-key.ps1
 ```
 
-Nach Review, Commit und Push bereitet der folgende Aufruf einen unveränderlichen Release vor, installiert ausschließlich Produktionsabhängigkeiten, führt Checks, Tests, Audit und einen isolierten Healthcheck auf Port `6100` aus, ändert aber noch keinen laufenden Dienst:
+Nach Review, Commit und Push bereitet der folgende Aufruf einen unveränderlichen Release vor, installiert ausschließlich Produktionsabhängigkeiten, führt Checks, Tests, Audit und einen isolierten Healthcheck auf Port `6101` aus, ändert aber noch keinen laufenden Dienst:
 
 ```powershell
 ssh beelink powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File C:/ProgramData/Beelink/Services/lerndeck/deploy-beelink.ps1 -Commit <vollständige-commit-id> -CandidatePort 6101

@@ -9,7 +9,7 @@ test.use({
   locale: "de-DE",
 });
 
-test("an active visual job has one progress display instead of duplicate action buttons", async ({ page }) => {
+test("an active visual job has one progress display instead of duplicate action buttons", async ({ page }, testInfo) => {
   const activeJob = {
     id: "job-1",
     setId: "set-1",
@@ -30,7 +30,7 @@ test("an active visual job has one progress display instead of duplicate action 
       back: "ferry",
       visual: {
         assetId: "visual-1",
-        url: "/media/visuals/visual-1.webp",
+        url: "/assets/icons/print-vocabulary-test.png",
         width: 512,
         height: 512,
         alt: "Lernbild zu Fähre",
@@ -84,4 +84,45 @@ test("an active visual job has one progress display instead of duplicate action 
   await expect(editor.locator("#regenerate-all-visuals-button")).toBeHidden();
   await expect(editor.locator("#visual-job-status")).toHaveText("Sheet 3/5 · Du kannst weiterarbeiten.");
   await expect(editor.getByText("Sheet 3/5", { exact: true })).toHaveCount(0);
+
+  const imageTrigger = page.getByRole("button", { name: "Bild zu Vokabel 1 ansehen" });
+  await imageTrigger.hover();
+  const popover = page.locator(".set-card-visual__popover--with-image");
+  await expect(popover).toBeVisible();
+  await expect(popover.locator(".set-card-visual__preview")).toHaveJSProperty("complete", true);
+  let bounds = await popover.boundingBox();
+  let panel = await page.locator("#set-editor-panel").boundingBox();
+  expect(bounds.width).toBeGreaterThanOrEqual(440);
+  expect(bounds.x).toBeGreaterThanOrEqual(panel.x);
+  expect(bounds.y).toBeGreaterThanOrEqual(panel.y);
+  expect(bounds.x + bounds.width).toBeLessThanOrEqual(panel.x + panel.width);
+  expect(bounds.y + bounds.height).toBeLessThanOrEqual(panel.y + panel.height);
+  await page.screenshot({ path: testInfo.outputPath("visual-preview-desktop.png"), fullPage: true });
+
+  await page.mouse.move(0, 0);
+  await expect(popover).toBeHidden();
+  await page.setViewportSize({ width: 768, height: 1024 });
+  await imageTrigger.hover();
+  bounds = await popover.boundingBox();
+  panel = await page.locator("#set-editor-panel").boundingBox();
+  expect(bounds.width).toBeGreaterThanOrEqual(440);
+  expect(bounds.x).toBeGreaterThanOrEqual(panel.x);
+  expect(bounds.y).toBeGreaterThanOrEqual(panel.y);
+  expect(bounds.x + bounds.width).toBeLessThanOrEqual(panel.x + panel.width);
+  expect(bounds.y + bounds.height).toBeLessThanOrEqual(panel.y + panel.height);
+  await page.screenshot({ path: testInfo.outputPath("visual-preview-tablet.png"), fullPage: true });
+
+  await page.mouse.move(0, 0);
+  await expect(popover).toBeHidden();
+  await page.setViewportSize({ width: 390, height: 780 });
+  await imageTrigger.scrollIntoViewIfNeeded();
+  await imageTrigger.hover();
+  bounds = await popover.boundingBox();
+  panel = await page.locator("#set-editor-panel").boundingBox();
+  expect(bounds.x).toBeGreaterThanOrEqual(panel.x);
+  expect(bounds.y).toBeGreaterThanOrEqual(panel.y);
+  expect(bounds.x + bounds.width).toBeLessThanOrEqual(panel.x + panel.width);
+  expect(bounds.y + bounds.height).toBeLessThanOrEqual(panel.y + panel.height);
+  expect(await popover.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath("visual-preview-mobile.png"), fullPage: true });
 });

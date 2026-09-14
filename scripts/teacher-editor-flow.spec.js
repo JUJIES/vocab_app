@@ -250,6 +250,13 @@ test("teacher editor keeps a usable add-vocabulary row after every entry", async
   await expect(page.getByRole("heading", { name: "Vokabeln" })).toBeVisible();
   await expect(page.locator("#set-card-count")).toHaveText("2 Vokabeln");
   await expect(addRow).toBeVisible();
+  await expect(addRow.locator("img.set-card-editor-add__icon")).toHaveAttribute("src", "./assets/icons/plus.svg");
+  await expect(addRow.locator("img.set-card-editor-add__icon")).toHaveCSS("border-top-width", "0px");
+  const addRowBounds = await addRow.boundingBox();
+  const addIconBounds = await addRow.locator("img").boundingBox();
+  const addLabelBounds = await addRow.locator(".set-card-editor-add__label").boundingBox();
+  expect(Math.abs((addIconBounds.x + addLabelBounds.x + addLabelBounds.width) / 2
+    - (addRowBounds.x + addRowBounds.width / 2))).toBeLessThan(12);
   await page.locator(".set-card-editor-list").screenshot({ path: testInfo.outputPath("editor-add-desktop.png") });
 
   await addRow.click();
