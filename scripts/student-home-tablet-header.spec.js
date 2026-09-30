@@ -101,6 +101,7 @@ for (const viewport of VIEWPORTS) {
 
     const selectors = {
       actions: ".student-screen__home-actions",
+      controls: ".student-screen__actions",
       context: ".student-screen__home-context",
       divider: ".student-screen__home-divider--actions",
       header: ".student-screen__header",
@@ -149,7 +150,8 @@ for (const viewport of VIEWPORTS) {
       )).toBeLessThan(8);
     } else {
       expect(boxes.actions.y).toBeGreaterThanOrEqual(boxes.title.y + boxes.title.height);
-      expect(boxes.actions.x).toBeLessThan(boxes.title.x + 8);
+      // The new theme switch precedes device/logout; the whole control row aligns with the title.
+      expect(boxes.controls.x).toBeLessThan(boxes.title.x + 8);
     }
 
     await page.locator(".student-screen__header").screenshot({

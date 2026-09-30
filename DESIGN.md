@@ -1,6 +1,6 @@
 # Design System Specification: The Academic Sanctuary
 
-> Status: Diese Datei beschreibt die visuelle Zielrichtung, kein vollständig umgesetztes Komponentenregelwerk. Der Lehrerbereich bietet seit 2026-09-30 unter Einstellungen → Darstellung gedämpfte helle Papierfarben (Leinen/Salbei) und zwei dunkle Varianten (Nachtblau/Wald). Bestehende Komponenten und Layouts nutzen dafür gemeinsame Farbwerte in `teacher.css`; Auswahl und lokale Speicherung liegen in `teacher-theme.js`. Die Schüleroberfläche und gemeinsamen Lernmodi behalten ihr dunkles Theme. Druckblätter bleiben schwarz-weiß. Die allgemeinen Empfehlungen unten sind bei neuen Komponenten gegen die aktuellen Patterns zu prüfen.
+> Status: Diese Datei beschreibt die visuelle Zielrichtung, kein vollständig umgesetztes Komponentenregelwerk. Seit 2026-09-30 gibt es genau zwei Designs: Hell (Salbei) und Dunkel (ursprüngliches Nachtblau). Der direkte Schalter liegt im Lehrer-Zahnradmenü bzw. oben in der Schüler-Setübersicht. Auswahl und getrennte lokale Speicherung liegen in `appearance.js`, die gemeinsame Palette in `appearance.css`; die Schülerwahl gilt für alle Lernmodi, die Lehrervorschau übernimmt die Lehrerwahl. Helle Flächen sind getönt, Deckfarben bleiben als sanfte Farbakzente sichtbar, Druckblätter bleiben schwarz-weiß. Die allgemeinen Empfehlungen unten sind bei neuen Komponenten gegen die aktuellen Patterns zu prüfen.
 
 ## 1. Overview & Creative North Star
 The Creative North Star for this design system is **"The Stoic Atelier."** 

@@ -1,273 +1,3 @@
-:root,
-[data-theme-preview="navy"] {
-  color-scheme: dark;
-  --bg: #141b28;
-  --surface: #20293a;
-  --surface-soft: #2a3448;
-  --text: #f4f7ff;
-  --heading-text: #e6eaf0;
-  --text-muted: #9eabc2;
-  --line: rgba(var(--ui-rgb), 0.08);
-  --shadow: 0 28px 60px -28px rgba(2, 8, 20, 0.72);
-  --radius-lg: 1.5rem;
-  --radius-md: 1rem;
-  --radius-pill: 999px;
-  --bg-top: #171e2b;
-  --ui-rgb: 214, 224, 246;
-  --text-rgb: 244, 247, 255;
-  --panel-top-rgb: 32, 41, 58;
-  --panel-bottom-rgb: 25, 32, 45;
-  --card-top-rgb: 43, 55, 74;
-  --card-bottom-rgb: 33, 42, 58;
-  --menu-rgb: 27, 35, 49;
-  --inset-rgb: 13, 19, 30;
-  --accent-rgb: 116, 145, 190;
-  --accent: #b7c8e6;
-  --button-top-rgb: 223, 232, 255;
-  --button-bottom-rgb: 183, 198, 229;
-  --danger-rgb: 244, 164, 164;
-  --danger: #f3a4a4;
-  --success-rgb: 166, 244, 195;
-  --warning-rgb: 255, 220, 158;
-  --icon-filter: brightness(0) saturate(100%) invert(76%) sepia(11%) saturate(449%) hue-rotate(184deg) brightness(91%) contrast(88%);
-  --danger-icon-filter: brightness(0) saturate(100%) invert(75%) sepia(27%) saturate(997%) hue-rotate(309deg) brightness(105%) contrast(101%);
-  --success-icon-filter: brightness(0) saturate(100%) invert(88%) sepia(14%) saturate(657%) hue-rotate(84deg) brightness(102%) contrast(93%);
-  --warning-icon-filter: brightness(0) saturate(100%) invert(87%) sepia(33%) saturate(1131%) hue-rotate(327deg) brightness(103%) contrast(102%);
-  --backdrop: rgba(7, 12, 21, 0.62);
-}
-
-/* Preview swatches use the same palette as the page, with no second color model. */
-:root[data-teacher-theme="linen"],
-[data-theme-preview="linen"] {
-  --bg: #eae5dc;
-  --bg-top: #f0ebe3;
-  --surface: #f7f3eb;
-  --surface-soft: #e7e0d4;
-  --text: #353830;
-  --heading-text: #30382e;
-  --text-muted: #62665b;
-  --ui-rgb: 70, 76, 61;
-  --text-rgb: 53, 56, 48;
-  --panel-top-rgb: 247, 243, 235;
-  --panel-bottom-rgb: 243, 238, 228;
-  --card-top-rgb: 251, 248, 241;
-  --card-bottom-rgb: 247, 243, 235;
-  --menu-rgb: 248, 244, 236;
-  --inset-rgb: 147, 138, 115;
-  --accent-rgb: 121, 101, 67;
-  --accent: #796543;
-}
-
-:root[data-teacher-theme="sage"],
-[data-theme-preview="sage"] {
-  --bg: #e3ebe5;
-  --bg-top: #eaf0eb;
-  --surface: #f1f6f0;
-  --surface-soft: #dce7dd;
-  --text: #293c34;
-  --heading-text: #253a30;
-  --text-muted: #53675a;
-  --ui-rgb: 47, 76, 59;
-  --text-rgb: 41, 60, 52;
-  --panel-top-rgb: 243, 248, 241;
-  --panel-bottom-rgb: 237, 244, 235;
-  --card-top-rgb: 247, 251, 245;
-  --card-bottom-rgb: 241, 247, 239;
-  --menu-rgb: 243, 248, 241;
-  --inset-rgb: 102, 131, 112;
-  --accent-rgb: 62, 112, 87;
-  --accent: #3e7057;
-}
-
-:root[data-teacher-mode="light"] {
-  color-scheme: light;
-  --line: rgba(var(--ui-rgb), 0.13);
-  --shadow: 0 24px 56px -32px rgba(45, 54, 43, 0.24);
-  --button-top-rgb: var(--accent-rgb);
-  --button-bottom-rgb: var(--accent-rgb);
-  --danger-rgb: 156, 57, 57;
-  --danger: #9c3939;
-  --success-rgb: 40, 103, 69;
-  --warning-rgb: 125, 86, 29;
-  --icon-filter: brightness(0) saturate(100%) invert(33%) sepia(13%) saturate(742%) hue-rotate(91deg) brightness(95%) contrast(89%);
-  --danger-icon-filter: brightness(0) saturate(100%) invert(30%) sepia(34%) saturate(1054%) hue-rotate(315deg) brightness(92%) contrast(88%);
-  --success-icon-filter: brightness(0) saturate(100%) invert(34%) sepia(21%) saturate(1067%) hue-rotate(95deg) brightness(94%) contrast(88%);
-  --warning-icon-filter: brightness(0) saturate(100%) invert(34%) sepia(46%) saturate(681%) hue-rotate(356deg) brightness(91%) contrast(88%);
-  --backdrop: rgba(37, 45, 37, 0.32);
-}
-
-:root[data-teacher-theme="forest"],
-[data-theme-preview="forest"] {
-  --bg: #192723;
-  --bg-top: #202e29;
-  --surface: #2b3d35;
-  --surface-soft: #344b40;
-  --text: #edf4eb;
-  --heading-text: #e7efe3;
-  --text-muted: #a7bdad;
-  --ui-rgb: 212, 236, 216;
-  --text-rgb: 237, 244, 235;
-  --panel-top-rgb: 43, 61, 53;
-  --panel-bottom-rgb: 35, 51, 44;
-  --card-top-rgb: 51, 72, 61;
-  --card-bottom-rgb: 44, 63, 54;
-  --menu-rgb: 36, 54, 45;
-  --inset-rgb: 17, 31, 23;
-  --accent-rgb: 140, 175, 146;
-  --accent: #b6d5bc;
-  --button-top-rgb: 204, 231, 203;
-  --button-bottom-rgb: 174, 205, 175;
-  --icon-filter: brightness(0) saturate(100%) invert(80%) sepia(12%) saturate(381%) hue-rotate(83deg) brightness(91%) contrast(86%);
-}
-
-
-.teacher-appearance-icon {
-  width: 1rem;
-  font-size: 1.1rem;
-  line-height: 1;
-  color: var(--text-muted);
-}
-
-.teacher-appearance-panel {
-  width: min(calc(100% - 2rem), 32rem);
-}
-.teacher-appearance-panel .set-editor-panel__header {
-  flex-direction: row;
-  align-items: center;
-  gap: 0.75rem;
-}
-.teacher-appearance-panel .teacher-button--ghost {
-  width: 2.55rem;
-  padding: 0;
-  flex: 0 0 auto;
-  background: transparent;
-  box-shadow: none;
-}
-.teacher-appearance-panel .teacher-button--ghost:hover {
-  background: rgba(var(--ui-rgb), 0.08);
-}
-.teacher-appearance-panel .teacher-button--ghost .teacher-button__icon {
-  width: 1.1rem;
-  height: 1.1rem;
-}
-.teacher-appearance-description,
-.teacher-appearance-note {
-  margin: 0;
-  color: var(--text-muted);
-  line-height: 1.5;
-}
-.teacher-appearance-description {
-  margin-top: -0.6rem;
-  font-size: 0.9rem;
-}
-.teacher-appearance-note {
-  font-size: 0.78rem;
-}
-
-.teacher-appearance-mode {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.35rem;
-  padding: 0.35rem;
-  border-radius: 1rem;
-  background: rgba(var(--ui-rgb), 0.06);
-}
-
-.teacher-appearance-mode button {
-  min-height: 2.8rem;
-  border: 0;
-  border-radius: 0.75rem;
-  background: transparent;
-  color: var(--text-muted);
-  font-weight: 750;
-  cursor: pointer;
-}
-.teacher-appearance-mode button span {
-  margin-right: 0.35rem;
-}
-.teacher-appearance-mode button[aria-pressed="true"] {
-  background: var(--surface-soft);
-  color: var(--text);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-}
-
-.teacher-theme-choices {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.85rem;
-}
-.teacher-theme-choice {
-  min-width: 0;
-  padding: 0.6rem;
-  display: grid;
-  gap: 0.55rem;
-  text-align: left;
-  border: 2px solid transparent;
-  border-radius: 1rem;
-  background: rgba(var(--ui-rgb), 0.04);
-  color: var(--text);
-  cursor: pointer;
-}
-.teacher-theme-choice:hover {
-  background: rgba(var(--ui-rgb), 0.08);
-}
-.teacher-theme-choice[aria-pressed="true"] {
-  border-color: var(--accent);
-}
-.teacher-theme-choice__name {
-  display: flex;
-  justify-content: space-between;
-  font-weight: 800;
-  font-size: 0.9rem;
-}
-.teacher-theme-choice__check {
-  visibility: hidden;
-  color: var(--accent);
-}
-.teacher-theme-choice[aria-pressed="true"] .teacher-theme-choice__check {
-  visibility: visible;
-}
-.teacher-theme-choice__description {
-  color: var(--text-muted);
-  font-size: 0.72rem;
-  line-height: 1.4;
-}
-.teacher-theme-preview {
-  height: 6.1rem;
-  padding: 0.8rem;
-  display: grid;
-  gap: 0.55rem;
-  border-radius: 0.65rem;
-  background: var(--bg);
-}
-.teacher-theme-preview__bar {
-  width: 45%;
-  height: 0.35rem;
-  border-radius: 1rem;
-  background: var(--accent);
-}
-.teacher-theme-preview__card {
-  padding: 0.7rem;
-  display: grid;
-  gap: 0.4rem;
-  border-radius: 0.5rem;
-  background: var(--surface);
-}
-.teacher-theme-preview__card i {
-  height: 0.25rem;
-  border-radius: 1rem;
-  background: var(--accent);
-  opacity: 0.6;
-}
-.teacher-theme-preview__card i:last-child {
-  width: 65%;
-  opacity: 0.3;
-}
-.teacher-appearance-panel button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
-}
-
 *,
 *::before,
 *::after {
@@ -3245,31 +2975,31 @@ html.is-pwa-standalone .pwa-splash {
 }
 .pwa-splash__brand { color: var(--heading-text); }
 .pwa-splash__spinner { border-color: var(--line); border-top-color: var(--accent); border-right-color: var(--accent); }
-:root[data-teacher-mode="light"] .pwa-splash__icon { filter: var(--icon-filter); }
+:root[data-appearance-mode="light"] .pwa-splash__icon { filter: var(--icon-filter); }
 
 /* Light mode uses tinted paper instead of bright white; print sheets remain white. */
-:root[data-teacher-mode="light"] .teacher-set-row {
+:root[data-appearance-mode="light"] .teacher-set-row {
   box-shadow: 0 8px 24px rgba(45, 54, 43, 0.05);
 }
-:root[data-teacher-mode="light"] :is(.teacher-settings__menu, .teacher-tablet-row__menu, .set-card-visual__popover) {
+:root[data-appearance-mode="light"] :is(.teacher-settings__menu, .teacher-tablet-row__menu, .set-card-visual__popover) {
   box-shadow: 0 14px 36px rgba(45, 54, 43, 0.14);
 }
-:root[data-teacher-mode="light"] .device-pill {
+:root[data-appearance-mode="light"] .device-pill {
   color: color-mix(in srgb, var(--device-accent) 38%, #25332e);
   box-shadow: none;
 }
-:root[data-teacher-mode="light"] :is(.teacher-button, .share-panel__action):not(.teacher-button--secondary):not(.teacher-button--danger):not(.teacher-button--ghost) {
+:root[data-appearance-mode="light"] :is(.teacher-button, .share-panel__action):not(.teacher-button--secondary):not(.teacher-button--danger):not(.teacher-button--ghost) {
   background: var(--accent);
   color: #faf9f3;
 }
-:root[data-teacher-mode="light"] :is(.teacher-button, .share-panel__action):not(.teacher-button--secondary):not(.teacher-button--danger):not(.teacher-button--ghost):hover {
+:root[data-appearance-mode="light"] :is(.teacher-button, .share-panel__action):not(.teacher-button--secondary):not(.teacher-button--danger):not(.teacher-button--ghost):hover {
   background: color-mix(in srgb, var(--accent) 90%, #25332e);
 }
-:root[data-teacher-mode="light"] .teacher-button:not(.teacher-button--secondary):not(.teacher-button--danger):not(.teacher-button--ghost) .teacher-button__icon {
+:root[data-appearance-mode="light"] .teacher-button:not(.teacher-button--secondary):not(.teacher-button--danger):not(.teacher-button--ghost) .teacher-button__icon {
   filter: brightness(0) invert(1);
 }
-:root[data-teacher-mode="light"] .teacher-auth__brand-icon,
-:root[data-teacher-mode="light"] .teacher-header__brand-icon:not([data-section-icon="tablets"]) {
+:root[data-appearance-mode="light"] .teacher-auth__brand-icon,
+:root[data-appearance-mode="light"] .teacher-header__brand-icon:not([data-section-icon="tablets"]) {
   filter: var(--icon-filter);
 }
 

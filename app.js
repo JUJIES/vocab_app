@@ -4369,6 +4369,7 @@ function attachStudentHomeHeaderActions(tabletId) {
   }
 
   actions.querySelector(".student-screen__home-actions")?.remove();
+  actions.querySelector("[data-appearance-switch]")?.remove();
 
   const homeActions = document.createElement("div");
   homeActions.className = "student-screen__home-actions";
@@ -4379,7 +4380,7 @@ function attachStudentHomeHeaderActions(tabletId) {
     createStudentHomeLogoutButton(),
   );
 
-  actions.append(homeActions);
+  actions.append(window.LerndeckAppearance.createSwitch(), homeActions);
 }
 
 function createStudentHomeHeaderContext(tabletId) {

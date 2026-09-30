@@ -76,6 +76,7 @@ test("teacher opens shared learning modes without writing tablet progress", asyn
     return route.fulfill({ status: 500, json: { error: "Teacher practice must not write here" } });
   });
 
+  await page.addInitScript(() => localStorage.setItem("lerndeck-teacher-appearance-v1", JSON.stringify({ mode: "light" })));
   await page.goto("/teacher", { waitUntil: "networkidle" });
   await page.evaluate(() => {
     // A stale student binding on a shared browser must never receive teacher preview results.
@@ -90,6 +91,7 @@ test("teacher opens shared learning modes without writing tablet progress", asyn
   await practiceButton.click();
 
   await expect(page).toHaveURL(/teacherPractice=set-1/);
+  await expect(page.locator("html")).toHaveAttribute("data-appearance-mode", "light");
   await expect(page.locator("#launch-mode-modal")).toBeVisible();
   await expect(page.locator("#launch-mode-title")).toHaveText("Means of transport");
   await expect(page.locator(".launch-mode-modal__mode-card")).toHaveCount(3);

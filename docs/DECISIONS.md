@@ -1,10 +1,10 @@
 # Produkt- und Architekturentscheidungen
 
-## 2026-09-30 – Lokale Lehrer-Darstellung
+## 2026-09-30 – Zwei Designs für Lehrer und Schüler
 
-- **Helligkeit und Farbvariante getrennt:** `Einstellungen → Darstellung` bietet Hell mit Leinen/Salbei und Dunkel mit Nachtblau/Wald. Bestehende Browser starten weiter in Nachtblau; der Wechsel merkt die zuletzt gewählte Variante je Helligkeit. Helle Oberflächen nutzen gedämpfte Papierfarben, lesbare dunkle Texte und passende Statusfarben.
-- **Darstellung ist eine Gerätepräferenz:** `lerndeck-teacher-appearance-v1` speichert ausschließlich `{ mode, light, dark }` im Browser. Es gibt keine neue Account-/Set-Persistenz oder API. Auswahl und Validierung laufen zentral in `teacher-theme.js`, das vor dem CSS geladen wird und auch die Browserleistenfarbe setzt. Fehlende oder ungültige Werte fallen auf die jeweiligen Standardvarianten zurück; gesperrter Browserspeicher verhindert das Umschalten für den aktuellen Besuch nicht.
-- **Ein Farbmodell für Lehreransichten:** Die bestehenden Komponenten nutzen gemeinsame Farbwerte in `teacher.css`; Miniaturvorschauen nutzen dieselben Paletten. Die Einstellung betrifft ausschließlich `/teacher` und `/teacher.html`, einschließlich Anmeldung und PWA-Start. Die Schüler-App und die gemeinsame Lernoberfläche werden nicht umgefärbt. Druckblätter behalten ihre feste schwarz-weiße Ausgabe. Neue Lehrer-Assets sind in der öffentlichen Dateiliste und im gemeinsam versionierten PWA-Cache eingetragen.
+- **Direkter Wechsel, keine Unterauswahl:** Die zunächst eingeführten vier Lehrerpaletten werden auf Hell = Salbei und Dunkel = ursprüngliches Nachtblau reduziert. Der Schalter sitzt im Lehrer-Zahnradmenü und im Schüler-Hauptmenü. Darstellungsdialog, Vorschauen und Hinweise entfallen; die Einstellungen innerhalb einzelner Lernmodi bleiben auf deren Lernfunktion beschränkt.
+- **Getrennte Gerätepräferenzen, gemeinsamer Controller:** `appearance.js` liest vor dem CSS `{ mode }` aus `lerndeck-teacher-appearance-v1` bzw. `lerndeck-student-appearance-v1`. Alte Lehrerwerte `{ mode, light, dark }` werden nach Helligkeit gelesen; der nächste Wechsel speichert nur noch `mode`. Ungültige/fehlende Werte starten dunkel; Speichersperren verhindern den aktuellen Wechsel nicht. Konten, Tablet-Bindung, Sets und Lernstand erhalten kein zusätzliches Datenmodell.
+- **Lernansichten erben die passende Wahl:** Schülerübersicht, Üben, Eingabe, Testen und deren Dialoge nutzen die Schülerpräferenz. Die gemeinsame Seite mit `teacherPractice` liest ausschließlich die Lehrerpräferenz, auch in eingebetteter Vorschau. `appearance.css` definiert die Palette und Schalter; Schüler-CSS verwendet Farbrollen mit den bestehenden Dunkelfarben als Fallback. Deckfarben, Lernbilder und Statusfarben behalten ihre Funktion; Druck bleibt schwarz-weiß. Beide gemeinsamen Assets stehen in der öffentlichen Dateiliste und im versionierten PWA-Cache.
 
 ## 2026-09-13 – Verbindliche Seitenzuordnung für neue Sets
 

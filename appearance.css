@@ -1,0 +1,174 @@
+/* Shared Nachtblau / Salbei palette; learner dark surfaces keep their established values. */
+:root[data-appearance-scope="teacher"] {
+  color-scheme: dark;
+  --bg: #141b28;
+  --surface: #20293a;
+  --surface-soft: #2a3448;
+  --text: #f4f7ff;
+  --heading-text: #e6eaf0;
+  --text-muted: #9eabc2;
+  --line: rgba(var(--ui-rgb), 0.08);
+  --shadow: 0 28px 60px -28px rgba(2, 8, 20, 0.72);
+  --radius-lg: 1.5rem;
+  --radius-md: 1rem;
+  --radius-pill: 999px;
+  --bg-top: #171e2b;
+  --ui-rgb: 214, 224, 246;
+  --text-rgb: 244, 247, 255;
+  --panel-top-rgb: 32, 41, 58;
+  --panel-bottom-rgb: 25, 32, 45;
+  --card-top-rgb: 43, 55, 74;
+  --card-bottom-rgb: 33, 42, 58;
+  --menu-rgb: 27, 35, 49;
+  --inset-rgb: 13, 19, 30;
+  --accent-rgb: 116, 145, 190;
+  --accent: #b7c8e6;
+  --button-top-rgb: 223, 232, 255;
+  --button-bottom-rgb: 183, 198, 229;
+  --danger-rgb: 244, 164, 164;
+  --danger: #f3a4a4;
+  --success-rgb: 166, 244, 195;
+  --warning-rgb: 255, 220, 158;
+  --icon-filter: brightness(0) saturate(100%) invert(76%) sepia(11%) saturate(449%) hue-rotate(184deg) brightness(91%) contrast(88%);
+  --danger-icon-filter: brightness(0) saturate(100%) invert(75%) sepia(27%) saturate(997%) hue-rotate(309deg) brightness(105%) contrast(101%);
+  --success-icon-filter: brightness(0) saturate(100%) invert(88%) sepia(14%) saturate(657%) hue-rotate(84deg) brightness(102%) contrast(93%);
+  --warning-icon-filter: brightness(0) saturate(100%) invert(87%) sepia(33%) saturate(1131%) hue-rotate(327deg) brightness(103%) contrast(102%);
+  --backdrop: rgba(7, 12, 21, 0.62);
+}
+
+:root[data-appearance-mode="light"] {
+  --bg: #e3ebe5;
+  --bg-top: #eaf0eb;
+  --surface: #f1f6f0;
+  --surface-soft: #dce7dd;
+  --text: #293c34;
+  --heading-text: #253a30;
+  --text-muted: #53675a;
+  --ui-rgb: 47, 76, 59;
+  --text-rgb: 41, 60, 52;
+  --panel-top-rgb: 243, 248, 241;
+  --panel-bottom-rgb: 237, 244, 235;
+  --card-top-rgb: 247, 251, 245;
+  --card-bottom-rgb: 241, 247, 239;
+  --menu-rgb: 243, 248, 241;
+  --inset-rgb: 102, 131, 112;
+  --accent-rgb: 62, 112, 87;
+  --accent: #3e7057;
+}
+
+:root[data-appearance-mode="light"] {
+  color-scheme: light;
+  --line: rgba(var(--ui-rgb), 0.13);
+  --shadow: 0 24px 56px -32px rgba(45, 54, 43, 0.24);
+  --button-top-rgb: var(--accent-rgb);
+  --button-bottom-rgb: var(--accent-rgb);
+  --danger-rgb: 156, 57, 57;
+  --danger: #9c3939;
+  --success-rgb: 40, 103, 69;
+  --warning-rgb: 125, 86, 29;
+  --icon-filter: brightness(0) saturate(100%) invert(33%) sepia(13%) saturate(742%) hue-rotate(91deg) brightness(95%) contrast(89%);
+  --danger-icon-filter: brightness(0) saturate(100%) invert(30%) sepia(34%) saturate(1054%) hue-rotate(315deg) brightness(92%) contrast(88%);
+  --success-icon-filter: brightness(0) saturate(100%) invert(34%) sepia(21%) saturate(1067%) hue-rotate(95deg) brightness(94%) contrast(88%);
+  --warning-icon-filter: brightness(0) saturate(100%) invert(34%) sepia(46%) saturate(681%) hue-rotate(356deg) brightness(91%) contrast(88%);
+  --backdrop: rgba(37, 45, 37, 0.32);
+}
+
+
+.appearance-switch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  min-height: 2.5rem;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid rgba(var(--ui-rgb), 0.14);
+  border-radius: var(--radius-pill);
+  background: rgba(var(--ui-rgb), 0.055);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.appearance-switch:hover { background: rgba(var(--ui-rgb), 0.1); }
+.appearance-switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.appearance-switch__track {
+  display: block;
+  width: 1.9rem;
+  height: 1.1rem;
+  padding: 0.15rem;
+  border-radius: var(--radius-pill);
+  background: rgba(var(--ui-rgb), 0.2);
+}
+.appearance-switch__track::after {
+  content: "";
+  display: block;
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 50%;
+  background: var(--text);
+}
+.appearance-switch[aria-checked="true"] .appearance-switch__track { background: var(--accent); }
+.appearance-switch[aria-checked="true"] .appearance-switch__track::after {
+  transform: translateX(0.8rem);
+  background: #f1f6f0;
+}
+.teacher-settings__menu .appearance-switch { width: 100%; border: 0; border-radius: 0.7rem; }
+.student-screen__actions:has(.appearance-switch) { gap: 0.55rem; flex-wrap: wrap; }
+
+/* Role tokens tint learner UI without changing pictures, flags, QR codes or the original dark palette. */
+:root[data-appearance-scope="student"][data-appearance-mode="light"] {
+  --surface-strong: #dce7dd;
+  --surface-soft: rgba(var(--ui-rgb), 0.04);
+  --surface-glass: rgba(var(--ui-rgb), 0.05);
+  --surface-glass-strong: rgba(var(--ui-rgb), 0.1);
+  --accent-shadow: rgba(var(--accent-rgb), 0.16);
+  --progress-track: rgba(var(--ui-rgb), 0.14);
+  --progress-fill: var(--accent);
+  --outline-soft: rgba(var(--ui-rgb), 0.13);
+  --shadow-card: var(--shadow);
+  --learner-ui-rgb: var(--ui-rgb);
+  --learner-text-rgb: var(--text-rgb);
+  --learner-text-color: var(--text);
+  --learner-muted-rgb: 65, 87, 73;
+  --learner-muted-opacity: 0.9;
+  --learner-hint-line-opacity: 0.75;
+  --learner-panel-bottom-rgb: var(--panel-bottom-rgb);
+  --learner-card-rgb: var(--card-top-rgb);
+  --learner-inset-rgb: 208, 222, 210;
+  --learner-accent-rgb: var(--accent-rgb);
+  --learner-success-rgb: var(--success-rgb);
+  --learner-danger-rgb: var(--danger-rgb);
+  --learner-warning-rgb: var(--warning-rgb);
+  --learner-shadow-rgb: 56, 76, 62;
+  --learner-bg-top: var(--bg-top);
+  --learner-icon-filter: var(--icon-filter);
+}
+:root[data-appearance-scope="student"][data-appearance-mode="light"] .device-pill {
+  color: color-mix(in srgb, var(--device-accent) 38%, #25332e);
+  box-shadow: none;
+}
+:root[data-appearance-scope="student"][data-appearance-mode="light"] :is(.launch-mode-modal__action--primary, .launch-settings-modal__start, .test-stage__submit) {
+  background: var(--accent);
+  color: #f1f6f0;
+}
+:root[data-appearance-scope="student"][data-appearance-mode="light"] :is(.launch-mode-modal__action--primary, .launch-settings-modal__start) .launch-mode-modal__action-content {
+  background: transparent;
+  color: inherit;
+}
+:root[data-appearance-mode="light"] .pwa-splash {
+  background: var(--bg);
+  color: var(--text);
+}
+:root[data-appearance-mode="light"] .pwa-splash__icon { filter: var(--icon-filter); }
+
+:root[data-appearance-scope="student"][data-appearance-mode="light"] .student-screen__library-cover {
+  background: linear-gradient(155deg,
+    color-mix(in srgb, var(--student-library-cover-start, #7689ab) 35%, var(--surface)),
+    color-mix(in srgb, var(--student-library-cover-end, #36445d) 35%, var(--surface)));
+}
+:root[data-appearance-scope="student"][data-appearance-mode="light"] :is(.student-screen__library-card, .student-screen__library-card--add) {
+  box-shadow: 0 10px 28px rgba(56, 76, 62, 0.1);
+}

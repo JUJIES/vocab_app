@@ -40,11 +40,13 @@ Runtime-Daten liegen ausschließlich in `DATA_DIR` und dürfen bei Deployments n
 
 Die fünf historisch mitgelieferten Lernsets werden beim ersten Start idempotent Julius zugeordnet. Dabei bleiben Set-Pfade, Karten-IDs und damit bestehende Set-Verknüpfungen der Tablets und Lernstände erhalten. Die Dateien unter `sets/` dienen danach nur noch als einmalige Migrationsquelle und erscheinen nicht als Vorlagen.
 
-## Darstellung im Lehrerbereich
+## Helles und dunkles Design
 
-Unter **Einstellungen → Darstellung** wechseln Lehrkräfte zwischen **Hell** (`Leinen`, `Salbei`) und **Dunkel** (`Nachtblau`, `Wald`). Gedämpfte Papierfarben halten die hellen Ansichten angenehm; `Nachtblau` bleibt der Standard. Jede Helligkeit merkt sich ihre zuletzt gewählte Variante. Die Einstellung gilt lokal für diesen Browser beziehungsweise diese installierte Lehrer-App, einschließlich Anmeldung, Editor und Dialogen; sie wird nicht im Lehrkraftkonto oder in Lernsets gespeichert. Schüleroberfläche und gemeinsame Lernmodi bleiben unverändert, Druckblätter bleiben weiß.
+Es gibt genau zwei Darstellungen: **Hell = Salbei**, **Dunkel = Nachtblau** (Standard). Lehrkräfte wechseln direkt im Zahnrad-Menü, Schüler mit dem kleinen Schalter oben in ihrer Lernset-Übersicht. Es gibt keinen zusätzlichen Darstellungsdialog und keine Farb-Unterauswahl. Die Schülerwahl gilt auch beim Öffnen von Üben, Eingabe und Testen; eine Lehrervorschau übernimmt stattdessen die Lehrerwahl. Helle Flächen sind sanft grün getönt, Druckblätter bleiben weiß.
 
-Die zentrale Auswahl und ihre Validierung liegen in `teacher-theme.js`, die Farbwerte und Vorschauen in `teacher.css`. Das Theme wird vor dem ersten Darstellen geladen. Browserchecks für Auswahl, Reload, getrennte Helligkeitsvarianten, Kontrast, schmale Ansichten und Schülerabgrenzung: `BASE_URL=http://127.0.0.1:4012 npx playwright test scripts/teacher-appearance.spec.js`. Die Checks verwenden API-Testdaten und erzeugen Screenshots unter `artifacts/teacher-appearance/`.
+Die Auswahl wird getrennt pro Browser/App in `lerndeck-teacher-appearance-v1` beziehungsweise `lerndeck-student-appearance-v1` als `{ mode }` gespeichert, unabhängig von Konto, Tablet-PIN und Lernset. Alte Lehrerpräferenzen behalten ihre Helligkeit und verwenden ab sofort Salbei/Nachtblau. Ungültige Werte starten dunkel; bei gesperrtem Speicher funktioniert der Schalter weiterhin für den aktuellen Besuch.
+
+`appearance.js` lädt die Wahl vor dem ersten Darstellen und erzeugt beide Schalter, `appearance.css` enthält die gemeinsame Palette. Schüler-Komponenten verwenden semantische Farbrollen mit ihren bisherigen Dunkelfarben als Fallback; Lernbilder, Deckfarben und Feedback bleiben eigenständig. Browserchecks für Auswahl, Reload, getrennte Präferenzen, Kontrast, Druck und Lernmodi: `BASE_URL=http://127.0.0.1:4012 npx playwright test scripts/teacher-appearance.spec.js scripts/student-appearance.spec.js scripts/teacher-practice-flow.spec.js`. Screenshots liegen unter `artifacts/teacher-appearance/` und `artifacts/student-appearance/`.
 
 ## Lokaler Start
 

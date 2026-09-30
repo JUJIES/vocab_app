@@ -47,8 +47,7 @@ async function mockTeacher(page) {
 
 async function appearance(page) {
   await page.getByRole("button", { name: "Einstellungen", exact: true }).click();
-  await page.getByRole("menuitem", { name: "Darstellung" }).click();
-  await expect(page.getByRole("dialog", { name: "Darstellung" })).toBeVisible();
+  await expect(page.getByRole("menuitemcheckbox", { name: "Helles Design" })).toBeVisible();
 }
 
 async function capture(page, name) {
@@ -59,8 +58,7 @@ async function capture(page, name) {
 }
 
 for (const [mode, id, name] of [
-  ["light", "linen", "Leinen"], ["light", "sage", "Salbei"],
-  ["dark", "navy", "Nachtblau"], ["dark", "forest", "Wald"],
+  ["light", "sage", "Salbei"], ["dark", "navy", "Nachtblau"],
 ]) {
   test(`${name}: teacher workflows and responsive appearance`, async ({ page }) => {
     const errors = [];
@@ -69,18 +67,13 @@ for (const [mode, id, name] of [
     await page.goto("/teacher");
     await expect(page.locator("#teacher-shell")).toBeVisible();
     await appearance(page);
-    const dialog = page.getByRole("dialog", { name: "Darstellung" });
-    await dialog.getByRole("button", { name: mode === "light" ? "Hell" : "Dunkel", exact: true }).click();
-    await dialog.getByRole("button", { name: new RegExp(name) }).click();
-    await expect(page.locator("html")).toHaveAttribute("data-teacher-theme", id);
-    await expect(dialog.getByRole("button", { name: new RegExp(name) })).toHaveAttribute("aria-pressed", "true");
+    const toggle = page.getByRole("menuitemcheckbox", { name: "Helles Design" });
+    if (mode === "light") await toggle.click();
+    await expect(page.locator("html")).toHaveAttribute("data-appearance-mode", mode);
+    await expect(toggle).toHaveAttribute("aria-checked", String(mode === "light"));
+    await expect(page.locator("#teacher-appearance-overlay")).toHaveCount(0);
     await capture(page, `${id}-settings`);
-    await dialog.getByRole("button", { name: "Fertig" }).focus();
-    await page.keyboard.press("Tab");
-    await expect(dialog.getByRole("button", { name: "Schließen" })).toBeFocused();
     await page.keyboard.press("Escape");
-    await expect(dialog).toBeHidden();
-    await expect(page.getByRole("button", { name: "Einstellungen", exact: true })).toBeFocused();
     await capture(page, `${id}-sets`);
 
     const contrast = await page.evaluate(() => {
@@ -114,27 +107,21 @@ for (const [mode, id, name] of [
     await page.keyboard.press("Escape");
     await expect(page.locator("#print-overlay")).toBeHidden();
     await page.reload();
-    await expect(page.locator("html")).toHaveAttribute("data-teacher-theme", id);
+    await expect(page.locator("html")).toHaveAttribute("data-appearance-mode", mode);
 
     await page.setViewportSize({ width: 390, height: 760 });
     await capture(page, `${id}-mobile`);
     await appearance(page);
     await capture(page, `${id}-settings-mobile`);
-    const bounds = await dialog.boundingBox();
+    const bounds = await page.locator("#teacher-settings-menu").boundingBox();
     expect(bounds.x).toBeGreaterThanOrEqual(0);
     expect(bounds.x + bounds.width).toBeLessThanOrEqual(390);
-    const titleBounds = await dialog.getByRole("heading", { name: "Darstellung" }).boundingBox();
-    const closeBounds = await dialog.getByRole("button", { name: "Schließen" }).boundingBox();
-    expect(Math.abs((titleBounds.y + titleBounds.height / 2) - (closeBounds.y + closeBounds.height / 2))).toBeLessThan(2);
-    expect(closeBounds.width).toBeLessThan(50);
     await page.keyboard.press("Escape");
-    await expect(dialog).toBeHidden();
     await page.setViewportSize({ width: 1024, height: 768 });
     await capture(page, `${id}-tablet`);
     await appearance(page);
     await capture(page, `${id}-settings-tablet`);
     await page.keyboard.press("Escape");
-    await expect(dialog).toBeHidden();
     await page.getByRole("button", { name: "Einstellungen", exact: true }).click();
     await page.getByRole("menuitem", { name: "Passwort ändern" }).click();
     await expect(page.locator("#password-overlay")).toBeVisible();
@@ -154,29 +141,20 @@ for (const [mode, id, name] of [
   });
 }
 
-test("each brightness remembers its color and leaves the student view unchanged", async ({ page }) => {
+test("old teacher variants migrate to the two modes, independently of students", async ({ page }) => {
   await mockTeacher(page);
   await page.goto("/teacher");
-  await appearance(page);
-  const dialog = page.getByRole("dialog", { name: "Darstellung" });
-  await dialog.getByRole("button", { name: /Wald/ }).click();
-  await dialog.getByRole("button", { name: "Hell", exact: true }).click();
-  await dialog.getByRole("button", { name: /Salbei/ }).click();
-  await dialog.getByRole("button", { name: "Dunkel", exact: true }).click();
-  await expect(page.locator("html")).toHaveAttribute("data-teacher-theme", "forest");
-  await dialog.getByRole("button", { name: "Hell", exact: true }).click();
-  await expect(page.locator("html")).toHaveAttribute("data-teacher-theme", "sage");
-  await page.goto("/");
-  await expect(page.locator("html")).not.toHaveAttribute("data-teacher-theme", /.+/);
-  await expect(page.locator("html")).toHaveCSS("color-scheme", "dark");
-  await page.goto("/teacher");
-  await expect(page.locator("html")).toHaveAttribute("data-teacher-theme", "sage");
-  await page.evaluate((key) => localStorage.setItem(key, '{"mode":"light","light":"unknown","dark":"sage"}'), STORAGE_KEY);
+  await page.evaluate((key) => localStorage.setItem(key, JSON.stringify({ mode: "light", light: "linen", dark: "forest" })), STORAGE_KEY);
   await page.reload();
-  await expect(page.locator("html")).toHaveAttribute("data-teacher-theme", "linen");
+  await expect(page.locator("html")).toHaveAttribute("data-appearance-mode", "light");
+  await appearance(page);
+  await page.getByRole("menuitemcheckbox", { name: "Helles Design" }).click();
+  expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)), STORAGE_KEY)).toEqual({ mode: "dark" });
   await page.evaluate((key) => localStorage.setItem(key, "broken json"), STORAGE_KEY);
   await page.reload();
-  await expect(page.locator("html")).toHaveAttribute("data-teacher-theme", "navy");
+  await expect(page.locator("html")).toHaveAttribute("data-appearance-mode", "dark");
+  await page.goto("/");
+  await expect(page.locator("html")).toHaveAttribute("data-appearance-mode", "dark");
 });
 
 test("appearance remains usable when its browser storage is blocked", async ({ page }) => {
@@ -192,6 +170,6 @@ test("appearance remains usable when its browser storage is blocked", async ({ p
   await mockTeacher(page);
   await page.goto("/teacher");
   await appearance(page);
-  await page.getByRole("dialog", { name: "Darstellung" }).getByRole("button", { name: "Hell", exact: true }).click();
-  await expect(page.locator("html")).toHaveAttribute("data-teacher-theme", "linen");
+  await page.getByRole("menuitemcheckbox", { name: "Helles Design" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-appearance-mode", "light");
 });
