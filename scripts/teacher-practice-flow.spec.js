@@ -7,6 +7,7 @@ test.use({
   viewport: { width: 1024, height: 768 },
   colorScheme: "dark",
   locale: "de-DE",
+  serviceWorkers: "block",
 });
 
 function buildSetDocument() {
