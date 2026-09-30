@@ -56,6 +56,7 @@ for (const [size, width, height] of [["tablet", 1024, 768], ["phone", 390, 760]]
       const toggle = page.getByRole("switch", { name: "Helles Design" });
       if (mode === "light") await toggle.click();
       await expect(toggle).toHaveAttribute("aria-checked", String(mode === "light"));
+      await expect(page.locator(".student-screen__title-icon")).toHaveCSS("filter", "none");
       await capture(page, `${mode}-${size}-home`);
       const contrasts = await page.evaluate(() => {
         const css = getComputedStyle(document.documentElement);

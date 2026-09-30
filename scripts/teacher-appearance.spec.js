@@ -58,7 +58,7 @@ async function capture(page, name) {
 }
 
 for (const [mode, id, name] of [
-  ["light", "sage", "Salbei"], ["dark", "navy", "Nachtblau"],
+  ["light", "linen", "Leinen"], ["dark", "navy", "Nachtblau"],
 ]) {
   test(`${name}: teacher workflows and responsive appearance`, async ({ page }) => {
     const errors = [];
@@ -74,6 +74,7 @@ for (const [mode, id, name] of [
     await expect(page.locator("#teacher-appearance-overlay")).toHaveCount(0);
     await capture(page, `${id}-settings`);
     await page.keyboard.press("Escape");
+    await expect(page.locator("#teacher-shell-icon")).toHaveCSS("filter", "none");
     await capture(page, `${id}-sets`);
 
     const contrast = await page.evaluate(() => {
@@ -136,6 +137,7 @@ for (const [mode, id, name] of [
     await page.route("**/api/teacher/session", (route) => route.fulfill({ status: 401, json: {} }));
     await page.reload();
     await expect(page.locator("#teacher-auth-panel")).toBeVisible();
+    await expect(page.locator(".teacher-auth__brand-icon")).toHaveCSS("filter", "none");
     await capture(page, `${id}-login`);
     expect(errors).toEqual([]);
   });

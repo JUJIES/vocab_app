@@ -21,7 +21,7 @@
     document.documentElement.dataset.appearanceScope = scope;
     document.documentElement.dataset.appearanceMode = mode;
     const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.content = mode === "light" ? "#e3ebe5" : "#141b28";
+    if (meta) meta.content = mode === "light" ? "#eae5dc" : "#141b28";
     document.querySelectorAll("[data-appearance-switch]").forEach(syncButton);
   }
 

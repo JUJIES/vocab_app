@@ -2975,7 +2975,6 @@ html.is-pwa-standalone .pwa-splash {
 }
 .pwa-splash__brand { color: var(--heading-text); }
 .pwa-splash__spinner { border-color: var(--line); border-top-color: var(--accent); border-right-color: var(--accent); }
-:root[data-appearance-mode="light"] .pwa-splash__icon { filter: var(--icon-filter); }
 
 /* Light mode uses tinted paper instead of bright white; print sheets remain white. */
 :root[data-appearance-mode="light"] .teacher-set-row {
@@ -2997,10 +2996,6 @@ html.is-pwa-standalone .pwa-splash {
 }
 :root[data-appearance-mode="light"] .teacher-button:not(.teacher-button--secondary):not(.teacher-button--danger):not(.teacher-button--ghost) .teacher-button__icon {
   filter: brightness(0) invert(1);
-}
-:root[data-appearance-mode="light"] .teacher-auth__brand-icon,
-:root[data-appearance-mode="light"] .teacher-header__brand-icon:not([data-section-icon="tablets"]) {
-  filter: var(--icon-filter);
 }
 
 @media (max-width: 900px) {
