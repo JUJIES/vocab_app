@@ -19,14 +19,15 @@
       }
     </script>
     <link rel="stylesheet" href="./pwa-splash.css?v=2026-08-30-pwa-splash-v1" />
-    <link rel="stylesheet" href="./teacher.css?v=2026-09-14-print-serif-v1" />
+    <script src="./teacher-theme.js?v=2026-09-30-appearance-v1"></script>
+    <link rel="stylesheet" href="./teacher.css?v=2026-09-30-appearance-v1" />
     <link rel="stylesheet" href="./ui-motion.css?v=2026-08-30-ui-motion-v1" />
     <script src="./pwa.js?v=2026-08-30-pwa-splash-v3" defer></script>
     <script src="./ui-motion.js?v=2026-08-30-ui-motion-v1" defer></script>
     <script src="./tafelraum-embed.js?v=2026-09-08-content-zoom-layout-v2" defer></script>
     <script src="./set-side-options.js?v=2026-09-13-side-selection-v1" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js" defer></script>
-    <script src="./teacher.js?v=2026-09-14-print-preview-zoom-v2" defer></script>
+    <script src="./teacher.js?v=2026-09-30-appearance-v1" defer></script>
   </head>
   <body>
     <div class="pwa-splash" role="status" aria-label="Lerndeck wird geladen">
@@ -111,6 +112,10 @@
                 <img class="teacher-button__icon" src="./assets/icons/settings.svg" alt="" decoding="async" />
               </button>
               <div id="teacher-settings-menu" class="teacher-settings__menu" role="menu" hidden>
+                <button id="teacher-appearance-menu-button" class="teacher-settings__item" type="button" role="menuitem">
+                  <span class="teacher-appearance-icon" aria-hidden="true">◐</span>
+                  <span>Darstellung</span>
+                </button>
                 <button id="change-password-menu-button" class="teacher-settings__item" type="button" role="menuitem">
                   <img class="teacher-settings__item-icon" src="./assets/icons/password-svgrepo-com.svg" alt="" decoding="async" />
                   <span>Passwort ändern</span>
@@ -346,6 +351,26 @@
             <span>Löschen</span>
           </button>
         </div>
+      </section>
+    </div>
+
+    <div id="teacher-appearance-overlay" class="share-overlay" data-ui-motion="dialog" hidden>
+      <div class="share-overlay__backdrop" data-close-appearance></div>
+      <section class="password-panel teacher-appearance-panel" data-ui-motion-panel role="dialog" aria-modal="true" aria-labelledby="teacher-appearance-title" aria-describedby="teacher-appearance-description">
+        <header class="set-editor-panel__header">
+          <h2 id="teacher-appearance-title" class="password-panel__title">Darstellung</h2>
+          <button class="teacher-button teacher-button--ghost" type="button" aria-label="Schließen" data-close-appearance>
+            <img class="teacher-button__icon" src="./assets/icons/x-mark.svg" alt="" />
+          </button>
+        </header>
+        <p id="teacher-appearance-description" class="teacher-appearance-description">Wähle die Farben, mit denen du dich wohlfühlst.</p>
+        <div class="teacher-appearance-mode" role="group" aria-label="Helligkeit">
+          <button type="button" data-teacher-mode="light" aria-pressed="false"><span aria-hidden="true">☀</span> Hell</button>
+          <button type="button" data-teacher-mode="dark" aria-pressed="true"><span aria-hidden="true">☾</span> Dunkel</button>
+        </div>
+        <div id="teacher-theme-choices" class="teacher-theme-choices" role="group" aria-label="Farbthema"></div>
+        <p class="teacher-appearance-note">Wird sofort übernommen und auf diesem Gerät für den Lehrerbereich gemerkt.</p>
+        <button class="teacher-button" type="button" data-close-appearance>Fertig</button>
       </section>
     </div>
 

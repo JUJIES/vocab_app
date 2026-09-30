@@ -40,6 +40,12 @@ Runtime-Daten liegen ausschließlich in `DATA_DIR` und dürfen bei Deployments n
 
 Die fünf historisch mitgelieferten Lernsets werden beim ersten Start idempotent Julius zugeordnet. Dabei bleiben Set-Pfade, Karten-IDs und damit bestehende Set-Verknüpfungen der Tablets und Lernstände erhalten. Die Dateien unter `sets/` dienen danach nur noch als einmalige Migrationsquelle und erscheinen nicht als Vorlagen.
 
+## Darstellung im Lehrerbereich
+
+Unter **Einstellungen → Darstellung** wechseln Lehrkräfte zwischen **Hell** (`Leinen`, `Salbei`) und **Dunkel** (`Nachtblau`, `Wald`). Gedämpfte Papierfarben halten die hellen Ansichten angenehm; `Nachtblau` bleibt der Standard. Jede Helligkeit merkt sich ihre zuletzt gewählte Variante. Die Einstellung gilt lokal für diesen Browser beziehungsweise diese installierte Lehrer-App, einschließlich Anmeldung, Editor und Dialogen; sie wird nicht im Lehrkraftkonto oder in Lernsets gespeichert. Schüleroberfläche und gemeinsame Lernmodi bleiben unverändert, Druckblätter bleiben weiß.
+
+Die zentrale Auswahl und ihre Validierung liegen in `teacher-theme.js`, die Farbwerte und Vorschauen in `teacher.css`. Das Theme wird vor dem ersten Darstellen geladen. Browserchecks für Auswahl, Reload, getrennte Helligkeitsvarianten, Kontrast, schmale Ansichten und Schülerabgrenzung: `BASE_URL=http://127.0.0.1:4012 npx playwright test scripts/teacher-appearance.spec.js`. Die Checks verwenden API-Testdaten und erzeugen Screenshots unter `artifacts/teacher-appearance/`.
+
 ## Lokaler Start
 
 ```bash

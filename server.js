@@ -1475,6 +1475,7 @@ const PUBLIC_ROOT_FILES = new Map([
   ["/grading-rules.js", "grading-rules.js"],
   ["/teacher.html", "teacher.html"],
   ["/teacher.css", "teacher.css"],
+  ["/teacher-theme.js", "teacher-theme.js"],
   ["/set-side-options.js", "set-side-options.js"],
   ["/teacher.js", "teacher.js"],
   ["/tafelraum-embed.js", "tafelraum-embed.js"],

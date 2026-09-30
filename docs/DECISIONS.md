@@ -1,5 +1,11 @@
 # Produkt- und Architekturentscheidungen
 
+## 2026-09-30 – Lokale Lehrer-Darstellung
+
+- **Helligkeit und Farbvariante getrennt:** `Einstellungen → Darstellung` bietet Hell mit Leinen/Salbei und Dunkel mit Nachtblau/Wald. Bestehende Browser starten weiter in Nachtblau; der Wechsel merkt die zuletzt gewählte Variante je Helligkeit. Helle Oberflächen nutzen gedämpfte Papierfarben, lesbare dunkle Texte und passende Statusfarben.
+- **Darstellung ist eine Gerätepräferenz:** `lerndeck-teacher-appearance-v1` speichert ausschließlich `{ mode, light, dark }` im Browser. Es gibt keine neue Account-/Set-Persistenz oder API. Auswahl und Validierung laufen zentral in `teacher-theme.js`, das vor dem CSS geladen wird und auch die Browserleistenfarbe setzt. Fehlende oder ungültige Werte fallen auf die jeweiligen Standardvarianten zurück; gesperrter Browserspeicher verhindert das Umschalten für den aktuellen Besuch nicht.
+- **Ein Farbmodell für Lehreransichten:** Die bestehenden Komponenten nutzen gemeinsame Farbwerte in `teacher.css`; Miniaturvorschauen nutzen dieselben Paletten. Die Einstellung betrifft ausschließlich `/teacher` und `/teacher.html`, einschließlich Anmeldung und PWA-Start. Die Schüler-App und die gemeinsame Lernoberfläche werden nicht umgefärbt. Druckblätter behalten ihre feste schwarz-weiße Ausgabe. Neue Lehrer-Assets sind in der öffentlichen Dateiliste und im gemeinsam versionierten PWA-Cache eingetragen.
+
 ## 2026-09-13 – Verbindliche Seitenzuordnung für neue Sets
 
 - **Auswahl statt Freitext:** Im Kopf der Vokabeltabelle wählen Lehrkräfte Vorder- und Rückseite bewusst aus Deutsch/Englisch (beide Richtungen), Begriff/Definition oder Frage/Antwort. Die zweite Auswahl ist auf das passende Gegenstück begrenzt; Sprachen zeigen Flaggen, allgemeine Paare eigene Symbole. Neue Entwürfe beginnen ohne Auswahl, selbst wenn ein Import Metadaten vorschlägt.

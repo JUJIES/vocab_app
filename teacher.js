@@ -95,6 +95,11 @@ const elements = {
   logoutButton: document.getElementById("teacher-logout-button"),
   settingsButton: document.getElementById("teacher-settings-button"),
   settingsMenu: document.getElementById("teacher-settings-menu"),
+  appearanceMenuButton: document.getElementById("teacher-appearance-menu-button"),
+  appearanceOverlay: document.getElementById("teacher-appearance-overlay"),
+  appearanceModeButtons: document.querySelectorAll("[data-teacher-mode]"),
+  themeChoices: document.getElementById("teacher-theme-choices"),
+  closeAppearanceTriggers: document.querySelectorAll("[data-close-appearance]"),
   changePasswordMenuButton: document.getElementById("change-password-menu-button"),
   passwordOverlay: document.getElementById("password-overlay"),
   passwordForm: document.getElementById("password-form"),
@@ -317,6 +322,29 @@ function bindEvents() {
   });
   elements.logoutButton.addEventListener("click", handleTeacherLogout);
   elements.settingsButton.addEventListener("click", toggleTeacherSettingsMenu);
+  elements.appearanceMenuButton.addEventListener("click", openTeacherAppearance);
+  for (const button of elements.appearanceModeButtons) {
+    button.addEventListener("click", () => {
+      window.LerndeckTeacherTheme.setMode(button.dataset.teacherMode);
+      renderTeacherAppearance();
+    });
+  }
+  for (const trigger of elements.closeAppearanceTriggers) {
+    trigger.addEventListener("click", closeTeacherAppearance);
+  }
+  elements.appearanceOverlay.addEventListener("keydown", (event) => {
+    if (event.key !== "Tab") return;
+    const buttons = [...elements.appearanceOverlay.querySelectorAll("button")];
+    const first = buttons[0];
+    const last = buttons[buttons.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  });
   elements.changePasswordMenuButton.addEventListener("click", openPasswordDialog);
   elements.passwordForm.addEventListener("submit", handlePasswordChange);
   elements.passwordDialogClose.addEventListener("click", closePasswordDialog);
@@ -398,6 +426,10 @@ function bindEvents() {
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
+      if (!elements.appearanceOverlay.hidden) {
+        closeTeacherAppearance();
+        return;
+      }
       if (!elements.printOverlay.hidden) {
         closePrintOverlay();
         return;
@@ -1387,6 +1419,7 @@ function createTeacherRequestError(response, fallbackMessage) {
 }
 
 function showTeacherAuth(feedback = "") {
+  closeTeacherAppearance();
   closeShareOverlay();
   closePrintOverlay();
   closeDeleteSetDialog();
@@ -1444,6 +1477,7 @@ function closeTeacherSettingsMenu() {
 
 function syncTeacherModalLock() {
   const hasOpenModal = [
+    elements.appearanceOverlay,
     elements.passwordOverlay,
     elements.shareOverlay,
     elements.printOverlay,
@@ -1451,6 +1485,51 @@ function syncTeacherModalLock() {
     elements.setEditorOverlay,
   ].some((overlay) => !overlay.hidden);
   document.body.classList.toggle("has-modal-open", hasOpenModal);
+}
+
+function renderTeacherAppearance() {
+  const { mode, ...selected } = window.LerndeckTeacherTheme.getPreference();
+  for (const button of elements.appearanceModeButtons) {
+    button.setAttribute("aria-pressed", String(button.dataset.teacherMode === mode));
+  }
+  // Keep the buttons in place while choosing a color so keyboard focus stays put.
+  if (elements.themeChoices.dataset.mode !== mode) {
+    elements.themeChoices.dataset.mode = mode;
+    elements.themeChoices.replaceChildren(...window.LerndeckTeacherTheme.themes[mode].map((theme) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "teacher-theme-choice";
+      button.dataset.themeChoice = theme.id;
+      button.innerHTML = `<span class="teacher-theme-preview" data-theme-preview="${theme.id}" aria-hidden="true"><span class="teacher-theme-preview__bar"></span><span class="teacher-theme-preview__card"><i></i><i></i></span></span><span class="teacher-theme-choice__name">${theme.name}<span class="teacher-theme-choice__check" aria-hidden="true">✓</span></span><span class="teacher-theme-choice__description">${theme.description}</span>`;
+      button.addEventListener("click", () => {
+        window.LerndeckTeacherTheme.setTheme(theme.id);
+        renderTeacherAppearance();
+      });
+      return button;
+    }));
+  }
+  for (const button of elements.themeChoices.children) {
+    button.setAttribute("aria-pressed", String(button.dataset.themeChoice === selected[mode]));
+  }
+}
+
+function openTeacherAppearance() {
+  closeTeacherSettingsMenu();
+  renderTeacherAppearance();
+  window.LerndeckUiMotion.show(elements.appearanceOverlay, {
+    focus: [...elements.appearanceModeButtons].find((button) => button.getAttribute("aria-pressed") === "true"),
+  });
+  syncTeacherModalLock();
+}
+
+function closeTeacherAppearance() {
+  const wasOpen = !elements.appearanceOverlay.hidden;
+  window.LerndeckUiMotion.hide(elements.appearanceOverlay, {
+    after: () => {
+      syncTeacherModalLock();
+      if (wasOpen && !elements.shell.hidden) elements.settingsButton.focus({ preventScroll: true });
+    },
+  });
 }
 
 function openPasswordDialog() {
