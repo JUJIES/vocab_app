@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Der App-Ladebildschirm verwendet für die Lerndeck-Wortmarke und den Spinner in Lehrer- und Lernansichten einheitlich die Theme-Farben. Auf Leinen ist die Wortmarke dunkel und gut lesbar; das dreifarbige Logo bleibt erhalten.
+
 - Die Darstellung ist auf genau zwei Designs vereinfacht: Hell (Leinen) und Dunkel (ursprüngliches Nachtblau). Ein kleiner direkter Schalter ersetzt im Lehrer-Zahnradmenü den Darstellungsdialog samt Unterauswahl und Hinweisen. Schüler wählen oben in der Lernset-Übersicht selbst; Üben, Eingabe und Testen übernehmen diese lokale Wahl. Lehrer- und Schülerpräferenzen bleiben getrennt, alte Lehrerwerte behalten ihre Helligkeit. Das gestapelte Lerndeck-Logo behält in beiden Modi seine drei Originalfarben. Druckblätter bleiben weiß.
 
 - Der Vokabeltest druckt auf Rückseiten nur einen knappen Fortsetzungskopf und führt direkt mit Spalten und Aufgaben weiter; Klasse, Name, Datum und Arbeitsauftrag bleiben allein auf Seite 1. PDF und HTML-Blattvorschau nutzen für Test und Liste eine einheitliche, größere klassische Serifenschrift.

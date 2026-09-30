@@ -2973,8 +2973,6 @@ html.is-pwa-standalone .pwa-splash {
   background: linear-gradient(180deg, var(--bg-top), var(--bg));
   color: var(--heading-text);
 }
-.pwa-splash__brand { color: var(--heading-text); }
-.pwa-splash__spinner { border-color: var(--line); border-top-color: var(--accent); border-right-color: var(--accent); }
 
 /* Light mode uses tinted paper instead of bright white; print sheets remain white. */
 :root[data-appearance-mode="light"] .teacher-set-row {
