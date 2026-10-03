@@ -1,5 +1,9 @@
 # Produkt- und Architekturentscheidungen
 
+## 2026-10-03 – Führendes Infinitiv-„to“ auch bei normalen Vokabeln optional
+
+- Eine ausdrücklich mit führendem `to` gespeicherte englische Antwort wie `to expect` oder `to pull a suitcase` akzeptiert auch die Grundform ohne dieses Präfix. Die gemeinsame Bewertung in `answer-rules.js` gilt für Eingabe und Testen und erhält die ursprüngliche Antwort für Anzeige/Feedback. Die App übergibt die Antwortsprache entsprechend der gewählten Richtung; deutsche und generische Antworten bleiben strikt. Artikel und `to` innerhalb einer Phrase/eines Satzes bleiben erforderlich. Kein Umformen gespeicherter Karten, keine Import-/Exportänderung, keine Änderung der freien KI-Satzprüfung. Die vorhandenen getrennten Infinitivvarianten der unregelmäßigen Verben bleiben kompatibel.
+
 ## 2026-10-03 – Wörter im Kontext mit kurzem Satzfeedback
 
 - `Say it in a sentence` ergänzt die gemeinsame Lernansicht für Schüler, Touch und Lehrervorschau. Bestehende Modi bleiben bestehen. Start mit Sprachrichtung und 1–20 zufälligen vollständigen Vokabelpaaren. Kein Chat, keine Benotung: ein Satz, Eingabe, `Prüfen`, kurzer Hinweis, Überarbeiten bis angenommen, dann `Weiter`.

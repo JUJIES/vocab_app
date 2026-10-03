@@ -8623,7 +8623,11 @@ function normalizeInputAnswerValue(value) {
 }
 
 function evaluateInputAnswer(input, answers) {
-  return window.LerndeckAnswerRules.evaluate(input, answers);
+  const labels = getLearningDirectionLabels();
+  const language = state.activeLearningDirection === LEARNING_DIRECTIONS.TARGET_SOURCE
+    ? labels.sourceLanguage
+    : labels.targetLanguage;
+  return window.LerndeckAnswerRules.evaluate(input, answers, { language });
 }
 
 function normalizeAudioPath(value) {

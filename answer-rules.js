@@ -124,7 +124,7 @@
     return 0;
   }
 
-  function evaluate(input, answers) {
+  function evaluate(input, answers, { language = "" } = {}) {
     const normalizedInput = normalizeForComparison(input);
     const normalizedAnswers = Array.isArray(answers)
       ? answers
@@ -134,6 +134,14 @@
             normalized: normalizeForComparison(answer),
           }))
           .filter((answer) => answer.normalized)
+          .flatMap((answer) => {
+            // An explicitly stored English infinitive also accepts its bare
+            // form. Do not remove articles or a "to" inside the phrase.
+            if (language === "en" && answer.normalized.startsWith("to ")) {
+              return [answer, { ...answer, normalized: answer.normalized.slice(3) }];
+            }
+            return [answer];
+          })
       : [];
 
     if (normalizedAnswers.length === 0) {

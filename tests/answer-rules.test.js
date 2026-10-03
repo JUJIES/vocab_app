@@ -71,3 +71,21 @@ test("display equivalence hides forms but preserves genuine synonyms", () => {
     false,
   );
 });
+
+test("explicit English infinitives accept the bare form without changing the displayed answer", () => {
+  for (const input of ["expect", "EXPECT!", "to expect"]) {
+    const result = answerRules.evaluate(input, ["to expect"], { language: "en" });
+    assert.equal(result.status, "correct");
+    assert.equal(result.bestAnswer, "to expect");
+  }
+  assert.equal(answerRules.evaluate("pull a suitcase", ["to pull a suitcase"], { language: "en" }).status, "correct");
+  assert.notEqual(answerRules.evaluate("expekt", ["to expect"], { language: "en" }).status, "correct");
+});
+
+test("optional infinitive does not remove internal words, articles or prefixes in other languages", () => {
+  assert.notEqual(answerRules.evaluate("want expect", ["want to expect"], { language: "en" }).status, "correct");
+  assert.notEqual(answerRules.evaluate("pull suitcase", ["to pull a suitcase"], { language: "en" }).status, "correct");
+  assert.notEqual(answerRules.evaluate("expect", ["to expect"], { language: "de" }).status, "correct");
+  assert.notEqual(answerRules.evaluate("expect", ["to expect"]).status, "correct");
+  assert.notEqual(answerRules.evaluate("house", ["the house"], { language: "en" }).status, "correct");
+});
