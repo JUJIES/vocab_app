@@ -269,6 +269,14 @@ app.put("/api/teacher/sets/:setId/unit", async (request, response) => {
   } catch (error) { handleApiError(response, error, "Set konnte nicht zugeordnet werden."); }
 });
 
+app.put("/api/teacher/library/order", async (request, response) => {
+  const session = requireTeacherSession(request);
+  if (!session.ok) return response.status(session.status).json({ error: session.error });
+  try {
+    response.json({ success: true, ...await setService.reorderLibrary(session.teacherId, request.body) });
+  } catch (error) { handleApiError(response, error, "Reihenfolge konnte nicht gespeichert werden."); }
+});
+
 app.get("/api/teacher/sets/:setId", async (request, response) => {
   const sessionResult = requireTeacherSession(request);
   if (!sessionResult.ok) {

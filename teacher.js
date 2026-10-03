@@ -324,8 +324,8 @@ function bindEvents() {
     request: requestJson, reload: reloadTeacherData, beforeLeave: confirmEditorLeave, authRequired: showTeacherAuth,
     openSet: openEditSetEditor, newSet: openNewSetEditor, hideEditor: hideSetEditor,
     editorId: () => state.editorSetId, editorOwner: () => state.editorOwnerId,
-    editorUnit: () => state.editorUnitId, moveEditor: moveEditorToUnit,
-    editorError: (message) => { elements.setEditorFeedback.textContent = message; }, unitCommitted: commitWorkspaceUnit,
+    editorUnit: () => state.editorUnitId, organize: organizeLibrary,
+    unitCommitted: commitWorkspaceUnit,
   });
   document.addEventListener("click", (event) => {
     if (!event.target.closest(".set-card-visual")) {
@@ -745,6 +745,7 @@ function normalizeSetEntry(entry) {
       : Boolean(entry.deletable),
     ownerTeacherId,
     unitId: typeof entry?.unitId === "string" ? entry.unitId : "",
+    libraryOrder: Number.isSafeInteger(entry?.libraryOrder) ? entry.libraryOrder : 0,
     ownerDisplayName: typeof entry?.ownerDisplayName === "string" && entry.ownerDisplayName.trim()
       ? entry.ownerDisplayName.trim()
       : ownerTeacherId,
@@ -2834,17 +2835,26 @@ async function closeSetEditor() {
   workspace.showLibrary();
 }
 
-async function moveEditorToUnit(unitId) {
+async function organizeLibrary({ kind, id, unitId, beforeId }) {
+  const teacherId = state.currentTeacher?.id;
   const operation = (async () => {
     if (!await persistEditorChanges({ immediate: true })) {
       throw new Error("Änderungen konnten nicht gespeichert werden. Bitte erneut versuchen.");
     }
-    if (!state.editorSetId) { state.editorUnitId = unitId; return; }
-    const setId = state.editorSetId;
-    const response = await requestJson(`/api/teacher/sets/${encodeURIComponent(setId)}/unit`, { method: "PUT", body: { unitId } });
-    if (!response.ok) throw createTeacherRequestError(response, "Zuordnung konnte nicht gespeichert werden.");
-    if (state.editorSetId === setId) state.editorUnitId = response.data.set.unitId;
-    state.sets = state.sets.map((entry) => entry.id === setId ? { ...entry, unitId: response.data.set.unitId } : entry);
+    const moving = kind === "assignment";
+    const response = await requestJson(moving ? `/api/teacher/sets/${encodeURIComponent(id)}/unit` : "/api/teacher/library/order", {
+      method: "PUT", body: moving ? { unitId } : { kind, id, beforeId },
+    });
+    if (!response.ok) throw createTeacherRequestError(response, moving ? "Zuordnung konnte nicht gespeichert werden." : "Reihenfolge konnte nicht gespeichert werden.");
+    if (state.currentTeacher?.id !== teacherId) return;
+    if (moving) {
+      state.sets = state.sets.map((entry) => entry.id === id ? { ...entry, unitId: response.data.set.unitId } : entry);
+      if (state.editorSetId === id) state.editorUnitId = response.data.set.unitId;
+    } else {
+      const orders = new Map(response.data.items.map((entry) => [entry.id, entry.libraryOrder]));
+      const entries = kind === "units" ? state.units : state.sets;
+      for (const entry of entries) if (orders.has(entry.id)) entry.libraryOrder = orders.get(entry.id);
+    }
     renderSetList();
   })();
   state.editorMovePromise = operation;

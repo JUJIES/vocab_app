@@ -1,5 +1,11 @@
 # Produkt- und Architekturentscheidungen
 
+## 2026-10-03 – Organisation per Drag-and-drop in der Bibliothek
+
+- Der Editor enthält kein Lerndeck-Auswahlfeld mehr; sein Pfad zeigt die Zuordnung. Sets werden links auf Lerndecks oder `Nicht eingeordnet` gezogen. Sets und Lerndecks lassen sich mit Einfügemarkierungen sortieren. Touch nutzt den Griff, Tastatur Alt + Pfeiltasten. Fremde Bibliotheken bleiben organisatorisch schreibgeschützt.
+- `teacher-sets.json` Version 4 ergänzt `libraryOrder` auf bestehenden Set-/Lerndeck-Datensätzen. Die Migration übernimmt die alte Lehrerordnung, verändert weder physische/public Set-Reihenfolge noch Inhalte und speichert bei der nächsten atomaren Mutation. Neue Einträge hängen sich an; Inhaltsänderungen verschieben keine Sets. Eine Set-Reihenfolge je Lehrkraft gilt für alle gefilterten Ansichten.
+- Die bestehende Zuordnungsroute bleibt zuständig für Lerndeck-Wechsel. Die neue geschützte relative Sortierroute verschiebt einen eigenen Eintrag vor einen eigenen Anker oder ans Ende. Kein vom Client ersetztes Komplettarray, keine zweite Inhaltslogik; spätere Sortierungen werden gegen den aktuellen Store angewendet. Serverbestätigungen aktualisieren nur Organisationsmetadaten.
+
 ## 2026-10-03 – Tablet-Zuordnung als reine Info im Set-Kopf
 
 - Die Tablet-Liste wandert neben `Teilen` in ein kleines Info-Popover, ausschließlich für Admins. Hover/Fokus zeigen die Liste, Klick hält sie offen; Escape und Klick/Fokus außerhalb schließen. Beim Öffnen liefert das bestehende geschützte Set-Index-API aktuelle Verbindungen. Die Info übernimmt nur Zuordnungen des weiterhin ausgewählten Sets; Editorfelder und Autosave bleiben unberührt. Die Liste bleibt bei Speicherbestätigungen offen.

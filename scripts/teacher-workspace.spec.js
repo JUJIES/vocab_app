@@ -46,6 +46,10 @@ async function login(page, teacherId = "aksana") {
   await expect(page.locator("#teacher-workspace")).toBeVisible();
 }
 async function open(page, set) { await page.locator(`[data-open-set="${set.id}"]`).click(); await expect(page.locator("#set-title-input")).toHaveValue(set.title); }
+async function dragToFolder(page, setId, unitId) {
+  await page.locator(`[data-open-set="${setId}"]`).dragTo(page.locator(`[data-library-view="${unitId || "unfiled"}"]`));
+}
+
 
 test("tablet connections require admin rights while device sessions keep their own access", async ({ page, playwright }) => {
   let directoryRequests = 0;
@@ -205,13 +209,15 @@ test("organizes units, keeps content identities and flushes autosave before swit
   await page.getByRole("button", { name: "+ Lerndeck anlegen", exact: true }).click();
   await page.locator("#workspace-unit-name").fill(prefix + " · Unit 2");
   await page.locator("#workspace-unit-form").getByRole("button", { name: "Speichern", exact: true }).click();
-  await expect(page.locator("#set-unit-input option", { hasText: prefix + " · Unit 2" })).toHaveCount(1);
-  await page.locator("#set-unit-input").selectOption({ label: prefix + " · Unit 2" });
+  const folder = page.locator("[data-library-view]", { hasText: prefix + " · Unit 2" });
+  await expect(folder).toBeVisible();
+  await dragToFolder(page, shops.id, await folder.getAttribute("data-library-view"));
   await expect(page.locator("#workspace-breadcrumb")).toContainText("Unit 2");
   const moved = (await (await page.request.get(`/api/teacher/sets/${shops.id}`)).json()).set;
   expect(moved.revision).toBe(saved.revision); expect(moved.updatedAt).toBe(saved.updatedAt);
   await page.reload(); await expect(page.locator("#set-title-input")).toHaveValue(saved.title);
-  await expect(page.locator("#set-unit-input")).toHaveValue(moved.unitId);
+  await expect(page.locator("#set-unit-input")).toHaveCount(0);
+  await expect(page.locator("#workspace-breadcrumb")).toContainText("Unit 2");
   await page.locator("#workspace-search").fill("Room things");
   await expect(page.locator(".workspace-set-row")).toHaveCount(1);
   await page.screenshot({ path: "artifacts/teacher-workspace/desktop-light.png" });
@@ -258,21 +264,102 @@ test("failed autosave retains the editor; retry confirms persistence and stale l
   await expect(page.locator("#set-title-input")).toHaveValue(otherTitle);
 });
 
+test("library drag and drop moves sets, sorts sets and decks, and preserves the open editor", async ({ page }) => {
+  await login(page); await open(page, shops);
+  const before = (await (await page.request.get(`/api/teacher/sets/${shops.id}`)).json()).set;
+  const folder = (await (await page.request.post("/api/teacher/units", { data: { name: "BL3 · Drag target" } })).json()).unit;
+  try {
+    await page.reload(); await expect(page.locator("#set-title-input")).toHaveValue(shops.title);
+    await dragToFolder(page, shops.id, folder.id);
+    await expect(page.locator("#workspace-breadcrumb")).toContainText(folder.name);
+    await page.locator(`[data-library-view="${folder.id}"]`).click();
+    await expect(page.locator("[data-open-set]")).toHaveCount(1);
+    await dragToFolder(page, shops.id, "");
+    await expect(page.locator("[data-open-set]")).toHaveCount(0);
+    await expect(page.locator("#workspace-breadcrumb")).toContainText("Nicht eingeordnet");
+    await page.locator('[data-library-view="unfiled"]').click();
+    await dragToFolder(page, shops.id, unit.id);
+    await expect(page.locator("#workspace-breadcrumb")).toContainText(unit.name);
+    await page.locator(`[data-library-view="${unit.id}"]`).click();
+    await page.locator(`[data-open-set="${rooms.id}"]`).dragTo(page.locator(`[data-open-set="${shops.id}"]`), { targetPosition: { x: 35, y: 5 } });
+    await expect(page.locator("#workspace-library-feedback")).toHaveText("Reihenfolge gespeichert");
+    let ids = await page.locator("[data-open-set]").evaluateAll(rows => rows.map(row => row.dataset.openSet));
+    expect(ids.indexOf(rooms.id)).toBeLessThan(ids.indexOf(shops.id));
+    await page.locator(`[data-open-set="${shops.id}"]`).press("Alt+ArrowUp");
+    await expect.poll(async () => (await page.locator("[data-open-set]").evaluateAll(rows => rows.map(row => row.dataset.openSet))).indexOf(shops.id)).toBeLessThan(ids.indexOf(rooms.id) + 1);
+    await page.locator(`[data-library-view="${folder.id}"]`).dragTo(page.locator(`[data-library-view="${unit.id}"]`), { targetPosition: { x: 30, y: 3 } });
+    await expect.poll(async () => (await page.locator('.workspace-unit-row [data-library-view]').evaluateAll(rows => rows.map(row => row.dataset.libraryView)))[0]).toBe(folder.id);
+    await page.reload(); await expect(page.locator("#set-title-input")).toHaveValue(shops.title);
+    ids = await page.locator("[data-open-set]").evaluateAll(rows => rows.map(row => row.dataset.openSet));
+    expect(ids.indexOf(shops.id)).toBeLessThan(ids.indexOf(rooms.id));
+    const after = (await (await page.request.get(`/api/teacher/sets/${shops.id}`)).json()).set;
+    expect(after.cards).toEqual(before.cards); expect(after.shareCode).toBe(before.shareCode);
+    expect(after.revision).toBe(before.revision); expect(after.updatedAt).toBe(before.updatedAt);
+    await expect(page.locator("#set-unit-input")).toHaveCount(0);
+    await page.screenshot({ path: "artifacts/teacher-workspace/library-drag-desktop.png" });
+  } finally { await page.request.delete(`/api/teacher/units/${folder.id}`); }
+});
+
+test("autosave confirmation keeps a native grip drag intact until the folder drop", async ({ page }) => {
+  await login(page); await open(page, shops);
+  let release; const gate = new Promise(resolve => { release = resolve; }); let writes = 0;
+  await page.route(`**/api/teacher/sets/${shops.id}`, async route => {
+    if (route.request().method() !== "PUT") return route.continue();
+    writes++; await gate; await route.continue();
+  });
+  const handle = await page.locator(`[data-open-set="${shops.id}"]`).elementHandle();
+  const grip = await page.locator(`[data-open-set="${shops.id}"] .workspace-drag-handle`).boundingBox();
+  const target = page.locator('[data-library-view="unfiled"]'); const box = await target.boundingBox();
+  try {
+    await page.locator("#set-title-input").fill(shops.title + " dragging");
+    await expect.poll(() => writes).toBe(1);
+    await page.mouse.move(grip.x + grip.width/2, grip.y + grip.height/2); await page.mouse.down();
+    await page.mouse.move(grip.x + 12, grip.y + 12); await page.mouse.move(box.x + box.width/2, box.y + box.height/2, { steps: 8 });
+    await expect(page.locator(`[data-open-set="${shops.id}"]`)).toHaveClass(/is-dragging/);
+    release(); await expect(page.locator("#workspace-save-status")).toHaveText("Gespeichert");
+    expect(await handle.evaluate(row => row.isConnected)).toBeTruthy();
+    await page.mouse.move(box.x + box.width/2 + 1, box.y + box.height/2); await page.mouse.up();
+    await expect(page.locator("#workspace-breadcrumb")).toContainText("Nicht eingeordnet");
+    await expect(page.locator("#set-title-input")).toHaveValue(shops.title + " dragging");
+    const saved = (await (await page.request.get(`/api/teacher/sets/${shops.id}`)).json()).set;
+    expect(saved.unitId).toBe(""); expect(saved.title).toBe(shops.title + " dragging");
+  } finally { release(); await page.mouse.up(); }
+});
+
+test("touch grips move sets without opening or replacing the editor", async ({ page, context, browserName }) => {
+  test.skip(browserName !== "chromium", "Real touch movement is exercised through Chromium's device protocol.");
+  await login(page); await open(page, shops);
+  const session = await context.newCDPSession(page);
+  const grip = await page.locator(`[data-open-set="${shops.id}"] .workspace-drag-handle`).boundingBox();
+  const target = page.locator('[data-library-view="unfiled"]'); const box = await target.boundingBox();
+  const start = { x: grip.x + grip.width / 2, y: grip.y + grip.height / 2 };
+  const end = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  await session.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [start] });
+  for (let i = 1; i <= 8; i++) await session.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: start.x + (end.x-start.x)*i/8, y: start.y + (end.y-start.y)*i/8 }] });
+  await expect(target).toHaveAttribute("data-drop-position", "inside");
+  await page.screenshot({ path: "artifacts/teacher-workspace/library-touch-drag.png" });
+  await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await expect(page.locator("#workspace-breadcrumb")).toContainText("Nicht eingeordnet");
+  await expect(page.locator("#set-title-input")).toHaveValue(shops.title);
+  await expect(page.locator(".workspace-drag-preview")).toHaveCount(0);
+  await session.detach();
+});
+
 test("units rename and remove without deleting their sets", async ({ page }) => {
   await login(page); await open(page, shops);
   const created = await (await page.request.post("/api/teacher/units", { data: { name: "BL3 · Organisation" } })).json();
   await page.reload();
-  await page.locator("#set-unit-input").selectOption(created.unit.id);
+  await dragToFolder(page, shops.id, created.unit.id);
   await expect.poll(async () => (await (await page.request.get(`/api/teacher/sets/${shops.id}`)).json()).set.unitId).toBe(created.unit.id);
   await page.getByLabel("Lerndeck BL3 · Organisation verwalten").click();
   await page.getByRole("button", { name: "Umbenennen", exact: true }).click();
   await page.locator("#workspace-unit-name").fill("BL3 · Umbenannt");
   await page.locator("#workspace-unit-form").getByRole("button", { name: "Speichern", exact: true }).click();
-  await expect(page.locator("#set-unit-input")).toHaveValue(created.unit.id);
+  await expect(page.locator("#workspace-breadcrumb")).toContainText("BL3 · Umbenannt");
   await page.getByLabel("Lerndeck BL3 · Umbenannt verwalten").click();
   page.once("dialog", dialog => dialog.accept());
   await page.getByRole("button", { name: "Entfernen", exact: true }).click();
-  await expect(page.locator("#set-unit-input")).toHaveValue("");
+  await expect(page.locator("#workspace-breadcrumb")).toContainText("Nicht eingeordnet");
   const retained = (await (await page.request.get(`/api/teacher/sets/${shops.id}`)).json()).set;
   expect(retained.cards.map(card => card.id)).toEqual(shops.cards.map(card => card.id));
   expect(retained.shareCode).toBe(shops.shareCode);
@@ -283,7 +370,7 @@ test("new sets exist immediately in their unit; partial rows and side choices su
   await page.locator(`[data-library-view="${unit.id}"]`).click();
   await page.getByRole("button", { name: "+ Neues Set", exact: true }).click();
   await expect(page.locator("#set-editor-form")).toBeVisible();
-  await expect(page.locator("#set-unit-input")).toHaveValue(unit.id);
+  await expect(page.locator("#workspace-breadcrumb")).toContainText(unit.name);
   await expect(page.locator("#workspace-save-status")).toHaveText("Gespeichert");
   const id = new URL(page.url()).searchParams.get("set");
   expect((await (await page.request.get(`/api/teacher/sets/${id}`)).json()).set.cards).toHaveLength(0);
@@ -384,36 +471,42 @@ test("a library refresh failure after confirmation retains the saved content and
   await page.locator("#workspace-unit-form").getByRole("button", { name: "Speichern", exact: true }).click();
   await expect(page.getByLabel("Lerndeck BL3 · Gesichert verwalten")).toBeVisible();
   await expect(page.locator("#workspace-library-feedback")).toHaveText("Lerndeck gespeichert. Die Bibliothek konnte gerade nicht aktualisiert werden.");
-  const createdUnitId = await page.locator("#set-unit-input option", { hasText: "BL3 · Gesichert" }).getAttribute("value");
-  await page.locator("#set-unit-input").selectOption(createdUnitId);
-  await expect(page.locator("#set-editor-feedback")).toHaveText("Zuordnung gespeichert. Die Bibliothek konnte gerade nicht aktualisiert werden.");
-  await expect(page.locator("#set-unit-input")).toHaveValue(createdUnitId);
+  const createdUnitId = await page.locator("[data-library-view]", { hasText: "BL3 · Gesichert" }).getAttribute("data-library-view");
+  await dragToFolder(page, rooms.id, createdUnitId);
+  await expect(page.locator("#workspace-library-feedback")).toHaveText("Zuordnung gespeichert");
+  await expect(page.locator("#workspace-breadcrumb")).toContainText("BL3 · Gesichert");
   await page.request.delete(`/api/teacher/units/${createdUnitId}`);
   await page.unroute("**/api/sets");
   await page.getByRole("button", { name: `Set ${shops.title} öffnen`, exact: true }).click();
   await expect(page.locator("#editor-leave-overlay")).toHaveCount(0);
 });
 
-test("failed unit moves retain the assignment and show their error in the mobile editor", async ({ page }) => {
+test("failed library moves retain the assignment and show their error in the mobile library", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 780 });
   await login(page); await open(page, rooms);
   await page.route(`**/api/teacher/sets/${rooms.id}/unit`, route => route.abort());
-  await page.locator("#set-unit-input").selectOption("");
-  await expect(page.locator("#set-editor-feedback")).toHaveText("Zuordnung konnte nicht gespeichert werden. Bitte erneut versuchen.");
-  await expect(page.locator("#set-editor-feedback")).toBeInViewport();
-  await expect(page.locator("#set-unit-input")).toHaveValue(unit.id);
-  await expect(page.locator("#set-unit-input")).toBeEnabled();
+  await page.locator("#set-editor-close").click();
+  await dragToFolder(page, rooms.id, "");
+  await expect(page.locator("#workspace-library-feedback")).toHaveText("Änderung konnte nicht gespeichert werden. Bitte erneut versuchen.");
+  await expect(page.locator("#workspace-library-feedback")).toBeInViewport();
+  expect((await (await page.request.get(`/api/teacher/sets/${rooms.id}`)).json()).set.unitId).toBe(unit.id);
+  await expect(page.locator(`[data-open-set="${rooms.id}"]`)).toHaveAttribute("draggable", "true");
 });
 
 test("admin chooses an owner's library without gaining organization or deletion rights", async ({ page }) => {
   await login(page, "julius");
   await page.getByLabel("Bibliothek der Lehrkraft").selectOption("aksana");
   await open(page, shops);
-  await expect(page.locator("#set-unit-input")).toBeDisabled();
+  await expect(page.locator("#set-unit-input")).toHaveCount(0);
+  await expect(page.locator(`[data-open-set="${shops.id}"]`)).not.toHaveAttribute("draggable", "true");
   await expect(page.locator("#workspace-create-unit")).toBeHidden();
   await expect(page.locator("#workspace-delete")).toBeHidden();
   const move = await page.request.put(`/api/teacher/sets/${shops.id}/unit`, { data: { unitId: "" } });
   expect(move.status()).toBe(404);
+  const order = await page.request.put("/api/teacher/library/order", { data: { kind: "sets", id: shops.id, beforeId: null } });
+  expect(order.status()).toBe(404);
+  const unitOrder = await page.request.put("/api/teacher/library/order", { data: { kind: "units", id: unit.id, beforeId: null } });
+  expect(unitOrder.status()).toBe(404);
   const remove = await page.request.delete(`/api/teacher/units/${unit.id}`);
   expect(remove.status()).toBe(404);
   await page.screenshot({ path: "artifacts/teacher-workspace/admin.png" });

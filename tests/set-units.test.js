@@ -23,7 +23,7 @@ test("legacy sets migrate to unfiled without changing their published identities
   const migrated = await service.getOwnedSet("aksana", original.id);
   assert.deepEqual(migrated, original);
   await service.saveUnit("aksana", { name: "BL3 · Unit 1" });
-  assert.equal(JSON.parse(await fs.readFile(file, "utf8")).version, 3);
+  assert.equal(JSON.parse(await fs.readFile(file, "utf8")).version, 4);
 }));
 
 test("units persist per owner and refuse foreign IDs and duplicate names", () => isolated(async (service, dataDir) => {
@@ -68,4 +68,60 @@ test("a new set inherits its unit and content saves preserve organization withou
   assert.equal(resaved.cards[0].id, published.cards[0].id);
   assert.equal(resaved.shareCode, published.shareCode);
   assert.equal(resaved.unitId, unit.id);
+}));
+
+
+test("library order persists independently of content, folder assignment and the public list", () => isolated(async (service, dataDir) => {
+  const a = await service.saveUnit("aksana", { name: "A" });
+  const b = await service.saveUnit("aksana", { name: "B" });
+  const first = await service.createSet("aksana", { ...input, title: "First", unitId: a.id });
+  const second = await service.createSet("aksana", { ...input, title: "Second", unitId: b.id });
+  const third = await service.createSet("aksana", { ...input, title: "Third", unitId: a.id });
+  const publicBefore = await service.listPublishedEntries();
+  await service.reorderLibrary("aksana", { kind: "sets", id: third.id, beforeId: first.id });
+  assert.deepEqual((await service.listOwnedSets("aksana")).map(s => s.id), [third.id, first.id, second.id]);
+  assert.deepEqual(await service.getOwnedSet("aksana", first.id), { ...first, libraryOrder: 1 });
+  await service.updateSet("aksana", second.id, { ...second, title: "Second edited", libraryOrder: 0 });
+  await service.moveSet("aksana", third.id, b.id);
+  const reopened = new SetService({ dataDir });
+  assert.deepEqual((await reopened.listOwnedSets("aksana")).map(s => s.id), [third.id, first.id, second.id]);
+  assert.deepEqual((await reopened.listPublishedEntries()).map(s => s.id), publicBefore.map(s => s.id));
+  await service.reorderLibrary("aksana", { kind: "units", id: b.id, beforeId: a.id });
+  await service.saveUnit("aksana", { name: "Z" }, b.id);
+  assert.deepEqual((await reopened.listUnits("aksana")).map(u => u.id), [b.id, a.id]);
+  const fresh = await service.createSet("aksana", input);
+  assert.equal((await reopened.listOwnedSets("aksana")).at(-1).id, fresh.id);
+}));
+
+test("library reordering rejects foreign, missing and archived anchors without writes", () => isolated(async (service, dataDir) => {
+  const own = await service.createSet("aksana", input);
+  const foreign = await service.createSet("julius", input);
+  const file = path.join(dataDir, "teacher-sets.json");
+  const before = await fs.readFile(file, "utf8");
+  for (const args of [
+    ["julius", { kind: "sets", id: own.id, beforeId: null }],
+    ["aksana", { kind: "sets", id: own.id, beforeId: foreign.id }],
+    ["aksana", { kind: "sets", id: own.id }],
+    ["aksana", { kind: "unknown", id: own.id, beforeId: null }],
+  ]) await assert.rejects(service.reorderLibrary(...args));
+  assert.equal(await fs.readFile(file, "utf8"), before);
+  await service.deleteOwnedSet("aksana", own.id);
+  await assert.rejects(service.reorderLibrary("aksana", { kind: "sets", id: own.id, beforeId: null }), { code: "LIBRARY_ENTRY_NOT_FOUND" });
+}));
+
+test("version 3 adopts the existing teacher order once and keeps physical public ordering", () => isolated(async (service, dataDir) => {
+  const a = await service.saveUnit("aksana", { name: "Z" });
+  const b = await service.saveUnit("aksana", { name: "A" });
+  const old = await service.createSet("aksana", { ...input, title: "Old" });
+  const recent = await service.createSet("aksana", { ...input, title: "Recent" });
+  const file = path.join(dataDir, "teacher-sets.json");
+  const legacy = JSON.parse(await fs.readFile(file, "utf8")); legacy.version = 3;
+  legacy.units.forEach(u => { delete u.libraryOrder; });
+  legacy.sets.forEach(s => { delete s.libraryOrder; s.updatedAt = s.id === old.id ? "2026-01-01T00:00:00.000Z" : "2026-02-01T00:00:00.000Z"; });
+  await fs.writeFile(file, JSON.stringify(legacy));
+  assert.deepEqual((await service.listOwnedSets("aksana")).map(s => s.id), [recent.id, old.id]);
+  assert.deepEqual((await service.listUnits("aksana")).map(u => u.id), [b.id, a.id]);
+  await service.reorderLibrary("aksana", { kind: "sets", id: old.id, beforeId: recent.id });
+  assert.equal(JSON.parse(await fs.readFile(file, "utf8")).version, 4);
+  assert.deepEqual((await service.listPublishedEntries()).map(s => s.id), [old.id, recent.id]);
 }));

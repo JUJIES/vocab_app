@@ -1,4 +1,4 @@
-const CACHE_NAME = "lerndeck-shell-v181";
+const CACHE_NAME = "lerndeck-shell-v182";
 const APP_SHELL_URLS = [
   "/",
   "/index.html",
@@ -11,10 +11,10 @@ const APP_SHELL_URLS = [
   "/app.js?v=2026-10-03-autosave-v1",
   "/appearance.js?v=2026-09-30-appearance-v4",
   "/appearance.css?v=2026-09-30-appearance-v4",
-  "/teacher.css?v=2026-10-03-tablet-info-v1",
+  "/teacher.css?v=2026-10-03-library-drag-v1",
   "/set-side-options.js?v=2026-09-13-side-selection-v1",
-  "/teacher.js?v=2026-10-03-tablet-info-v1",
-  "/teacher-workspace.js?v=2026-10-03-lerndecks-v2",
+  "/teacher.js?v=2026-10-03-library-drag-v1",
+  "/teacher-workspace.js?v=2026-10-03-library-drag-v1",
   "/tafelraum-embed.js?v=2026-09-08-content-zoom-layout-v2",
   "/ui-motion.css?v=2026-08-30-ui-motion-v1",
   "/ui-motion.js?v=2026-08-30-ui-motion-v1",
@@ -25,6 +25,7 @@ const APP_SHELL_URLS = [
   "/assets/icons/lerndeck-stack.svg",
   "/assets/icons/image-plus.svg",
   "/assets/icons/import.svg",
+  "/assets/icons/grip-vertical.svg",
   "/assets/icons/plus.svg",
   "/assets/icons/learn-mode.svg",
   "/assets/icons/learning-modes-open.svg",

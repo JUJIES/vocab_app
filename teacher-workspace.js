@@ -11,14 +11,14 @@ window.LerndeckTeacherWorkspace = (() => {
       search: byId("workspace-search"), list: byId("teacher-set-list"), title: byId("sets-title"), meta: byId("sets-meta"),
       empty: byId("teacher-empty-state"), feedback: byId("workspace-library-feedback"), newSet: byId("create-set-button"),
       newUnit: byId("workspace-create-unit"), unitForm: byId("workspace-unit-form"), unitName: byId("workspace-unit-name"),
-      unitCancel: byId("workspace-unit-cancel"), unitSelect: byId("set-unit-input"), editor: byId("workspace-editor"),
+      unitCancel: byId("workspace-unit-cancel"), editor: byId("workspace-editor"),
       breadcrumb: byId("workspace-breadcrumb"),
     };
-    const state = { owner: "", view: "all", selected: "", search: "", mobile: "library", editUnit: "", loaded: false, intent: 0, restored: null, movingUnit: false, unitOptions: "", navMarkup: "" };
+    const state = { owner: "", view: "all", selected: "", search: "", mobile: "library", editUnit: "", loaded: false, intent: 0, restored: null, organizing: false, organizationPromise: null, drag: null, renderPending: false, suppressClickUntil: 0, navMarkup: "" };
     const key = () => `lerndeck-teacher-workspace-v1:${config.data().teacher?.id || ""}`;
     const ownLibrary = () => state.owner === config.data().teacher?.id;
-    const units = () => config.data().units.filter((unit) => unit.ownerTeacherId === state.owner);
-    const sets = () => config.data().sets.filter((set) => set.ownerTeacherId === state.owner);
+    const units = () => config.data().units.filter((unit) => unit.ownerTeacherId === state.owner).sort((a, b) => a.libraryOrder - b.libraryOrder);
+    const sets = () => config.data().sets.filter((set) => set.ownerTeacherId === state.owner).sort((a, b) => a.libraryOrder - b.libraryOrder);
     const name = () => labels[state.view] || units().find((unit) => unit.id === state.view)?.name || "Alle Sets";
     const currentUnit = () => units().find((unit) => unit.id === state.view)?.id || "";
     const count = (view) => sets().filter((set) => matches(set, view)).length;
@@ -47,11 +47,10 @@ window.LerndeckTeacherWorkspace = (() => {
       if (error.requiresAuth) config.authRequired(error.message);
       else feedback(error.message);
     }
-    async function refreshAfterCommit(message, inEditor = false) {
+    async function refreshAfterCommit(message) {
       try { await config.reload(); }
       catch (error) {
         if (error.requiresAuth) showError(error);
-        else if (inEditor) config.editorError(message);
         else feedback(message);
       }
     }
@@ -66,6 +65,7 @@ window.LerndeckTeacherWorkspace = (() => {
     }
     async function navigate(change) {
       const intent = ++state.intent;
+      if (state.organizationPromise) await state.organizationPromise;
       if (!await config.beforeLeave() || intent !== state.intent) return;
       await change();
       remember(); writeUrl();
@@ -84,6 +84,7 @@ window.LerndeckTeacherWorkspace = (() => {
       });
     }
     function render() {
+      if (state.drag) { state.renderPending = true; return; }
       const data = config.data();
       if (!data.teacher) return;
       if (!state.loaded) {
@@ -106,7 +107,8 @@ window.LerndeckTeacherWorkspace = (() => {
       el.newSet.hidden = !ownLibrary(); el.newUnit.hidden = !ownLibrary();
       el.search.value = state.search;
       const navScroll = el.units.scrollTop, listScroll = el.list.scrollTop;
-      const navButton = (view, text) => `<button type="button" class="workspace-nav-button" data-library-view="${escape(view)}" aria-pressed="${state.view === view}"><span>${escape(text)}</span><span class="workspace-count">${count(view)}</span></button>`;
+      const handle = '<img class="workspace-drag-handle" src="./assets/icons/grip-vertical.svg" alt="" draggable="false" />';
+      const navButton = (view, text) => `<button type="button" class="workspace-nav-button" data-library-view="${escape(view)}" ${ownLibrary() && !labels[view] ? 'draggable="true" aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown" aria-description="Zum Sortieren ziehen oder Alt und Pfeil hoch oder runter verwenden."' : ''} aria-pressed="${state.view === view}">${ownLibrary() && !labels[view] ? handle : ''}<span>${escape(text)}</span><span class="workspace-count">${count(view)}</span></button>`;
       const navMarkup = navButton("all", labels.all)
         + '<p class="workspace-nav-caption">Lerndecks</p>'
         + units().map((unit) => `<div class="workspace-unit-row">${navButton(unit.id, unit.name)}${ownLibrary() ? `<details class="workspace-unit-menu" data-unit-id="${escape(unit.id)}"><summary aria-label="Lerndeck ${escape(unit.name)} verwalten">•••</summary><div><button type="button" data-unit-rename="${escape(unit.id)}">Umbenennen</button><button type="button" data-unit-delete="${escape(unit.id)}">Entfernen</button></div></details>` : ""}</div>`).join("")
@@ -130,7 +132,15 @@ window.LerndeckTeacherWorkspace = (() => {
         const meta = document.createElement("span"); meta.className = "workspace-set-meta";
         const job = data.jobs.find((job) => job.setId === set.id && ["queued", "running"].includes(job.status));
         meta.textContent = `${set.cardCount} ${set.cardCount === 1 ? "Vokabel" : "Vokabeln"}${job ? " · Bilder werden erstellt" : ""}`;
-        row.append(title, meta); el.list.append(row);
+        const content = document.createElement("span"); content.className = "workspace-set-content"; content.append(title, meta);
+        if (ownLibrary()) {
+          row.draggable = true;
+          row.setAttribute("aria-keyshortcuts", "Alt+ArrowUp Alt+ArrowDown Alt+ArrowLeft Alt+ArrowRight");
+          row.setAttribute("aria-description", "Zum Sortieren oder in ein Lerndeck ziehen. Alt und Pfeil hoch oder runter sortiert; Alt und Pfeil links oder rechts wechselt das Lerndeck.");
+          const grip = document.createElement("img"); grip.className = "workspace-drag-handle";
+          grip.src = "./assets/icons/grip-vertical.svg"; grip.alt = ""; grip.draggable = false; row.append(grip);
+        }
+        row.append(content); el.list.append(row);
       }
       el.title.textContent = name(); el.meta.textContent = `${filtered.length} Set${filtered.length === 1 ? "" : "s"}`;
       el.empty.hidden = filtered.length > 0;
@@ -142,13 +152,6 @@ window.LerndeckTeacherWorkspace = (() => {
       const editorOwner = config.editorOwner() || config.data().teacher?.id;
       const editorUnits = config.data().units.filter((unit) => unit.ownerTeacherId === editorOwner);
       const selected = config.editorUnit();
-      const options = JSON.stringify(editorUnits.map((unit) => [unit.id, unit.name]));
-      if (options !== state.unitOptions) {
-        el.unitSelect.replaceChildren(new Option("Nicht eingeordnet", ""), ...editorUnits.map((unit) => new Option(unit.name, unit.id)));
-        state.unitOptions = options;
-      }
-      el.unitSelect.value = selected;
-      el.unitSelect.disabled = state.movingUnit || editorOwner !== config.data().teacher?.id;
       const owner = config.data().accounts.find((account) => account.id === editorOwner);
       const unit = editorUnits.find((unit) => unit.id === selected);
       el.breadcrumb.textContent = `${owner?.displayName || "Meine Lernsets"} / ${unit?.name || "Nicht eingeordnet"}`;
@@ -159,7 +162,7 @@ window.LerndeckTeacherWorkspace = (() => {
       el.unitForm.hidden = false; feedback(""); el.unitName.focus();
     }
     el.nav.addEventListener("click", (event) => {
-      const button = event.target.closest("button"); if (!button) return;
+      const button = event.target.closest("button"); if (!button || Date.now() < state.suppressClickUntil) return;
       if (button.dataset.libraryView !== undefined) {
         void navigate(async () => {
           state.view = button.dataset.libraryView; state.mobile = "library"; el.list.scrollTop = 0; render();
@@ -185,7 +188,7 @@ window.LerndeckTeacherWorkspace = (() => {
       }
     });
     el.list.addEventListener("click", (event) => {
-      const row = event.target.closest("[data-open-set]"); if (row) void selectSet(row.dataset.openSet);
+      const row = event.target.closest("[data-open-set]"); if (row && Date.now() >= state.suppressClickUntil) void selectSet(row.dataset.openSet);
     });
     el.search.addEventListener("input", () => { state.search = el.search.value; render(); remember(); });
     el.owner.addEventListener("change", () => {
@@ -208,27 +211,152 @@ window.LerndeckTeacherWorkspace = (() => {
         } catch (error) { showError(error); } finally { button.disabled = false; }
       })();
     });
-    el.unitSelect.addEventListener("change", () => {
-      const unitId = el.unitSelect.value; state.movingUnit = true; el.unitSelect.disabled = true;
-      void (async () => {
+    async function organize(change, focusId = "") {
+      if (state.organizing || !ownLibrary()) return;
+      state.organizing = true; feedback(""); el.root.setAttribute("aria-busy", "true");
+      const owner = state.owner;
+      const operation = (async () => {
         try {
-          await config.moveEditor(unitId); config.editorError("");
-          await refreshAfterCommit("Zuordnung gespeichert. Die Bibliothek konnte gerade nicht aktualisiert werden.", true);
-          refreshEditorUnit(); remember();
-        }
-        catch (error) {
-          if (error.requiresAuth) showError(error);
-          else config.editorError(error.name === "TypeError" ? "Zuordnung konnte nicht gespeichert werden. Bitte erneut versuchen." : error.message);
-          refreshEditorUnit();
-        }
-        finally { state.movingUnit = false; refreshEditorUnit(); }
+          await config.organize(change);
+          if (state.owner !== owner) return;
+          render(); remember(); writeUrl();
+          if (focusId) (el.list.querySelector(`[data-open-set="${CSS.escape(focusId)}"]`)
+            || el.nav.querySelector(`[data-library-view="${CSS.escape(focusId)}"]`))?.focus({ preventScroll: true });
+          feedback(change.kind === "assignment" ? "Zuordnung gespeichert" : "Reihenfolge gespeichert");
+        } catch (error) {
+          if (state.owner === owner) showError(error.name === "TypeError" ? new Error("Änderung konnte nicht gespeichert werden. Bitte erneut versuchen.") : error);
+        } finally { state.organizing = false; el.root.removeAttribute("aria-busy"); }
       })();
+      state.organizationPromise = operation;
+      try { await operation; } finally { if (state.organizationPromise === operation) state.organizationPromise = null; }
+    }
+    function dragSource(target) {
+      const row = target.closest("[data-open-set], [data-library-view]");
+      if (!row || !ownLibrary() || state.organizing) return null;
+      if (row.dataset.openSet) return { kind: "sets", id: row.dataset.openSet, owner: state.owner, row };
+      if (!labels[row.dataset.libraryView]) return { kind: "units", id: row.dataset.libraryView, owner: state.owner, row };
+      return null;
+    }
+    function dragLabel(source) {
+      return source.row.querySelector(".workspace-set-title, span")?.textContent || "Lernset";
+    }
+    function clearDropHints() {
+      for (const node of el.root.querySelectorAll("[data-drop-position]")) delete node.dataset.dropPosition;
+    }
+    function finishDrag() {
+      state.drag?.row.classList.remove("is-dragging");
+      state.drag = null; clearDropHints();
+      if (state.renderPending) { state.renderPending = false; render(); }
+    }
+    function dropTarget(target, clientY) {
+      const drag = state.drag;
+      if (!drag || !ownLibrary() || drag.owner !== state.owner) return null;
+      const nav = target.closest("[data-library-view]");
+      if (nav) {
+        const view = nav.dataset.libraryView;
+        if (drag.kind === "sets" && view !== "all") return { node: nav, position: "inside", change: { kind: "assignment", id: drag.id, unitId: view === "unfiled" ? "" : view } };
+        if (drag.kind === "units" && !labels[view] && view !== drag.id) return insertion(nav, "units", view, clientY);
+        return null;
+      }
+      if (drag.kind !== "sets") return null;
+      const row = target.closest("[data-open-set]");
+      if (row && row.dataset.openSet !== drag.id) return insertion(row, "sets", row.dataset.openSet, clientY);
+      if (target.closest("#teacher-set-list, #teacher-empty-state") && !row) return { node: el.list, position: "after", change: { kind: "sets", id: drag.id, beforeId: null } };
+      return null;
+    }
+    function insertion(node, kind, targetId, clientY) {
+      const after = clientY >= node.getBoundingClientRect().top + node.offsetHeight / 2;
+      const ids = [...(kind === "sets" ? el.list.querySelectorAll("[data-open-set]") : el.nav.querySelectorAll('[draggable="true"]'))]
+        .map((row) => kind === "sets" ? row.dataset.openSet : row.dataset.libraryView).filter((id) => id !== state.drag.id);
+      const beforeId = after ? ids[ids.indexOf(targetId) + 1] || null : targetId;
+      return { node, position: after ? "after" : "before", change: { kind, id: state.drag.id, beforeId } };
+    }
+    function showDrop(target, clientY) {
+      clearDropHints(); const drop = dropTarget(target, clientY);
+      if (drop) drop.node.dataset.dropPosition = drop.position;
+      const surface = target.closest("#teacher-set-list, #workspace-units");
+      if (surface) {
+        const rect = surface.getBoundingClientRect();
+        if (clientY < rect.top + 36) surface.scrollTop -= 16;
+        else if (clientY > rect.bottom - 36) surface.scrollTop += 16;
+      }
+      return drop;
+    }
+    function commitDrop(drop) {
+      state.suppressClickUntil = Date.now() + 350;
+      finishDrag();
+      if (drop) void organize(drop.change);
+    }
+    el.root.addEventListener("dragstart", (event) => {
+      const source = dragSource(event.target);
+      if (!source) { event.preventDefault(); return; }
+      state.drag = source; source.row.classList.add("is-dragging");
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("application/x-lerndeck-library", source.id);
+      event.dataTransfer.setData("text/plain", dragLabel(source));
+    });
+    el.root.addEventListener("dragover", (event) => {
+      if (showDrop(event.target, event.clientY)) { event.preventDefault(); event.dataTransfer.dropEffect = "move"; }
+    });
+    el.root.addEventListener("drop", (event) => {
+      const drop = dropTarget(event.target, event.clientY);
+      if (state.drag) { event.preventDefault(); commitDrop(drop); }
+    });
+    el.root.addEventListener("dragend", () => { state.suppressClickUntil = Date.now() + 350; finishDrag(); });
+    el.root.addEventListener("dragleave", (event) => { if (!el.root.contains(event.relatedTarget)) clearDropHints(); });
+    // Touch drags start on the grip; the rest of each row keeps native scrolling and clicking.
+    let touch = null;
+    el.root.addEventListener("pointerdown", (event) => {
+      if (event.pointerType !== "touch" || !event.target.closest(".workspace-drag-handle")) return;
+      const source = dragSource(event.target); if (!source) return;
+      touch = { source, x: event.clientX, y: event.clientY, pointerId: event.pointerId, preview: null };
+      event.target.setPointerCapture(event.pointerId);
+    });
+    el.root.addEventListener("pointermove", (event) => {
+      if (!touch || touch.pointerId !== event.pointerId) return;
+      if (!state.drag && Math.hypot(event.clientX - touch.x, event.clientY - touch.y) < 6) return;
+      if (!state.drag) {
+        state.drag = touch.source; state.drag.row.classList.add("is-dragging");
+        touch.preview = document.createElement("div"); touch.preview.className = "workspace-drag-preview";
+        touch.preview.textContent = dragLabel(state.drag); document.body.append(touch.preview);
+      }
+      touch.preview.style.transform = `translate(${event.clientX + 14}px, ${event.clientY + 14}px)`;
+      const target = document.elementFromPoint(event.clientX, event.clientY);
+      if (target) showDrop(target, event.clientY);
+    });
+    function endTouch(event) {
+      if (!touch || touch.pointerId !== event.pointerId) return;
+      const target = document.elementFromPoint(event.clientX, event.clientY);
+      const drop = event.type === "pointerup" && target ? dropTarget(target, event.clientY) : null;
+      touch.preview?.remove(); touch = null;
+      if (state.drag) commitDrop(drop);
+    }
+    el.root.addEventListener("pointerup", endTouch);
+    el.root.addEventListener("pointercancel", endTouch);
+    el.root.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && state.drag) { touch?.preview?.remove(); touch = null; finishDrag(); }
+      if (!event.altKey || !["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) return;
+      const source = dragSource(event.target); if (!source) return;
+      event.preventDefault();
+      const down = event.key === "ArrowDown", up = event.key === "ArrowUp";
+      if (down || up) {
+        const ids = [...(source.kind === "sets" ? el.list.querySelectorAll("[data-open-set]") : el.nav.querySelectorAll('[draggable="true"]'))]
+          .map((row) => source.kind === "sets" ? row.dataset.openSet : row.dataset.libraryView);
+        const at = ids.indexOf(source.id);
+        if ((up && at === 0) || (down && at === ids.length - 1)) return;
+        void organize({ kind: source.kind, id: source.id, beforeId: up ? ids[at - 1] : ids[at + 2] || null }, source.id);
+      } else if (source.kind === "sets") {
+        const folders = ["", ...units().map((unit) => unit.id)];
+        const current = sets().find((set) => set.id === source.id)?.unitId || "";
+        const next = folders.indexOf(current) + (event.key === "ArrowRight" ? 1 : -1);
+        if (next >= 0 && next < folders.length) void organize({ kind: "assignment", id: source.id, unitId: folders[next] }, source.id);
+      }
     });
     for (const surface of [el.units, el.list, el.editor]) surface.addEventListener("scroll", remember, { passive: true });
     document.addEventListener("visibilitychange", remember);
     return {
       render, remember, refreshEditorUnit, currentUnit, owner: () => state.owner,
-      reset() { state.loaded = false; state.selected = ""; state.intent += 1; },
+      reset() { touch?.preview?.remove(); touch = null; finishDrag(); state.loaded = false; state.selected = ""; state.intent += 1; },
       async restore() {
         const selected = config.data().sets.find((set) => set.id === state.selected && set.ownerTeacherId === state.owner);
         if (selected) {
