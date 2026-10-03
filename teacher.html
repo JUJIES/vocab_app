@@ -20,7 +20,7 @@
     </script>
     <link rel="stylesheet" href="./pwa-splash.css?v=2026-09-30-splash-contrast-v2" />
     <script src="./appearance.js?v=2026-09-30-appearance-v4" data-appearance-scope="teacher"></script>
-    <link rel="stylesheet" href="./teacher.css?v=2026-10-03-direct-delete-v1" />
+    <link rel="stylesheet" href="./teacher.css?v=2026-10-03-tablet-info-v1" />
     <link rel="stylesheet" href="./appearance.css?v=2026-09-30-appearance-v4" />
     <link rel="stylesheet" href="./ui-motion.css?v=2026-08-30-ui-motion-v1" />
     <script src="./pwa.js?v=2026-08-30-pwa-splash-v3" defer></script>
@@ -29,7 +29,7 @@
     <script src="./set-side-options.js?v=2026-09-13-side-selection-v1" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js" defer></script>
     <script src="./teacher-workspace.js?v=2026-10-03-lerndecks-v2" defer></script>
-    <script src="./teacher.js?v=2026-10-03-direct-delete-v1" defer></script>
+    <script src="./teacher.js?v=2026-10-03-tablet-info-v1" defer></script>
   </head>
   <body>
     <div class="pwa-splash" role="status" aria-label="Lerndeck wird geladen">
@@ -204,6 +204,7 @@
                     <a id="workspace-practice" class="teacher-button teacher-button--secondary workspace-action" target="_blank" rel="noopener"><img class="teacher-button__icon" src="./assets/icons/learning-modes-open.svg" alt="" />Lernen</a>
                     <button id="workspace-print" class="teacher-button teacher-button--secondary workspace-action" type="button"><img class="teacher-button__icon" src="./assets/icons/print.svg" alt="" />Drucken</button>
                     <button id="workspace-share" class="teacher-button teacher-button--secondary workspace-action" type="button"><img class="teacher-button__icon" src="./assets/icons/share-2.svg" alt="" />Teilen</button>
+                    <div id="workspace-tablet-usage" class="workspace-tablet-usage" hidden></div>
                   </div>
                   <p id="set-editor-feedback" class="teacher-auth__feedback" aria-live="polite"></p>
                 </header>
@@ -281,7 +282,6 @@
 
                   </div>
                 </form>
-                <div id="workspace-tablet-usage" class="workspace-tablet-usage"></div>
               </section>
             </div>
           </section>

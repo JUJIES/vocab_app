@@ -25,7 +25,6 @@ const state = {
   units: [],
   tablets: [],
   activeTab: "sets",
-  setPanels: {},
   publicOrigin: "",
   activeSet: null,
   pendingDeleteSet: null,
@@ -448,6 +447,11 @@ function bindEvents() {
     trigger.addEventListener("click", closePasswordDialog);
   }
 
+  window.addEventListener("resize", () => {
+    const panel = elements.workspaceUsage.querySelector(".workspace-tablet-info-panel");
+    if (panel && !panel.hidden && !elements.workspaceUsage.hidden) positionTabletUsageInfo(panel);
+  });
+
   elements.sectionToggle.addEventListener("click", () => toggleTeacherSectionMenu());
   elements.sectionToggle.addEventListener("keydown", (event) => {
     if (!["ArrowDown", "ArrowUp"].includes(event.key) || !isCurrentTeacherAdmin()) return;
@@ -473,6 +477,11 @@ function bindEvents() {
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
+      const usagePanel = elements.workspaceUsage.querySelector(".workspace-tablet-info-panel");
+      if (usagePanel && !usagePanel.hidden) {
+        closeTabletUsageInfo({ restoreFocus: true });
+        return;
+      }
       if (!elements.sectionMenu.hidden) {
         closeTeacherSectionMenu({ restoreFocus: true });
         return;
@@ -506,7 +515,12 @@ function bindEvents() {
     }
   });
 
+  document.addEventListener("focusin", (event) => {
+    if (!elements.workspaceUsage.contains(event.target)) closeTabletUsageInfo();
+  });
+
   document.addEventListener("click", (event) => {
+    if (!(event.target instanceof Element) || !event.target.closest("#workspace-tablet-usage")) closeTabletUsageInfo();
     if (!(event.target instanceof Element) || !event.target.closest(".teacher-section-switch")) {
       closeTeacherSectionMenu();
     }
@@ -821,6 +835,7 @@ function renderSetList() {
 }
 
 function setActiveTeacherSection(nextTab) {
+  closeTabletUsageInfo();
   const previousTab = state.activeTab;
   state.activeTab = nextTab === "tablets" && isCurrentTeacherAdmin() ? "tablets" : "sets";
   updateTeacherShellCopy();
@@ -877,92 +892,132 @@ function buildTeacherPracticeUrl(setEntry) {
   return url.href;
 }
 
-function createTabletUsageBlock(setEntry) {
-  const wrapper = document.createElement("div");
-  wrapper.className = "teacher-set-row__tablets";
-
-  if (setEntry.tablets.length === 0) {
-    const summary = document.createElement("span");
-    summary.className = "teacher-set-row__tablet-summary";
-    summary.setAttribute("aria-label", "Noch kein Tablet hat dieses Set hinzugefügt");
-    summary.append(createTabletUsageIcon(), document.createTextNode("0 Tablets"));
-    wrapper.append(summary);
-    return wrapper;
+function renderTabletUsageInfo(setEntry) {
+  const visible = Boolean(setEntry && isCurrentTeacherAdmin());
+  elements.workspaceUsage.hidden = !visible;
+  const key = visible ? JSON.stringify([setEntry.id, setEntry.tablets.map(({ id, label }) => [id, label])]) : "";
+  if (elements.workspaceUsage.dataset.usageKey === key) return;
+  elements.workspaceUsage.dataset.usageKey = key;
+  if (visible && elements.workspaceUsage.dataset.setId === setEntry.id
+    && elements.workspaceUsage.querySelector(".workspace-tablet-info-panel")) {
+    updateTabletUsageInfo(setEntry.tablets);
+    return;
   }
+  closeTabletUsageInfo();
+  elements.workspaceUsage.dataset.setId = visible ? setEntry.id : "";
+  elements.workspaceUsage.replaceChildren();
+  if (!visible) return;
 
-  const isExpanded = isSetTabletListExpanded(setEntry);
-  wrapper.dataset.expanded = isExpanded ? "true" : "false";
-
-  const panelId = `teacher-set-panel-${createDomSafeToken(setEntry.path)}`;
+  const wrapper = document.createElement("div");
   const toggle = document.createElement("button");
+  toggle.id = "workspace-tablet-info-toggle";
   toggle.type = "button";
-  toggle.className = "teacher-set-row__toggle";
-  toggle.setAttribute("aria-expanded", isExpanded ? "true" : "false");
-  toggle.setAttribute("aria-controls", panelId);
-  toggle.setAttribute(
-    "aria-label",
-    `${setEntry.tablets.length} Tablet${setEntry.tablets.length === 1 ? " hat" : "s haben"} dieses Set hinzugefügt. Details anzeigen`,
-  );
-
-  const toggleLabel = document.createElement("span");
-  toggleLabel.className = "teacher-set-row__toggle-label";
-  toggleLabel.textContent = `${setEntry.tablets.length} Tablet${setEntry.tablets.length === 1 ? "" : "s"}`;
-
-  const toggleChevron = document.createElement("span");
-  toggleChevron.className = "teacher-set-row__toggle-chevron";
-  toggleChevron.setAttribute("aria-hidden", "true");
-  toggleChevron.textContent = "⌄";
-
-  toggle.append(createTabletUsageIcon(), toggleLabel, toggleChevron);
+  toggle.className = "teacher-button teacher-button--secondary workspace-action";
+  toggle.setAttribute("aria-expanded", "false");
+  toggle.setAttribute("aria-controls", "workspace-tablet-info-panel");
+  toggle.append(createButtonIcon(TABLET_ICON_PATH), document.createTextNode(
+    `${setEntry.tablets.length} Tablet${setEntry.tablets.length === 1 ? "" : "s"}`,
+  ));
 
   const panel = document.createElement("div");
-  panel.className = "teacher-set-row__tablets-panel";
-  panel.id = panelId;
-  panel.setAttribute("aria-hidden", isExpanded ? "false" : "true");
-
-  const panelInner = document.createElement("div");
-  panelInner.className = "teacher-set-row__tablets-panel-inner";
-
-  for (const tablet of setEntry.tablets) {
-    const row = document.createElement("div");
-    row.className = "teacher-set-row__tablet";
-
-    const tabletInfo = document.createElement("div");
-    tabletInfo.className = "teacher-set-row__tablet-info";
-    tabletInfo.append(createDevicePill(tablet));
-
-    const removeButton = document.createElement("button");
-    removeButton.type = "button";
-    removeButton.className = "teacher-tablet-remove";
-    removeButton.textContent = "Vom Tablet entfernen";
-    removeButton.addEventListener("click", () => {
-      void handleRemoveTabletSubscription(tablet.id, setEntry.path);
-    });
-
-    row.append(tabletInfo, removeButton);
-    panelInner.append(row);
-  }
-
-  panel.append(panelInner);
+  panel.id = "workspace-tablet-info-panel";
+  panel.className = "workspace-tablet-info-panel";
+  panel.setAttribute("role", "region");
+  panel.setAttribute("aria-label", "Tablets mit diesem Set");
+  panel.hidden = true;
   toggle.addEventListener("click", () => {
-    const nextExpanded = wrapper.dataset.expanded !== "true";
-    setSetTabletListExpanded(setEntry.path, nextExpanded);
-    wrapper.dataset.expanded = nextExpanded ? "true" : "false";
-    toggle.setAttribute("aria-expanded", nextExpanded ? "true" : "false");
-    panel.setAttribute("aria-hidden", nextExpanded ? "false" : "true");
+    if (elements.workspaceUsage.dataset.pinned === "true") closeTabletUsageInfo();
+    else { elements.workspaceUsage.dataset.pinned = "true"; openTabletUsageInfo(); }
   });
-
+  toggle.addEventListener("focus", openTabletUsageInfo);
+  wrapper.addEventListener("pointerenter", (event) => {
+    if (event.pointerType === "mouse") openTabletUsageInfo();
+  });
+  wrapper.addEventListener("pointerleave", () => {
+    if (elements.workspaceUsage.dataset.pinned !== "true" && !wrapper.contains(document.activeElement)) closeTabletUsageInfo();
+  });
   wrapper.append(toggle, panel);
-  return wrapper;
+  elements.workspaceUsage.append(wrapper);
+  updateTabletUsageInfo(setEntry.tablets);
 }
 
-function createTabletUsageIcon() {
-  const icon = document.createElement("img");
-  icon.className = "teacher-set-row__usage-icon";
-  icon.src = TABLET_ICON_PATH;
-  icon.alt = "";
-  icon.decoding = "async";
-  return icon;
+function openTabletUsageInfo() {
+  const toggle = elements.workspaceUsage.querySelector("button");
+  const panel = elements.workspaceUsage.querySelector(".workspace-tablet-info-panel");
+  if (!panel || elements.workspaceUsage.hidden) return;
+  toggle.setAttribute("aria-expanded", "true");
+  window.LerndeckUiMotion.revealPopover(panel);
+  positionTabletUsageInfo(panel);
+  void refreshTabletUsageInfo();
+}
+
+function positionTabletUsageInfo(panel) {
+  panel.style.left = "0px";
+  const editor = document.getElementById("workspace-editor").getBoundingClientRect();
+  const anchor = elements.workspaceUsage.getBoundingClientRect();
+  const left = Math.max(12, editor.left + 12), right = Math.min(innerWidth - 12, editor.right - 12);
+  panel.style.maxWidth = `${Math.max(0, right - left)}px`;
+  panel.style.left = `${Math.max(left - anchor.left, Math.min(0, right - anchor.left - panel.offsetWidth))}px`;
+  panel.style.maxHeight = `${Math.max(80, Math.min(260, innerHeight - panel.getBoundingClientRect().top - 16))}px`;
+}
+
+function closeTabletUsageInfo({ restoreFocus = false } = {}) {
+  const toggle = elements.workspaceUsage.querySelector("button");
+  const panel = elements.workspaceUsage.querySelector(".workspace-tablet-info-panel");
+  elements.workspaceUsage.dataset.pinned = "false";
+  if (restoreFocus) toggle?.focus({ preventScroll: true });
+  if (panel) window.LerndeckUiMotion.hidePopover(panel);
+  toggle?.setAttribute("aria-expanded", "false");
+}
+
+function updateTabletUsageInfo(tablets) {
+  const toggle = elements.workspaceUsage.querySelector("button");
+  const panel = elements.workspaceUsage.querySelector(".workspace-tablet-info-panel");
+  toggle.replaceChildren(createButtonIcon(TABLET_ICON_PATH), document.createTextNode(
+    `${tablets.length} Tablet${tablets.length === 1 ? "" : "s"}`,
+  ));
+  panel.replaceChildren();
+  if (tablets.length) {
+    const list = document.createElement("ul");
+    for (const tablet of tablets) {
+      const row = document.createElement("li");
+      row.append(createDevicePill(tablet));
+      list.append(row);
+    }
+    panel.append(list);
+  } else panel.textContent = "Noch kein Tablet hat dieses Set.";
+  if (!panel.hidden) positionTabletUsageInfo(panel);
+}
+
+async function refreshTabletUsageInfo() {
+  const setId = state.editorSetId, teacherId = state.currentTeacher?.id;
+  if (!setId || !isCurrentTeacherAdmin() || elements.workspaceUsage.dataset.refreshingSetId === setId) return;
+  elements.workspaceUsage.dataset.refreshingSetId = setId;
+  const panel = elements.workspaceUsage.querySelector(".workspace-tablet-info-panel");
+  panel?.setAttribute("aria-busy", "true");
+  try {
+    const response = await requestJson(SET_INDEX_API_PATH, { auth: "teacher" });
+    if (state.editorSetId !== setId || state.currentTeacher?.id !== teacherId || !isCurrentTeacherAdmin()) return;
+    if (!response.ok) throw createTeacherRequestError(response, "Tablet-Info konnte nicht aktualisiert werden.");
+    const source = response.data?.sets?.find((entry) => entry.id === setId);
+    const entry = activeEditorSet();
+    if (!source || !entry || !Array.isArray(source.tablets)) return;
+    entry.tablets = source.tablets.map(normalizeTabletEntry).filter(Boolean);
+    renderTabletUsageInfo(entry);
+    panel?.querySelector("[data-usage-error]")?.remove();
+  } catch (_) {
+    if (state.editorSetId === setId && state.currentTeacher?.id === teacherId && panel?.isConnected) {
+      if (!panel.querySelector("[data-usage-error]")) {
+        const message = document.createElement("p");
+        message.dataset.usageError = "true";
+        message.textContent = "Info konnte nicht aktualisiert werden.";
+        panel.append(message);
+      }
+    }
+  } finally {
+    panel?.removeAttribute("aria-busy");
+    if (elements.workspaceUsage.dataset.refreshingSetId === setId) delete elements.workspaceUsage.dataset.refreshingSetId;
+  }
 }
 
 function createDevicePill(tablet) {
@@ -1151,23 +1206,6 @@ function getTabletGroupName(value) {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
-}
-
-function isSetTabletListExpanded(setEntry) {
-  const savedState = state.setPanels[setEntry.path];
-  if (typeof savedState === "boolean") {
-    return savedState;
-  }
-
-  return false;
-}
-
-function setSetTabletListExpanded(path, expanded) {
-  state.setPanels[path] = expanded;
-}
-
-function createDomSafeToken(value) {
-  return value.replace(/[^a-zA-Z0-9_-]+/g, "-");
 }
 
 function createBadgeIcon(path) {
@@ -2582,31 +2620,6 @@ function clearQrCanvas() {
   context.fillRect(0, 0, elements.shareQrCanvas.width, elements.shareQrCanvas.height);
 }
 
-async function handleRemoveTabletSubscription(tabletId, setPath) {
-  try {
-    const response = await requestJson(
-      `/api/tablets/${encodeURIComponent(tabletId)}/subscriptions?set=${encodeURIComponent(setPath)}`,
-      {
-        method: "DELETE",
-        auth: "teacher",
-      },
-    );
-
-    if (!response.ok) {
-      throw createTeacherRequestError(response, "Set konnte nicht vom Tablet entfernt werden.");
-    }
-
-    await reloadTeacherData();
-  } catch (error) {
-    if (error?.requiresAuth) {
-      showTeacherAuth(error.message);
-      return;
-    }
-
-    console.error("Unable to remove set assignment:", error);
-    showTeacherActionError(typeof error?.message === "string" ? error.message : "Set konnte nicht vom Tablet entfernt werden.");
-  }
-}
 
 async function handleResetAccessSession(tabletId) {
   try {
@@ -2869,9 +2882,7 @@ function updateEditorStatusUi() {
   elements.workspacePrint.disabled = !available || !ready;
   elements.workspaceShare.disabled = !available;
   elements.workspaceDelete.hidden = !entry?.deletable;
-  elements.workspaceUsage.replaceChildren();
-  elements.workspaceUsage.hidden = !available || !isCurrentTeacherAdmin();
-  if (!elements.workspaceUsage.hidden) elements.workspaceUsage.append(createTabletUsageBlock(entry));
+  renderTabletUsageInfo(entry);
   workspace?.refreshEditorUnit();
   renderVisualControls();
 }

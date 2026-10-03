@@ -97,6 +97,62 @@ test("tablet connections require admin rights while device sessions keep their o
   }
 });
 
+test("tablet info stays in the header, refreshes pupil subscriptions and never removes them", async ({ page, playwright }) => {
+  await login(page, "julius");
+  await page.locator("#workspace-owner").selectOption("aksana");
+  await open(page, shops);
+  const usage = page.locator("#workspace-tablet-usage");
+  const toggle = page.locator("#workspace-tablet-info-toggle");
+  const panel = page.locator("#workspace-tablet-info-panel");
+  await expect(page.locator("#workspace-use-actions #workspace-tablet-usage")).toBeVisible();
+  await expect(page.locator("#set-editor-panel > #workspace-tablet-usage")).toHaveCount(0);
+  let subscriptionDeletes = 0;
+  page.on("request", request => {
+    if (request.method() === "DELETE" && new URL(request.url()).pathname.endsWith("/subscriptions")) subscriptionDeletes++;
+  });
+  const pupil = await playwright.request.newContext({ baseURL: BASE_URL });
+  const tabletPath = "/api/tablets/blau-6";
+  try {
+    expect((await page.request.post(tabletPath + "/decouple")).ok()).toBeTruthy();
+    const registered = await pupil.post(tabletPath + "/register", { data: { pin: "6472" } });
+    expect(registered.ok()).toBeTruthy();
+    const headers = { Authorization: `Bearer ${(await registered.json()).session.token}` };
+    expect((await pupil.post(tabletPath + "/subscriptions", { headers, data: { setPath: shops.path } })).ok()).toBeTruthy();
+    await toggle.hover();
+    await expect(panel).toBeVisible();
+    await expect(panel).toContainText("Blau 6");
+    await expect(toggle).toHaveText("1 Tablet");
+    await expect(panel.getByRole("button")).toHaveCount(0);
+    await expect(page.getByText("Vom Tablet entfernen", { exact: true })).toHaveCount(0);
+    await page.mouse.move(900, 850); await expect(panel).toBeHidden();
+    await toggle.focus(); await expect(panel).toBeVisible();
+    await toggle.press("Escape"); await expect(panel).toBeHidden(); await expect(toggle).toBeFocused();
+    await toggle.click(); await expect(panel).toBeVisible();
+    await page.mouse.move(900, 850); await expect(panel).toBeVisible();
+    await page.locator("#set-title-input").fill(shops.title + " with info");
+    await expect(panel).toBeHidden();
+    await toggle.click(); await expect(panel).toBeVisible();
+    await expect(page.locator("#workspace-save-status")).toHaveText("Gespeichert");
+    await expect(panel).toBeVisible();
+    const subscriptions = (await (await pupil.get(tabletPath + "/subscriptions", { headers })).json()).subscriptions;
+    expect(subscriptions.map(entry => entry.setPath)).toContain(shops.path);
+    expect(subscriptionDeletes).toBe(0);
+    await toggle.click(); await expect(panel).toBeHidden();
+    expect((await pupil.delete(tabletPath + `/subscriptions?set=${encodeURIComponent(shops.path)}`, { headers })).ok()).toBeTruthy();
+    await toggle.click(); await expect(toggle).toHaveText("0 Tablets");
+    await expect(panel).toHaveText("Noch kein Tablet hat dieses Set.");
+    await page.setViewportSize({ width: 390, height: 900 });
+    const box = await panel.boundingBox(); expect(box.x).toBeGreaterThanOrEqual(0); expect(box.x + box.width).toBeLessThanOrEqual(390);
+    await toggle.press("Escape"); await page.getByRole("button", { name: "Einstellungen", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Abmelden", exact: true }).click();
+    await login(page); await open(page, { ...shops, title: shops.title + " with info" }); await expect(usage).toBeHidden();
+  } finally {
+    await page.request.post("/api/teacher/session", { data: { teacherId: "julius", password: PASSWORD } });
+    await page.request.post(tabletPath + "/decouple");
+    await pupil.dispose();
+  }
+});
+
 test("admin heading menu supports keyboard and dismissal; regular teachers keep a plain heading", async ({ page }) => {
   await login(page, "julius");
   const toggle = page.locator("#teacher-section-toggle");

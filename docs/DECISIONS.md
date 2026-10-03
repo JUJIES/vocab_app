@@ -1,5 +1,10 @@
 # Produkt- und Architekturentscheidungen
 
+## 2026-10-03 – Tablet-Zuordnung als reine Info im Set-Kopf
+
+- Die Tablet-Liste wandert neben `Teilen` in ein kleines Info-Popover, ausschließlich für Admins. Hover/Fokus zeigen die Liste, Klick hält sie offen; Escape und Klick/Fokus außerhalb schließen. Beim Öffnen liefert das bestehende geschützte Set-Index-API aktuelle Verbindungen. Die Info übernimmt nur Zuordnungen des weiterhin ausgewählten Sets; Editorfelder und Autosave bleiben unberührt. Die Liste bleibt bei Speicherbestätigungen offen.
+- Entfernen-Aktion, alter Aufklappblock am Editorende und dessen ungenutzter Client-Schreibpfad entfallen. Der Vokabelbereich endet mit der Plus-Zeile. Schüler entfernen ihre Sets weiterhin über die bestehende Gerätesitzung; bestehende Serverrechte und administrative Gerätewartung bleiben kompatibel. Kein neues Verbindungsmodell und keine Online-Statusbehauptung.
+
 ## 2026-10-03 – Set löschen als direkte Aktion
 
 - Ein beschrifteter `Set löschen`-Button ersetzt das Drei-Punkte-Menü mit nur einem Eintrag. Sichtbarkeit folgt weiterhin dem serverseitig abgeleiteten Löschrecht; fremde Sets bleiben nicht löschbar. Der bestehende Bestätigungsdialog mit Abbrechen/Bestätigen und die bisherige Archivierung/Tablet-Bereinigung werden unverändert verwendet. Kein weiterer Löschpfad.

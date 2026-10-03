@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Admins sehen die Anzahl der Tablets eines Sets neben `Teilen`; Hover, Fokus oder Klick öffnen eine beim Öffnen aktualisierte Info-Liste. Der Block unten und `Vom Tablet entfernen` entfallen. Schüler verwalten ihre eigenen Set-Verbindungen weiterhin selbst; der Vokabelbereich endet mit der Hinzufügen-Zeile.
+
 - `Set löschen` steht direkt als ruhiger Button im Editor-Kopf. Das Drei-Punkte-Menü mit nur dieser Aktion entfällt; Bestätigungsdialog und Löschrechte bleiben erhalten.
 
 - Für Admins öffnet die Bereichsüberschrift oben links ein kompaktes Menü mit `Lernsets` und `Tablets`; aktueller Titel und größeres Icon ersetzen die doppelte Überschrift-/Tab-Navigation. Normale Lehrkräfte behalten die einfache Überschrift. Tastaturbedienung, Fokusführung und Schließen bei Klick außerhalb sind integriert.
