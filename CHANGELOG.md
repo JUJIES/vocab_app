@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `Importieren` nutzt das passende Lucide-Import-Icon mit derselben Größe und Theme-Färbung wie die übrigen Editoraktionen; das Icon ist im PWA-Cache enthalten.
+
 - Admins sehen die Anzahl der Tablets eines Sets neben `Teilen`; Hover, Fokus oder Klick öffnen eine beim Öffnen aktualisierte Info-Liste. Der Block unten und `Vom Tablet entfernen` entfallen. Schüler verwalten ihre eigenen Set-Verbindungen weiterhin selbst; der Vokabelbereich endet mit der Hinzufügen-Zeile.
 
 - `Set löschen` steht direkt als ruhiger Button im Editor-Kopf. Das Drei-Punkte-Menü mit nur dieser Aktion entfällt; Bestätigungsdialog und Löschrechte bleiben erhalten.

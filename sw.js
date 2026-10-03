@@ -1,4 +1,4 @@
-const CACHE_NAME = "lerndeck-shell-v180";
+const CACHE_NAME = "lerndeck-shell-v181";
 const APP_SHELL_URLS = [
   "/",
   "/index.html",
@@ -24,6 +24,7 @@ const APP_SHELL_URLS = [
   "/teacher.webmanifest",
   "/assets/icons/lerndeck-stack.svg",
   "/assets/icons/image-plus.svg",
+  "/assets/icons/import.svg",
   "/assets/icons/plus.svg",
   "/assets/icons/learn-mode.svg",
   "/assets/icons/learning-modes-open.svg",
