@@ -326,6 +326,9 @@ function bindEvents() {
     editorId: () => state.editorSetId, editorOwner: () => state.editorOwnerId,
     editorUnit: () => state.editorUnitId, organize: organizeLibrary,
     unitCommitted: commitWorkspaceUnit,
+    closeMenus: () => {
+      closeTeacherSectionMenu(); closeTeacherSettingsMenu(); closeTabletActionMenus(); closeEditorVisualPopovers();
+    },
   });
   document.addEventListener("click", (event) => {
     if (!event.target.closest(".set-card-visual")) {

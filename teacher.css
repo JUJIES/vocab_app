@@ -3116,14 +3116,10 @@ body.teacher-workspace-visible { overflow: hidden; }
 .workspace-nav-button[aria-pressed="true"], .workspace-set-row[aria-current="page"] { background: rgba(var(--accent-rgb), 0.2); color: var(--heading-text); }
 .workspace-count { font-size: 0.68rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .workspace-unit-row { display: flex; align-items: center; gap: 0.1rem; position: relative; }
-.workspace-unit-menu { flex-shrink: 0; }
-.workspace-unit-menu summary { list-style: none; cursor: pointer; color: var(--text-muted); padding: 0.5rem 0.35rem; }
-.workspace-unit-menu summary::-webkit-details-marker { display: none; }
-.workspace-unit-menu[open] { z-index: 5; }
-.workspace-unit-menu > div { position: absolute; right: 0; top: 100%; min-width: 9rem; padding: 0.3rem;
+.workspace-unit-menu { position: fixed; z-index: 100; min-width: 9rem; max-width: calc(100vw - 1rem); padding: 0.3rem;
   background: var(--surface); border: 1px solid var(--line); border-radius: 0.7rem; box-shadow: var(--shadow); }
-.workspace-unit-menu button { display: block; width: 100%; padding: 0.6rem; border: 0; border-radius: 0.4rem; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
-.workspace-unit-menu button:hover { background: var(--surface-soft); }
+.workspace-unit-menu button { display: block; width: 100%; padding: 0.6rem; border: 0; border-radius: 0.4rem; background: transparent; color: var(--text); font: inherit; font-size: 0.82rem; text-align: left; cursor: pointer; }
+.workspace-unit-menu button:hover, .workspace-unit-menu button:focus-visible { background: var(--surface-soft); }
 .workspace-unit-create { margin-top: 1.25rem; padding: 0.6rem 0.5rem; border: 0; background: transparent; color: var(--text-muted); font: inherit; font-size: 0.8rem; cursor: pointer; }
 .workspace-unit-form { display: grid; gap: 0.55rem; margin-top: 0.75rem; font-size: 0.78rem; }
 .workspace-inline-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 0.55rem; }
@@ -3230,7 +3226,7 @@ body.teacher-workspace-visible { overflow: hidden; }
   .teacher-editor .set-editor-field--card[data-side="back"] { grid-column: 2; grid-row: 2; }
   .workspace-editor-actions { position: static; }
   .workspace-editor input, .workspace-editor select, .workspace-search, .workspace-owner-field select, .workspace-unit-form input { font-size: 1rem !important; }
-  .workspace-nav-button, .workspace-set-row, .workspace-unit-create, .workspace-unit-menu summary, .workspace-editor .teacher-button { min-height: 2.75rem; }
+  .workspace-nav-button, .workspace-set-row, .workspace-unit-create, .workspace-unit-menu button, .workspace-editor .teacher-button { min-height: 2.75rem; }
 }
 
 @media print {

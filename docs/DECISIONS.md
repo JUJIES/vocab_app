@@ -1,5 +1,10 @@
 # Produkt- und Architekturentscheidungen
 
+## 2026-10-03 – Lerndeck-Optionen per Kontextmenü
+
+- Rechtsklick ersetzt die sichtbaren Drei-Punkte-Schaltflächen in der Bibliothek; dieselben bestehenden Umbenennen-/Entfernen-Pfade, Eigentumsrechte und Bestätigung bleiben erhalten. Ein einziges fensterbegrenztes Theme-Popover außerhalb der Scrollpanels verhindert abgeschnittene Menüs. Tastatur (Umschalt+F10/Menütaste, Pfeile, Escape) und langes Drücken außerhalb des Drag-Griffs erhalten den Zugang ohne zusätzliche sichtbare Bedienfläche.
+- Drag und Kontextmenü schließen einander aus. Die bisher globale kurze Klicksperre nach dem Ziehen betrifft nur noch den gezogenen Eintrag; bewusstes Wechseln zu einem anderen Lerndeck wird nicht verschluckt. Keine Änderung am Datenmodell, an Inhalten oder an der gespeicherten Ordnung.
+
 ## 2026-10-03: Dauerhafte Translation-Rohdaten für die Unterrichtserprobung
 
 - Auf ausdrücklichen Wunsch werden abgegebene Antworten und Feedbackschleifen jetzt dauerhaft gespeichert; ersetzt die bisherige Regel ohne Satzinhalte auf Platte. Eine Datei pro Lauf in `DATA_DIR/translation-logs/<UTC-Startdatum>/<runId>.json` hält Aufgaben, Sprachpaar/Zielvarianten, Schwierigkeit, Set-Eigentümer/Revision, alle Abgaben, tatsächliches Feedback, Hilfen/Markierungen, Modellkriterien und Kontext-IDs zusammen. Auch unvollständige Durchgänge/technische Fehler bleiben erkennbar; keine Auswertung/Note. Schüleridentitäten fehlen, Lehrervorschauen sind gekennzeichnet.

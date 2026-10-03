@@ -14,7 +14,89 @@ window.LerndeckTeacherWorkspace = (() => {
       unitCancel: byId("workspace-unit-cancel"), editor: byId("workspace-editor"),
       breadcrumb: byId("workspace-breadcrumb"),
     };
-    const state = { owner: "", view: "all", selected: "", search: "", mobile: "library", editUnit: "", loaded: false, intent: 0, restored: null, organizing: false, organizationPromise: null, drag: null, renderPending: false, suppressClickUntil: 0, navMarkup: "" };
+    const state = { owner: "", view: "all", selected: "", search: "", mobile: "library", editUnit: "", loaded: false, intent: 0, restored: null, organizing: false, organizationPromise: null, drag: null, renderPending: false, suppressClickUntil: 0, suppressClickTarget: "", navMarkup: "" };
+    const unitMenu = document.createElement("div");
+    unitMenu.className = "workspace-unit-menu"; unitMenu.hidden = true;
+    unitMenu.setAttribute("role", "menu");
+    unitMenu.innerHTML = '<button type="button" role="menuitem" tabindex="-1" data-unit-rename="">Umbenennen</button><button type="button" role="menuitem" tabindex="-1" data-unit-delete="">Entfernen</button>';
+    document.body.append(unitMenu);
+    let unitMenuSource = null, unitHold = null;
+    function closeUnitMenu(restoreFocus = false) {
+      if (!unitMenuSource) return;
+      const source = unitMenuSource; unitMenuSource = null;
+      source.setAttribute("aria-expanded", "false");
+      window.LerndeckUiMotion.hidePopover(unitMenu);
+      if (restoreFocus && source.isConnected) source.focus({ preventScroll: true });
+    }
+    function cancelUnitHold() {
+      if (unitHold) clearTimeout(unitHold.timer);
+      unitHold = null;
+      if (state.suppressClickUntil === Infinity) state.suppressClickUntil = Date.now() + 350;
+    }
+    function openUnitMenu(source, x, y) {
+      const id = source?.dataset.libraryView;
+      const unit = units().find((entry) => entry.id === id);
+      if (!unit || !ownLibrary() || state.drag || state.organizing) return;
+      config.closeMenus();
+      cancelUnitHold(); closeUnitMenu(); unitMenuSource = source;
+      source.setAttribute("aria-expanded", "true");
+      unitMenu.setAttribute("aria-label", `Lerndeck ${unit.name} verwalten`);
+      unitMenu.querySelector("[data-unit-rename]").dataset.unitRename = id;
+      unitMenu.querySelector("[data-unit-delete]").dataset.unitDelete = id;
+      window.LerndeckUiMotion.revealPopover(unitMenu);
+      const anchor = source.getBoundingClientRect();
+      unitMenu.style.left = `${Math.max(8, Math.min(x ?? anchor.left, innerWidth - unitMenu.offsetWidth - 8))}px`;
+      unitMenu.style.top = `${Math.max(8, Math.min(y ?? anchor.bottom, innerHeight - unitMenu.offsetHeight - 8))}px`;
+      unitMenu.querySelector("button").focus({ preventScroll: true });
+    }
+    el.nav.addEventListener("contextmenu", (event) => {
+      const source = event.target.closest("[data-library-view]");
+      if (!ownLibrary() || !units().some((unit) => unit.id === source?.dataset.libraryView)) return;
+      event.preventDefault(); openUnitMenu(source, event.clientX, event.clientY);
+    });
+    el.nav.addEventListener("keydown", (event) => {
+      if (event.key !== "ContextMenu" && !(event.shiftKey && event.key === "F10")) return;
+      const source = event.target.closest("[data-library-view]");
+      if (!ownLibrary() || !units().some((unit) => unit.id === source?.dataset.libraryView)) return;
+      event.preventDefault(); openUnitMenu(source);
+    });
+    // Long press keeps the same actions available on touch, away from the drag grip.
+    el.nav.addEventListener("pointerdown", (event) => {
+      cancelUnitHold();
+      if (event.pointerType !== "touch" || event.target.closest(".workspace-drag-handle")) return;
+      const source = event.target.closest("[data-library-view]");
+      if (!ownLibrary() || !units().some((unit) => unit.id === source?.dataset.libraryView)) return;
+      unitHold = { x: event.clientX, y: event.clientY, timer: setTimeout(() => {
+        openUnitMenu(source, event.clientX, event.clientY);
+        state.suppressClickTarget = `units:${source.dataset.libraryView}`;
+        state.suppressClickUntil = Infinity;
+      }, 500) };
+    });
+    document.addEventListener("pointermove", (event) => {
+      if (unitHold && Math.hypot(event.clientX - unitHold.x, event.clientY - unitHold.y) > 8) cancelUnitHold();
+    });
+    for (const type of ["pointerup", "pointercancel"]) document.addEventListener(type, cancelUnitHold);
+    // Touch's compatibility mousedown must not return focus to the held row and dismiss its menu.
+    document.addEventListener("mousedown", (event) => {
+      if (unitMenuSource && Date.now() < state.suppressClickUntil
+        && event.target.closest("[data-library-view]") === unitMenuSource) event.preventDefault();
+    }, true);
+    document.addEventListener("pointerdown", (event) => { if (!unitMenu.contains(event.target)) closeUnitMenu(); });
+    document.addEventListener("focusin", (event) => { if (!unitMenu.contains(event.target)) closeUnitMenu(); });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && unitMenuSource) { event.preventDefault(); closeUnitMenu(true); }
+    });
+    document.addEventListener("scroll", () => { cancelUnitHold(); closeUnitMenu(); }, true);
+    window.addEventListener("resize", () => { cancelUnitHold(); closeUnitMenu(); });
+    unitMenu.addEventListener("keydown", (event) => {
+      if (event.key === "Tab") { closeUnitMenu(true); return; }
+      if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+      event.preventDefault();
+      const items = [...unitMenu.querySelectorAll("button")];
+      const at = items.indexOf(document.activeElement);
+      items[event.key === "Home" ? 0 : event.key === "End" ? items.length - 1
+        : (at + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length].focus();
+    });
     const key = () => `lerndeck-teacher-workspace-v1:${config.data().teacher?.id || ""}`;
     const ownLibrary = () => state.owner === config.data().teacher?.id;
     const units = () => config.data().units.filter((unit) => unit.ownerTeacherId === state.owner).sort((a, b) => a.libraryOrder - b.libraryOrder);
@@ -64,6 +146,7 @@ window.LerndeckTeacherWorkspace = (() => {
       return response.data;
     }
     async function navigate(change) {
+      closeUnitMenu(); cancelUnitHold();
       const intent = ++state.intent;
       if (state.organizationPromise) await state.organizationPromise;
       if (!await config.beforeLeave() || intent !== state.intent) return;
@@ -108,15 +191,14 @@ window.LerndeckTeacherWorkspace = (() => {
       el.search.value = state.search;
       const navScroll = el.units.scrollTop, listScroll = el.list.scrollTop;
       const handle = '<img class="workspace-drag-handle" src="./assets/icons/grip-vertical.svg" alt="" draggable="false" />';
-      const navButton = (view, text) => `<button type="button" class="workspace-nav-button" data-library-view="${escape(view)}" ${ownLibrary() && !labels[view] ? 'draggable="true" aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown" aria-description="Zum Sortieren ziehen oder Alt und Pfeil hoch oder runter verwenden."' : ''} aria-pressed="${state.view === view}">${ownLibrary() && !labels[view] ? handle : ''}<span>${escape(text)}</span><span class="workspace-count">${count(view)}</span></button>`;
+      const navButton = (view, text) => `<button type="button" class="workspace-nav-button" data-library-view="${escape(view)}" ${ownLibrary() && !labels[view] ? 'draggable="true" aria-haspopup="menu" aria-expanded="false" aria-keyshortcuts="Shift+F10 Alt+ArrowUp Alt+ArrowDown" aria-description="Rechtsklick, langes Drücken oder Umschalt und F10 für Optionen. Zum Sortieren ziehen oder Alt und Pfeil hoch oder runter verwenden."' : ''} aria-pressed="${state.view === view}">${ownLibrary() && !labels[view] ? handle : ''}<span>${escape(text)}</span><span class="workspace-count">${count(view)}</span></button>`;
       const navMarkup = navButton("all", labels.all)
         + '<p class="workspace-nav-caption">Lerndecks</p>'
-        + units().map((unit) => `<div class="workspace-unit-row">${navButton(unit.id, unit.name)}${ownLibrary() ? `<details class="workspace-unit-menu" data-unit-id="${escape(unit.id)}"><summary aria-label="Lerndeck ${escape(unit.name)} verwalten">•••</summary><div><button type="button" data-unit-rename="${escape(unit.id)}">Umbenennen</button><button type="button" data-unit-delete="${escape(unit.id)}">Entfernen</button></div></details>` : ""}</div>`).join("")
+        + units().map((unit) => `<div class="workspace-unit-row">${navButton(unit.id, unit.name)}</div>`).join("")
         + navButton("unfiled", labels.unfiled);
       if (navMarkup !== state.navMarkup) {
-        const openUnits = new Set([...el.nav.querySelectorAll(".workspace-unit-menu[open]")].map((menu) => menu.dataset.unitId));
+        closeUnitMenu(); cancelUnitHold();
         el.nav.innerHTML = navMarkup;
-        for (const menu of el.nav.querySelectorAll(".workspace-unit-menu")) menu.open = openUnits.has(menu.dataset.unitId);
         state.navMarkup = navMarkup;
       }
       const needle = state.search.trim().toLocaleLowerCase("de");
@@ -162,18 +244,21 @@ window.LerndeckTeacherWorkspace = (() => {
       el.unitForm.hidden = false; feedback(""); el.unitName.focus();
     }
     el.nav.addEventListener("click", (event) => {
-      const button = event.target.closest("button"); if (!button || Date.now() < state.suppressClickUntil) return;
+      const button = event.target.closest("button"); if (!button || (Date.now() < state.suppressClickUntil && state.suppressClickTarget === `units:${button.dataset.libraryView}`)) return;
       if (button.dataset.libraryView !== undefined) {
         void navigate(async () => {
           state.view = button.dataset.libraryView; state.mobile = "library"; el.list.scrollTop = 0; render();
         });
       }
+    });
+    unitMenu.addEventListener("click", (event) => {
+      const button = event.target.closest("button");
+      if (!button || !unitMenuSource || !ownLibrary()) return;
+      closeUnitMenu(true);
       if (button.dataset.unitRename) {
-        const menu = button.closest("details"); if (menu) menu.open = false;
         showUnitForm(button.dataset.unitRename);
       }
       if (button.dataset.unitDelete) {
-        const menu = button.closest("details"); if (menu) menu.open = false;
         void (async () => {
           const unit = units().find((unit) => unit.id === button.dataset.unitDelete);
           if (!unit || !confirm(`Lerndeck „${unit.name}“ entfernen? Die Sets bleiben unter „Nicht eingeordnet“ erhalten.`)) return;
@@ -188,7 +273,7 @@ window.LerndeckTeacherWorkspace = (() => {
       }
     });
     el.list.addEventListener("click", (event) => {
-      const row = event.target.closest("[data-open-set]"); if (row && Date.now() >= state.suppressClickUntil) void selectSet(row.dataset.openSet);
+      const row = event.target.closest("[data-open-set]"); if (row && !(Date.now() < state.suppressClickUntil && state.suppressClickTarget === `sets:${row.dataset.openSet}`)) void selectSet(row.dataset.openSet);
     });
     el.search.addEventListener("input", () => { state.search = el.search.value; render(); remember(); });
     el.owner.addEventListener("change", () => {
@@ -282,14 +367,20 @@ window.LerndeckTeacherWorkspace = (() => {
       }
       return drop;
     }
-    function commitDrop(drop) {
+    function suppressDragClick() {
+      if (!state.drag) return;
+      state.suppressClickTarget = `${state.drag.kind}:${state.drag.id}`;
       state.suppressClickUntil = Date.now() + 350;
+    }
+    function commitDrop(drop) {
+      suppressDragClick();
       finishDrag();
       if (drop) void organize(drop.change);
     }
     el.root.addEventListener("dragstart", (event) => {
       const source = dragSource(event.target);
       if (!source) { event.preventDefault(); return; }
+      closeUnitMenu(); cancelUnitHold();
       state.drag = source; source.row.classList.add("is-dragging");
       event.dataTransfer.effectAllowed = "move";
       event.dataTransfer.setData("application/x-lerndeck-library", source.id);
@@ -302,7 +393,7 @@ window.LerndeckTeacherWorkspace = (() => {
       const drop = dropTarget(event.target, event.clientY);
       if (state.drag) { event.preventDefault(); commitDrop(drop); }
     });
-    el.root.addEventListener("dragend", () => { state.suppressClickUntil = Date.now() + 350; finishDrag(); });
+    el.root.addEventListener("dragend", () => { suppressDragClick(); finishDrag(); });
     el.root.addEventListener("dragleave", (event) => { if (!el.root.contains(event.relatedTarget)) clearDropHints(); });
     // Touch drags start on the grip; the rest of each row keeps native scrolling and clicking.
     let touch = null;
@@ -356,7 +447,7 @@ window.LerndeckTeacherWorkspace = (() => {
     document.addEventListener("visibilitychange", remember);
     return {
       render, remember, refreshEditorUnit, currentUnit, owner: () => state.owner,
-      reset() { touch?.preview?.remove(); touch = null; finishDrag(); state.loaded = false; state.selected = ""; state.intent += 1; },
+      reset() { closeUnitMenu(); cancelUnitHold(); touch?.preview?.remove(); touch = null; finishDrag(); state.loaded = false; state.selected = ""; state.intent += 1; },
       async restore() {
         const selected = config.data().sets.find((set) => set.id === state.selected && set.ownerTeacherId === state.owner);
         if (selected) {
