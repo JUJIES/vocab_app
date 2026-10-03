@@ -75,7 +75,8 @@ const teacherService = new TeacherService({
 });
 const setService = new SetService({ dataDir: DATA_DIR });
 const importService = new ImportService();
-const sentenceService = new SentenceService();
+const { SentenceOrderStore } = require("./lib/sentence-order-store");
+const sentenceService = new SentenceService({ orderStore: new SentenceOrderStore({ dataDir: DATA_DIR }) });
 const visualService = new VisualService({ dataDir: DATA_DIR, setService });
 
 app.use("/api/teacher/import-draft", express.json({ limit: "18mb" }));
@@ -615,7 +616,8 @@ app.post("/api/sentence-practice/:action", async (request, response) => {
     const body = request.body;
     let run;
     switch (request.params.action) {
-      case "start": run = await sentenceService.start(actor, setPath, setService.toSetDocument(set), body.direction, body.count); break;
+      case "start": run = await sentenceService.start(actor, setPath, setService.toSetDocument(set), body.direction, body.count, body.difficulty); break;
+      case "shown": run = await sentenceService.shown(actor, body.id, setPath, body.promptId); break;
       case "resume": run = sentenceService.view(sentenceService.get(actor, body.id, setPath)); break;
       case "check": run = await sentenceService.check(actor, body.id, setPath, body.promptId, body.answer); break;
       case "next": run = await sentenceService.next(actor, body.id, setPath, body.promptId); break;
@@ -1175,6 +1177,7 @@ app.delete("/api/tablets/:tabletId/subscriptions", requireTabletOrAdminSession, 
       .filter((entry) => entry.setPath !== setPath);
     tablet.updatedAt = new Date().toISOString();
     await writeTabletStore(store);
+    await sentenceService.clear(`tablet:${tablet.id}`, setPath);
 
     response.json({
       success: true,
@@ -1378,6 +1381,7 @@ app.post("/api/tablets/:tabletId/reset-pin", requireAdminSession, async (request
     invalidateTabletSessions(tablet.id);
     clearAccessSessionsForTablet(tablet.id);
     await writeTabletStore(store);
+    await sentenceService.clear(`tablet:${tablet.id}`);
 
     response.json({
       success: true,
@@ -1416,6 +1420,7 @@ app.post("/api/tablets/:tabletId/decouple", requireAdminSession, async (request,
     invalidateTabletSessions(tablet.id);
     clearAccessSessionsForTablet(tablet.id);
     await writeTabletStore(store);
+    await sentenceService.clear(`tablet:${tablet.id}`);
 
     response.json({
       success: true,
@@ -1502,6 +1507,7 @@ const PUBLIC_ROOT_FILES = new Map([
   ["/app.js", "app.js"],
   ["/answer-rules.js", "answer-rules.js"],
   ["/grading-rules.js", "grading-rules.js"],
+  ["/sentence-options.js", "sentence-options.js"],
   ["/teacher.html", "teacher.html"],
   ["/teacher.css", "teacher.css"],
   ["/appearance.js", "appearance.js"],
@@ -2651,6 +2657,8 @@ async function removeSetReferencesFromTablets(setPath) {
   if (tabletsUpdated > 0) {
     await writeTabletStore(store);
   }
+
+  await sentenceService.clear("", normalizedSetPath);
 
   return tabletsUpdated;
 }

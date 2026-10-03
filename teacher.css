@@ -3270,3 +3270,18 @@ body.teacher-workspace-visible { overflow: hidden; }
 [data-drop-position="after"]::after { bottom: -2px; }
 .workspace-drag-preview { position: fixed; top: 0; left: 0; z-index: 100; pointer-events: none; max-width: 14rem; padding: 0.7rem; border-radius: 0.6rem; border: 1px solid var(--line); background: var(--surface); color: var(--text); box-shadow: var(--shadow); font-size: 0.8rem; }
 @media (pointer: coarse) { .workspace-drag-handle { width: 1.2rem; height: 2.5rem; padding: 0.25rem; } }
+
+
+/* Keep the desktop workspace spacious; secondary metadata carries less weight. */
+.teacher-editor .set-card-editor-title { display: flex; align-items: baseline; gap: .45rem; }
+.teacher-editor .set-card-editor-title .set-editor-section-title { margin: 0; }
+.teacher-editor .set-card-editor-count { color: var(--text-muted); font-size: .8rem; font-weight: 400; }
+.teacher-editor .set-card-editor-count::before { content: "·"; margin-right: .45rem; }
+.workspace-breadcrumb { font-size: .74rem; font-weight: 400; }
+.workspace-save-status { font-size: .74rem; font-weight: 400; }
+.teacher-editor .set-card-visual__trigger:not(.has-image) { border-color: transparent; background: transparent; color: var(--text-muted); opacity: 1; }
+.teacher-editor .set-card-visual__trigger:not(.has-image):hover:not(:disabled),
+.teacher-editor .set-card-visual__trigger:not(.has-image):focus-visible,
+.teacher-editor .set-card-visual.is-open .set-card-visual__trigger:not(.has-image) { background: var(--surface-soft); border-color: var(--line); transform: none; }
+.teacher-editor .set-card-visual__trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.teacher-editor .set-card-visual__trigger:not(.has-image):disabled { opacity: .28; }

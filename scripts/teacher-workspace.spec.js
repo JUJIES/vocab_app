@@ -521,7 +521,7 @@ test("learning opens the familiar student mode selection in another tab and keep
   await page.getByRole("link", { name: "Lernen", exact: true }).click();
   const learning = await newPage;
   await expect(learning.locator("#launch-mode-modal")).toBeVisible();
-  await expect(learning.locator(".launch-mode-modal__mode-card")).toHaveCount(3);
+  await expect(learning.locator(".launch-mode-modal__mode-card")).toHaveCount(4);
   await expect(page.locator("#set-title-input")).toHaveValue(rooms.title + " for learning");
   await learning.locator('.launch-mode-modal__mode-card[data-mode-key="practice"]').click();
   await learning.locator("#launch-mode-start").click();

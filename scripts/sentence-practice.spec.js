@@ -161,3 +161,40 @@ for (const light of [false, true]) test(`specific feedback highlights only the p
   await expect(page.locator("#sentence-submit")).toHaveText("Weiter");
   await expect(mark).toHaveCount(0);
 });
+
+for (const light of [false,true]) test(`difficulty and optional transfer help (${light ? 'light':'dark'})`,async({page},testInfo)=>{
+  const run={id:'help-run',total:2,position:1,difficulty:'hard',targetLanguage:'en',prompt:{id:'help-prompt',prefix:'Die Fähre kommt ',focus:'jeden Tag',suffix:'.'},accepted:false,status:'ready',feedback:'',help:null,shown:false};
+  let shown=0;
+  await page.route('**/api/sentence-practice/*',route=>{
+    const action=route.request().url().split('/').pop();
+    const body=route.request().postDataJSON();
+    if(action==='start'){ expect(body.difficulty).toBe('hard');expect(body.count).toBe(2);return route.fulfill({json:{run}}); }
+    if(action==='shown'){shown++;expect(body.promptId).toBe('help-prompt');return route.fulfill({json:{run:{...run,shown:true}}});}
+    return route.fulfill({json:{run:{...run,shown:true,status:'revise',checkedAnswer:'The ferry come every day.',feedback:'Fast da! 🔎 Die Häufigkeit stimmt. Prüfe die Verbform bei „come“: Die Fähre steht in der Einzahl.',problem:{start:10,end:14},help:{explanation:'Bei he, she, it verändert sich im einfachen Präsens die Verbform. Überlege, welche Form zu einem einzelnen Subjekt passt.',example:'The dog plays in the park.'}}}});
+  });
+  await prepare(page,light);
+  await expect(page.getByRole('radio',{name:/Einfach/})).toBeChecked();
+  await page.getByText('Schwer',{exact:true}).click();
+  await expect(page.getByRole('radio',{name:/Schwer/})).toBeChecked();
+  await page.getByRole('radio',{name:/Schwer/}).focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(page.getByRole('radio',{name:/Mittel/})).toBeChecked();
+  await page.keyboard.press('ArrowRight');
+  await page.locator('.launch-mode-modal__test-count-slider').fill('2');
+  await page.screenshot({path:testInfo.outputPath('sentence-settings.png')});
+  await page.locator('#launch-settings-start').click();
+  await page.locator('#sentence-answer').fill('The ferry come every day.');
+  await page.locator('#sentence-submit').click();
+  await expect(page.locator('#sentence-help')).not.toHaveAttribute('open','');
+  await expect(page.locator('#sentence-help-example')).toBeHidden();
+  await page.getByText('Mehr Hilfe',{exact:true}).click();
+  await expect(page.locator('#sentence-help-example')).toHaveText('The dog plays in the park.');
+  await page.screenshot({path:testInfo.outputPath('sentence-help.png')});
+  await page.setViewportSize({width:390,height:844});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.screenshot({path:testInfo.outputPath('sentence-help-mobile.png'),fullPage:true});
+  await page.locator('#sentence-answer').fill('The ferry comes every day.');
+  await expect(page.locator('#sentence-feedback')).toBeHidden();
+  await expect(page.locator('#sentence-help')).not.toHaveAttribute('open','');
+  expect(shown).toBe(1);
+});

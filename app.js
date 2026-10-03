@@ -82,9 +82,12 @@ const state = {
   pendingLaunchModeKey: "practice",
   pendingLaunchDirection: "source-target",
   pendingSentenceCount: 5,
+  pendingSentenceDifficulty: "easy",
+  activeSentenceDifficulty: "easy",
   sentenceSession: null,
   sentenceRequestId: 0,
   sentenceBusy: false,
+  sentenceShownPromise: null,
   pendingTestCardCount: TEST_DEFAULT_CARD_COUNT,
   activeTestCardCount: TEST_DEFAULT_CARD_COUNT,
   launchModeScrollY: 0,
@@ -399,6 +402,9 @@ const elements = {
   sentenceFeedback: document.getElementById("sentence-feedback"),
   sentenceFeedbackText: document.getElementById("sentence-feedback-text"),
   sentenceFeedbackExcerpt: document.getElementById("sentence-feedback-excerpt"),
+  sentenceHelp: document.getElementById("sentence-help"),
+  sentenceHelpExplanation: document.getElementById("sentence-help-explanation"),
+  sentenceHelpExample: document.getElementById("sentence-help-example"),
   sentenceProgress: document.getElementById("sentence-progress"),
   sentencePrompt: document.getElementById("sentence-prompt"),
 
@@ -520,12 +526,15 @@ function bindEvents() {
   elements.sentenceHome.addEventListener("click", handleReturnToStudentHome);
   elements.sentenceLogout.addEventListener("click", () => elements.inputMenuLogout.click());
   elements.sentenceForm.addEventListener("submit", handleSentenceSubmit);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) acknowledgeSentencePrompt(); });
   elements.sentenceAnswer.addEventListener("input", () => {
     if (state.sentenceSession && !state.sentenceSession.accepted && !state.sentenceBusy) {
       state.sentenceSession.feedback = "";
       state.sentenceSession.problem = null;
+      state.sentenceSession.help = null;
       state.sentenceSession.status = "ready";
       elements.sentenceFeedback.hidden = true;
+      elements.sentenceHelp.open = false;
       elements.sentenceAnswer.removeAttribute("aria-invalid");
       elements.sentenceAnswer.dataset.status = "";
     }
@@ -7012,6 +7021,7 @@ function openLaunchModeModal(setPath) {
   const { maximum } = getTestCardCountRange(subscription);
   state.pendingTestCardCount = Math.min(TEST_DEFAULT_CARD_COUNT, maximum);
   state.pendingSentenceCount = Math.min(5, maximum);
+  state.pendingSentenceDifficulty = window.LerndeckSentenceOptions.defaultDifficulty;
   state.launchModeScrollY = window.scrollY || window.pageYOffset || 0;
   renderLaunchModeModal({
     forceRebuildCards: true,
@@ -7036,10 +7046,45 @@ function renderLaunchSettings(subscription, selectedMode) {
   if (selectedMode.key === "test" || selectedMode.key === "sentence") {
     const group = document.createElement("section");
     group.className = "launch-settings-modal__group";
-    group.setAttribute("aria-label", "Testumfang");
+    group.setAttribute("aria-label", selectedMode.key === "sentence" ? "Satzanzahl" : "Testumfang");
     group.append(createTestCardCountControl(subscription, selectedMode.key === "sentence"));
     elements.launchSettingsAdditional.append(group);
+    if (selectedMode.key === "sentence") elements.launchSettingsAdditional.append(createSentenceDifficultyControl());
   }
+}
+
+function createSentenceDifficultyControl() {
+  const group = document.createElement("fieldset");
+  group.className = "sentence-difficulty";
+  const legend = document.createElement("legend");
+  legend.textContent = "Schwierigkeit";
+  const choices = document.createElement("div");
+  choices.className = "sentence-difficulty__choices";
+  for (const option of window.LerndeckSentenceOptions.difficulties) {
+    const label = document.createElement("label");
+    label.className = "sentence-difficulty__choice";
+    const input = document.createElement("input");
+    input.type = "radio";
+    input.name = "sentence-difficulty";
+    input.value = option.key;
+    input.checked = state.pendingSentenceDifficulty === option.key;
+    input.addEventListener("change", () => { if (input.checked) state.pendingSentenceDifficulty = option.key; });
+    const content = document.createElement("span");
+    content.className = "sentence-difficulty__content";
+    const icon = document.createElement("img");
+    icon.src = option.iconPath;
+    icon.alt = "";
+    icon.width = icon.height = 40;
+    const title = document.createElement("strong");
+    title.textContent = option.label;
+    const description = document.createElement("small");
+    description.textContent = option.description;
+    content.append(icon, title, description);
+    label.append(input, content);
+    choices.append(label);
+  }
+  group.append(legend, choices);
+  return group;
 }
 
 function openLaunchSettingsModal() {
@@ -7168,6 +7213,7 @@ async function startPendingLaunchMode() {
   const selectedModeKey = state.pendingLaunchModeKey;
   const selectedDirection = state.pendingLaunchDirection;
   const sentenceCount = state.pendingSentenceCount;
+  const sentenceDifficulty = state.pendingSentenceDifficulty;
   const selectedTestCardCount = clampTestCardCount(
     state.pendingTestCardCount,
     getPendingLaunchSubscription(),
@@ -7182,7 +7228,7 @@ async function startPendingLaunchMode() {
     ? buildTeacherPracticeLearningUrl()
     : buildCanonicalStudentSetUrl(setPath));
   if (selectedModeKey === "sentence") {
-    await startSentenceSet(setPath, selectedDirection, sentenceCount);
+    await startSentenceSet(setPath, selectedDirection, sentenceCount, { difficulty: sentenceDifficulty });
     return;
   }
   if (selectedModeKey === "test") {
@@ -7422,7 +7468,7 @@ async function resumeActiveLearningSession(setPath) {
   state.requestedSetUrl = setUrl;
 
   if (activeSession.modeKey === "sentence") {
-    await startSentenceSet(setPath, activeSession.direction, activeSession.testCardCount, true);
+    await startSentenceSet(setPath, activeSession.direction, activeSession.testCardCount, { resume: true });
     return true;
   }
   if (activeSession.appMode === APP_MODES.TEST || activeSession.modeKey === "test") {
@@ -9870,11 +9916,32 @@ async function sentenceRequest(action, body = {}) {
   return response.data.run;
 }
 
+function acknowledgeSentencePrompt() {
+  const run = state.sentenceSession;
+  if (document.hidden || state.appMode !== APP_MODES.SENTENCE || !run || run.complete || run.shown || run.acknowledging) return;
+  run.acknowledging = true;
+  // Wait for display, rather than consuming a prepared sentence in a hidden tab.
+  state.sentenceShownPromise = new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+    .then(async () => {
+      if (document.hidden || state.sentenceSession !== run || state.appMode !== APP_MODES.SENTENCE) return;
+      await sentenceRequest("shown", { id: run.id, promptId: run.prompt.id });
+      if (state.sentenceSession === run) { run.shown = true; saveSentenceRun(); }
+    }).catch(() => { /* Checking can acknowledge the same prompt again. */ })
+    .finally(() => { run.acknowledging = false; });
+}
+
 function renderSentenceFeedback(message, status, run = null) {
   const feedback = elements.sentenceFeedback;
   feedback.hidden = !message;
   feedback.dataset.status = status;
   elements.sentenceFeedbackText.textContent = message || "";
+  const help = elements.sentenceHelp;
+  const explanation = status === "revise" && !state.sentenceBusy ? run?.help?.explanation : "";
+  help.hidden = !explanation;
+  help.open = false;
+  elements.sentenceHelpExplanation.textContent = explanation || "";
+  elements.sentenceHelpExample.textContent = run?.help?.example || "";
+  elements.sentenceHelpExample.parentElement.hidden = !explanation || !run?.help?.example;
   const excerpt = elements.sentenceFeedbackExcerpt;
   excerpt.replaceChildren();
   excerpt.hidden = true;
@@ -9936,12 +10003,14 @@ function renderSentenceRun() {
   button.textContent = state.sentenceBusy ? "Prüft …" : run.accepted ? "Weiter" : "Prüfen";
 }
 
-async function startSentenceSet(setPath, direction, count, resume = false) {
+async function startSentenceSet(setPath, direction, count, { resume = false, difficulty = "easy" } = {}) {
   state.currentSetPath = setPath;
   state.activeLearningModeKey = "sentence";
+  state.activeSentenceDifficulty = difficulty;
   state.activeLearningDirection = direction;
   state.activeTestCardCount = count;
   state.sentenceSession = null;
+  state.sentenceShownPromise = null;
   setStudentAppMode(APP_MODES.SENTENCE);
   const requestId = ++state.sentenceRequestId;
   state.sentenceBusy = true;
@@ -9956,16 +10025,19 @@ async function startSentenceSet(setPath, direction, count, resume = false) {
     if (resume) {
       try { saved = JSON.parse(sessionStorage.getItem(sentenceStorageKey())); } catch (_) { /* Start new if no saved run. */ }
     }
+    if (window.LerndeckSentenceOptions.getDifficulty(saved?.run?.difficulty)) state.activeSentenceDifficulty = saved.run.difficulty;
     const run = saved?.run?.id
       ? await sentenceRequest("resume", { id: saved.run.id })
-      : await sentenceRequest("start", { direction, count });
+      : await sentenceRequest("start", { direction, count, difficulty: state.activeSentenceDifficulty });
     if (requestId !== state.sentenceRequestId || state.appMode !== APP_MODES.SENTENCE) return;
+    state.activeSentenceDifficulty = run.difficulty || difficulty;
     state.sentenceSession = { ...run, counted: Boolean(saved?.run?.counted) };
     answer.value = saved?.answer || "";
-    if (saved && !run.accepted && saved.answer !== run.checkedAnswer) {
+    if (saved && !run.accepted && String(saved.answer || "").trim() !== run.checkedAnswer) {
       state.sentenceSession.feedback = "";
       state.sentenceSession.status = "ready";
       state.sentenceSession.problem = null;
+      state.sentenceSession.help = null;
     }
     persistActiveLearningSession(setPath, "sentence", APP_MODES.SENTENCE, direction, run.total);
     saveSentenceRun();
@@ -9976,6 +10048,7 @@ async function startSentenceSet(setPath, direction, count, resume = false) {
     if (requestId === state.sentenceRequestId) {
       state.sentenceBusy = false;
       renderSentenceRun();
+      acknowledgeSentencePrompt();
     }
   }
 }
@@ -9984,7 +10057,7 @@ async function handleSentenceSubmit(event) {
   event.preventDefault();
   if (state.sentenceBusy) return;
   const current = state.sentenceSession;
-  if (!current) { await startSentenceSet(state.currentSetPath, state.activeLearningDirection, state.activeTestCardCount); return; }
+  if (!current) { await startSentenceSet(state.currentSetPath, state.activeLearningDirection, state.activeTestCardCount, { difficulty: state.activeSentenceDifficulty }); return; }
   if (current.complete) { await handleReturnToStudentHome(); return; }
   const answer = elements.sentenceAnswer;
   const requestId = ++state.sentenceRequestId;
@@ -9993,6 +10066,7 @@ async function handleSentenceSubmit(event) {
   elements.sentenceFeedbackExcerpt.hidden = true;
   renderSentenceRun();
   try {
+    await state.sentenceShownPromise;
     const run = await sentenceRequest(current.accepted ? "next" : "check", { id: current.id, promptId: current.prompt.id, answer: answer.value });
     if (requestId !== state.sentenceRequestId || state.appMode !== APP_MODES.SENTENCE) return;
     state.sentenceSession = { ...run, counted: current.counted };
@@ -10013,6 +10087,7 @@ async function handleSentenceSubmit(event) {
     if (requestId === state.sentenceRequestId) {
       state.sentenceBusy = false;
       renderSentenceRun();
+      acknowledgeSentencePrompt();
       if (!state.sentenceSession) {
         renderSentenceFeedback("Durchgang abgelaufen. Bitte neu starten.", "error");
       }

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Satzübung mit Einfach/Mittel/Schwer und farbigen SVG-Icons bei der Satzanzahl. Vollständige Bedeutung einschließlich Zeit/Häufigkeit/Ort/Menge/Verneinung sowie korrekte Rechtschreibung werden verlangt; natürliche Varianten bleiben erlaubt. Lockeres konkretes Feedback mit optionaler Erklärung und anderer Grammatik-Beispielsituation, ohne Lösung; gezielte echte Modell-Evaluation mit 30 Basisfällen und weiteren Grenzfällen.
+- Gemischte Satz-Auswahl läuft über kurze Durchgänge und Neustarts weiter: erst das ganze Set, dann Wiederholung. Schwierigkeitswechsel setzt sie nicht zurück. Auswahlmetadaten enthalten keine Antworten; nur sichtbare/bestätigte Karten zählen. Fehlgeschlagene/abgebrochene Vorbereitung verbraucht keine zukünftigen Karten. Bestehende Zugriffs- und Bewertungswege bleiben erhalten.
+- Lehrer-Desktopansicht ruhiger: `Vokabeln · Anzahl`, reduzierte Rahmen leerer Bildaktionen mit klaren Hover-/Fokuszuständen und sekundäre lesbare Metadaten. Keine allgemeine Verdichtung oder Änderung der Bedienwege.
+
 - Satzfeedback ist als eigener Bereich mit Seitenlinie hervorgehoben und benennt konkrete Probleme ohne fertige Lösung. Eine kurze, serverseitig validierte Problemstelle wird rot unterstrichen; Klick wählt sie zur Überarbeitung im Eingabefeld aus. Alte, unklare und technische Fehlermarkierungen bleiben ausgeschlossen.
 
 - Korrigiert: Normale englische Infinitiv-Vokabeln mit führendem `to` akzeptieren in Eingabe und Testen auch die Grundform (`expect` für `to expect`). Die gewählte Antwortsprache wird berücksichtigt; andere Wörter und satzinterne `to` bleiben unverändert erforderlich.

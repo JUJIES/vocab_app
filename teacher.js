@@ -2990,7 +2990,8 @@ function addEditorCard(card = createEmptyEditorCard()) {
 
 function renderEditorCards() {
   elements.setCardList.replaceChildren();
-  elements.setCardCount.textContent = `${state.editorCards.length} Vokabel${state.editorCards.length === 1 ? "" : "n"}`;
+  elements.setCardCount.textContent = String(state.editorCards.length);
+  elements.setCardCount.setAttribute("aria-label", `${state.editorCards.length} Vokabel${state.editorCards.length === 1 ? "" : "n"}`);
   const sideLabels = getEditorCardSideLabels();
 
   const columns = document.createElement("div");

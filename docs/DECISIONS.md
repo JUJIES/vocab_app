@@ -1,5 +1,19 @@
 # Produkt- und Architekturentscheidungen
 
+## 2026-10-03 – Satzstufen, klare Annahme und übertragbare Zusatzhilfe
+
+- Einfach/Mittel/Schwer steuern Begleitsatz und bekannten Wortschatz, nicht Fehlertoleranz. Gemeinsame Stufendefinition für Browser/Server; keine neuen Übungsmodi. Annahme braucht Grammatik, gesamte Bedeutung, Zielwort **und Rechtschreibung**. Zeit/Häufigkeit/Ort/Menge/Bedingung/Verneinung sind Bestandteil der Aussage. Wortstellung, Flexionen und echte UK/US-Varianten bleiben erlaubt.
+- Kurzer persönlicher Hinweis plus optional eingeklappte Erklärung/anderer Grammatik-Beispielsatz. Kein korrigierter Aufgabensatz, kein übersetztes fehlendes Detail und kein verratenes Zielwort. Konkrete Provenienz-/Wortprüfungen verhindern problematische Extras; genau eine begrenzte Modellreparatur mit deaktivierter Zusatzhilfe, danach kontrollierter Fehler statt erfundener Bewertung. Hinweise, markierte Stelle und Zusatzhilfe verfallen beim Überarbeiten. Echte Modellprüfungen und Grenzen: `docs/SENTENCE_EVAL.md`.
+
+## 2026-10-03 – Fortlaufende Satz-Auswahl ist Organisation, keine Bewertung
+
+- Kleine eigene Metadaten-Datei `sentence-order.json` über vorhandenen atomaren `RuntimeJsonStore`; kein zweites Karten-/Bewertungsmodell und keine adaptive Lern-Engine. Identität + Set + Richtung bilden den Auswahlstrom; Schwierigkeit gehört nicht zum Schlüssel. Karten-ID plus Paar-Inhaltshash machen veränderte/neu hinzugefügte Paare wieder ungesehen, ohne alle übrigen zurückzusetzen. Zyklus erst nach vollständiger Abdeckung, keine Duplikate im Lauf und keine unmittelbare Wiederholung an normaler Zyklusgrenze.
+- Auswahl wird bei bestätigter **Anzeige**, nicht beim Vorabplanen verbraucht. Browser `shown` nach sichtbarer Darstellung; `check` dient als alternative Anzeige-Bestätigung. Generierungsfehler oder nie angezeigte Startantworten verbrauchen keine Karte. Pro Strom ist ein aktiver Lauf fortsetzbar, ein neuer erfolgreicher Start ersetzt ältere. Lauf/Satz/Eingabe bleiben temporär, Auswahl übersteht Neustarts. Reset/Abokündigung/Set-Löschen räumen auf; parallele Resets brechen ausstehende Läufe ab. Lehrervorschau erhält einen eigenen Auswahlstrom und schreibt weiterhin keine Tablet-Note.
+
+## 2026-10-03 – Kleine Desktop-Verfeinerung der Lehreroberfläche
+
+- Überschrift `Vokabeln · Anzahl` ersetzt die doppelte Zeile. Leere Bildaktionen behalten ihre sichtbaren Icons und 40px-Flächen, zeigen Rahmen/Fläche erst bei Hover/Fokus/Öffnen. Bestehende Bildkacheln bleiben unverändert. Titel/Inhalt führen, lesbarer Pfad/Status/Zahl sind sekundär. Großzügige Desktop-Aufteilung, Titelbearbeitung, Löschen und bestehende Bedienwege bleiben erhalten.
+
 ## 2026-10-03 – Konkretes Satzfeedback mit gezielter Problemstelle
 
 - Feedback erhält eine beschriftete Fläche mit Seitenlinie und 1–2 kurze, konkrete Hinweise ohne vorgegebene Lösung. Eine optionale kurze Problemstelle stammt als Zitat/Vorkommen aus derselben strukturierten Modellantwort; der Server bestimmt geprüfte Wortgrenzen und Positionen. Keine Tool-Aktion, kein HTML oder frei übernommene Modell-Offsets. Ganze Sätze und unpassende Stellvertreter für fehlende Wörter werden nicht markiert.

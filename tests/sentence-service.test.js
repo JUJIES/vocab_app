@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const { SentenceService, locateProblem } = require("../lib/sentence-service");
 const document = { set: { title: "Context", languages: { source: "de", target: "en" } }, cards: [{ source: { text: "vorübergehend" }, target: { text: "temporarily" }, acceptedAnswers: ["for a while"] }] };
 const prompt = { prefix: "Der Zoo ist ", focus: "vorübergehend", suffix: " geschlossen." };
-const accepted = { grammar: true, meaning: true, target: true, hint: "Gut.", problem: null };
+const accepted = { grammar: true, meaning: true, target: true, spelling: true, hint: "Gut.", help: null, problem: null };
 function service(results) {
   const calls = [];
   return { calls, service: new SentenceService({ client: { responses: { create: async body => {
@@ -125,4 +125,57 @@ test("localized feedback is tied to the checked attempt, never accepted or uncer
   assert.equal((await check("The zoo ist closed temporarily.")).problem, null);
   assert.equal((await check("The zoo is temporarily closed.")).problem, null);
   assert.equal((await s.next("a", run.id, "sets/a.json", run.prompt.id)).problem, null);
+});
+
+test("difficulty controls generation and survives resume; invalid difficulty never calls the provider", async () => {
+  const { service: s, calls } = service([prompt]);
+  await assert.rejects(s.start("a", "sets/a.json", document, "source-target", 1, "hardcore"), error => error.status === 400);
+  assert.equal(calls.length, 0);
+  const run = await s.start("a", "sets/a.json", document, "source-target", 1, "hard");
+  assert.equal(run.difficulty, "hard");
+  assert.equal(s.view(s.get("a", run.id, "sets/a.json")).difficulty, "hard");
+  assert.equal(JSON.parse(calls[0].input[0].content).difficulty, "hard");
+});
+test("recognizable typos block acceptance independently; corrections clear optional help", async () => {
+  const { service: s } = service([prompt, { ...accepted, spelling: false, hint: "Fast geschafft: Prüfe die Schreibweise von „temprarily“.", problem: { quote: "temprarily", occurrence: 0 } }, accepted]);
+  const run = await s.start("a", "sets/a.json", document, "source-target", 1);
+  const revise = await s.check("a", run.id, "sets/a.json", run.prompt.id, "The zoo is temprarily closed.");
+  assert.equal(revise.accepted, false);
+  assert.equal(revise.status, "revise");
+  assert.deepEqual(revise.problem, { start: 11, end: 21 });
+  await assert.rejects(s.next("a", run.id, "sets/a.json", run.prompt.id));
+  assert.equal((await s.check("a", run.id, "sets/a.json", run.prompt.id, "The zoo is temporarily closed.")).help, null);
+});
+test("unsafe transfer examples and invented translated quotes get one bounded repair", async () => {
+  const unsafe = { ...accepted, grammar: false, hint: "Prüfe die Verbform.", help: { explanation: "Das Subjekt steht in der Einzahl.", example: "The shop is temporarily closed." } };
+  const safe = { ...unsafe, help: null };
+  const { service: s, calls } = service([prompt, unsafe, safe]);
+  const run = await s.start("a", "sets/a.json", document, "source-target", 1);
+  const result = await s.check("a", run.id, "sets/a.json", run.prompt.id, "The zoo are temporarily closed.");
+  assert.equal(result.help, null);
+  assert.equal(calls.length, 3);
+  const invented = { ...accepted, meaning: false, hint: "Ergänze „tomorrow“.", help: null };
+  const rejected = service([prompt, invented, invented]).service;
+  const second = await rejected.start("b", "sets/a.json", document, "source-target", 1);
+  await assert.rejects(rejected.check("b", second.id, "sets/a.json", second.prompt.id, "The zoo is temporarily closed."), error => error.status === 503);
+  assert.equal(rejected.get("b", second.id, "sets/a.json").lastAnswer, undefined);
+  assert.equal(rejected.get("b", second.id, "sets/a.json").accepted, false);
+});
+test("malformed optional help never partially accepts or caches a response", async () => {
+  const { service: s } = service([prompt, { ...accepted, help: { explanation: "", example: "" } }]);
+  const run = await s.start("a", "sets/a.json", document, "source-target", 1);
+  await assert.rejects(s.check("a", run.id, "sets/a.json", run.prompt.id, "The zoo is temporarily closed."));
+  assert.equal(s.get("a", run.id, "sets/a.json").accepted, false);
+  assert.equal(s.get("a", run.id, "sets/a.json").lastAnswer, undefined);
+});
+
+test("spelling feedback does not invent letter counts and repairs once", async () => {
+  const unsafe = { ...accepted, spelling: false, hint: "Da fehlt ein Buchstabe." };
+  const safe = { ...unsafe, hint: "Fast da! Prüfe die Schreibweise von temprarily.", help: null };
+  const { service: s, calls } = service([prompt, unsafe, safe]);
+  const run = await s.start("a", "sets/a.json", document, "source-target", 1);
+  const result = await s.check("a", run.id, "sets/a.json", run.prompt.id, "The zoo is temprarily closed.");
+  assert.equal(result.accepted, false);
+  assert.equal(result.feedback, safe.hint);
+  assert.equal(calls.length, 3);
 });

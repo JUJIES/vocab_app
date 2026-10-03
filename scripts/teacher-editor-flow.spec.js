@@ -272,7 +272,7 @@ test("teacher editor keeps a usable add-vocabulary row after every entry", async
   await page.getByRole("button", { name: "Set Zoom in öffnen" }).click();
   const addRow = page.getByRole("button", { name: "Neue Vokabel hinzufügen" });
   await expect(page.getByRole("heading", { name: "Vokabeln" })).toBeVisible();
-  await expect(page.locator("#set-card-count")).toHaveText("2 Vokabeln");
+  await expect(page.locator("#set-card-count")).toHaveText("2");
   await expect(addRow).toBeVisible();
   await expect(addRow.locator("img.set-card-editor-add__icon")).toHaveAttribute("src", "./assets/icons/plus.svg");
   await expect(addRow.locator("img.set-card-editor-add__icon")).toHaveCSS("border-top-width", "0px");
@@ -285,7 +285,7 @@ test("teacher editor keeps a usable add-vocabulary row after every entry", async
 
   await addRow.click();
   await expect(page.locator(".set-card-editor-row")).toHaveCount(3);
-  await expect(page.locator("#set-card-count")).toHaveText("3 Vokabeln");
+  await expect(page.locator("#set-card-count")).toHaveText("3");
   await expect(page.locator(".set-card-editor-row").last().locator("input").first()).toBeFocused();
   await expect(addRow).toBeVisible();
   await page.locator(".set-card-editor-row").last().locator("input").first().fill("school");
