@@ -55,6 +55,26 @@ Der Datensatz umfasst 56 Fälle. Zehn neue Fälle prüfen mehrere Fehlerstellen 
 
 Automatische Abschlussprüfung: **97/97** Produkt-/Diensttests und Syntaxchecks. Kein API-Key oder echtes Schülermaterial wurde ins Repository aufgenommen.
 
+## Echter UI-Nachtest mit dauerhaftem Serverprotokoll (2026-10-03)
+
+Fünf synthetische Lehrervorschauen wurden im Browser vollständig durchgeführt, jeweils mit schrittweiser Überarbeitung. Isolierter Testbestand auf Beelink, identischer Dienstcode zum produktiven Release `6214449`, vorhandener serverseitiger API-Key und GPT-6 Luna: Generierung `none`, Prüfung `low`. Hier wurden **die tatsächlich generierten Ausgangssätze unverändert verwendet**, Antworten regulär eingegeben und reale Modellrückmeldungen gelesen; keine eingesetzten Quellvorlagen oder simulierten Feedbacks.
+
+Die fünf Laufdateien liegen dauerhaft im produktiven Runtime-Ordner `data/translation-logs/2026-10-03/`, erkennbar an `actorKind: teacherPreview` und Set-Titeln `[Synthetischer Feedback-Test 2026-10-03] …`. Account-/Set-Daten blieben im isolierten Testbestand. Screenshots und eine zurückgelesene JSON-Kopie liegen lokal unter `artifacts/translation-feedback-2026-10-03/` (ignorierte Testartefakte, keine Schülerdaten im Repository).
+
+| Fall | Tatsächliche Überarbeitung | Abgaben | Laufdatei (UUID vor `.json`) |
+| --- | --- | --- | --- |
+| Zustandsverb / Schreibweise | `I have sick.` → `I am sik.` → `I am sick.` | 3 | `5f5f066c-f8ea-4cda-80ef-199ae4d57135` |
+| Wortverbindung / nicht zählbares Nomen | `make my homeworks` → `do my homeworks` → `do my homework`, Zeit und Ort erhalten | 3 | `ace4c8bb-bae2-438d-ad08-c201920939c6` |
+| Mehrfachfehler | `like … musik … study` → `likes … musik … study` → `likes … music … study` → `likes … music … studies` | 4 | `3016caf2-c440-4aa4-91bc-6e4c834fafd3` |
+| Ausgelassene Häufigkeit / Verbform | `regelmäßig` fehlt → ergänzt, aber `technician check` → vollständig korrekt | 3 | `eacd90b9-2c11-4fcb-81a4-00257728f325` |
+| Wortstellung / Verbendung | `I learn today English.` → `Today I learns English.` → `Today I learn English.` | 3 | `90c2770d-9df1-4539-bfff-b23620b82300` |
+
+**16 Abgaben: 11 Überarbeitungen, 5 angenommene Endfassungen**, alle fünf Durchgänge mit Weiter abgeschlossen. Keine falsche Annahme oder falsche Ablehnung in dieser kleinen Probe. 17 Bewertungsaufrufe einschließlich einer begrenzten Ausgabe-Reparatur; Prüfzeiten laut Rohdaten durchschnittlich 2,9 Sekunden, maximal 4,8 Sekunden (einschließlich Speicherung). Kein Lasttest.
+
+Feedback gelesen: Alle drei Musik-Fehlerstellen waren markiert; nach Teilkorrekturen wurden nur verbleibende Fehler beanstandet und behobene Stellen konkret gewürdigt. Die fehlende Häufigkeit wurde ausdrücklich genannt, ohne ihre englische Übersetzung vorzugeben oder ein richtiges Wort als Ersatzmarkierung zu unterstreichen. Emoji in jeder Rückmeldung; keine fertige Aufgabenlösung im gelesenen Fehlerfeedback. Bei Verbformen bleibt „passende Endung“ teilweise zu allgemein für schwache Schüler; vorhandene Transferbeispiele helfen, erklären aber beispielsweise den Wechsel von `-y` zu `-ies` nicht ausdrücklich. Das bleibt eine qualitative Beobachtung, kein automatisch bestandener Wirksamkeitsnachweis.
+
+Serverdateien direkt und ausdrücklich als UTF-8 zurückgelesen (Windows PowerShell 5 liest sonst möglicherweise ANSI). Abgabeanzahl/-reihenfolge, tatsächliche Antworten, Ergebnisse, Markierungsspannen, Abschlusszeiten und sämtliche `previousAttemptIds` gegen die chronologischen früheren Versuche geprüft. Dienst-Codehash entspricht der lokalen Live-Fassung. Für die beiden letzten Fälle zusätzlich sämtliche Zitate, Rückmeldungen und Hinweise mit gespeicherten Browser-DOM-Snapshots abgeglichen. Nach Beenden des Testservers und Entfernen seiner Protokoll-Verknüpfung alle fünf Dateien nochmals unverändert aus dem produktiven Ordner zurückgelesen; produktiver Dienst weiterhin gesund. Produktcode und Prompt wurden für diese Probe nicht geändert.
+
 ## Grenzen
 
 Das ist ein gezielter synthetischer Test, keine Wirksamkeitsstudie mit Schülern und keine Garantie für beliebige Sätze. Modelle bleiben variabel. Das Feedback kann fachlich unvollkommen sein; unklare Ergebnisse werden nicht benotet/angenommen. Bei Prompt-/Modelländerungen gleiche Fälle erneut ausführen und besonders die Texte/Beispiele prüfen. Auswahl-Persistenz, sichtbare Bestätigung, Abbruch, Reset und Zyklusgrenzen werden unabhängig in `tests/sentence-order.test.js` getestet; UI in `scripts/sentence-practice.spec.js` (Chromium/WebKit, Hell/Dunkel, Desktop/schmal).
