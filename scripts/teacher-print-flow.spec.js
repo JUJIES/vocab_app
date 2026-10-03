@@ -24,8 +24,8 @@ function buildEditableSet() {
     targetLanguage: "de",
     sourceLabel: "Englisch",
     targetLabel: "Deutsch",
-    cardCount: 15,
-    cards: Array.from({ length: 15 }, (_, index) => ({
+    cardCount: 25,
+    cards: Array.from({ length: 25 }, (_, index) => ({
       id: `card-${index + 1}`,
       front: `English phrase ${index + 1}`,
       back: `Deutsche Übersetzung ${index + 1}`,
@@ -65,12 +65,13 @@ test("teacher creates a temporary list or test PDF from one set", async ({ page 
   await page.route("**/api/teacher/sets/set-1", (route) => route.fulfill({ json: { set: editableSet } }));
 
   await page.goto("/teacher", { waitUntil: "networkidle" });
-  const printButton = page.getByRole("button", { name: /Set Means of transport.*ausdrucken/ });
+  await page.getByRole("button", { name: "Set " + editableSet.title + " öffnen" }).click();
+  const printButton = page.locator("#workspace-print");
   await expect(printButton).toBeVisible();
   await expect(printButton.locator("img")).toHaveAttribute("src", "./assets/icons/print.svg");
-  await page.locator(".teacher-set-row").first().screenshot({ path: testInfo.outputPath("set-actions-desktop.png") });
+  await page.locator("#workspace-editor-actions").screenshot({ path: testInfo.outputPath("set-actions-desktop.png") });
   await page.setViewportSize({ width: 390, height: 780 });
-  await page.locator(".teacher-set-row").first().screenshot({ path: testInfo.outputPath("set-actions-mobile.png") });
+  await page.locator("#workspace-editor-actions").screenshot({ path: testInfo.outputPath("set-actions-mobile.png") });
   await page.setViewportSize({ width: 1150, height: 780 });
   await printButton.click();
 
@@ -135,9 +136,42 @@ test("teacher creates a temporary list or test PDF from one set", async ({ page 
   await expect(page.locator("#print-selection-count")).toHaveText("10 ausgewählt");
   await expect(page.locator("#print-paper")).toBeVisible();
   await expect(page.locator("#print-preview")).toBeHidden();
-  await expect(page.locator(".print-card-row")).toHaveCount(15);
+  await expect(page.locator(".print-card-row")).toHaveCount(25);
   await expect(page.locator(".print-paper__row")).toHaveCount(10);
+  await expect(page.locator("#print-paper > .print-paper")).toHaveCount(1);
+  await expect(page.locator("#print-paper .print-paper__page-number")).toHaveText("Seite 1 / 1");
   await expect(page.locator("#print-download-button")).toBeEnabled();
+  for (let index = 10; index < 25; index += 1) {
+    await page.locator(".print-card-row__toggle").nth(index).click();
+  }
+  await expect(page.locator("#print-selection-count")).toHaveText("25 ausgewählt");
+  await expect(page.locator("#print-paper > .print-paper")).toHaveCount(2);
+  await expect(page.locator(".print-paper__continuation-title")).toHaveText("VOKABELTEST – FORTSETZUNG");
+  await expect(page.locator("#print-paper > .print-paper").nth(1).locator(".print-paper__number").first()).toHaveText("17.");
+  const paginationInstruction = page.getByRole("textbox", { name: "Arbeitsauftrag auf dem Blatt" });
+  const originalInstruction = await paginationInstruction.inputValue();
+  await paginationInstruction.fill(`${originalInstruction} ${"Zusätzlicher Hinweis ".repeat(6)}`);
+  await expect.poll(async () => Number.parseInt(
+    await page.locator("#print-paper > .print-paper").nth(1).locator(".print-paper__number").first().textContent(),
+    10,
+  )).toBeLessThan(17);
+  await paginationInstruction.fill(originalInstruction);
+  await expect(page.locator("#print-paper > .print-paper").nth(1).locator(".print-paper__number").first()).toHaveText("17.");
+  await expect(page.locator("#print-paper .print-paper__page-number")).toHaveText(["Seite 1 / 2", "Seite 2 / 2"]);
+  await page.screenshot({ path: testInfo.outputPath("print-test-two-pages.png"), fullPage: true });
+  await page.locator("#print-paper > .print-paper").nth(1)
+    .screenshot({ path: testInfo.outputPath("print-test-page-2.png") });
+  await page.locator(".print-preview-shell").evaluate((preview) => {
+    const pageTwo = preview.querySelector("#print-paper > .print-paper:nth-child(2)");
+    preview.scrollTop += pageTwo.getBoundingClientRect().top - preview.getBoundingClientRect().top - 12;
+  });
+  await page.screenshot({ path: testInfo.outputPath("print-test-page-2-in-context.png"), fullPage: true });
+  await page.locator(".print-preview-shell").evaluate((preview) => { preview.scrollTop = 0; });
+  for (let index = 10; index < 25; index += 1) {
+    await page.locator(".print-card-row__toggle").nth(index).click();
+  }
+  await expect(page.locator("#print-selection-count")).toHaveText("10 ausgewählt");
+  await expect(page.locator("#print-paper > .print-paper")).toHaveCount(1);
   const previewBounds = await page.locator(".print-preview-shell").boundingBox();
   const footerBounds = await page.locator(".print-footer").boundingBox();
   expect(previewBounds.height).toBeGreaterThan(530);
@@ -213,6 +247,18 @@ test("teacher creates a temporary list or test PDF from one set", async ({ page 
   expect(swapBounds.x + swapBounds.width).toBeLessThanOrEqual(answerBounds.x + 1);
   const firstHandle = page.locator(".print-paper__handle").first();
   const dragFrom = await firstHandle.boundingBox();
+  const dragHandleClientBounds = await firstHandle.evaluate((handle) => {
+    const bounds = handle.getBoundingClientRect();
+    return { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
+  });
+  expect(Math.abs(dragFrom.x - dragHandleClientBounds.x)).toBeLessThan(1);
+  expect(Math.abs(dragFrom.y - dragHandleClientBounds.y)).toBeLessThan(1);
+  expect(Math.abs(dragFrom.y - answerBounds.y)).toBeLessThan(1);
+  expect(await firstHandle.evaluate((handle) => {
+    const bounds = handle.getBoundingClientRect();
+    const target = document.elementFromPoint(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+    return target === handle || handle.contains(target);
+  })).toBe(true);
   const dragTo = await page.locator(".print-paper__row").nth(2).boundingBox();
   await page.mouse.move(dragFrom.x + dragFrom.width / 2, dragFrom.y + dragFrom.height / 2);
   await page.mouse.down();
@@ -290,10 +336,24 @@ test("teacher creates a temporary list or test PDF from one set", async ({ page 
   await printButton.click();
   await dialog.getByRole("button", { name: /Vokabelliste/ }).click();
   await expect(page.locator("#print-zoom-value")).toHaveText("85 %");
+  await expect(page.locator("#print-config")).toBeVisible();
+  await expect(page.locator("#print-selection-count")).toHaveText("25 ausgewählt");
+  await expect(page.locator(".print-card-row")).toHaveCount(25);
   await expect(page.locator("#print-list-paper")).toBeVisible();
   await expect(page.locator("#print-list-paper")).toContainText("English phrase 1");
   await expect(page.locator("#print-list-paper")).toContainText("Deutsche Übersetzung 1");
-  await expect(page.locator(".print-list__row")).toHaveCount(15);
+  await expect(page.locator(".print-list__row")).toHaveCount(25);
+  await expect(page.locator("#print-list-paper > .print-paper")).toHaveCount(2);
+  await expect(page.locator("#print-list-paper > .print-paper").nth(1).locator(".print-list__number").first()).toHaveText("24.");
+  await expect(page.locator("#print-list-paper .print-paper__page-number")).toHaveText(["Seite 1 / 2", "Seite 2 / 2"]);
+  await page.locator("#print-list-paper > .print-paper").nth(1)
+    .screenshot({ path: testInfo.outputPath("print-list-page-2.png") });
+  await page.locator(".print-preview-shell").evaluate((preview) => {
+    const pageTwo = preview.querySelector("#print-list-paper > .print-paper:nth-child(2)");
+    preview.scrollTop += pageTwo.getBoundingClientRect().top - preview.getBoundingClientRect().top - 12;
+  });
+  await page.screenshot({ path: testInfo.outputPath("print-list-page-2-in-context.png"), fullPage: true });
+  await page.locator(".print-preview-shell").evaluate((preview) => { preview.scrollTop = 0; });
   await expect(page.locator(".print-list__term").first()).toContainText("English phrase 1");
   await expect(page.getByRole("button", { name: "Sprachreihenfolge tauschen" })).toBeVisible();
   await expect(page.locator(".print-list__column-swap img")).toHaveJSProperty("complete", true);
@@ -301,15 +361,30 @@ test("teacher creates a temporary list or test PDF from one set", async ({ page 
   await page.screenshot({ path: testInfo.outputPath("print-list-desktop.png"), fullPage: true });
   await page.setViewportSize({ width: 768, height: 1024 });
   await expect(page.locator("#print-list-paper")).toBeVisible();
-  await expect(page.locator(".print-list__row")).toHaveCount(15);
+  await expect(page.locator(".print-list__row")).toHaveCount(25);
   await page.screenshot({ path: testInfo.outputPath("print-list-tablet.png"), fullPage: true });
   await page.setViewportSize({ width: 1150, height: 780 });
-  await expect(page.locator("#print-config")).toBeHidden();
+  await expect(page.locator("#print-config")).toBeVisible();
   await expect(swapDirection).toBeVisible();
   await expect.poll(() => printBodies.at(-1)?.kind).toBe("list");
   expect(printBodies.at(-1).direction).toBe("source-target");
-  expect(printBodies.at(-1).cardIds).toHaveLength(15);
+  expect(printBodies.at(-1).cardIds).toHaveLength(25);
   await expect(page.locator("#print-download-button")).toBeEnabled();
+  const firstListToggle = page.locator(".print-card-row").first().getByRole("button");
+  await firstListToggle.click();
+  await expect(firstListToggle).toHaveAttribute("aria-pressed", "false");
+  await expect(page.locator("#print-selection-count")).toHaveText("24 ausgewählt");
+  await expect(page.locator(".print-list__row")).toHaveCount(24);
+  await expect(page.locator(".print-list__term").first()).toContainText("English phrase 2");
+  await expect.poll(() => printBodies.at(-1)?.cardIds.length).toBe(24);
+  expect(printBodies.at(-1).cardIds).not.toContain("card-1");
+  await firstListToggle.click();
+  await expect(firstListToggle).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#print-selection-count")).toHaveText("25 ausgewählt");
+  await expect(page.locator(".print-list__row")).toHaveCount(25);
+  await expect(page.locator(".print-list__term").first()).toContainText("English phrase 1");
+  await expect.poll(() => printBodies.at(-1)?.cardIds.length).toBe(25);
+  expect(printBodies.at(-1).cardIds[0]).toBe("card-1");
   await swapDirection.click();
   await expect(page.locator(".print-list__term").first()).toContainText("Deutsche Übersetzung 1");
   await expect(page.locator(".print-list__translation").first()).toContainText("English phrase 1");

@@ -4,7 +4,6 @@ const LERNDECK_ICON_PATH = "./assets/icons/lerndeck-stack.svg";
 const TABLET_ICON_PATH = "./assets/icons/tablet-device.svg";
 const STATUS_CONNECTED_ICON_PATH = "./assets/icons/status-connected.svg";
 const STATUS_DISCONNECTED_ICON_PATH = "./assets/icons/status-disconnected.svg";
-const PENCIL_ICON_PATH = "./assets/icons/pencil.svg";
 const EXTERNAL_LINK_ICON_PATH = "./assets/icons/external-link.svg";
 const DELETE_ICON_PATH = "./assets/icons/trash-2.svg";
 const REMOVE_ICON_PATH = "./assets/icons/x.svg";
@@ -13,16 +12,17 @@ const PLUS_ICON_PATH = "./assets/icons/plus.svg";
 const TEACHER_PRACTICE_ICON_PATH = "./assets/icons/learning-modes-open.svg";
 const PRINT_ICON_PATH = "./assets/icons/print.svg";
 const BROKEN_LINK_ICON_PATH = "./assets/icons/broken-link.svg";
+const PRINT_PAGE_WIDTH = 595;
 const PRINT_ZOOM_STEPS = [0.7, 0.85, 1, 1.15];
 const TIMEOUT_ICON_PATH = "./assets/icons/timeout.svg";
 const PASSWORD_ICON_PATH = "./assets/icons/password-svgrepo-com.svg";
 const LAST_TEACHER_STORAGE_KEY = "lerndeck-last-teacher-v1";
-const ADMIN_SET_GROUP_STORAGE_KEY = "lerndeck-admin-set-groups-v1";
 const TAFELRAUM_EMBED = window.self !== window.top
   && new URLSearchParams(window.location.search).get("embed") === "tafelraum";
 
 const state = {
   sets: [],
+  units: [],
   tablets: [],
   activeTab: "sets",
   setPanels: {},
@@ -40,19 +40,25 @@ const state = {
   visualAssetsByCard: {},
   visualPollTimerId: null,
   editorSetId: "",
-  editorSetStatus: "draft",
-  editorDraftVersion: 0,
-  editorSavedDraftVersion: 0,
+  editorOwnerId: "",
+  editorUnitId: "",
+  editorContentRevision: 1,
+  editorConflict: false,
+  editorLoadId: 0,
+  editorMovePromise: null,
+  editorSaveError: false,
+  editorSetStatus: "published",
+  editorChangeVersion: 0,
+  editorSavedVersion: 0,
   editorAutosaveTimerId: null,
   editorAutosavePromise: null,
-  editorView: "choice",
-  editorImportMode: "replace",
-  editorImportReturnView: "choice",
+  editorView: "manual",
   editorFiles: [],
   editorFilePreviewUrls: [],
   editorCards: [],
   editorMetadata: { sourceLanguage: "", targetLanguage: "" },
   editorSideSelection: { front: "", back: "" },
+  editorUsesLegacySides: false,
   printSet: null,
   printKind: "",
   printDirection: "source-target",
@@ -62,8 +68,10 @@ const state = {
   printPreviewTimerId: null,
   printPreviewRequestId: 0,
   printPreviewAbortController: null,
+  printPaginationFrameId: null,
   printTestDraft: null,
 };
+let workspace;
 
 const TEACHER_TAB_COPY = {
   sets: {
@@ -158,15 +166,21 @@ const elements = {
   setEditorOverlay: document.getElementById("set-editor-overlay"),
   setEditorPanel: document.getElementById("set-editor-panel"),
   setEditorTitle: document.getElementById("set-editor-title"),
-  setEditorStatus: document.getElementById("set-editor-status"),
-  setEditorChoice: document.getElementById("set-editor-choice"),
-  setEditorChooseManual: document.getElementById("set-editor-choose-manual"),
-  setEditorChooseImport: document.getElementById("set-editor-choose-import"),
   setEditorClose: document.getElementById("set-editor-close"),
   setEditorCancel: document.getElementById("set-editor-cancel"),
   setEditorForm: document.getElementById("set-editor-form"),
   setEditorFeedback: document.getElementById("set-editor-feedback"),
-  saveSetButton: document.getElementById("save-set-button"),
+  workspaceLoading: document.getElementById("workspace-editor-loading"),
+  workspaceEmpty: document.getElementById("workspace-editor-empty"),
+  workspaceSaveStatus: document.getElementById("workspace-save-status"),
+  workspaceRetrySave: document.getElementById("workspace-retry-save"),
+  workspaceActions: document.getElementById("workspace-editor-actions"),
+  workspaceUseActions: document.getElementById("workspace-use-actions"),
+  workspacePractice: document.getElementById("workspace-practice"),
+  workspacePrint: document.getElementById("workspace-print"),
+  workspaceShare: document.getElementById("workspace-share"),
+  workspaceDelete: document.getElementById("workspace-delete"),
+  workspaceUsage: document.getElementById("workspace-tablet-usage"),
   setTitleInput: document.getElementById("set-title-input"),
   setSubjectInput: document.getElementById("set-subject-input"),
   setSourceLabelInput: document.getElementById("set-source-label-input"),
@@ -175,7 +189,6 @@ const elements = {
   setDescriptionInput: document.getElementById("set-description-input"),
   setCardList: document.getElementById("set-card-editor-list"),
   setCardCount: document.getElementById("set-card-count"),
-  addCardButton: document.getElementById("add-card-button"),
   generateVisualsButton: document.getElementById("generate-visuals-button"),
   regenerateAllVisualsButton: document.getElementById("regenerate-all-visuals-button"),
   visualJobStatus: document.getElementById("visual-job-status"),
@@ -304,12 +317,21 @@ function installTafelraumBridge() {
 }
 
 function bindEvents() {
+  workspace = window.LerndeckTeacherWorkspace.create({
+    data: () => ({ teacher: state.currentTeacher, accounts: state.teacherAccounts, sets: state.sets, units: state.units, jobs: state.visualJobs }),
+    request: requestJson, reload: reloadTeacherData, beforeLeave: confirmEditorLeave, authRequired: showTeacherAuth,
+    openSet: openEditSetEditor, newSet: openNewSetEditor, hideEditor: hideSetEditor,
+    editorId: () => state.editorSetId, editorOwner: () => state.editorOwnerId,
+    editorUnit: () => state.editorUnitId, moveEditor: moveEditorToUnit,
+    editorError: (message) => { elements.setEditorFeedback.textContent = message; }, unitCommitted: commitWorkspaceUnit,
+  });
   document.addEventListener("click", (event) => {
     if (!event.target.closest(".set-card-visual")) {
       closeEditorVisualPopovers();
     }
   });
   elements.setEditorPanel.addEventListener("scroll", positionVisibleEditorVisualPopovers);
+  document.getElementById("workspace-editor").addEventListener("scroll", positionVisibleEditorVisualPopovers);
   window.addEventListener("resize", positionVisibleEditorVisualPopovers);
   elements.authForm.addEventListener("submit", handleTeacherAuthSubmit);
   elements.authAccountSelect.addEventListener("change", () => {
@@ -332,20 +354,50 @@ function bindEvents() {
   elements.printDownloadButton.addEventListener("click", () => { void downloadPrintPdf(); });
   elements.deleteSetCancel.addEventListener("click", closeDeleteSetDialog);
   elements.deleteSetConfirm.addEventListener("click", handleDeleteSet);
-  elements.createSetButton.addEventListener("click", openNewSetEditor);
+  elements.createSetButton.addEventListener("click", () => { void workspace.newSet(); });
+  elements.workspaceRetrySave.addEventListener("click", () => { void persistEditorChanges({ immediate: true }); });
+  elements.workspacePrint.addEventListener("click", () => { void (async () => {
+    if (await persistEditorChanges({ immediate: true })) {
+      const entry = activeEditorSet(); if (entry) await openPrintOverlay(entry);
+    }
+  })(); });
+  elements.workspaceShare.addEventListener("click", () => { void (async () => {
+    if (await persistEditorChanges({ immediate: true })) {
+      const entry = activeEditorSet(); if (entry) openShareOverlay(entry);
+    }
+  })(); });
+  elements.workspaceDelete.addEventListener("click", () => { const entry = activeEditorSet(); if (entry) openDeleteSetDialog(entry); });
+  elements.workspacePractice.addEventListener("click", (event) => {
+    if (elements.workspacePractice.getAttribute("aria-disabled") === "true") { event.preventDefault(); return; }
+    if (!hasUnsavedEditorChanges()) return;
+    event.preventDefault();
+    // Open within the click gesture so browser popup protection permits the student tab.
+    const practiceTab = window.open("about:blank", "_blank");
+    if (practiceTab) practiceTab.opener = null;
+    void (async () => {
+      if (await persistEditorChanges({ immediate: true })) {
+        const url = buildTeacherPracticeUrl(activeEditorSet());
+        if (practiceTab) practiceTab.location.replace(url); else window.location.assign(url);
+      } else practiceTab?.close();
+    })();
+  });
+  window.addEventListener("beforeunload", (event) => {
+    if (hasUnsavedEditorChanges()) { event.preventDefault(); event.returnValue = ""; }
+  });
+  window.addEventListener("pagehide", () => { workspace.remember(); void persistEditorChanges({ immediate: true }); });
+  window.addEventListener("online", () => { if (hasUnsavedEditorChanges() && !state.editorConflict) void persistEditorChanges({ immediate: true }); });
   elements.setEditorClose.addEventListener("click", () => {
     void closeSetEditor();
   });
   elements.setEditorCancel.addEventListener("click", () => {
     void closeSetEditor();
   });
-  elements.setEditorChooseManual.addEventListener("click", openManualSetEditor);
-  elements.setEditorChooseImport.addEventListener("click", openInitialSetImport);
   elements.setOpenImportButton.addEventListener("click", openAppendSetImport);
   elements.setImportBack.addEventListener("click", returnFromSetImport);
-  elements.setEditorForm.addEventListener("submit", handleSaveSet);
-  elements.setEditorForm.addEventListener("input", scheduleEditorDraftSave);
-  elements.addCardButton.addEventListener("click", () => addEditorCard());
+  elements.setEditorForm.addEventListener("submit", (event) => { event.preventDefault(); void persistEditorChanges({ immediate: true }); });
+  elements.setEditorForm.addEventListener("input", (event) => {
+    if (event.target.matches("#set-title-input, #set-subject-input, #set-description-input, .set-card-editor-row .set-editor-field--card input")) scheduleEditorSave();
+  });
   elements.generateVisualsButton.addEventListener("click", handleGenerateMissingVisuals);
   elements.regenerateAllVisualsButton.addEventListener("click", handleRegenerateAllVisuals);
   elements.setImportFilePicker.addEventListener("click", () => elements.setImportFiles.click());
@@ -397,6 +449,16 @@ function bindEvents() {
     button.addEventListener("click", () => {
       setActiveTeacherTab(button.dataset.teacherTab || "sets");
     });
+    button.addEventListener("keydown", (event) => {
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      const tabs = [...elements.tabButtons].filter((tab) => !tab.hidden);
+      const index = tabs.indexOf(button);
+      const nextIndex = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1
+        : (index + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+      event.preventDefault();
+      setActiveTeacherTab(tabs[nextIndex].dataset.teacherTab);
+      tabs[nextIndex].focus();
+    });
   }
 
   document.addEventListener("keydown", (event) => {
@@ -423,11 +485,6 @@ function bindEvents() {
 
       if (!elements.shareOverlay.hidden) {
         closeShareOverlay();
-        return;
-      }
-
-      if (!elements.setEditorOverlay.hidden) {
-        void closeSetEditor();
         return;
       }
 
@@ -512,6 +569,7 @@ async function loadSetIndex() {
 
   state.importConfigured = Boolean(response.data?.importConfigured);
   state.visualConfigured = Boolean(response.data?.visualConfigured);
+  state.units = Array.isArray(response.data?.units) ? response.data.units : [];
   if (response.data?.teacher?.id) {
     const publicAccount = state.teacherAccounts.find((account) => account.id === response.data.teacher.id);
     state.currentTeacher = { ...state.currentTeacher, ...publicAccount, ...response.data.teacher };
@@ -545,7 +603,7 @@ async function loadTabletDirectory() {
 async function reloadTeacherData() {
   const [sets, tablets, visualJobs] = await Promise.all([
     loadSetIndex(),
-    loadTabletDirectory(),
+    isCurrentTeacherAdmin() ? loadTabletDirectory() : Promise.resolve([]),
     loadVisualJobs(),
   ]);
 
@@ -591,6 +649,7 @@ async function loadProtectedTeacherData() {
   try {
     await reloadTeacherData();
     showTeacherShell();
+    await workspace.restore();
     if (state.currentTeacher?.mustChangePassword) {
       openPasswordDialog();
     }
@@ -654,6 +713,7 @@ function normalizeSetEntry(entry) {
       ? Boolean(entry?.editable && ownerTeacherId === state.currentTeacher?.id)
       : Boolean(entry.deletable),
     ownerTeacherId,
+    unitId: typeof entry?.unitId === "string" ? entry.unitId : "",
     ownerDisplayName: typeof entry?.ownerDisplayName === "string" && entry.ownerDisplayName.trim()
       ? entry.ownerDisplayName.trim()
       : ownerTeacherId,
@@ -735,121 +795,17 @@ function isValidSetPath(path) {
 }
 
 function renderSetList() {
-  elements.setList.replaceChildren();
   elements.errorState.hidden = true;
-
-  if (state.sets.length === 0) {
-    elements.emptyState.hidden = false;
-    elements.setsMeta.textContent = "0 Sets";
-    return;
-  }
-
-  elements.emptyState.hidden = true;
-  const ownSets = state.sets.filter((setEntry) => setEntry.ownerTeacherId === state.currentTeacher?.id);
-  const otherSets = state.sets.filter((setEntry) => setEntry.ownerTeacherId !== state.currentTeacher?.id);
-  if (state.currentTeacher?.role === "admin") {
-    elements.setsMeta.textContent = `${ownSets.length} eigene · ${otherSets.length} von anderen`;
-  } else {
-    elements.setsMeta.textContent = formatSetCount(ownSets.length);
-  }
-
-  appendSetCollection(elements.setList, ownSets);
-  if (state.currentTeacher?.role === "admin" && otherSets.length > 0) {
-    const managedSection = document.createElement("section");
-    managedSection.className = "teacher-managed-sets";
-    const heading = document.createElement("h3");
-    heading.className = "teacher-managed-sets__title";
-    heading.textContent = "Sets anderer Lehrkräfte";
-    managedSection.append(heading);
-
-    const groups = new Map();
-    for (const setEntry of otherSets) {
-      const owner = setEntry.ownerTeacherId;
-      if (!groups.has(owner)) groups.set(owner, []);
-      groups.get(owner).push(setEntry);
-    }
-    for (const [ownerTeacherId, sets] of groups) {
-      managedSection.append(createManagedOwnerGroup(ownerTeacherId, sets));
-    }
-    elements.setList.append(managedSection);
-  }
-}
-
-function formatSetCount(count) {
-  return `${count} Set${count === 1 ? "" : "s"}`;
-}
-
-function appendSetCollection(container, sets) {
-  const drafts = sets.filter((setEntry) => setEntry.status === "draft");
-  const publishedSets = sets.filter((setEntry) => setEntry.status !== "draft");
-  if (drafts.length > 0) {
-    container.append(createSetGroup(drafts, `Entwürfe (${drafts.length})`));
-  }
-  if (publishedSets.length > 0) {
-    container.append(createSetGroup(publishedSets, drafts.length ? "Veröffentlichte Sets" : ""));
-  }
-}
-
-function createManagedOwnerGroup(ownerTeacherId, sets) {
-  const details = document.createElement("details");
-  details.className = "teacher-managed-owner";
-  details.dataset.ownerTeacherId = ownerTeacherId;
-  details.open = readOpenAdminSetGroups().includes(ownerTeacherId);
-
-  const summary = document.createElement("summary");
-  summary.className = "teacher-managed-owner__summary";
-  const name = document.createElement("strong");
-  name.textContent = sets[0]?.ownerDisplayName || ownerTeacherId;
-  const count = document.createElement("span");
-  count.textContent = formatSetCount(sets.length);
-  summary.append(name, count);
-
-  const content = document.createElement("div");
-  content.className = "teacher-managed-owner__content";
-  appendSetCollection(content, sets);
-  details.append(summary, content);
-  details.addEventListener("toggle", () => storeOpenAdminSetGroup(ownerTeacherId, details.open));
-  return details;
-}
-
-function readOpenAdminSetGroups() {
-  try {
-    const value = JSON.parse(window.localStorage.getItem(ADMIN_SET_GROUP_STORAGE_KEY) || "[]");
-    return Array.isArray(value) ? value.filter((entry) => typeof entry === "string") : [];
-  } catch (_error) {
-    return [];
-  }
-}
-
-function storeOpenAdminSetGroup(ownerTeacherId, isOpen) {
-  const owners = new Set(readOpenAdminSetGroups());
-  if (isOpen) owners.add(ownerTeacherId);
-  else owners.delete(ownerTeacherId);
-  window.localStorage.setItem(ADMIN_SET_GROUP_STORAGE_KEY, JSON.stringify([...owners]));
-}
-
-function createSetGroup(sets, titleText = "") {
-  const group = document.createElement("section");
-  group.className = "teacher-set-group";
-  if (titleText) {
-    const title = document.createElement("h3");
-    title.className = "teacher-set-group__title";
-    title.textContent = titleText;
-    group.append(title);
-  }
-  const list = document.createElement("div");
-  list.className = "teacher-set-group__list";
-  list.setAttribute("role", "list");
-  for (const setEntry of sets) {
-    list.append(createSetRow(setEntry));
-  }
-  group.append(list);
-  return group;
+  const entry = activeEditorSet();
+  if (entry) state.editorUnitId = entry.unitId;
+  else if (!state.units.some((unit) => unit.id === state.editorUnitId && unit.ownerTeacherId === state.editorOwnerId)) state.editorUnitId = "";
+  workspace.render();
+  updateEditorStatusUi();
 }
 
 function setActiveTeacherTab(nextTab) {
   const previousTab = state.activeTab;
-  state.activeTab = nextTab === "tablets" ? "tablets" : "sets";
+  state.activeTab = nextTab === "tablets" && isCurrentTeacherAdmin() ? "tablets" : "sets";
   updateTeacherShellCopy();
 
   for (const button of elements.tabButtons) {
@@ -894,123 +850,10 @@ function renderTabletList() {
   }
 }
 
-function createSetRow(setEntry) {
-  const row = document.createElement("article");
-  row.className = "teacher-set-row";
-  row.setAttribute("role", "listitem");
-
-  const copy = document.createElement("div");
-  copy.className = "teacher-set-row__copy";
-
-  const title = document.createElement("h3");
-  title.className = "teacher-set-row__title";
-  title.textContent = setEntry.title;
-
-  const titleLine = document.createElement("div");
-  titleLine.className = "teacher-set-row__title-line";
-  titleLine.append(title);
-  if (setEntry.status === "draft") {
-    const draftBadge = document.createElement("span");
-    draftBadge.className = "set-draft-badge";
-    draftBadge.textContent = "Entwurf";
-    titleLine.append(draftBadge);
-  }
-  const visualJob = getLatestVisualJob(setEntry.id);
-  if (isVisualJobActive(visualJob)) {
-    const jobBadge = document.createElement("span");
-    jobBadge.className = "teacher-set-row__visual-job";
-    jobBadge.append(createVisualSpinner(), document.createTextNode(formatVisualJobProgress(visualJob)));
-    titleLine.append(jobBadge);
-  }
-
-  const meta = document.createElement("p");
-  meta.className = "teacher-set-row__meta";
-  meta.textContent = [
-    setEntry.subject,
-    `${setEntry.cardCount} Vokabel${setEntry.cardCount === 1 ? "" : "n"}`,
-    setEntry.description,
-  ]
-    .filter(Boolean)
-    .join(" · ") || "Lernset";
-
-  copy.append(titleLine, meta);
-  if (setEntry.status !== "draft") {
-    copy.append(createTabletUsageBlock(setEntry));
-  }
-
-  const actions = document.createElement("div");
-  actions.className = "teacher-set-row__actions";
-
-  if (setEntry.editable) {
-    const editAction = document.createElement("button");
-    editAction.className = "teacher-set-row__edit";
-    editAction.type = "button";
-    editAction.setAttribute("aria-label", `Set ${setEntry.title} bearbeiten`);
-    editAction.title = "Bearbeiten";
-    editAction.append(createButtonIcon(PENCIL_ICON_PATH));
-    editAction.addEventListener("click", () => {
-      void openEditSetEditor(setEntry);
-    });
-    actions.append(editAction);
-  }
-
-  if (setEntry.status !== "draft") {
-    const practiceAction = document.createElement("button");
-    practiceAction.className = "teacher-set-row__practice";
-    practiceAction.type = "button";
-    practiceAction.setAttribute("aria-label", `Lernmodi für Set ${setEntry.title} öffnen`);
-    practiceAction.title = "Lernmodi öffnen";
-    practiceAction.append(createButtonIcon(TEACHER_PRACTICE_ICON_PATH));
-    practiceAction.addEventListener("click", () => {
-      window.location.assign(buildTeacherPracticeUrl(setEntry));
-    });
-    actions.append(practiceAction);
-
-    const printAction = document.createElement("button");
-    printAction.className = "teacher-set-row__print";
-    printAction.type = "button";
-    printAction.setAttribute("aria-label", `Set ${setEntry.title} ausdrucken`);
-    printAction.title = "Ausdrucken";
-    printAction.append(createButtonIcon(PRINT_ICON_PATH));
-    printAction.addEventListener("click", () => {
-      void openPrintOverlay(setEntry);
-    });
-    actions.append(printAction);
-
-    const shareAction = document.createElement("button");
-    shareAction.className = "teacher-set-row__share";
-    shareAction.type = "button";
-    shareAction.setAttribute("aria-label", `Set ${setEntry.title} teilen`);
-    shareAction.title = "Teilen";
-    shareAction.append(
-      createButtonIcon(EXTERNAL_LINK_ICON_PATH),
-    );
-    shareAction.addEventListener("click", () => {
-      openShareOverlay(setEntry);
-    });
-    actions.append(shareAction);
-  }
-
-  if (setEntry.deletable) {
-    const deleteAction = document.createElement("button");
-    deleteAction.className = "teacher-set-row__delete";
-    deleteAction.type = "button";
-    deleteAction.setAttribute("aria-label", `Set ${setEntry.title} löschen`);
-    deleteAction.title = "Löschen";
-    deleteAction.append(createButtonIcon(DELETE_ICON_PATH));
-    deleteAction.addEventListener("click", () => {
-      openDeleteSetDialog(setEntry);
-    });
-    actions.append(deleteAction);
-  }
-
-  row.append(copy, actions);
-  return row;
-}
-
 function buildTeacherPracticeUrl(setEntry) {
   const url = new URL("index.html", window.location.href);
   url.searchParams.set("teacherPractice", setEntry.id);
+  url.searchParams.set("teacherPracticeTab", "1");
   if (TAFELRAUM_EMBED) {
     url.searchParams.set("embed", "tafelraum");
   }
@@ -1390,10 +1233,12 @@ function createTeacherRequestError(response, fallbackMessage) {
 }
 
 function showTeacherAuth(feedback = "") {
+  document.body.classList.remove("teacher-workspace-visible");
   closeShareOverlay();
   closePrintOverlay();
   closeDeleteSetDialog();
-  closeSetEditor();
+  hideSetEditor();
+  workspace?.reset();
   closePasswordDialog();
   closeTeacherSettingsMenu();
   closeTabletActionMenus();
@@ -1414,6 +1259,7 @@ function showTeacherAuth(feedback = "") {
 }
 
 function showTeacherShell() {
+  document.body.classList.add("teacher-workspace-visible");
   state.authReady = true;
   elements.authPanel.hidden = true;
   elements.shell.hidden = false;
@@ -1421,11 +1267,20 @@ function showTeacherShell() {
   elements.authFeedback.textContent = "";
   const displayName = state.currentTeacher?.displayName || "Lehrkraft";
   elements.profileName.textContent = displayName;
-  const isAdmin = state.currentTeacher?.role === "admin";
+  const isAdmin = isCurrentTeacherAdmin();
+  for (const button of elements.tabButtons) {
+    if (button.dataset.teacherTab === "tablets") button.hidden = !isAdmin;
+  }
+  document.querySelector(".teacher-tabs").hidden = !isAdmin;
+  setActiveTeacherTab(state.activeTab);
   elements.profileRole.hidden = !isAdmin;
   elements.accountStatus.setAttribute("aria-label", `Angemeldet als ${displayName}${isAdmin ? ", Admin" : ""}`);
   closeTeacherSettingsMenu();
   closeTabletActionMenus();
+}
+
+function isCurrentTeacherAdmin() {
+  return state.currentTeacher?.role === "admin";
 }
 
 function toggleTeacherSettingsMenu() {
@@ -1451,7 +1306,6 @@ function syncTeacherModalLock() {
     elements.shareOverlay,
     elements.printOverlay,
     elements.deleteSetOverlay,
-    elements.setEditorOverlay,
   ].some((overlay) => !overlay.hidden);
   document.body.classList.toggle("has-modal-open", hasOpenModal);
 }
@@ -1529,6 +1383,7 @@ async function openPrintOverlay(setEntry) {
     }
 
     state.printSet = response.data?.set || null;
+    if (state.printSet) state.printSet.cards = state.printSet.cards.filter((card) => card.front.trim() && card.back.trim());
     if (!state.printSet || !Array.isArray(state.printSet.cards) || state.printSet.cards.length === 0) {
       throw new Error("Dieses Set enthält keine druckbaren Vokabeln.");
     }
@@ -1566,6 +1421,9 @@ function closePrintOverlay() {
 }
 
 function resetPrintState() {
+  if (state.printPaginationFrameId !== null) {
+    window.cancelAnimationFrame(state.printPaginationFrameId);
+  }
   if (state.printPdfUrl) {
     URL.revokeObjectURL(state.printPdfUrl);
   }
@@ -1575,6 +1433,7 @@ function resetPrintState() {
   state.printZoom = 0.85;
   state.printSelectedCardIds = [];
   state.printPdfUrl = "";
+  state.printPaginationFrameId = null;
   state.printTestDraft = null;
   elements.printCardList.replaceChildren();
   elements.printListPaper.replaceChildren();
@@ -1613,8 +1472,7 @@ function selectPrintKind(kind) {
   elements.printModeView.hidden = true;
   elements.printWorkspace.hidden = false;
   elements.printZoomControls.hidden = false;
-  elements.printConfig.hidden = kind === "list";
-  elements.printLayout.classList.toggle("print-layout--list", kind === "list");
+  elements.printConfig.hidden = false;
   elements.printPaper.hidden = kind !== "test";
   elements.printListPaper.hidden = kind !== "list";
   elements.printPreviewLoading.hidden = true;
@@ -1636,6 +1494,9 @@ function adjustPrintZoom(direction) {
 
 function updatePrintZoom() {
   elements.printPreviewShell.style.setProperty("--print-zoom", String(state.printZoom));
+  const pageStackWidth = `${PRINT_PAGE_WIDTH * state.printZoom}px`;
+  elements.printPaper.style.width = pageStackWidth;
+  elements.printListPaper.style.width = pageStackWidth;
   elements.printZoomValue.textContent = `${Math.round(state.printZoom * 100)} %`;
   elements.printZoomOut.disabled = state.printZoom === PRINT_ZOOM_STEPS[0];
   elements.printZoomIn.disabled = state.printZoom === PRINT_ZOOM_STEPS.at(-1);
@@ -1675,43 +1536,9 @@ function getPrintSideLabels() {
 
 function renderPrintListPaper() {
   if (state.printKind !== "list" || !state.printSet) return;
-  const paper = elements.printListPaper;
   const sourceFirst = state.printDirection === "source-target";
-  const { sourceLabel, targetLabel } = getPrintSideLabels();
-  const eyebrow = document.createElement("div");
-  eyebrow.className = "print-list__eyebrow";
-  eyebrow.textContent = "VOKABELLISTE";
-  const title = document.createElement("h3");
-  title.className = "print-list__title";
-  title.textContent = state.printSet.title || "Lernset";
-  const meta = document.createElement("p");
-  meta.className = "print-list__meta";
-  meta.textContent = [
-    state.printSet.subject,
-    `${state.printSelectedCardIds.length} Vokabel${state.printSelectedCardIds.length === 1 ? "" : "n"}`,
-  ].filter(Boolean).join(" · ");
-  const columns = document.createElement("div");
-  columns.className = "print-list__columns";
-  const [leftLabel, rightLabel] = sourceFirst ? [sourceLabel, targetLabel] : [targetLabel, sourceLabel];
-  for (const label of [leftLabel, rightLabel]) {
-    const heading = document.createElement("span");
-    heading.textContent = label;
-    columns.append(heading);
-  }
-  const swapDirection = document.createElement("button");
-  swapDirection.className = "print-list__column-swap";
-  swapDirection.type = "button";
-  swapDirection.setAttribute("aria-label", "Sprachreihenfolge tauschen");
-  swapDirection.title = "Sprachreihenfolge tauschen";
-  const swapIcon = document.createElement("img");
-  swapIcon.src = "./assets/icons/swap-horizontal.svg";
-  swapIcon.alt = "";
-  swapDirection.append(swapIcon);
-  swapDirection.addEventListener("click", swapPrintDirection);
-  columns.append(swapDirection);
-  const rows = document.createElement("div");
-  rows.className = "print-list__rows";
   const cardsById = new Map(state.printSet.cards.map((card) => [String(card.id), card]));
+  const rowNodes = [];
   state.printSelectedCardIds.forEach((cardId, index) => {
     const card = cardsById.get(cardId);
     if (!card) return;
@@ -1729,13 +1556,113 @@ function renderPrintListPaper() {
     right.className = "print-list__translation";
     right.textContent = sourceFirst ? card.back : card.front;
     row.append(left, right);
-    rows.append(row);
+    rowNodes.push(row);
   });
-  paper.replaceChildren(eyebrow, title, meta, columns, rows);
+  elements.printListPaper.replaceChildren(createPrintListPage(0, rowNodes));
+  paginatePrintListPages();
+}
+
+function createPrintPreviewPage(modifierClass) {
+  const page = document.createElement("section");
+  page.className = `print-paper ${modifierClass}`;
+  return page;
+}
+
+function createPrintListPage(pageIndex, rowNodes) {
+  const page = createPrintPreviewPage("print-paper--list-page");
+  const sourceFirst = state.printDirection === "source-target";
+  const { sourceLabel, targetLabel } = getPrintSideLabels();
+  const eyebrow = document.createElement("div");
+  eyebrow.className = "print-list__eyebrow";
+  eyebrow.textContent = "VOKABELLISTE";
+  const title = document.createElement("h3");
+  title.className = "print-list__title";
+  title.textContent = state.printSet.title || "Lernset";
+  const meta = document.createElement("p");
+  meta.className = "print-list__meta";
+  meta.textContent = pageIndex === 0
+    ? [
+      state.printSet.subject,
+      `${state.printSelectedCardIds.length} Vokabel${state.printSelectedCardIds.length === 1 ? "" : "n"}`,
+    ].filter(Boolean).join(" · ")
+    : "Fortsetzung";
+  const columns = document.createElement("div");
+  columns.className = "print-list__columns";
+  const [leftLabel, rightLabel] = sourceFirst ? [sourceLabel, targetLabel] : [targetLabel, sourceLabel];
+  for (const label of [leftLabel, rightLabel]) {
+    const heading = document.createElement("span");
+    heading.textContent = label;
+    columns.append(heading);
+  }
+  if (pageIndex === 0) {
+    const swapDirection = document.createElement("button");
+    swapDirection.className = "print-list__column-swap";
+    swapDirection.type = "button";
+    swapDirection.setAttribute("aria-label", "Sprachreihenfolge tauschen");
+    swapDirection.title = "Sprachreihenfolge tauschen";
+    const swapIcon = document.createElement("img");
+    swapIcon.src = "./assets/icons/swap-horizontal.svg";
+    swapIcon.alt = "";
+    swapDirection.append(swapIcon);
+    swapDirection.addEventListener("click", swapPrintDirection);
+    columns.append(swapDirection);
+  }
+  const rows = document.createElement("div");
+  rows.className = "print-list__rows";
+  rows.append(...rowNodes);
+  page.append(eyebrow, title, meta, columns, rows);
+  return page;
+}
+
+function schedulePrintPaperPagination() {
+  if (state.printPaginationFrameId !== null) {
+    window.cancelAnimationFrame(state.printPaginationFrameId);
+  }
+  state.printPaginationFrameId = window.requestAnimationFrame(() => {
+    state.printPaginationFrameId = null;
+    if (state.printKind === "list") paginatePrintListPages();
+    else if (state.printKind === "test") paginatePrintTestPages();
+  });
+}
+
+function paginatePreviewRows(rows, firstCapacity, followingCapacity) {
+  const pages = [[]];
+  let remaining = firstCapacity;
+  for (const row of rows) {
+    const height = row.offsetHeight;
+    if (pages.at(-1).length > 0 && height > remaining) {
+      pages.push([]);
+      remaining = followingCapacity;
+    }
+    pages.at(-1).push(row);
+    remaining -= Math.min(height, followingCapacity);
+  }
+  return pages;
+}
+
+function paginatePrintListPages() {
+  if (state.printKind !== "list" || elements.printListPaper.hidden) return;
+  const rows = [...elements.printListPaper.querySelectorAll(".print-list__row")];
+  const groups = paginatePreviewRows(rows, 782 - 151, 782 - 151);
+  elements.printListPaper.replaceChildren(
+    ...groups.map((pageRows, pageIndex) => createPrintListPage(pageIndex, pageRows)),
+  );
+  updatePrintPreviewPageNumbers(elements.printListPaper);
+}
+
+function updatePrintPreviewPageNumbers(stack) {
+  stack.querySelectorAll(".print-paper__page-number").forEach((number) => number.remove());
+  const pages = [...stack.querySelectorAll(":scope > .print-paper")];
+  pages.forEach((page, pageIndex) => {
+    const number = document.createElement("span");
+    number.className = "print-paper__page-number";
+    number.textContent = `Seite ${pageIndex + 1} / ${pages.length}`;
+    page.append(number);
+  });
 }
 
 function renderPrintCardList() {
-  if (state.printKind !== "test" || !state.printSet) {
+  if (!state.printKind || !state.printSet) {
     elements.printCardList.replaceChildren();
     return;
   }
@@ -1754,7 +1681,11 @@ function renderPrintCardList() {
     toggle.className = "print-card-row__toggle";
     toggle.type = "button";
     toggle.setAttribute("aria-pressed", isSelected ? "true" : "false");
-    toggle.setAttribute("aria-label", `${card.front} ${isSelected ? "aus Test entfernen" : "zum Test hinzufügen"}`);
+    const selectionTarget = state.printKind === "test" ? "Test" : "Vokabelliste";
+    toggle.setAttribute(
+      "aria-label",
+      `${card.front} ${isSelected ? `aus ${selectionTarget} entfernen` : `zur ${selectionTarget} hinzufügen`}`,
+    );
 
     const position = document.createElement("span");
     position.className = "print-card-row__position";
@@ -1789,14 +1720,27 @@ function createPrintOrderButton(label, accessibleLabel, disabled, onClick) {
 function togglePrintCard(cardId) {
   const index = state.printSelectedCardIds.indexOf(cardId);
   if (index === -1) {
-    state.printSelectedCardIds.push(cardId);
-    state.printTestDraft.items.set(cardId, createPrintTestItem(cardId));
+    if (state.printKind === "list") {
+      const selectedIds = new Set([...state.printSelectedCardIds, cardId]);
+      state.printSelectedCardIds = state.printSet.cards
+        .map((card) => String(card.id))
+        .filter((id) => selectedIds.has(id));
+    } else {
+      state.printSelectedCardIds.push(cardId);
+      state.printTestDraft.items.set(cardId, createPrintTestItem(cardId));
+    }
   } else {
     state.printSelectedCardIds.splice(index, 1);
-    state.printTestDraft.items.delete(cardId);
+    state.printTestDraft?.items.delete(cardId);
   }
   renderPrintCardList();
-  renderPrintPaper();
+  if (state.printKind === "test") {
+    renderPrintPaper();
+  } else {
+    renderPrintListPaper();
+    clearPrintPreview({ keepPaper: true });
+    schedulePrintPreview(0);
+  }
 }
 
 function moveSelectedPrintCard(cardId, offset) {
@@ -1817,32 +1761,37 @@ function createPrintTestItem(cardId) {
   return { side: state.printDirection, prompt: getPrintCardPrompt(cardId, state.printDirection), edited: false };
 }
 
-function createPrintPaperField({ value, label, maxLength, placeholder = "", multiline = false, onInput }) {
+function createPrintPaperField({
+  value, label, maxLength, placeholder = "", multiline = false, onInput, onLayout = null,
+}) {
   const field = document.createElement(multiline ? "textarea" : "input");
   field.className = "print-paper__field";
   field.setAttribute("aria-label", label);
   field.maxLength = maxLength;
   field.value = value;
   field.placeholder = placeholder;
+  const resizeMultilineField = () => {
+    if (!multiline) return;
+    field.style.height = "auto";
+    field.style.height = `${field.scrollHeight}px`;
+  };
   if (multiline) {
     field.rows = 1;
-    field.addEventListener("input", () => {
-      field.style.height = "auto";
-      field.style.height = `${field.scrollHeight}px`;
-    });
-    requestAnimationFrame(() => {
-      field.style.height = `${field.scrollHeight}px`;
-    });
   }
-  field.addEventListener("input", () => onInput(field.value));
+  field.addEventListener("input", () => {
+    resizeMultilineField();
+    onInput(field.value);
+    onLayout?.();
+  });
   return field;
 }
 
 function renderPrintPaper() {
   if (state.printKind !== "test" || !state.printTestDraft) return;
   const draft = state.printTestDraft;
-  const paper = elements.printPaper;
-  paper.replaceChildren();
+  const stack = elements.printPaper;
+  stack.replaceChildren();
+  const page = createPrintPreviewPage("print-paper--test-page");
   const heading = document.createElement("div");
   heading.className = "print-paper__eyebrow";
   heading.textContent = "VOKABELTEST";
@@ -1870,19 +1819,23 @@ function renderPrintPaper() {
   instruction.className = "print-paper__instruction";
   const instructionLabel = document.createElement("span");
   instructionLabel.textContent = "ARBEITSAUFTRAG";
-  instruction.append(instructionLabel, createPrintPaperField({
+  const instructionField = createPrintPaperField({
     value: draft.instruction, label: "Arbeitsauftrag auf dem Blatt", maxLength: 240, multiline: true,
     onInput: (value) => { draft.instruction = value; },
-  }));
+    onLayout: schedulePrintPaperPagination,
+  });
+  instruction.append(instructionLabel, instructionField);
   const columns = document.createElement("div");
   columns.className = "print-paper__columns";
   const leftHeading = createPrintPaperField({
     value: draft.leftHeading, label: "Überschrift der linken Spalte", maxLength: 40,
     onInput: (value) => { draft.leftHeading = value; updatePrintTestValidity(); },
+    onLayout: schedulePrintPaperPagination,
   });
   const rightHeading = createPrintPaperField({
     value: draft.rightHeading, label: "Überschrift der rechten Spalte", maxLength: 40,
     onInput: (value) => { draft.rightHeading = value; updatePrintTestValidity(); },
+    onLayout: schedulePrintPaperPagination,
   });
   const swapDirection = document.createElement("button");
   swapDirection.className = "print-paper__column-swap";
@@ -1915,6 +1868,7 @@ function renderPrintPaper() {
     const prompt = createPrintPaperField({
       value: item.prompt, label: `Begriff ${index + 1} auf dem Blatt`, maxLength: 500, multiline: true,
       onInput: (value) => { item.prompt = value; item.edited = true; updatePrintTestValidity(); },
+      onLayout: schedulePrintPaperPagination,
     });
     prompt.classList.add("print-paper__prompt");
     const answerLine = document.createElement("span");
@@ -1941,8 +1895,62 @@ function renderPrintPaper() {
   const score = document.createElement("div");
   score.className = "print-paper__score";
   score.innerHTML = '<span>Punkte: <i></i></span><span>Prozent: <i></i></span><span>Note: <i></i></span>';
-  paper.append(heading, header, instruction, columns, rows, score);
+  page.append(heading, header, instruction, columns, rows, score);
+  stack.append(page);
+  stack.querySelectorAll("textarea.print-paper__field").forEach((field) => {
+    field.style.height = `${field.scrollHeight}px`;
+  });
+  paginatePrintTestPages();
   updatePrintTestValidity();
+}
+
+function createPrintTestContinuationPage(draft, rowNodes) {
+  const page = createPrintPreviewPage("print-paper--test-page print-paper--test-continuation");
+  const heading = document.createElement("div");
+  heading.className = "print-paper__continuation-title";
+  heading.textContent = "VOKABELTEST – FORTSETZUNG";
+  const columns = document.createElement("div");
+  columns.className = "print-paper__columns print-paper__continuation-columns";
+  for (const value of [draft.leftHeading, "", draft.rightHeading]) {
+    const label = document.createElement("span");
+    label.textContent = value;
+    columns.append(label);
+  }
+  const rows = document.createElement("div");
+  rows.className = "print-paper__rows";
+  rows.append(...rowNodes);
+  page.append(heading, columns, rows);
+  return page;
+}
+
+function paginatePrintTestPages() {
+  if (state.printKind !== "test" || elements.printPaper.hidden || !state.printTestDraft) return;
+  const stack = elements.printPaper;
+  if (stack.querySelector(".print-paper__row.is-dragging")) return;
+  const firstPage = stack.querySelector(":scope > .print-paper--test-page:not(.print-paper--test-continuation)");
+  if (!firstPage) return;
+  const rows = [...stack.querySelectorAll(".print-paper__row")];
+  const firstRows = firstPage.querySelector(":scope > .print-paper__rows");
+  const columns = firstPage.querySelector(":scope > .print-paper__columns");
+  const instructionField = firstPage.querySelector(".print-paper__instruction .print-paper__field");
+  const instructionHeight = Math.max(instructionField?.scrollHeight || 0, instructionField?.offsetHeight || 0);
+  const firstRowsY = Math.max(219, Math.ceil(148 + instructionHeight + 50));
+  columns.style.top = `${firstRowsY - 39}px`;
+  firstRows.style.top = `${firstRowsY}px`;
+
+  const groups = paginatePreviewRows(rows, 725 - firstRowsY, 725 - 130);
+  const oldContinuationPages = [...stack.querySelectorAll(":scope > .print-paper--test-continuation")];
+  const score = stack.querySelector(".print-paper__score");
+  const empty = firstRows.querySelector(".print-paper__empty");
+  firstRows.replaceChildren(...groups[0]);
+  if (rows.length === 0 && empty) firstRows.append(empty);
+  const continuationPages = groups.slice(1)
+    .map((pageRows) => createPrintTestContinuationPage(state.printTestDraft, pageRows));
+  oldContinuationPages.forEach((continuationPage) => continuationPage.remove());
+  stack.append(...continuationPages);
+  const lastPage = continuationPages.at(-1) || firstPage;
+  if (score) lastPage.append(score);
+  updatePrintPreviewPageNumbers(stack);
 }
 
 function bindPrintRowDragHandle(handle, row, cardId) {
@@ -1974,7 +1982,6 @@ function bindPrintRowDragHandle(handle, row, cardId) {
   handle.addEventListener("pointerdown", (event) => {
     if (event.button !== 0) return;
     event.preventDefault();
-    handle.setPointerCapture(event.pointerId);
     row.classList.add("is-dragging");
     dragPreview = document.createElement("div");
     dragPreview.className = "print-paper__drag-preview";
@@ -1982,6 +1989,7 @@ function bindPrintRowDragHandle(handle, row, cardId) {
     dragPreview.textContent = row.querySelector(".print-paper__prompt")?.value || "Vokabel";
     document.body.append(dragPreview);
     moveDragPreview(event);
+    handle.setPointerCapture(event.pointerId);
   });
   handle.addEventListener("pointermove", (event) => {
     if (!handle.hasPointerCapture(event.pointerId)) return;
@@ -2221,6 +2229,14 @@ async function handleDeleteSet() {
   elements.deleteSetFeedback.textContent = "Wird gelöscht …";
 
   try {
+    if (state.editorSetId === setEntry.id) {
+      if (!await persistEditorChanges({ immediate: true })) {
+        elements.deleteSetFeedback.textContent = "Änderungen konnten nicht gespeichert werden. Bitte erneut versuchen.";
+        elements.deleteSetCancel.disabled = false;
+        elements.deleteSetConfirm.disabled = false;
+        return;
+      }
+    }
     const response = await requestJson(`/api/teacher/sets/${encodeURIComponent(setEntry.id)}`, {
       method: "DELETE",
       auth: "teacher",
@@ -2230,6 +2246,7 @@ async function handleDeleteSet() {
     }
 
     state.sets = state.sets.filter((entry) => entry.id !== setEntry.id);
+    if (state.editorSetId === setEntry.id) { hideSetEditor(); workspace.markEditor(""); workspace.showLibrary(); }
     renderSetList();
     closeDeleteSetDialog();
     try {
@@ -2643,131 +2660,192 @@ async function handleDecoupleTablet(tablet) {
   }
 }
 
-function openNewSetEditor() {
-  resetEditorDraftState({ status: "draft" });
-  state.editorSetId = "";
-  state.editorCards = [];
+function activeEditorSet() {
+  return state.sets.find((entry) => entry.id === state.editorSetId) || null;
+}
+
+function commitWorkspaceUnit(unit, removed = false) {
+  state.units = state.units.filter((entry) => entry.id !== unit.id);
+  if (!removed) state.units.push(unit);
+  else {
+    state.sets = state.sets.map((entry) => entry.unitId === unit.id ? { ...entry, unitId: "" } : entry);
+    if (state.editorUnitId === unit.id) state.editorUnitId = "";
+  }
+  renderSetList();
+}
+
+function hasUnsavedEditorChanges() {
+  return !elements.setEditorOverlay.hidden && state.editorChangeVersion > state.editorSavedVersion;
+}
+
+async function confirmEditorLeave() {
+  if (state.editorMovePromise) {
+    try { await state.editorMovePromise; } catch (_) { return false; }
+  }
+  return elements.setEditorOverlay.hidden || await persistEditorChanges({ immediate: true });
+}
+
+function applyEditableSet(editableSet) {
+  document.getElementById("workspace-set-menu").open = false;
+  resetEditorSaveState({ status: editableSet.status });
+  state.editorSetId = editableSet.id;
+  state.editorContentRevision = editableSet.contentRevision || 1;
+  state.editorOwnerId = editableSet.ownerTeacherId || state.currentTeacher?.id || "";
+  state.editorUnitId = editableSet.unitId || "";
   state.visualAssetsByCard = {};
-  state.editorMetadata = { sourceLanguage: "", targetLanguage: "" };
-  state.editorSideSelection = { front: "", back: "" };
-  elements.setEditorTitle.textContent = "Neues Set";
-  updateEditorStatusUi();
-  elements.setTitleInput.value = "";
-  elements.setSubjectInput.value = "";
-  elements.setDescriptionInput.value = "";
-  elements.setSourceLabelInput.value = "";
-  elements.setTargetLabelInput.value = "";
+  state.editorCards = Array.isArray(editableSet.cards) ? editableSet.cards.map(normalizeEditorCard).filter(Boolean) : [];
+  restoreEditorSideSelection(editableSet);
+  elements.setTitleInput.value = editableSet.title || "";
+  elements.setSubjectInput.value = editableSet.subject || "";
+  elements.setDescriptionInput.value = editableSet.description || "";
   clearEditorSideError();
   elements.setEditorFeedback.textContent = "";
   resetSetImportInputs();
-  window.LerndeckUiMotion.show(elements.setEditorOverlay);
-  syncTeacherModalLock();
-  showSetEditorView("choice");
+  if (!state.editorCards.length) state.editorCards.push(createEmptyEditorCard());
+  renderEditorCards();
+  updateEditorStatusUi();
+}
+
+async function openNewSetEditor() {
+  const requestId = ++state.editorLoadId;
+  elements.workspaceLoading.hidden = false;
+  elements.setEditorPanel.inert = true;
+  try {
+    const response = await requestJson("/api/teacher/sets", { auth: "teacher", method: "POST", body: {
+      title: "Neues Lernset", unitId: workspace.currentUnit(), sideSelection: { front: "", back: "" }, cards: [],
+    } });
+    if (!response.ok) throw createTeacherRequestError(response, "Set konnte nicht erstellt werden.");
+    if (requestId !== state.editorLoadId) return false;
+    applyEditableSet(response.data.set);
+    const summary = normalizeSetEntry({ ...response.data.set, editable: true, deletable: true });
+    state.sets.unshift(summary);
+    elements.setEditorOverlay.hidden = false; elements.workspaceEmpty.hidden = true;
+    showSetEditorView("manual"); workspace.markEditor(state.editorSetId); updateEditorStatusUi();
+    return true;
+  } catch (error) {
+    if (error?.requiresAuth) showTeacherAuth(error.message);
+    else document.getElementById("workspace-library-feedback").textContent = error.message;
+    return false;
+  } finally {
+    elements.workspaceLoading.hidden = true; elements.setEditorPanel.inert = false;
+  }
 }
 
 async function openEditSetEditor(setEntry) {
+  if (!setEntry) return false;
+  const requestId = ++state.editorLoadId;
+  closeEditorVisualPopovers();
+  elements.workspaceLoading.hidden = false; elements.workspaceEmpty.hidden = true;
+  elements.setEditorPanel.inert = true;
   try {
-    const response = await requestJson(`/api/teacher/sets/${encodeURIComponent(setEntry.id)}`, {
-      auth: "teacher",
-    });
-    if (!response.ok) {
-      throw createTeacherRequestError(response, "Set konnte nicht geladen werden.");
-    }
-
-    const editableSet = response.data?.set;
-    resetEditorDraftState({ status: editableSet.status });
-    state.editorSetId = editableSet.id;
-    state.visualAssetsByCard = {};
-    state.editorCards = Array.isArray(editableSet.cards)
-      ? editableSet.cards.map(normalizeEditorCard).filter(Boolean)
-      : [];
-    restoreEditorSideSelection(editableSet);
-    elements.setEditorTitle.textContent = editableSet.status === "draft" ? "Entwurf bearbeiten" : "Set bearbeiten";
-    updateEditorStatusUi();
-    elements.setTitleInput.value = editableSet.title || "";
-    elements.setSubjectInput.value = editableSet.subject || "";
-    elements.setDescriptionInput.value = editableSet.description || "";
-    clearEditorSideError();
-    elements.setEditorFeedback.textContent = "";
-    resetSetImportInputs();
-    if (state.editorCards.length === 0) {
-      state.editorCards.push(createEmptyEditorCard());
-    }
-    renderEditorCards();
-    window.LerndeckUiMotion.show(elements.setEditorOverlay);
-    syncTeacherModalLock();
+    const response = await requestJson(`/api/teacher/sets/${encodeURIComponent(setEntry.id)}`, { auth: "teacher" });
+    if (requestId !== state.editorLoadId) return false;
+    if (!response.ok) throw createTeacherRequestError(response, "Set konnte nicht geladen werden.");
+    applyEditableSet(response.data.set);
+    elements.setEditorOverlay.hidden = false;
     showSetEditorView("manual");
-    if (editableSet.status === "published") {
-      await refreshEditorVisualWorkspace();
-    }
+    workspace.refreshEditorUnit();
+    if (state.editorSetStatus === "published") void refreshEditorVisualWorkspace();
+    return true;
   } catch (error) {
-    if (error?.requiresAuth) {
-      showTeacherAuth(error.message);
-      return;
+    if (requestId !== state.editorLoadId) return false;
+    if (error?.requiresAuth) showTeacherAuth(error.message);
+    else {
+      elements.workspaceEmpty.hidden = !elements.setEditorOverlay.hidden;
+      elements.setEditorFeedback.textContent = error.message || "Set konnte nicht geladen werden.";
+      document.getElementById("workspace-library-feedback").textContent = error.message;
     }
-    showTeacherActionError(error.message || "Set konnte nicht geladen werden.");
-  }
-}
-
-async function closeSetEditor({ skipDraftSave = false } = {}) {
-  if (!skipDraftSave && state.editorSetStatus === "draft") {
-    const saved = await persistEditorDraft({ immediate: true });
-    if (!saved) {
-      return;
-    }
-  }
-  window.LerndeckUiMotion.hide(elements.setEditorOverlay, {
-    after: () => {
-      elements.setEditorFeedback.textContent = "";
-      resetSetImportInputs();
-      syncTeacherModalLock();
-    },
-  });
-  if (state.editorSetStatus === "draft" && state.editorSetId) {
-    try {
-      await reloadTeacherData();
-    } catch (error) {
-      console.error("Unable to refresh drafts:", error);
+    return false;
+  } finally {
+    if (requestId === state.editorLoadId) {
+      elements.workspaceLoading.hidden = true; elements.setEditorPanel.inert = false;
     }
   }
 }
 
-function resetEditorDraftState({ status = "draft" } = {}) {
+function hideSetEditor() {
+  state.editorLoadId += 1;
+  if (state.editorAutosaveTimerId) clearTimeout(state.editorAutosaveTimerId);
+  state.editorAutosaveTimerId = null;
+  elements.setEditorOverlay.hidden = true;
+  elements.workspaceEmpty.hidden = false; elements.workspaceLoading.hidden = true;
+  state.editorSetId = "";
+  resetSetImportInputs(); closeEditorVisualPopovers();
+}
+
+async function closeSetEditor() {
+  if (!await confirmEditorLeave()) return;
+  workspace.showLibrary();
+}
+
+async function moveEditorToUnit(unitId) {
+  const operation = (async () => {
+    if (!await persistEditorChanges({ immediate: true })) {
+      throw new Error("Änderungen konnten nicht gespeichert werden. Bitte erneut versuchen.");
+    }
+    if (!state.editorSetId) { state.editorUnitId = unitId; return; }
+    const setId = state.editorSetId;
+    const response = await requestJson(`/api/teacher/sets/${encodeURIComponent(setId)}/unit`, { method: "PUT", body: { unitId } });
+    if (!response.ok) throw createTeacherRequestError(response, "Zuordnung konnte nicht gespeichert werden.");
+    if (state.editorSetId === setId) state.editorUnitId = response.data.set.unitId;
+    state.sets = state.sets.map((entry) => entry.id === setId ? { ...entry, unitId: response.data.set.unitId } : entry);
+    renderSetList();
+  })();
+  state.editorMovePromise = operation;
+  try { await operation; } finally { if (state.editorMovePromise === operation) state.editorMovePromise = null; }
+}
+
+function resetEditorSaveState({ status = "published" } = {}) {
   if (state.editorAutosaveTimerId) {
     window.clearTimeout(state.editorAutosaveTimerId);
   }
   state.editorSetStatus = status === "draft" ? "draft" : "published";
-  state.editorDraftVersion = 0;
-  state.editorSavedDraftVersion = 0;
+  state.editorChangeVersion = 0;
+  state.editorSavedVersion = 0;
   state.editorAutosaveTimerId = null;
   state.editorAutosavePromise = null;
+  state.editorSaveError = false;
+  state.editorConflict = false;
 }
 
 function updateEditorStatusUi() {
-  const isDraft = state.editorSetStatus === "draft";
-  elements.setEditorStatus.hidden = !isDraft;
-  elements.saveSetButton.textContent = isDraft ? "Set veröffentlichen" : "Änderungen speichern";
+  elements.setEditorTitle.textContent = elements.setTitleInput.value.trim() || "Unbenanntes Set";
+  const pending = hasUnsavedEditorChanges() || Boolean(state.editorAutosavePromise);
+  const status = state.editorSaveError ? "Nicht gespeichert" : pending ? "Wird gespeichert …" : "Gespeichert";
+  if (elements.workspaceSaveStatus.textContent !== status) elements.workspaceSaveStatus.textContent = status;
+  elements.workspaceSaveStatus.dataset.state = state.editorSaveError ? "error" : pending ? "pending" : "saved";
+  elements.workspaceRetrySave.hidden = !state.editorSaveError || state.editorConflict;
+  const entry = activeEditorSet();
+  const available = Boolean(entry);
+  const ready = Boolean(editorHasLearningSides()
+    && state.editorCards.some((card) => card.front.trim() && card.back.trim()));
+  elements.workspaceUseActions.hidden = !available;
+  elements.workspacePractice.setAttribute("aria-disabled", ready ? "false" : "true");
+  if (ready && entry) elements.workspacePractice.href = buildTeacherPracticeUrl(entry);
+  else elements.workspacePractice.removeAttribute("href");
+  elements.workspacePrint.disabled = !available || !ready;
+  elements.workspaceShare.disabled = !available;
+  elements.workspaceDelete.hidden = !entry?.deletable;
+  document.getElementById("workspace-set-menu").hidden = !entry?.deletable;
+  elements.workspaceUsage.replaceChildren();
+  elements.workspaceUsage.hidden = !available || !isCurrentTeacherAdmin();
+  if (!elements.workspaceUsage.hidden) elements.workspaceUsage.append(createTabletUsageBlock(entry));
+  workspace?.refreshEditorUnit();
   renderVisualControls();
 }
 
 function showSetEditorView(view) {
-  const nextView = ["choice", "manual", "import"].includes(view) ? view : "manual";
+  const nextView = view === "import" ? "import" : "manual";
   state.editorView = nextView;
   elements.setEditorPanel.dataset.editorView = nextView;
-  elements.setEditorChoice.hidden = nextView !== "choice";
   elements.setEditorForm.hidden = nextView !== "manual";
   elements.setImportSection.hidden = nextView !== "import";
-  const activeView = nextView === "choice"
-    ? elements.setEditorChoice
-    : nextView === "import"
-      ? elements.setImportSection
-      : elements.setEditorForm;
+  elements.workspaceActions.dataset.editorView = nextView;
+  const activeView = nextView === "import" ? elements.setImportSection : elements.setEditorForm;
   window.LerndeckUiMotion.revealSurface(activeView);
 
   requestAnimationFrame(() => {
-    if (nextView === "choice") {
-      elements.setEditorChooseManual.focus();
-    } else if (nextView === "import") {
+    if (nextView === "import") {
       elements.setImportText.focus();
     } else {
       elements.setTitleInput.focus();
@@ -2775,30 +2853,13 @@ function showSetEditorView(view) {
   });
 }
 
-function openManualSetEditor() {
-  if (state.editorCards.length === 0) {
-    state.editorCards.push(createEmptyEditorCard());
-    renderEditorCards();
-  }
-  showSetEditorView("manual");
-}
-
-function openInitialSetImport() {
-  state.editorImportMode = "replace";
-  state.editorImportReturnView = "choice";
-  elements.setImportFeedback.textContent = "";
-  showSetEditorView("import");
-}
-
 function openAppendSetImport() {
-  state.editorImportMode = "append";
-  state.editorImportReturnView = "manual";
   elements.setImportFeedback.textContent = "";
   showSetEditorView("import");
 }
 
 function returnFromSetImport() {
-  showSetEditorView(state.editorImportReturnView);
+  showSetEditorView("manual");
 }
 
 function resetSetImportInputs() {
@@ -2831,6 +2892,7 @@ function normalizeEditorCard(card) {
     front: typeof card.front === "string" ? card.front : "",
     back,
     initialBack: back,
+    newForVisuals: card.newForVisuals ?? !card.id,
     acceptedAnswers: Array.isArray(card.acceptedAnswers)
       ? card.acceptedAnswers.filter((answer) => typeof answer === "string" && answer.trim())
       : [],
@@ -2856,6 +2918,7 @@ function normalizeEditorVisual(visual) {
 function addEditorCard(card = createEmptyEditorCard()) {
   state.editorCards.push(normalizeEditorCard(card) || createEmptyEditorCard());
   renderEditorCards();
+  scheduleEditorSave();
   requestAnimationFrame(() => {
     const rows = elements.setCardList.querySelectorAll(".set-card-editor-row");
     rows[rows.length - 1]?.querySelector("input")?.focus();
@@ -2907,7 +2970,7 @@ function renderEditorCards() {
         state.editorCards.push(createEmptyEditorCard());
       }
       renderEditorCards();
-      scheduleEditorDraftSave();
+      scheduleEditorSave();
     });
 
     row.append(number, front, back, visual, remove);
@@ -2960,6 +3023,7 @@ function createEditorSideSelect(side) {
   select.value = state.editorSideSelection[side];
   select.disabled = side === "back" && !state.editorSideSelection.front;
   select.addEventListener("change", () => {
+    state.editorUsesLegacySides = false;
     state.editorSideSelection[side] = select.value;
     if (side === "front") {
       state.editorSideSelection.back = "";
@@ -2967,13 +3031,16 @@ function createEditorSideSelect(side) {
     applyEditorSideSelection();
     renderEditorCards();
     requestAnimationFrame(() => {
+      // Rebuilding the selects leaves focus on the body. If the user has already
+      // chosen another field, the deferred guidance must not steal their input.
+      if (document.activeElement !== document.body) return;
       if (side === "front") {
         elements.setCardList.querySelector('[data-editor-side-select="back"]')?.focus();
       } else {
         elements.setCardList.querySelector(".set-card-editor-row input")?.focus();
       }
     });
-    scheduleEditorDraftSave();
+    scheduleEditorSave();
   });
   field.append(title, select);
   return field;
@@ -2995,27 +3062,25 @@ function applyEditorSideSelection() {
 
 function restoreEditorSideSelection(set) {
   const inferred = window.LerndeckSetSides.infer(set);
+  state.editorUsesLegacySides = !set.sideSelection && !inferred && set.status === "published";
   const useExisting = set.status === "published" || Boolean(set.sidePreset);
   const selected = useExisting && inferred && (!set.sidePreset || inferred.preset === set.sidePreset)
     ? inferred : null;
-  state.editorSideSelection = { front: selected?.front || "", back: selected?.back || "" };
-  applyEditorSideSelection();
+  state.editorSideSelection = set.sideSelection ? { ...set.sideSelection } : { front: selected?.front || "", back: selected?.back || "" };
+  if (state.editorUsesLegacySides) {
+    elements.setSourceLabelInput.value = set.sourceLabel || "Begriff";
+    elements.setTargetLabelInput.value = set.targetLabel || "Übersetzung oder Definition";
+    state.editorMetadata = { sourceLanguage: set.sourceLanguage, targetLanguage: set.targetLanguage };
+  } else applyEditorSideSelection();
+}
+
+function editorHasLearningSides() {
+  return state.editorUsesLegacySides || Boolean(window.LerndeckSetSides.resolve(state.editorSideSelection.front, state.editorSideSelection.back));
 }
 
 function clearEditorSideError() {
   elements.setSideFeedback.hidden = true;
   elements.setCardList.classList.remove("is-side-invalid");
-}
-
-function requireEditorSideSelection() {
-  if (window.LerndeckSetSides.resolve(state.editorSideSelection.front, state.editorSideSelection.back)) return true;
-  elements.setSideFeedback.hidden = false;
-  elements.setCardList.classList.add("is-side-invalid");
-  const missingSide = state.editorSideSelection.front ? "back" : "front";
-  const select = elements.setCardList.querySelector(`[data-editor-side-select="${missingSide}"]`);
-  select?.scrollIntoView({ behavior: "smooth", block: "center" });
-  select?.focus({ preventScroll: true });
-  return false;
 }
 
 function createEditorVisualControl(card, index) {
@@ -3028,7 +3093,7 @@ function createEditorVisualControl(card, index) {
   const trigger = document.createElement("button");
   trigger.className = "set-card-visual__trigger";
   trigger.type = "button";
-  trigger.disabled = !card.id || state.editorSetStatus !== "published";
+  trigger.disabled = !card.front.trim() || !card.back.trim() || !editorHasLearningSides();
   trigger.setAttribute("aria-label", activeAsset ? `Bild zu Vokabel ${index + 1} ansehen` : `Bild zu Vokabel ${index + 1} erstellen`);
   trigger.setAttribute("aria-expanded", "false");
   if (activeAsset?.url) {
@@ -3050,7 +3115,7 @@ function createEditorVisualControl(card, index) {
   });
   shell.append(trigger);
 
-  if (card.id && state.editorSetStatus === "published") {
+  if (card.front.trim() && card.back.trim() && state.editorSetStatus === "published") {
     const popover = document.createElement("section");
     popover.className = "set-card-visual__popover";
     popover.classList.toggle("set-card-visual__popover--with-image", Boolean(activeAsset?.url));
@@ -3119,9 +3184,18 @@ function createEditorVisualControl(card, index) {
 function positionEditorVisualPopover(shell) {
   const popover = shell.querySelector(".set-card-visual__popover");
   if (!popover || !popover.getClientRects().length) return;
-  const panel = elements.setEditorPanel.getBoundingClientRect();
+  const editor = document.getElementById("workspace-editor").getBoundingClientRect();
+  const toolbar = elements.workspaceActions.getBoundingClientRect();
+  const columns = elements.setCardList.querySelector(".set-card-editor-columns")?.getBoundingClientRect();
+  const panel = {
+    left: Math.max(0, editor.left), top: Math.max(0, editor.top, toolbar.bottom, columns?.bottom || 0),
+    right: Math.min(window.innerWidth, editor.right), bottom: Math.min(window.innerHeight, editor.bottom),
+  };
+  panel.width = panel.right - panel.left;
+  panel.height = panel.bottom - panel.top;
   const anchor = shell.getBoundingClientRect();
   const inset = 12;
+  if (panel.width <= 2 * inset || panel.height <= 2 * inset) return;
   popover.style.width = `${Math.min(popover.classList.contains("set-card-visual__popover--with-image") ? 448 : 200, panel.width - 2 * inset)}px`;
   popover.style.maxHeight = `${panel.height - 2 * inset}px`;
   let { width, height } = popover.getBoundingClientRect();
@@ -3198,13 +3272,15 @@ function renderVisualControls() {
   const isPublished = state.editorSetStatus === "published" && Boolean(state.editorSetId);
   const job = isPublished ? getLatestVisualJob(state.editorSetId) : null;
   const active = isVisualJobActive(job);
-  const missingCount = state.editorCards.filter((card) => card.id && !card.visual).length;
+  const readyCards = state.editorCards.filter((card) => card.front.trim() && card.back.trim());
+  const newCards = readyCards.filter((card) => card.newForVisuals && !card.visual);
+  const missingCount = (newCards.length ? newCards : readyCards.filter((card) => !card.visual)).length;
   const visualCount = state.editorCards.filter((card) => card.id && card.visual).length;
-  const actionsAvailable = isPublished && !active;
+  const actionsAvailable = isPublished && !active && Boolean(editorHasLearningSides());
   elements.generateVisualsButton.hidden = !actionsAvailable || missingCount === 0;
   elements.generateVisualsButton.disabled = !state.visualConfigured || active || missingCount === 0;
   elements.generateVisualsButton.querySelector("span").textContent = missingCount > 0
-    ? `Bilder erstellen (${missingCount})`
+    ? `${newCards.length ? "Neue Bilder" : "Bilder erstellen"} (${missingCount})`
     : "Bilder erstellt";
   elements.regenerateAllVisualsButton.hidden = !actionsAvailable || visualCount === 0;
   elements.regenerateAllVisualsButton.disabled = !state.visualConfigured || active;
@@ -3235,11 +3311,14 @@ async function refreshEditorVisualWorkspace() {
   if (!state.editorSetId || state.editorSetStatus !== "published") {
     return;
   }
+  const setId = state.editorSetId;
+  const loadId = state.editorLoadId;
   try {
     const [workspaceResponse, setResponse] = await Promise.all([
       requestJson(`/api/teacher/sets/${encodeURIComponent(state.editorSetId)}/visual-assets`, { auth: "teacher" }),
       requestJson(`/api/teacher/sets/${encodeURIComponent(state.editorSetId)}`, { auth: "teacher" }),
     ]);
+    if (setId !== state.editorSetId || loadId !== state.editorLoadId || elements.setEditorOverlay.hidden) return;
     if (!workspaceResponse.ok || !setResponse.ok) {
       throw createTeacherRequestError(
         !workspaceResponse.ok ? workspaceResponse : setResponse,
@@ -3264,9 +3343,9 @@ async function refreshEditorVisualWorkspace() {
     const serverCards = new Map((setResponse.data?.set?.cards || []).map((card) => [card.id, card]));
     for (const card of state.editorCards) {
       const serverCard = serverCards.get(card.id);
-      card.visual = normalizeEditorVisual(serverCard?.visual);
+      card.visual = serverCard?.front === card.front.trim() && serverCard?.back === card.back.trim() ? normalizeEditorVisual(serverCard.visual) : null;
     }
-    renderEditorCards();
+    refreshEditorVisualControls();
     scheduleVisualJobPolling();
   } catch (error) {
     console.error("Unable to refresh visual workspace:", error);
@@ -3275,20 +3354,25 @@ async function refreshEditorVisualWorkspace() {
 }
 
 async function handleGenerateMissingVisuals() {
+  if (!await persistEditorChanges({ immediate: true })) return;
   if (!state.editorSetId) {
     return;
   }
   elements.generateVisualsButton.disabled = true;
   try {
+    const newCards = state.editorCards.filter((card) => card.newForVisuals && card.front.trim() && card.back.trim() && !card.visual);
+    const cardIds = newCards.map((card) => card.id);
     const response = await requestJson(`/api/teacher/sets/${encodeURIComponent(state.editorSetId)}/visual-jobs`, {
       auth: "teacher",
       method: "POST",
+      body: cardIds.length ? { cardIds } : {},
     });
     if (!response.ok) {
       throw createTeacherRequestError(response, "Bilderstellung konnte nicht gestartet werden.");
     }
     const job = normalizeVisualJob(response.data?.job);
     if (job) {
+      newCards.forEach((card) => { card.newForVisuals = false; });
       state.visualJobs = [job, ...state.visualJobs.filter((entry) => entry.setId !== job.setId)];
     }
     renderVisualControls();
@@ -3301,10 +3385,11 @@ async function handleGenerateMissingVisuals() {
 }
 
 async function handleRegenerateAllVisuals() {
+  if (!await persistEditorChanges({ immediate: true })) return;
   if (!state.editorSetId) {
     return;
   }
-  const cardCount = state.editorCards.filter((card) => card.id).length;
+  const cardCount = state.editorCards.filter((card) => card.id && card.front.trim() && card.back.trim()).length;
   const confirmed = window.confirm(
     `Alle ${cardCount} Bilder dieses Sets fachlich neu planen und erstellen? Die bisherigen Varianten bleiben in der Bildauswahl erhalten.`,
   );
@@ -3334,6 +3419,7 @@ async function handleRegenerateAllVisuals() {
 }
 
 async function handleRegenerateCardVisual(card, instruction = "") {
+  if (!await persistEditorChanges({ immediate: true })) return;
   if (!state.editorSetId || !card?.id) {
     return;
   }
@@ -3358,6 +3444,7 @@ async function handleRegenerateCardVisual(card, instruction = "") {
 }
 
 async function handleSelectVisualAsset(card, asset) {
+  if (!await persistEditorChanges({ immediate: true })) return;
   try {
     const response = await requestJson(
       `/api/teacher/sets/${encodeURIComponent(state.editorSetId)}/cards/${encodeURIComponent(card.id)}/visual`,
@@ -3428,8 +3515,11 @@ function createEditorInput(labelText, value, onInput, { compact = false, side = 
   }
   const input = document.createElement("input");
   input.type = "text";
+  if (side) input.maxLength = side === "front" ? 500 : 1000;
   input.value = value;
-  input.addEventListener("input", () => onInput(input.value));
+  input.addEventListener("input", () => {
+    onInput(input.value);
+  });
   label.append(labelCopy, input);
   return label;
 }
@@ -3566,23 +3656,18 @@ async function handleCreateImportDraft() {
         text,
         instruction,
         files,
-        purpose: state.editorImportMode === "replace" ? "create_set" : "append_cards",
+        purpose: state.editorCards.every((card) => !card.front.trim() && !card.back.trim()) ? "create_set" : "append_cards",
       },
     });
     if (!response.ok) {
       throw createTeacherRequestError(response, "Material konnte nicht verarbeitet werden.");
     }
 
+    const wasAppended = state.editorCards.some((card) => card.front.trim() || card.back.trim());
     const importedCardCount = applyImportDraft(response.data?.draft);
-    const wasAppended = state.editorImportMode === "append";
     resetSetImportInputs();
     showSetEditorView("manual");
-    if (state.editorSetStatus === "draft") {
-      const draftSaved = await persistEditorDraft({ immediate: true });
-      if (!draftSaved) {
-        return;
-      }
-    }
+    if (!await persistEditorChanges({ immediate: true })) return;
     elements.setEditorFeedback.textContent = response.data?.importMethod === "openai"
       ? `${importedCardCount} Vokabel${importedCardCount === 1 ? "" : "n"} automatisch ${wasAppended ? "hinzugefügt" : "erstellt"}. Bitte kurz prüfen.`
       : `${importedCardCount} Vokabel${importedCardCount === 1 ? "" : "n"} ${wasAppended ? "hinzugefügt" : "übernommen"}. Bitte kurz prüfen.`;
@@ -3608,28 +3693,16 @@ function applyImportDraft(draft) {
     throw new Error("Der Entwurf enthält keine vollständigen Vokabeln.");
   }
 
-  const shouldAppend = state.editorImportMode === "append";
-
-  if (shouldAppend) {
-    const existingCards = state.editorCards.filter((card) => card.front.trim() || card.back.trim());
-    state.editorCards = [...existingCards, ...importedCards];
-
-    if (!state.editorSetId) {
-      elements.setTitleInput.value = elements.setTitleInput.value || draft.title || "Neues Lernset";
-      elements.setSubjectInput.value = elements.setSubjectInput.value || draft.subject || "";
-      elements.setDescriptionInput.value = elements.setDescriptionInput.value || draft.description || "";
-    }
-  } else {
-    elements.setTitleInput.value = draft.title || elements.setTitleInput.value || "Neues Lernset";
-    elements.setSubjectInput.value = draft.subject || "";
-    elements.setDescriptionInput.value = draft.description || "";
-    state.editorSideSelection = { front: "", back: "" };
-    applyEditorSideSelection();
-    state.editorCards = importedCards;
+  const existingCards = state.editorCards.filter((card) => card.front.trim() || card.back.trim());
+  state.editorCards = [...existingCards, ...importedCards];
+  if (existingCards.length === 0 && elements.setTitleInput.value === "Neues Lernset") {
+    elements.setTitleInput.value = draft.title || "Neues Lernset";
+    elements.setSubjectInput.value ||= draft.subject || "";
+    elements.setDescriptionInput.value ||= draft.description || "";
   }
 
   renderEditorCards();
-  scheduleEditorDraftSave();
+  scheduleEditorSave();
   return importedCards.length;
 }
 
@@ -3671,33 +3744,24 @@ function inferImportFileType(file) {
   }[extension] || "application/octet-stream";
 }
 
-function scheduleEditorDraftSave() {
-  if (state.editorSetStatus !== "draft") {
-    return;
-  }
-  state.editorDraftVersion += 1;
-  if (state.editorAutosaveTimerId) {
-    window.clearTimeout(state.editorAutosaveTimerId);
-  }
-  const { payload } = buildEditorDraftPayload();
-  if (!state.editorSetId && !state.editorAutosavePromise && hasMeaningfulEditorDraft(payload)) {
-    state.editorAutosaveTimerId = null;
-    void persistEditorDraft();
-    return;
-  }
+function scheduleEditorSave() {
+  state.editorChangeVersion += 1;
+  if (!state.editorConflict) state.editorSaveError = false;
+  updateEditorStatusUi();
+  if (state.editorAutosaveTimerId) window.clearTimeout(state.editorAutosaveTimerId);
   state.editorAutosaveTimerId = window.setTimeout(() => {
     state.editorAutosaveTimerId = null;
-    void persistEditorDraft();
+    if (!state.editorConflict) void persistEditorChanges();
   }, 700);
 }
 
-function buildEditorDraftPayload() {
+function buildEditorPayload() {
   const cardRefs = [];
   const cards = [];
   for (const card of state.editorCards) {
     const front = card.front.trim();
     const back = card.back.trim();
-    if (!front && !back) {
+    if (!front && !back && !card.id) {
       continue;
     }
     cardRefs.push(card);
@@ -3707,7 +3771,7 @@ function buildEditorDraftPayload() {
       back,
       acceptedAnswers: [
         back,
-        ...card.acceptedAnswers.map((answer) => answer.trim()).filter(Boolean),
+        ...card.acceptedAnswers.map((answer) => answer.trim()).filter((answer) => answer && (answer !== card.initialBack || answer === back)),
       ].filter(Boolean),
     });
   }
@@ -3723,188 +3787,94 @@ function buildEditorDraftPayload() {
       sourceLanguage: state.editorMetadata.sourceLanguage,
       targetLanguage: state.editorMetadata.targetLanguage,
       sidePreset: window.LerndeckSetSides.resolve(state.editorSideSelection.front, state.editorSideSelection.back)?.preset || null,
+      sideSelection: state.editorUsesLegacySides ? null : { ...state.editorSideSelection },
+      unitId: state.editorUnitId,
       cards,
     },
   };
 }
 
-function hasMeaningfulEditorDraft(payload) {
-  return Boolean(
-    payload.title.trim()
-    || payload.subject.trim()
-    || payload.description.trim()
-    || payload.cards.length > 0
-  );
-}
-
-async function persistEditorDraft({ immediate = false } = {}) {
-  if (state.editorSetStatus !== "draft") {
-    return true;
-  }
-  if (state.editorAutosaveTimerId) {
-    window.clearTimeout(state.editorAutosaveTimerId);
-    state.editorAutosaveTimerId = null;
-  }
+async function persistEditorChanges({ immediate = false } = {}) {
+  if (elements.setEditorOverlay.hidden || !state.editorSetId) return true;
+  if (state.editorConflict) return false;
+  if (state.editorAutosaveTimerId) window.clearTimeout(state.editorAutosaveTimerId);
+  state.editorAutosaveTimerId = null;
   if (state.editorAutosavePromise) {
-    const previousSaveSucceeded = await state.editorAutosavePromise;
-    if (!previousSaveSucceeded && immediate) {
-      return false;
-    }
+    const succeeded = await state.editorAutosavePromise;
+    if (!succeeded) return false;
+    return persistEditorChanges({ immediate });
   }
-  if (state.editorSavedDraftVersion >= state.editorDraftVersion) {
-    return true;
-  }
-
-  const { payload, cardRefs } = buildEditorDraftPayload();
-  if (!hasMeaningfulEditorDraft(payload)) {
-    return true;
-  }
-
-  const saveVersion = state.editorDraftVersion;
-  const keepalive = JSON.stringify(payload).length <= 60_000;
-  const path = state.editorSetId
-    ? `/api/teacher/set-drafts/${encodeURIComponent(state.editorSetId)}`
-    : "/api/teacher/set-drafts";
-  elements.setEditorFeedback.textContent = "Entwurf wird gespeichert …";
-
-  const saveOperation = (async () => {
+  if (!hasUnsavedEditorChanges()) return true;
+  const { payload, cardRefs } = buildEditorPayload();
+  const saveVersion = state.editorChangeVersion;
+  const loadId = state.editorLoadId;
+  const setId = state.editorSetId;
+  payload.expectedContentRevision = state.editorContentRevision;
+  const operation = (async () => {
     try {
-      const response = await requestJson(path, {
-        method: state.editorSetId ? "PUT" : "POST",
-        auth: "teacher",
-        body: payload,
-        keepalive,
+      const response = await requestJson(`/api/teacher/sets/${encodeURIComponent(setId)}`, {
+        auth: "teacher", method: "PUT", body: payload, keepalive: new TextEncoder().encode(JSON.stringify(payload)).byteLength <= 60_000,
       });
       if (!response.ok) {
-        throw createTeacherRequestError(response, "Entwurf konnte nicht gespeichert werden.");
+        if (response.data?.code === "SET_CONTENT_CONFLICT") state.editorConflict = true;
+        throw createTeacherRequestError(response, "Änderungen konnten nicht gespeichert werden.");
       }
-
-      const savedSet = response.data?.set;
-      state.editorSetId = typeof savedSet?.id === "string" ? savedSet.id : state.editorSetId;
-      state.editorSetStatus = savedSet?.status === "draft" ? "draft" : state.editorSetStatus;
-      const savedCards = Array.isArray(savedSet?.cards) ? savedSet.cards : [];
+      if (loadId !== state.editorLoadId || setId !== state.editorSetId) return true;
+      const saved = response.data.set;
+      state.editorContentRevision = saved.contentRevision;
       cardRefs.forEach((card, index) => {
-        if (!card.id && typeof savedCards[index]?.id === "string") {
-          card.id = savedCards[index].id;
-        }
+        const serverCard = saved.cards[index];
+        if (!serverCard) return;
+        card.id = serverCard.id;
+        if (card.front.trim() === payload.cards[index].front && card.back.trim() === payload.cards[index].back) {
+          card.visual = normalizeEditorVisual(serverCard.visual);
+        } else card.visual = null;
       });
-      state.editorSavedDraftVersion = Math.max(state.editorSavedDraftVersion, saveVersion);
-      elements.setEditorTitle.textContent = "Entwurf bearbeiten";
-      updateEditorStatusUi();
-      elements.setEditorFeedback.textContent = "Entwurf gespeichert";
+      state.editorSavedVersion = saveVersion;
+      state.editorSaveError = false;
+      const existing = activeEditorSet();
+      const summary = normalizeSetEntry({ ...existing, ...saved, tablets: existing?.tablets || [],
+        deletable: state.editorOwnerId === state.currentTeacher?.id });
+      state.sets = [summary, ...state.sets.filter((entry) => entry.id !== setId)];
+      workspace.markEditor(setId);
+      refreshEditorVisualControls();
+      elements.setEditorFeedback.textContent = "";
       return true;
     } catch (error) {
-      if (error?.requiresAuth) {
-        showTeacherAuth(error.message);
-        return false;
+      if (loadId !== state.editorLoadId) return false;
+      state.editorSaveError = true;
+      elements.setEditorFeedback.textContent = error.message || "Änderungen konnten nicht gespeichert werden.";
+      if (error.requiresAuth) {
+        const login = document.createElement("a");
+        login.href = "./teacher.html"; login.target = "_blank"; login.rel = "noopener";
+        login.textContent = "Anmeldung öffnen";
+        elements.setEditorFeedback.replaceChildren(document.createTextNode("Sitzung abgelaufen. Deine Eingaben bleiben hier erhalten. "), login,
+          document.createTextNode(" und danach erneut versuchen."));
       }
-      console.error("Unable to autosave set draft:", error);
-      elements.setEditorFeedback.textContent = error.message || "Entwurf konnte nicht gespeichert werden.";
       return false;
     }
   })();
-
-  state.editorAutosavePromise = saveOperation;
-  const succeeded = await saveOperation;
-  if (state.editorAutosavePromise === saveOperation) {
-    state.editorAutosavePromise = null;
-  }
-  if (succeeded && state.editorDraftVersion > state.editorSavedDraftVersion && !immediate) {
-    state.editorAutosaveTimerId = window.setTimeout(() => {
-      state.editorAutosaveTimerId = null;
-      void persistEditorDraft();
-    }, 250);
-  }
-  if (immediate && succeeded && state.editorDraftVersion > state.editorSavedDraftVersion) {
-    return persistEditorDraft({ immediate: true });
+  state.editorAutosavePromise = operation;
+  updateEditorStatusUi();
+  const succeeded = await operation;
+  if (state.editorAutosavePromise === operation) state.editorAutosavePromise = null;
+  updateEditorStatusUi();
+  if (succeeded && hasUnsavedEditorChanges()) {
+    if (immediate) return persistEditorChanges({ immediate: true });
+    state.editorAutosaveTimerId = window.setTimeout(() => { void persistEditorChanges(); }, 250);
   }
   return succeeded;
 }
 
-async function handleSaveSet(event) {
-  event.preventDefault();
-  if (!requireEditorSideSelection()) return;
-  const preparedCards = state.editorCards.map((card) => ({
-      id: card.id,
-      front: card.front.trim(),
-      back: card.back.trim(),
-      acceptedAnswers: [
-        card.back.trim(),
-        ...card.acceptedAnswers
-          .map((answer) => answer.trim())
-          .filter((answer) => answer && (answer !== card.initialBack || answer === card.back.trim())),
-      ],
-    }));
-  const incompleteCardIndex = preparedCards.findIndex((card) => Boolean(card.front) !== Boolean(card.back));
-  if (incompleteCardIndex >= 0) {
-    elements.setEditorFeedback.textContent = `Vokabel ${incompleteCardIndex + 1} ist noch unvollständig.`;
-    return;
-  }
-  const cards = preparedCards.filter((card) => card.front && card.back);
-
-  if (!elements.setTitleInput.value.trim()) {
-    elements.setEditorFeedback.textContent = "Bitte einen Titel eingeben.";
-    elements.setTitleInput.focus();
-    return;
-  }
-  if (cards.length === 0) {
-    elements.setEditorFeedback.textContent = "Mindestens eine vollständige Vokabel ist erforderlich.";
-    return;
-  }
-
-  if (state.editorSetStatus === "draft") {
-    const draftSaved = await persistEditorDraft({ immediate: true });
-    if (!draftSaved) {
-      return;
+// Updating save acknowledgements and images must never replace the input elements.
+function refreshEditorVisualControls() {
+  elements.setCardList.querySelectorAll(".set-card-editor-row").forEach((row, index) => {
+    const previous = row.querySelector(".set-card-visual");
+    if (previous && !previous.contains(document.activeElement) && state.editorCards[index]) {
+      previous.replaceWith(createEditorVisualControl(state.editorCards[index], index));
     }
-  }
-
-  const payload = {
-    title: elements.setTitleInput.value,
-    subject: elements.setSubjectInput.value,
-    description: elements.setDescriptionInput.value,
-    sourceLabel: elements.setSourceLabelInput.value,
-    targetLabel: elements.setTargetLabelInput.value,
-    sourceLanguage: state.editorMetadata.sourceLanguage,
-    targetLanguage: state.editorMetadata.targetLanguage,
-    sidePreset: window.LerndeckSetSides.resolve(state.editorSideSelection.front, state.editorSideSelection.back).preset,
-    cards,
-  };
-  const path = state.editorSetId
-    ? `/api/teacher/sets/${encodeURIComponent(state.editorSetId)}`
-    : "/api/teacher/sets";
-
-  elements.saveSetButton.disabled = true;
-  elements.setEditorFeedback.textContent = "Wird gespeichert …";
-  try {
-    const response = await requestJson(path, {
-      method: state.editorSetId ? "PUT" : "POST",
-      auth: "teacher",
-      body: payload,
-    });
-    if (!response.ok) {
-      throw createTeacherRequestError(response, "Set konnte nicht gespeichert werden.");
-    }
-    const savedSet = normalizeSetEntry(response.data?.set);
-    state.editorSetId = savedSet?.id || state.editorSetId;
-    state.editorSetStatus = "published";
-    state.editorSavedDraftVersion = state.editorDraftVersion;
-    updateEditorStatusUi();
-    await reloadTeacherData();
-    await closeSetEditor({ skipDraftSave: true });
-    if (savedSet) {
-      await openShareOverlay(savedSet);
-    }
-  } catch (error) {
-    if (error?.requiresAuth) {
-      showTeacherAuth(error.message);
-      return;
-    }
-    console.error("Unable to save set:", error);
-    elements.setEditorFeedback.textContent = error.message || "Set konnte nicht gespeichert werden.";
-  } finally {
-    elements.saveSetButton.disabled = false;
-  }
+  });
+  renderVisualControls();
 }
 
 async function handleCopyLink() {
@@ -4021,6 +3991,7 @@ async function handlePasswordChange(event) {
 }
 
 async function handleTeacherLogout() {
+  if (!await confirmEditorLeave()) return;
   try {
     await requestJson("/api/teacher/session", {
       method: "DELETE",
@@ -4044,6 +4015,7 @@ async function requestJson(path, options = {}) {
     method: options.method || "GET",
     headers,
     credentials: "same-origin",
+    signal: options.signal,
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
     keepalive: Boolean(options.keepalive),
   });

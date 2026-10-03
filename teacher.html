@@ -20,7 +20,7 @@
     </script>
     <link rel="stylesheet" href="./pwa-splash.css?v=2026-09-30-splash-contrast-v2" />
     <script src="./appearance.js?v=2026-09-30-appearance-v4" data-appearance-scope="teacher"></script>
-    <link rel="stylesheet" href="./teacher.css?v=2026-09-30-appearance-v4" />
+    <link rel="stylesheet" href="./teacher.css?v=2026-10-03-editor-header-v1" />
     <link rel="stylesheet" href="./appearance.css?v=2026-09-30-appearance-v4" />
     <link rel="stylesheet" href="./ui-motion.css?v=2026-08-30-ui-motion-v1" />
     <script src="./pwa.js?v=2026-08-30-pwa-splash-v3" defer></script>
@@ -28,7 +28,8 @@
     <script src="./tafelraum-embed.js?v=2026-09-08-content-zoom-layout-v2" defer></script>
     <script src="./set-side-options.js?v=2026-09-13-side-selection-v1" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js" defer></script>
-    <script src="./teacher.js?v=2026-09-30-appearance-v4" defer></script>
+    <script src="./teacher-workspace.js?v=2026-10-03-autosave-v1" defer></script>
+    <script src="./teacher.js?v=2026-10-03-autosave-v1" defer></script>
   </head>
   <body>
     <div class="pwa-splash" role="status" aria-label="Lerndeck wird geladen">
@@ -162,30 +163,142 @@
         role="tabpanel"
         data-teacher-panel="sets"
       >
-        <div class="teacher-section__header">
-          <div>
-            <h2 id="sets-title" class="teacher-section__title">Meine Sets</h2>
+        <div id="teacher-workspace" class="teacher-workspace" data-mobile-view="library">
+          <aside id="workspace-units" class="workspace-units" aria-label="Units">
+            <h2 class="workspace-heading">Bibliothek</h2>
+            <label id="workspace-owner-field" class="workspace-owner-field" hidden><span>Lehrkraft</span><select id="workspace-owner" aria-label="Bibliothek der Lehrkraft"></select></label>
+            <nav id="workspace-navigation" aria-label="Set-Bibliothek"></nav>
+            <button id="workspace-create-unit" class="workspace-unit-create" type="button">+ Unit anlegen</button>
+            <form id="workspace-unit-form" class="workspace-unit-form" hidden>
+              <label for="workspace-unit-name">Unit-Name</label><input id="workspace-unit-name" maxlength="80" required />
+              <div class="workspace-inline-actions"><button class="teacher-button" type="submit">Speichern</button><button id="workspace-unit-cancel" class="teacher-button teacher-button--secondary" type="button">Abbrechen</button></div>
+            </form>
+            <p id="workspace-library-feedback" class="teacher-auth__feedback" role="status" aria-live="polite"></p>
+          </aside>
+          <section id="workspace-library" class="workspace-library" aria-label="Lernsets">
+            <div class="workspace-library-controls">
+            <div class="workspace-library-header"><h2 id="sets-title" class="workspace-heading">Alle Sets</h2><button id="create-set-button" class="teacher-button" type="button">+ Neues Set</button></div>
+            <input id="workspace-search" class="workspace-search" type="search" aria-label="Sets suchen" placeholder="Sets suchen" />
             <p id="sets-meta" class="teacher-section__meta"></p>
-          </div>
-          <button id="create-set-button" class="teacher-button" type="button">
-            <img class="teacher-button__icon" src="./assets/icons/square-plus.svg" alt="" decoding="async" />
-            <span>Neues Set</span>
-          </button>
-        </div>
+            </div>
+            <div id="teacher-empty-state" class="teacher-empty-state" hidden><p class="teacher-empty-state__title">Keine Sets</p></div>
+            <div id="teacher-error-state" class="teacher-empty-state teacher-empty-state--error" hidden><p class="teacher-empty-state__title">Sets konnten nicht geladen werden</p><p id="teacher-error-message" class="teacher-empty-state__message"></p></div>
+            <div id="teacher-set-list" class="teacher-set-list"></div>
+          </section>
+          <section id="workspace-editor" class="workspace-editor" aria-label="Set-Arbeitsbereich">
+            <div id="workspace-editor-empty" class="workspace-editor-empty"><h2>Set auswählen</h2></div>
+            <p id="workspace-editor-loading" class="workspace-editor-loading" role="status" hidden>Set wird geladen …</p>
+            <div id="set-editor-overlay" class="teacher-editor" hidden>
+              <section
+                id="set-editor-panel"
+                class="set-editor-panel"
+                role="region"
+                aria-labelledby="set-editor-title"
+              >
+                <header id="workspace-editor-actions" class="workspace-editor-actions">
+                  <button id="set-editor-close" class="set-editor-back workspace-mobile-back" type="button">← Bibliothek</button>
+                  <div class="workspace-editor-topline">
+                    <div class="workspace-editor-title">
+                      <div class="set-editor-panel__kicker-row">
+                        <p id="workspace-breadcrumb" class="workspace-breadcrumb">Meine Lernsets</p>
+                      </div>
+                      <h2 id="set-editor-title" class="share-panel__title">Neues Set</h2>
+                    </div>
+                    <div class="workspace-save-actions">
+                      <span id="workspace-save-status" class="workspace-save-status" role="status" aria-live="polite" aria-atomic="true"></span>
+                      <button id="workspace-retry-save" class="workspace-retry-save" type="button" hidden>Erneut versuchen</button>
+                      <details id="workspace-set-menu" class="workspace-set-menu">
+                        <summary aria-label="Weitere Set-Aktionen">•••</summary>
+                        <button id="workspace-delete" class="teacher-button teacher-button--secondary" type="button">Set löschen</button>
+                      </details>
+                    </div>
+                  </div>
+                  <div id="workspace-use-actions" class="workspace-use-actions" role="group" aria-label="Lernset verwenden" hidden>
+                    <a id="workspace-practice" class="teacher-button teacher-button--secondary workspace-action" target="_blank" rel="noopener"><img class="teacher-button__icon" src="./assets/icons/learning-modes-open.svg" alt="" />Lernmodi öffnen ↗</a>
+                    <button id="workspace-print" class="teacher-button teacher-button--secondary workspace-action" type="button"><img class="teacher-button__icon" src="./assets/icons/print.svg" alt="" />Drucken</button>
+                    <button id="workspace-share" class="teacher-button teacher-button--secondary workspace-action" type="button"><img class="teacher-button__icon" src="./assets/icons/share-2.svg" alt="" />Teilen</button>
+                  </div>
+                  <p id="set-editor-feedback" class="teacher-auth__feedback" aria-live="polite"></p>
+                </header>
 
-        <div id="teacher-empty-state" class="teacher-empty-state" hidden>
-          <p class="teacher-empty-state__title">Keine Sets gefunden</p>
-          <p class="teacher-empty-state__message">
-            Noch keine Sets verfügbar.
-          </p>
-        </div>
+                <section id="set-import-section" class="set-import-section" aria-label="Material importieren" hidden>
+                  <div class="set-editor-view-header set-editor-view-header--back-only">
+                    <button id="set-import-back" class="set-editor-back" type="button">
+                      <span aria-hidden="true">←</span>
+                      <span>Zurück</span>
+                    </button>
+                  </div>
+                  <div id="set-import-dropzone" class="set-import-dropzone">
+                    <div id="set-import-preview-list" class="set-import-preview-list" aria-live="polite" hidden></div>
+                    <button id="set-import-file-picker" class="set-import-file-picker" type="button">
+                      <span id="set-import-picker-title">Datei auswählen oder ablegen</span>
+                      <small id="set-import-picker-types">Bild, PDF, DOCX, PPTX, TXT, MD oder CSV</small>
+                    </button>
+                  </div>
+                  <input id="set-import-files" type="file" multiple hidden accept=".txt,.md,.csv,.tsv,.jpg,.jpeg,.png,.webp,.gif,.pdf,.docx,.pptx" />
+                  <textarea id="set-import-text" class="set-editor-textarea" rows="5" aria-label="Text einfügen" placeholder="Text oder Vokabelliste einfügen …"></textarea>
+                  <label class="set-import-instruction-field" for="set-import-instruction">
+                    <span>Was soll daraus werden? <small>optional</small></span>
+                    <textarea id="set-import-instruction" class="set-editor-textarea set-import-instruction" rows="2" maxlength="2000" placeholder="z. B. Lektion 1 · Deutsch → Englisch · 15 Begriffe"></textarea>
+                  </label>
+                  <div class="set-editor-inline-actions">
+                    <button id="create-import-draft-button" class="teacher-button" type="button">Übernehmen</button>
+                    <span id="set-import-file-summary" class="teacher-section__meta"></span>
+                  </div>
+                  <p id="set-import-feedback" class="teacher-auth__feedback" aria-live="polite"></p>
+                </section>
 
-        <div id="teacher-error-state" class="teacher-empty-state teacher-empty-state--error" hidden>
-          <p class="teacher-empty-state__title">Set-Liste konnte nicht geladen werden</p>
-          <p id="teacher-error-message" class="teacher-empty-state__message"></p>
-        </div>
+                <form id="set-editor-form" class="set-editor-form" novalidate hidden>
+                  <div class="set-editor-grid">
+                    <label class="set-editor-field">
+                      <span>Titel</span>
+                      <input id="set-title-input" name="title" type="text" maxlength="160" required />
+                    </label>
+                    <label class="set-editor-field" for="set-unit-input">
+                      <span>Unit</span>
+                      <select id="set-unit-input"><option value="">Nicht eingeordnet</option></select>
+                    </label>
+                  </div>
+                  <input id="set-source-label-input" name="sourceLabel" type="hidden" />
+                  <input id="set-target-label-input" name="targetLabel" type="hidden" />
+                  <details class="workspace-metadata">
+                    <summary>Fach & Beschreibung</summary>
+                    <div class="set-editor-grid">
+                      <label class="set-editor-field"><span>Fach</span><input id="set-subject-input" name="subject" type="text" maxlength="120" placeholder="z. B. Englisch" /></label>
+                      <label class="set-editor-field"><span>Beschreibung</span><input id="set-description-input" name="description" type="text" maxlength="500" /></label>
+                    </div>
+                  </details>
+                  <div class="set-card-editor-heading">
+                    <div>
+                      <h3 class="set-editor-section-title">Vokabeln</h3>
+                      <p id="set-card-count" class="teacher-section__meta">0 Vokabeln</p>
+                    </div>
+                    <div class="set-card-editor-heading__actions">
+                      <button id="set-open-import-button" class="teacher-button teacher-button--secondary workspace-action" type="button">Importieren</button>
+                      <button id="generate-visuals-button" class="teacher-button teacher-button--secondary workspace-action" type="button" hidden>
+                        <img class="teacher-button__icon" src="./assets/icons/image-plus.svg" alt="" decoding="async" />
+                        <span>Bilder erstellen</span>
+                      </button>
+                      <button id="regenerate-all-visuals-button" class="teacher-button teacher-button--secondary workspace-action" type="button" hidden>
+                        <img class="teacher-button__icon" src="./assets/icons/image-plus.svg" alt="" decoding="async" />
+                        <span>Alle Bilder neu</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div id="visual-job-status" class="visual-job-status" role="status" aria-live="polite" hidden></div>
+                  <p id="set-side-feedback" class="set-side-feedback" role="alert" hidden>Bitte Vorder- und Rückseite auswählen.</p>
+                  <div id="set-card-editor-list" class="set-card-editor-list"></div>
 
-        <div id="teacher-set-list" class="teacher-set-list"></div>
+                  <div class="set-editor-actions" hidden>
+                    <button id="set-editor-cancel" class="teacher-button teacher-button--secondary" type="button">Schließen</button>
+
+                  </div>
+                </form>
+                <div id="workspace-tablet-usage" class="workspace-tablet-usage"></div>
+              </section>
+            </div>
+          </section>
+        </div>
       </section>
 
       <section
@@ -312,8 +425,8 @@
 
             <section class="print-preview-shell" aria-label="Druckvorschau">
               <div id="print-preview-loading" class="print-preview-loading">Vorschau wird erstellt …</div>
-              <div id="print-list-paper" class="print-paper print-paper--list" aria-label="Vokabelliste" hidden></div>
-              <div id="print-paper" class="print-paper" aria-label="Vokabeltest bearbeiten" hidden></div>
+              <div id="print-list-paper" class="print-page-stack" aria-label="Vokabelliste" hidden></div>
+              <div id="print-paper" class="print-page-stack" aria-label="Vokabeltest bearbeiten" hidden></div>
             </section>
           </div>
 
@@ -388,130 +501,10 @@
       </section>
     </div>
 
-    <div id="set-editor-overlay" class="share-overlay" data-ui-motion="dialog" hidden>
-      <div class="share-overlay__backdrop"></div>
-      <section
-        id="set-editor-panel"
-        class="set-editor-panel"
-        data-ui-motion-panel
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="set-editor-title"
-      >
-        <header class="set-editor-panel__header">
-          <div>
-            <div class="set-editor-panel__kicker-row">
-              <p class="share-panel__kicker">Lernset</p>
-              <span id="set-editor-status" class="set-draft-badge" hidden>Entwurf</span>
-            </div>
-            <h2 id="set-editor-title" class="share-panel__title">Neues Set</h2>
-          </div>
-          <button id="set-editor-close" class="share-panel__close" type="button" aria-label="Schließen">
-            <img class="share-panel__close-icon" src="./assets/icons/x-mark.svg" alt="" />
-          </button>
-        </header>
 
-        <section id="set-editor-choice" class="set-editor-choice" aria-label="Erstellungsart auswählen" hidden>
-          <div class="set-editor-choice__grid">
-            <button id="set-editor-choose-manual" class="set-editor-choice-card" type="button">
-              <strong>Manuell erstellen</strong>
-              <small>Vokabeln selbst eingeben</small>
-              <span class="set-editor-choice-card__arrow" aria-hidden="true">→</span>
-            </button>
-            <button id="set-editor-choose-import" class="set-editor-choice-card set-editor-choice-card--accent" type="button">
-              <strong>Aus Material erstellen</strong>
-              <small>Datei, Bild oder Text verwenden</small>
-              <span class="set-editor-choice-card__arrow" aria-hidden="true">→</span>
-            </button>
-          </div>
-        </section>
 
-        <section id="set-import-section" class="set-import-section" aria-label="Material importieren" hidden>
-          <div class="set-editor-view-header set-editor-view-header--back-only">
-            <button id="set-import-back" class="set-editor-back" type="button">
-              <span aria-hidden="true">←</span>
-              <span>Zurück</span>
-            </button>
-          </div>
-          <div id="set-import-dropzone" class="set-import-dropzone">
-            <div id="set-import-preview-list" class="set-import-preview-list" aria-live="polite" hidden></div>
-            <button id="set-import-file-picker" class="set-import-file-picker" type="button">
-              <span id="set-import-picker-title">Datei auswählen oder ablegen</span>
-              <small id="set-import-picker-types">Bild, PDF, DOCX, PPTX, TXT, MD oder CSV</small>
-            </button>
-          </div>
-          <input id="set-import-files" type="file" multiple hidden accept=".txt,.md,.csv,.tsv,.jpg,.jpeg,.png,.webp,.gif,.pdf,.docx,.pptx" />
-          <textarea id="set-import-text" class="set-editor-textarea" rows="5" aria-label="Text einfügen" placeholder="Text oder Vokabelliste einfügen …"></textarea>
-          <label class="set-import-instruction-field" for="set-import-instruction">
-            <span>Was soll daraus werden? <small>optional</small></span>
-            <textarea id="set-import-instruction" class="set-editor-textarea set-import-instruction" rows="2" maxlength="2000" placeholder="z. B. Lektion 1 · Deutsch → Englisch · 15 Begriffe"></textarea>
-          </label>
-          <div class="set-editor-inline-actions">
-            <button id="create-import-draft-button" class="teacher-button" type="button">Entwurf erstellen</button>
-            <span id="set-import-file-summary" class="teacher-section__meta"></span>
-          </div>
-          <p id="set-import-feedback" class="teacher-auth__feedback" aria-live="polite"></p>
-        </section>
 
-        <form id="set-editor-form" class="set-editor-form" novalidate hidden>
-          <div class="set-editor-mode-bar">
-            <div>
-              <p class="share-panel__kicker">Manuelle Bearbeitung</p>
-              <p class="set-editor-help">Set-Daten und Vokabeln prüfen oder direkt anpassen.</p>
-            </div>
-            <button id="set-open-import-button" class="teacher-button teacher-button--secondary" type="button">
-              Automatisch hinzufügen
-              <span aria-hidden="true">→</span>
-            </button>
-          </div>
-          <div class="set-editor-grid">
-            <label class="set-editor-field">
-              <span>Titel</span>
-              <input id="set-title-input" name="title" type="text" maxlength="160" required />
-            </label>
-            <label class="set-editor-field">
-              <span>Fach</span>
-              <input id="set-subject-input" name="subject" type="text" maxlength="120" placeholder="z. B. Englisch" />
-            </label>
-          </div>
-          <input id="set-source-label-input" name="sourceLabel" type="hidden" />
-          <input id="set-target-label-input" name="targetLabel" type="hidden" />
-
-          <label class="set-editor-field">
-            <span>Beschreibung <small>optional</small></span>
-            <input id="set-description-input" name="description" type="text" maxlength="500" />
-          </label>
-
-          <div class="set-card-editor-heading">
-            <div>
-              <h3 class="set-editor-section-title">Vokabeln</h3>
-              <p id="set-card-count" class="teacher-section__meta">0 Vokabeln</p>
-            </div>
-            <div class="set-card-editor-heading__actions">
-              <button id="generate-visuals-button" class="teacher-button teacher-button--secondary" type="button" hidden>
-                <img class="teacher-button__icon" src="./assets/icons/image-plus.svg" alt="" decoding="async" />
-                <span>Bilder erstellen</span>
-              </button>
-              <button id="regenerate-all-visuals-button" class="teacher-button teacher-button--secondary" type="button" hidden>
-                <img class="teacher-button__icon" src="./assets/icons/image-plus.svg" alt="" decoding="async" />
-                <span>Alle Bilder neu</span>
-              </button>
-              <button id="add-card-button" class="teacher-button teacher-button--secondary" type="button">
-                <img class="teacher-button__icon" src="./assets/icons/square-plus.svg" alt="" decoding="async" />
-                <span>Vokabel hinzufügen</span>
-              </button>
-            </div>
-          </div>
-          <div id="visual-job-status" class="visual-job-status" role="status" aria-live="polite" hidden></div>
-          <p id="set-side-feedback" class="set-side-feedback" role="alert" hidden>Bitte Vorder- und Rückseite auswählen.</p>
-          <div id="set-card-editor-list" class="set-card-editor-list"></div>
-
-          <p id="set-editor-feedback" class="teacher-auth__feedback" aria-live="polite"></p>
-          <div class="set-editor-actions">
-            <button id="set-editor-cancel" class="teacher-button teacher-button--secondary" type="button">Schließen</button>
-            <button id="save-set-button" class="teacher-button" type="submit">Set veröffentlichen</button>
-          </div>
-        </form>
+        <p id="editor-leave-error" class="teacher-auth__feedback" role="alert"></p>
       </section>
     </div>
   </body>

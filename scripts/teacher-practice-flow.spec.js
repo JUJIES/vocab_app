@@ -33,7 +33,7 @@ function buildSetDocument() {
   };
 }
 
-test("teacher opens shared learning modes without writing tablet progress", async ({ page }, testInfo) => {
+test("teacher opens shared learning modes without writing tablet progress", async ({ page: teacherPage, context }, testInfo) => {
   const setDocument = buildSetDocument();
   const editableSet = {
     id: "set-1",
@@ -48,19 +48,19 @@ test("teacher opens shared learning modes without writing tablet progress", asyn
     sourceLabel: "Deutsch",
     targetLabel: "Englisch",
     cardCount: setDocument.cards.length,
-    cards: setDocument.cards,
+    cards: setDocument.cards.map(card => ({ id: card.id, front: card.source.text, back: card.target.text, acceptedAnswers: card.acceptedAnswers })),
     tablets: [],
   };
   let tabletProgressWrites = 0;
 
-  await page.route("**/api/runtime-info", (route) => route.fulfill({ json: { publicOrigin: BASE_URL } }));
-  await page.route("**/api/teacher/accounts", (route) => route.fulfill({
+  await context.route("**/api/runtime-info", (route) => route.fulfill({ json: { publicOrigin: BASE_URL } }));
+  await context.route("**/api/teacher/accounts", (route) => route.fulfill({
     json: { accounts: [{ id: "julius", displayName: "Julius" }] },
   }));
-  await page.route("**/api/teacher/session", (route) => route.fulfill({
+  await context.route("**/api/teacher/session", (route) => route.fulfill({
     json: { session: { teacherId: "julius" }, teacher: { id: "julius", displayName: "Julius" } },
   }));
-  await page.route("**/api/sets", (route) => route.fulfill({
+  await context.route("**/api/sets", (route) => route.fulfill({
     json: {
       sets: [{ ...editableSet, cards: undefined }],
       teacher: { id: "julius" },
@@ -68,28 +68,31 @@ test("teacher opens shared learning modes without writing tablet progress", asyn
       visualConfigured: true,
     },
   }));
-  await page.route("**/api/tablets", (route) => route.fulfill({ json: { tablets: [] } }));
-  await page.route("**/api/teacher/visual-jobs", (route) => route.fulfill({ json: { jobs: [] } }));
-  await page.route("**/api/teacher/sets/set-1", (route) => route.fulfill({ json: { set: editableSet } }));
-  await page.route("**/sets/user/set-1.json*", (route) => route.fulfill({ json: setDocument }));
-  await page.route("**/api/tablets/**/learning-progress/rounds", (route) => {
+  await context.route("**/api/tablets", (route) => route.fulfill({ json: { tablets: [] } }));
+  await context.route("**/api/teacher/visual-jobs", (route) => route.fulfill({ json: { jobs: [] } }));
+  await context.route("**/api/teacher/sets/set-1", (route) => route.fulfill({ json: { set: editableSet } }));
+  await context.route("**/sets/user/set-1.json*", (route) => route.fulfill({ json: setDocument }));
+  await context.route("**/api/tablets/**/learning-progress/rounds", (route) => {
     tabletProgressWrites += 1;
     return route.fulfill({ status: 500, json: { error: "Teacher practice must not write here" } });
   });
 
-  await page.addInitScript(() => localStorage.setItem("lerndeck-teacher-appearance-v1", JSON.stringify({ mode: "light" })));
-  await page.goto("/teacher", { waitUntil: "networkidle" });
-  await page.evaluate(() => {
+  await context.addInitScript(() => localStorage.setItem("lerndeck-teacher-appearance-v1", JSON.stringify({ mode: "light" })));
+  await teacherPage.goto("/teacher", { waitUntil: "networkidle" });
+  await teacherPage.evaluate(() => {
     // A stale student binding on a shared browser must never receive teacher preview results.
     window.localStorage.setItem("dino-vocab-device-id-v1", "rot-1");
     window.localStorage.setItem("dino-vocab-session-unlocked-v1", "1");
     window.localStorage.setItem("dino-vocab-tablet-session-v1", JSON.stringify({ tabletId: "rot-1", token: "stale-token" }));
   });
-  const practiceButton = page.getByRole("button", { name: "Lernmodi für Set Means of transport öffnen" });
+  await teacherPage.getByRole("button", { name: "Set Means of transport öffnen" }).click();
+  const practiceButton = teacherPage.getByRole("link", { name: "Lernmodi öffnen", exact: false });
   await expect(practiceButton).toBeVisible();
   await expect(practiceButton.locator("img")).toHaveAttribute("src", "./assets/icons/learning-modes-open.svg");
-  await page.locator(".teacher-set-row").first().screenshot({ path: testInfo.outputPath("teacher-set-practice-icon.png") });
+  await teacherPage.locator("#workspace-editor-actions").screenshot({ path: testInfo.outputPath("teacher-set-practice-icon.png") });
+  const newPage = context.waitForEvent("page");
   await practiceButton.click();
+  const page = await newPage;
 
   await expect(page).toHaveURL(/teacherPractice=set-1/);
   await expect(page.locator("html")).toHaveAttribute("data-appearance-mode", "light");
@@ -118,12 +121,14 @@ test("teacher opens shared learning modes without writing tablet progress", asyn
   await expect(page.locator("#test-feedback-detail")).toHaveText("100 % · ungefähr Note 1");
   expect(tabletProgressWrites).toBe(0);
 
+  const closed = page.waitForEvent("close");
   await page.locator("#test-home-link").click();
-  await expect(page).toHaveURL(/\/teacher$/);
-  await expect(practiceButton).toBeVisible();
+  await closed;
+  await teacherPage.bringToFront();
+  await expect(teacherPage.locator("#set-title-input")).toHaveValue("Means of transport");
 });
 
-test("generic sets show readable words instead of flags in direction choices", async ({ page }, testInfo) => {
+test("generic sets show readable words instead of flags in direction choices", async ({ page: teacherPage, context }, testInfo) => {
   const setDocument = buildSetDocument();
   setDocument.set.title = "Begriffe";
   setDocument.set.languages = { source: "und", target: "und" };
@@ -132,25 +137,28 @@ test("generic sets show readable words instead of flags in direction choices", a
     id: "set-1", path: "sets/user/set-1.json", status: "published", editable: true,
     title: "Begriffe", cardCount: setDocument.cards.length,
     sourceLanguage: "und", targetLanguage: "und", sourceLabel: "Begriff", targetLabel: "Definition",
-    cards: setDocument.cards, tablets: [],
+    cards: setDocument.cards.map(card => ({ id: card.id, front: card.source.text, back: card.target.text, acceptedAnswers: card.acceptedAnswers })), tablets: [],
   };
-  await page.route("**/api/runtime-info", (route) => route.fulfill({ json: { publicOrigin: BASE_URL } }));
-  await page.route("**/api/teacher/accounts", (route) => route.fulfill({
+  await context.route("**/api/runtime-info", (route) => route.fulfill({ json: { publicOrigin: BASE_URL } }));
+  await context.route("**/api/teacher/accounts", (route) => route.fulfill({
     json: { accounts: [{ id: "julius", displayName: "Julius" }] },
   }));
-  await page.route("**/api/teacher/session", (route) => route.fulfill({
+  await context.route("**/api/teacher/session", (route) => route.fulfill({
     json: { session: { teacherId: "julius" }, teacher: { id: "julius", displayName: "Julius" } },
   }));
-  await page.route("**/api/sets", (route) => route.fulfill({
+  await context.route("**/api/sets", (route) => route.fulfill({
     json: { sets: [{ ...editableSet, cards: undefined }], teacher: { id: "julius" } },
   }));
-  await page.route("**/api/tablets", (route) => route.fulfill({ json: { tablets: [] } }));
-  await page.route("**/api/teacher/visual-jobs", (route) => route.fulfill({ json: { jobs: [] } }));
-  await page.route("**/api/teacher/sets/set-1", (route) => route.fulfill({ json: { set: editableSet } }));
-  await page.route("**/sets/user/set-1.json*", (route) => route.fulfill({ json: setDocument }));
+  await context.route("**/api/tablets", (route) => route.fulfill({ json: { tablets: [] } }));
+  await context.route("**/api/teacher/visual-jobs", (route) => route.fulfill({ json: { jobs: [] } }));
+  await context.route("**/api/teacher/sets/set-1", (route) => route.fulfill({ json: { set: editableSet } }));
+  await context.route("**/sets/user/set-1.json*", (route) => route.fulfill({ json: setDocument }));
 
-  await page.goto("/teacher", { waitUntil: "networkidle" });
-  await page.getByRole("button", { name: "Lernmodi für Set Begriffe öffnen" }).click();
+  await teacherPage.goto("/teacher", { waitUntil: "networkidle" });
+  await teacherPage.getByRole("button", { name: "Set Begriffe öffnen" }).click();
+  const newPage = context.waitForEvent("page");
+  await teacherPage.getByRole("link", { name: "Lernmodi öffnen", exact: false }).click();
+  const page = await newPage;
   await page.locator('.launch-mode-modal__mode-card[data-mode-key="practice"]').click();
   await page.locator("#launch-mode-start").click();
   const directions = page.locator('[data-learning-direction-group="launch"]');

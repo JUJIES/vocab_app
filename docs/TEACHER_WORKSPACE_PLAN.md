@@ -1,0 +1,51 @@
+# Lehrer-Arbeitsbereich: Bibliothek und Editor
+
+Stand: 2026-10-03. Implementierter Arbeitsbereich; Desktop ist die primäre Lehreroberfläche.
+
+## Oberfläche und Workflows
+
+- Admins wechseln über flache, unterstrichene Tabs zwischen `Lernsets` und `Tablets` (auch mit Pfeiltasten/Home/End). Normale Lehrkräfte sehen ausschließlich Lernsets und benötigen keine Bereichsnavigation. Im Lernset-Bereich stehen Units, kompakte Set-Liste mit Suche und der bestehende Editor nebeneinander. Die Bereiche scrollen unabhängig; die Fensterbreite wird vollständig genutzt.
+- Ein Klick auf einen Set-Eintrag lädt dessen geschützte Details direkt in den Editor. Veraltete Ladeantworten und Bildantworten dürfen einen später gewählten Editor nicht überschreiben. Autosave lässt den Editor und seine Eingabefelder unverändert offen.
+- Unter 981 Pixeln stehen Unit-Navigation und Set-Liste links übereinander. Unter 721 Pixeln folgen Bibliothek und Editor nacheinander, mit `← Bibliothek`. Die Lernansicht behält ihre bisherige Touch-Oberfläche.
+- Der Kopf ordnet Aktionen nach Zweck: eine ruhige Autosave-Bestätigung rechts neben dem Set-Titel, seltene Set-Aktionen im benachbarten Menü. Speichern-/Veröffentlichen-Buttons entfallen. Darunter liegen Lernmodi, Drucken und Teilen gemeinsam als ruhige Textaktionen; diese Zeile erscheint für angelegte Sets im Editor. Lernen/Drucken sind erst bei vollständigen Paaren mit gewählter Seitenkonfiguration aktiv. Der Kopf ist über die gesamte Editorbreite mit der vorhandenen Theme-Farbe `--bg-top` dezent vom Formular abgesetzt; Inhalte behalten ihre gemeinsame Ausrichtung. Er bleibt beim Desktop-Scrollen erreichbar. Import und Bildaktionen gehören zur Vokabelüberschrift. Neue Vokabeln werden ausschließlich über die Plus-Zeile am Tabellenende ergänzt; der zweite Hinzufügen-Button entfällt.
+- Bildpopovers sind auf den sichtbaren Tabellenbereich unter Set-Kopf und Spaltenwahl begrenzt. Sie dürfen weder Set-Aktionen noch Import, Bildaktionen oder Sprachwahl überdecken; große Vorschauen scrollen innerhalb dieses Bereichs.
+- Seltene Metadaten sind unter `Fach & Beschreibung` eingeklappt. Import, Seitenwahl, Bilder und bestehende Druck-/Teilen-Dialoge verwenden dieselben Editor- und Serviceabläufe. Löschen sitzt im Set-Menü.
+- `Neues Set` erzeugt sofort einen Datensatz mit stabilem Code in der gewählten Unit und öffnet direkt den Editor. Alle Änderungen speichern nach 700 ms Schreibpause; unvollständige Paare und leere Titel bleiben erhalten. Es gibt keine separate Entwurfsansicht oder Veröffentlichung. Vor Wechsel/Abmelden wird die Speicherung vollständig abgeschlossen; Fehler lassen den Editor offen. Reloads mit noch offenen Änderungen erhalten den Browser-Schutzdialog. „Gespeichert“ folgt ausschließlich der Serverbestätigung; kein Toast pro Änderung.
+- `Lernmodi öffnen` wartet auf Autosave und öffnet danach einen eigenen Tab mit der vorhandenen Schüler-Modusauswahl (`Üben`, `Eingabe`, `Testen`) und deren Einstellungen. Der Editor bleibt im Ursprungstab. Die Lehrer-Vorschau schreibt keine Tablet-Lernstände. Zurück schließt den Vorschautab; wenn der Browser das verhindert, öffnet der Tab die Lehreransicht mit dem gleichen Set.
+- Lernvorschau, Druck, Bilder und Teilen warten bei offenen Änderungen automatisch auf die bestätigte Speicherung. Fehlermeldungen bleiben auch auf schmalen Geräten im Editor sichtbar. Nach einer bestätigten Inhalts- oder Unit-Änderung übernimmt der Client die Serverantwort sofort; ein nachfolgend fehlgeschlagener Index-Refresh setzt diese Bestätigung nicht zurück.
+- Leinen/Nachtblau und das dreifarbige Logo bleiben gemeinsam mit der Schüler-App erhalten.
+
+## Units und Rechte
+
+- Eine Unit gehört genau einer Lehrkraft. Die Struktur hat eine Ebene; Namen wie `BL3 · Unit 1` bilden Kurs/Unit ohne weitere Hierarchie ab.
+- Ein Set gehört höchstens einer Unit. Bestehende Sets starten ohne Zuordnung. `Alle Sets` und `Nicht eingeordnet` sind Ansichten, keine Ordner. Neue Sets übernehmen die aktuell gewählte Unit.
+- Anlegen, Umbenennen, Zuordnen und Entfernen sind nur für die eigenen Inhalte erlaubt. Beim Entfernen einer Unit bleiben alle Sets bestehen und werden nicht eingeordnet.
+- Admins wählen die Bibliothek einer Lehrkraft explizit aus. Bestehende Inhalts- und Bildrechte bleiben erhalten; fremde Units und Zuordnungen sind schreibgeschützt, fremde Sets bleiben nicht löschbar. Normale Lehrkräfte sehen ausschließlich ihre eigene Bibliothek.
+- Tabletübersicht, Verbindungsanzeigen je Set, PIN-/Timeout-Reset, Entkoppeln und administrative Entfernung einer Verbindung stehen ausschließlich Admins zur Verfügung. Normale Lehrkräfte laden kein Tabletverzeichnis und erhalten im Set-Index keine Tablet-Verbindungen. Schüler können mit ihrer eigenen Gerätesitzung weiterhin ihre Sets lesen und Verbindungen entfernen.
+- Die Organisation verändert weder Karten-IDs, Set-Pfad, Share-Code, Lernstände, Inhaltsrevision noch `updatedAt`.
+
+## Datenfluss und Architektur
+
+- `lib/set-service.js` normalisiert `teacher-sets.json` zu Version 3 mit `units: [{ id, ownerTeacherId, name }]` und optionaler `unitId` je Set. Alte Stores werden ohne Neuordnung gelesen; ungültige/fremde Referenzen werden geleert. Einziger persistenter Store, dieselbe atomare `RuntimeJsonStore`-Mutation.
+- Geschütztes `GET /api/sets` ergänzt die sichtbaren Units. `POST /api/teacher/units`, `PUT/DELETE /api/teacher/units/:unitId` und `PUT /api/teacher/sets/:setId/unit` prüfen immer die Sitzungseigentümerschaft, auch für Admins. Nur die Zuordnungsroute verändert eine bestehende Zuordnung; Inhaltsspeicherung ignoriert nachgereichte `unitId`.
+- `requireAdminSession` prüft für die Tabletverwaltung die aktuelle Kontorolle auf dem Server. Die gemeinsamen Routen zum Lesen eines Tablets und Entfernen eines Set-Abos verwenden `requireTabletOrAdminSession`: eine passende Gerätesitzung oder ein Admin ist erforderlich. Ein normales Lehrkraft-Cookie darf die Gerätesitzung weder ersetzen noch sperren. Das öffentliche Namensverzeichnis für die Schüleranmeldung bleibt erhalten.
+- `teacher-workspace.js` steuert ausschließlich Bibliotheksfilter, Navigation, Units und Darstellung. `teacher.js` bleibt verantwortlich für Inhalte, Autosave, Validierung, Import, Bilder, Drucken und Teilen. Kein zweiter Editor und kein dupliziertes Inhaltsmodell.
+- Navigation wird kontogetrennt unter `lerndeck-teacher-workspace-v1:<teacherId>` gespeichert: Eigentümer, Ansicht, ausgewähltes Set, Suche und Scrollpositionen. URL-Parameter `owner`, `unit` und `set` ermöglichen direkte Wiederaufnahme; es wird keine zusätzliche Browser-Historie je Klick angelegt. Bei blockiertem Speicher funktionieren Navigation und Editor weiterhin.
+- `teacherPracticeTab=1` bleibt während aller Lernmodi in der Vorschau-URL erhalten. Ohne diesen Parameter behalten bestehende Direktlinks ihre Rücknavigation im selben Tab.
+
+## Autosave und Datenfluss
+
+- Ein vorhandener Set-Datensatz enthält den vollständigen bearbeitbaren Inhalt, einschließlich halbfertiger Paare. `SetService.learningCards` ist die gemeinsame Projektion für öffentliche Lernsets, öffentliche Kartenanzahl, Druck und Bildjobs; es entsteht kein zweites Kartenmodell. Neue Sets benötigen eine gültige `sideSelection`, bevor vollständige Paare lernbar sind. Alte veröffentlichte Sets mit freien Metadaten bleiben lernbar und werden beim Umbenennen nicht automatisch umkonfiguriert.
+- Der atomare Set-Store hat Version 3. Alte Entwürfe werden beim Serverstart einmal in aktive Sets mit stabilem Code überführt; Karten, Unit und ID bleiben erhalten. Intern heißt der aktive Status weiterhin `published`, um bestehende Codes, Routen und Tablet-Verknüpfungen kompatibel zu halten. `/set-drafts` bleibt ein dünner Kompatibilitätsalias zur gleichen Anlage/Änderung, ohne eigene Logik.
+- `contentRevision` steigt nur bei Inhaltsänderungen; `revision` steigt zusätzlich bei Bildzuordnungen für die Lernansicht. Der Editor sendet `expectedContentRevision`. Fremde Inhaltsänderungen werden mit HTTP 409 zurückgewiesen; der lokale Text bleibt im Editor und muss vor einem Reload verglichen/übernommen werden. Es gibt keine automatische Zusammenführung.
+- Der Client serialisiert Speicheranfragen. Versionszähler unterscheiden eingetippte und bestätigte Änderungen; ältere Antworten ersetzen weder aktuelle Feldwerte noch Cursor/Scrollpositionen. Während einer Anfrage neu eingetippter Inhalt wird anschließend gespeichert. Seitenauswahl und lokale Kartenreferenzen werden mit der jeweiligen Anfrage abgeglichen; Bildantworten dürfen neuere Texte nicht bebildern.
+- Eine fehlgeschlagene Speicherung bietet „Erneut versuchen“; bei abgelaufener Sitzung öffnet ein Link die Anmeldung in einem weiteren Tab, damit die aktuellen Eingaben erhalten bleiben; bei wiederhergestellter Verbindung wird erneut versucht. Ungespeicherte Eingaben leben bis zur Bestätigung im geöffneten Editor, nicht in einem separaten Offline-Speicher. Ein Browser-/Geräteabsturz vor Serverbestätigung ist deshalb nicht abgesichert.
+- `Neue Bilder (N)` wartet auf Autosave und übergibt nur die neuen vollständigen Karten-IDs dieser Bearbeitung. Sind keine neuen Karten vorhanden, erzeugt die bestehende Aktion alle fehlenden Bilder. Die Leerzeile am Tabellenende ist weiterhin der einzige Hinzufügen-Einstieg.
+
+## Prüfung
+
+Servicechecks: Migration, Eigentumsgrenzen, doppelte Namen, Zuordnung/Entfernung ohne Inhaltsänderung, direkte Anlage und stabile Identitäten in `tests/set-units.test.js` und `tests/services.test.js`.
+
+Browserchecks mit echter lokaler API und isoliertem `DATA_DIR`: `scripts/teacher-workspace.spec.js`. Für diesen Test ausdrücklich `WORKSPACE_TEST_DATA` auf das Datenverzeichnis der lokalen Testinstanz und `BASE_URL` auf deren Loopback-Adresse setzen. Der Test provisioniert lokale Konten und erzeugt seine Beispielbibliothek; niemals Unterrichtsdaten verwenden.
+
+Bestehende Checks für Editor/Import, neue Bildjobs, Adminrechte, Themes, Lernvorschau, Teilen und Druck folgen dem direkten Editor. Rollenchecks prüfen zusätzlich abgewiesene Verwaltungsaufrufe ohne Datenänderung, erhaltene Gerätezugriffe, Adminaktionen und den Wechsel Admin → Lehrkraft. Screenshots der größeren Bibliothek liegen unter `artifacts/teacher-workspace/` (Desktop, Tablet, Mobil; Hell/Dunkel).

@@ -76,7 +76,7 @@ test("an active visual job has one progress display instead of duplicate action 
   await page.route("**/api/teacher/sets/set-1", (route) => route.fulfill({ json: { set } }));
 
   await page.goto("/teacher", { waitUntil: "networkidle" });
-  await page.getByRole("button", { name: "Set Means of transport bearbeiten" }).click();
+  await page.getByRole("button", { name: "Set Means of transport öffnen" }).click();
 
   const editor = page.locator("#set-editor-form");
   await expect(editor).toBeVisible();
@@ -91,7 +91,7 @@ test("an active visual job has one progress display instead of duplicate action 
   await expect(popover).toBeVisible();
   await expect(popover.locator(".set-card-visual__preview")).toHaveJSProperty("complete", true);
   let bounds = await popover.boundingBox();
-  let panel = await page.locator("#set-editor-panel").boundingBox();
+  let panel = await page.locator("#workspace-editor").boundingBox();
   expect(bounds.width).toBeGreaterThanOrEqual(440);
   expect(bounds.x).toBeGreaterThanOrEqual(panel.x);
   expect(bounds.y).toBeGreaterThanOrEqual(panel.y);
@@ -104,7 +104,7 @@ test("an active visual job has one progress display instead of duplicate action 
   await page.setViewportSize({ width: 768, height: 1024 });
   await imageTrigger.hover();
   bounds = await popover.boundingBox();
-  panel = await page.locator("#set-editor-panel").boundingBox();
+  panel = await page.locator("#workspace-editor").boundingBox();
   expect(bounds.width).toBeGreaterThanOrEqual(440);
   expect(bounds.x).toBeGreaterThanOrEqual(panel.x);
   expect(bounds.y).toBeGreaterThanOrEqual(panel.y);
@@ -118,7 +118,7 @@ test("an active visual job has one progress display instead of duplicate action 
   await imageTrigger.scrollIntoViewIfNeeded();
   await imageTrigger.hover();
   bounds = await popover.boundingBox();
-  panel = await page.locator("#set-editor-panel").boundingBox();
+  panel = await page.locator("#workspace-editor").boundingBox();
   expect(bounds.x).toBeGreaterThanOrEqual(panel.x);
   expect(bounds.y).toBeGreaterThanOrEqual(panel.y);
   expect(bounds.x + bounds.width).toBeLessThanOrEqual(panel.x + panel.width);

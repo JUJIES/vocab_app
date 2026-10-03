@@ -27,10 +27,11 @@ test("teacher share QR is centered inside its frame", async ({ page }) => {
   await page.getByRole("textbox", { name: "Passwort" }).fill(TEACHER_PASSWORD);
   await page.getByRole("button", { name: "Anmelden" }).click();
   await expect(page.locator("#teacher-shell")).toBeVisible();
-  await page.getByRole("button", { name: /teilen/i }).first().click();
+  await page.locator(".workspace-set-row").filter({ hasNotText: "Entwurf" }).first().click();
+  await page.locator("#workspace-share").click();
   await expect(page.locator("#share-overlay")).toBeVisible();
   await expect(page.getByRole("button", { name: "Link kopieren" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Drucken" })).toHaveCount(0);
+  await expect(page.locator("#share-overlay").getByRole("button", { name: "Drucken" })).toHaveCount(0);
   await page.waitForTimeout(150);
 
   const metrics = await page.evaluate(() => {
@@ -109,7 +110,7 @@ test("teacher share QR is centered inside its frame", async ({ page }) => {
   expect(Math.abs(metrics.frameCenterX - metrics.codeCenterX)).toBeLessThanOrEqual(0.5);
   expect(metrics.code).toMatch(/^[A-HJ-NP-Z2-9]{6}$/);
 
-  await page.locator(".share-panel").screenshot({
+  await page.locator("#share-overlay .share-panel").screenshot({
     path: path.join(OUTPUT_DIR, "teacher-share-qr.png"),
   });
 });

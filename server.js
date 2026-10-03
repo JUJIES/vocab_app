@@ -212,25 +212,26 @@ app.get("/api/sets", async (request, response) => {
   }
 
   try {
-    const store = await readTabletStore();
     const [teacher, accounts] = await Promise.all([
       teacherService.getTeacher(sessionResult.teacherId),
       teacherService.listPublicAccounts(),
     ]);
     const isAdmin = teacher?.role === "admin";
+    const store = isAdmin ? await readTabletStore() : null;
     const sets = isAdmin
       ? await setService.listManageableSets()
       : await setService.listOwnedSets(sessionResult.teacherId);
     const accountNames = new Map(accounts.map((account) => [account.id, account.displayName]));
 
     response.json({
+      units: await setService.listUnits(isAdmin ? "" : sessionResult.teacherId),
       sets: sets.map((setEntry) => ({
         ...setEntry,
         ownerDisplayName: accountNames.get(setEntry.ownerTeacherId) || setEntry.ownerTeacherId,
         managedByAdmin: isAdmin && setEntry.ownerTeacherId !== sessionResult.teacherId,
         editable: setEntry.ownerTeacherId === sessionResult.teacherId || isAdmin,
         deletable: setEntry.ownerTeacherId === sessionResult.teacherId,
-        tablets: getTabletsForSet(store, setEntry?.path),
+        ...(isAdmin ? { tablets: getTabletsForSet(store, setEntry?.path) } : {}),
       })),
       teacher,
       importConfigured: importService.isConfigured(),
@@ -242,6 +243,30 @@ app.get("/api/sets", async (request, response) => {
       error: "Set-Liste konnte nicht geladen werden.",
     });
   }
+});
+
+for (const [method, routePath, operation] of [
+  ["post", "/api/teacher/units", (teacherId, request) => setService.saveUnit(teacherId, request.body)],
+  ["put", "/api/teacher/units/:unitId", (teacherId, request) => setService.saveUnit(teacherId, request.body, request.params.unitId)],
+  ["delete", "/api/teacher/units/:unitId", (teacherId, request) => setService.deleteUnit(teacherId, request.params.unitId)],
+]) {
+  app[method](routePath, async (request, response) => {
+    const session = requireTeacherSession(request);
+    if (!session.ok) return response.status(session.status).json({ error: session.error });
+    try {
+      const unit = await operation(session.teacherId, request);
+      response.status(method === "post" ? 201 : 200).json({ success: true, unit });
+    } catch (error) { handleApiError(response, error, "Unit konnte nicht geändert werden."); }
+  });
+}
+
+app.put("/api/teacher/sets/:setId/unit", async (request, response) => {
+  const session = requireTeacherSession(request);
+  if (!session.ok) return response.status(session.status).json({ error: session.error });
+  try {
+    const set = await setService.moveSet(session.teacherId, request.params.setId, request.body?.unitId);
+    response.json({ success: true, set });
+  } catch (error) { handleApiError(response, error, "Set konnte nicht zugeordnet werden."); }
 });
 
 app.get("/api/teacher/sets/:setId", async (request, response) => {
@@ -284,7 +309,7 @@ app.post("/api/teacher/sets/:setId/print", async (request, response) => {
     }
 
     const pdf = await createVocabularyPrintPdf({
-      set: setEntry,
+      set: { ...setEntry, cards: setService.learningCards(setEntry) },
       kind: request.body?.kind,
       direction: request.body?.direction,
       cardIds: request.body?.cardIds,
@@ -352,7 +377,11 @@ app.post("/api/teacher/sets/:setId/visual-jobs", async (request, response) => {
   }
   try {
     const access = await requireManagedSetAccess(sessionResult, request.params.setId);
-    const job = await visualService.startMissingVisuals(access.ownerTeacherId, request.params.setId);
+    const job = await visualService.startMissingVisuals(
+      access.ownerTeacherId,
+      request.params.setId,
+      { cardIds: request.body?.cardIds },
+    );
     response.status(202).json({ success: true, job });
   } catch (error) {
     handleApiError(response, error, "Bilderstellung konnte nicht gestartet werden.");
@@ -598,16 +627,7 @@ app.get("/api/tablet-directory", async (_request, response) => {
   }
 });
 
-app.get("/api/tablets", async (request, response) => {
-  const sessionResult = requireTeacherSession(request);
-
-  if (!sessionResult.ok) {
-    response.status(sessionResult.status).json({
-      error: sessionResult.error,
-    });
-    return;
-  }
-
+app.get("/api/tablets", requireAdminSession, async (request, response) => {
   try {
     const store = await readTabletStore();
 
@@ -624,16 +644,7 @@ app.get("/api/tablets", async (request, response) => {
   }
 });
 
-app.get("/api/tablets/:tabletId", async (request, response) => {
-  const sessionResult = requireTabletOrTeacherSession(request, request.params.tabletId);
-
-  if (!sessionResult.ok) {
-    response.status(sessionResult.status).json({
-      error: sessionResult.error,
-    });
-    return;
-  }
-
+app.get("/api/tablets/:tabletId", requireTabletOrAdminSession, async (request, response) => {
   try {
     const store = await readTabletStore();
     const tablet = findTablet(store, request.params.tabletId);
@@ -1083,16 +1094,7 @@ app.post("/api/tablets/:tabletId/learning-progress/rounds", async (request, resp
   }
 });
 
-app.delete("/api/tablets/:tabletId/subscriptions", async (request, response) => {
-  const sessionResult = requireTabletOrTeacherSession(request, request.params.tabletId);
-
-  if (!sessionResult.ok) {
-    response.status(sessionResult.status).json({
-      error: sessionResult.error,
-    });
-    return;
-  }
-
+app.delete("/api/tablets/:tabletId/subscriptions", requireTabletOrAdminSession, async (request, response) => {
   const setPath = normalizeSetPath(request.query?.set);
 
   if (!setPath) {
@@ -1186,7 +1188,7 @@ app.post("/api/tablets/:tabletId/verify-pin", async (request, response) => {
 
     if (tablet.lockedAt) {
       response.status(423).json({
-        error: "Dieser Tablet-Zugang ist gesperrt. Bitte eine Lehrkraft um Freigabe.",
+        error: "Dieser Tablet-Zugang ist gesperrt. Bitte einen Admin um Freigabe.",
         tablet: toSafeTablet(tablet),
         accessSession: serializeAccessSession(accessSession, now),
       });
@@ -1224,7 +1226,7 @@ app.post("/api/tablets/:tabletId/verify-pin", async (request, response) => {
 
       response.status(tablet.lockedAt ? 423 : 429).json({
         error: tablet.lockedAt
-          ? "Dieser Tablet-Zugang ist nach zu vielen falschen Versuchen gesperrt. Bitte eine Lehrkraft um Freigabe."
+          ? "Dieser Tablet-Zugang ist nach zu vielen falschen Versuchen gesperrt. Bitte einen Admin um Freigabe."
           : buildAccessPinCooldownMessage(accessSession.lockedUntil - now, { includeWrongPin: true }),
         tablet: toSafeTablet(tablet),
         accessSession: serializeAccessSession(accessSession, now),
@@ -1256,16 +1258,7 @@ app.post("/api/tablets/:tabletId/verify-pin", async (request, response) => {
   }
 });
 
-app.post("/api/tablets/:tabletId/reset-access-session", async (request, response) => {
-  const sessionResult = requireTeacherSession(request);
-
-  if (!sessionResult.ok) {
-    response.status(sessionResult.status).json({
-      error: sessionResult.error,
-    });
-    return;
-  }
-
+app.post("/api/tablets/:tabletId/reset-access-session", requireAdminSession, async (request, response) => {
   try {
     const store = await readTabletStore();
     const tablet = findTablet(store, request.params.tabletId);
@@ -1295,16 +1288,7 @@ app.post("/api/tablets/:tabletId/reset-access-session", async (request, response
   }
 });
 
-app.post("/api/tablets/:tabletId/reset-pin", async (request, response) => {
-  const sessionResult = requireTeacherSession(request);
-
-  if (!sessionResult.ok) {
-    response.status(sessionResult.status).json({
-      error: sessionResult.error,
-    });
-    return;
-  }
-
+app.post("/api/tablets/:tabletId/reset-pin", requireAdminSession, async (request, response) => {
   const pin = typeof request.body?.pin === "string" ? request.body.pin.trim() : "";
 
   if (!isValidPin(pin)) {
@@ -1353,16 +1337,7 @@ app.post("/api/tablets/:tabletId/reset-pin", async (request, response) => {
   }
 });
 
-app.post("/api/tablets/:tabletId/decouple", async (request, response) => {
-  const sessionResult = requireTeacherSession(request);
-
-  if (!sessionResult.ok) {
-    response.status(sessionResult.status).json({
-      error: sessionResult.error,
-    });
-    return;
-  }
-
+app.post("/api/tablets/:tabletId/decouple", requireAdminSession, async (request, response) => {
   try {
     const store = await readTabletStore();
     const tablet = findTablet(store, request.params.tabletId);
@@ -1479,6 +1454,7 @@ const PUBLIC_ROOT_FILES = new Map([
   ["/appearance.css", "appearance.css"],
   ["/set-side-options.js", "set-side-options.js"],
   ["/teacher.js", "teacher.js"],
+  ["/teacher-workspace.js", "teacher-workspace.js"],
   ["/tafelraum-embed.js", "tafelraum-embed.js"],
   ["/pwa-splash.css", "pwa-splash.css"],
   ["/ui-motion.css", "ui-motion.css"],
@@ -1530,6 +1506,7 @@ for (const publicDirectory of ["assets", "audio", "icons", "sets"]) {
 const shouldStartLocalHttps = !process.env.RENDER && fs.existsSync(HTTPS_KEY_PATH) && fs.existsSync(HTTPS_CERT_PATH);
 
 async function startServers() {
+  await setService.migrateAutosaveSets();
   await visualService.recoverInterruptedJobs();
   const migration = await migrateLegacySetsToJulius();
   if (migration.added > 0) {
@@ -2305,14 +2282,33 @@ async function requireManagedSetAccess(sessionResult, setId) {
   throw error;
 }
 
-function requireTabletOrTeacherSession(request, tabletId) {
-  const teacherSession = requireTeacherSession(request);
-
-  if (teacherSession.ok) {
-    return teacherSession;
+// Tablet administration uses the current account role, never a client-supplied role.
+function requireAdminSession(request, response, next) {
+  const session = requireTeacherSession(request);
+  if (!session.ok) {
+    response.status(session.status).json({ error: session.error });
+    return;
   }
+  teacherService.getTeacher(session.teacherId).then((teacher) => {
+    if (teacher?.role !== "admin") {
+      response.status(403).json({ error: "Tabletverwaltung ist nur für Admins verfügbar." });
+      return;
+    }
+    next();
+  }).catch(next);
+}
 
-  return requireTabletSession(request, tabletId);
+function requireTabletOrAdminSession(request, response, next) {
+  // A valid device session still permits pupils to read/remove their own connections,
+  // including when the same browser also has a regular teacher cookie.
+  const tabletSession = requireTabletSession(request, request.params.tabletId);
+  if (tabletSession.ok) {
+    next();
+  } else if (requireTeacherSession(request).ok) {
+    requireAdminSession(request, response, next);
+  } else {
+    response.status(tabletSession.status).json({ error: tabletSession.error });
+  }
 }
 
 function normalizeTabletSubscriptions(tablet) {

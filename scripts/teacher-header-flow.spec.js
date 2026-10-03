@@ -74,7 +74,7 @@ for (const viewport of [
 
     const headerBox = await page.locator(".teacher-header").boundingBox();
     const accountBox = await page.locator("#teacher-account-status").boundingBox();
-    const accountLabelBox = await page.locator(".teacher-account-status__label").boundingBox();
+    await expect(page.locator(".teacher-account-status__label")).toBeHidden();
     const accountNameBox = await page.locator(".teacher-account-status__name").boundingBox();
     const setIconBox = await page.locator("#teacher-shell-icon").boundingBox();
     const setTabBox = await page.locator('[data-teacher-tab="sets"]').boundingBox();
@@ -83,14 +83,11 @@ for (const viewport of [
     expect(headerBox.x + headerBox.width).toBeLessThanOrEqual(viewport.width + 1);
     expect(Math.abs(
       (accountBox.y + accountBox.height / 2)
-      - (accountLabelBox.y + accountLabelBox.height / 2),
-    )).toBeLessThan(1.5);
-    expect(Math.abs(
-      (accountBox.y + accountBox.height / 2)
       - (accountNameBox.y + accountNameBox.height / 2),
     )).toBeLessThan(1.5);
-    expect(Math.abs(setTabBox.width - tabletTabBox.width)).toBeLessThan(1.5);
     expect(Math.abs(setTabBox.height - tabletTabBox.height)).toBeLessThan(1.5);
+    expect(tabletTabBox.x).toBeGreaterThan(setTabBox.x + setTabBox.width);
+    expect(Math.abs(setTabBox.y - tabletTabBox.y)).toBeLessThan(1.5);
 
     await page.locator(".teacher-header").screenshot({
       path: path.join(OUTPUT_DIR, `teacher-header-sets-${viewport.name}.png`),

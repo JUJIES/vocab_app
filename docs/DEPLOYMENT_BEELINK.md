@@ -115,7 +115,9 @@ Folgende Dateien gehören zur Runtime und nie in einen Release-Cutover:
 
 Beim ersten Start eines Releases mit privater Set-Bibliothek werden die fünf historischen JSON-Sets aus `sets/sets-index.json` einmalig in `data/teacher-sets.json` als Eigentum von Julius übernommen. Die Migration ist idempotent und überschreibt spätere Bearbeitungen nicht. Alte Set-Pfade und Karten-IDs bleiben bestehen, damit auf Tablets bereits hinzugefügte Sets und ihre Lernstände weiter funktionieren. Vor dem Cutover deshalb wie üblich den gesamten Runtime-Ordner sichern und nach dem Start prüfen, dass Julius die Sets unter `Meine Sets` sieht, ein anderes Lehrkraftkonto dagegen nicht.
 
-Vor dem Cutover eine datenschutzkonforme Sicherung des gesamten Runtime-Ordners erstellen. Rollback ändert nur den Releasepfad; Runtime-Daten und Tunnel-Hostname bleiben erhalten. Da ein alter Release die neuen Lehrerdateien ignoriert, bleiben sie beim Rollback bestehen.
+Vor dem Cutover eine datenschutzkonforme Sicherung des gesamten Runtime-Ordners erstellen. Der Deploy-Helfer sichert Runtime-Daten und Service-Konfiguration vor der Aktivierung. Ein normaler Rollback ändert nur den Releasepfad; Runtime-Daten und Tunnel-Hostname bleiben erhalten.
+
+Seit dem Autosave-Release werden neue Sets sofort angelegt und auch unvollständige Vokabeln dauerhaft gespeichert (`teacher-sets.json`, Version 3). Bestehende Entwürfe werden beim Serverstart idempotent zu aktiven Sets mit stabilen Codes migriert; IDs, Units und Inhalte bleiben erhalten. Nur vollständige Paare mit gültiger Seitenkonfiguration gelangen in Lernen, Druck und Bildgenerierung. Vor der Aktivierung die Migration auf einer Kopie der Produktionsdaten prüfen. **Kein unkontrollierter Rollback auf die alte Entwurfslogik:** Ein alter Server kann bei späteren Schreibvorgängen halbfertige Paare verwerfen. Im Fehlerfall Schreibzugriffe stoppen und die Datenkompatibilität prüfen; eine Wiederherstellung des Backups verliert Änderungen seit dem Cutover und muss bewusst erfolgen. Ein Vorwärtsfix ist bei bereits erfolgten Autosave-Änderungen vorzuziehen.
 
 ## PWA und Relution
 
@@ -125,7 +127,7 @@ Safari unter der öffentlichen HTTPS-Adresse bleibt der vollständige, unabhäng
 
 1. `/health` lokal und öffentlich prüfen.
 2. Mit einem Test-Lehrkraftkonto anmelden und eine klare Zweispaltenliste importieren.
-3. Set speichern, Code auf einem frischen Browser öffnen und einem freien Testtablet hinzufügen.
+3. Set unmittelbar anlegen, Vokabeln ergänzen, `Gespeichert` abwarten und nach Neuladen prüfen. Code auf einem frischen Browser öffnen und einem freien Testtablet hinzufügen.
 4. Eingabemodus starten, eine falsche und danach die richtige Antwort eingeben.
 5. Set-Titel ändern und prüfen, dass Code und Pfad gleich bleiben und der neue Titel nach Neuladen erscheint.
-6. Testtablet danach über den Lehrerbereich wieder entkoppeln.
+6. Testtablet danach als Admin über die Tabletverwaltung wieder entkoppeln; normale Lehrkräfte dürfen diese Verwaltung nicht sehen oder per API erreichen.

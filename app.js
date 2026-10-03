@@ -604,7 +604,7 @@ async function initializeTeacherPractice({ setId, embedded }) {
   const setEntry = setResponse.data?.set;
   const setPath = normalizeSetPath(setEntry?.path);
   if (!setResponse.ok || !setPath || setEntry?.status !== "published") {
-    renderTeacherPracticeError("Dieses veröffentlichte Lernset ist nicht verfügbar.");
+    renderTeacherPracticeError("Dieses Lernset ist nicht verfügbar.");
     return;
   }
 
@@ -614,8 +614,8 @@ async function initializeTeacherPractice({ setId, embedded }) {
     title: typeof setEntry.title === "string" && setEntry.title.trim() ? setEntry.title.trim() : "Lernset",
     subject: typeof setEntry.subject === "string" ? setEntry.subject.trim() : "",
     description: typeof setEntry.description === "string" ? setEntry.description.trim() : "",
-    cardCount: Number.isFinite(setEntry.cardCount)
-      ? setEntry.cardCount
+    cardCount: Number.isFinite(setEntry.learningCardCount)
+      ? setEntry.learningCardCount
       : (Array.isArray(setEntry.cards) ? setEntry.cards.length : 0),
     sourceLabel: setEntry.sourceLabel,
     targetLabel: setEntry.targetLabel,
@@ -650,6 +650,7 @@ function renderTeacherPracticeError(detail) {
 
 function buildTeacherReturnUrl() {
   const url = new URL("teacher", getAppBaseUrl());
+  url.searchParams.set("set", state.teacherPracticeSetId);
   if (state.teacherPracticeEmbedded) {
     url.searchParams.set("embed", "tafelraum");
   }
@@ -659,6 +660,9 @@ function buildTeacherReturnUrl() {
 function buildTeacherPracticeLearningUrl() {
   const url = new URL("index.html", getAppBaseUrl());
   url.searchParams.set("teacherPractice", state.teacherPracticeSetId);
+  if (new URLSearchParams(window.location.search).get("teacherPracticeTab") === "1") {
+    url.searchParams.set("teacherPracticeTab", "1");
+  }
   if (state.teacherPracticeEmbedded) {
     url.searchParams.set("embed", "tafelraum");
   }
@@ -666,6 +670,11 @@ function buildTeacherPracticeLearningUrl() {
 }
 
 function returnToTeacherApp() {
+  if (new URLSearchParams(window.location.search).get("teacherPracticeTab") === "1") {
+    window.close();
+    window.setTimeout(() => window.location.assign(buildTeacherReturnUrl()), 100);
+    return;
+  }
   window.location.assign(buildTeacherReturnUrl());
 }
 
@@ -734,7 +743,7 @@ async function startFlashcardSet(
     console.error("Unable to start flashcard set:", error);
     renderStudentLoadErrorState({
       title: "Set nicht verfügbar",
-      message: "Set konnte nicht geöffnet werden.",
+      message: error?.code === "SET_EMPTY" ? error.message : "Set konnte nicht geöffnet werden.",
       detail: "",
       primaryAction: "retry-set",
       primaryLabel: "Erneut",
@@ -1865,7 +1874,7 @@ async function startInputSet(
     console.error("Unable to start input set:", error);
     renderStudentLoadErrorState({
       title: "Set nicht verfügbar",
-      message: "Set konnte nicht geöffnet werden.",
+      message: error?.code === "SET_EMPTY" ? error.message : "Set konnte nicht geöffnet werden.",
       detail: "",
       primaryAction: "retry-set",
       primaryLabel: "Erneut",
@@ -1981,6 +1990,10 @@ function createTestTableRow(card, index) {
   return row;
 }
 
+function shouldAutoFocusTestAnswer() {
+  return window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+}
+
 function renderTestSession({ focusWrongAnswer = false } = {}) {
   const session = state.testSession;
   const labels = getLearningDirectionLabels();
@@ -2012,7 +2025,7 @@ function renderTestSession({ focusWrongAnswer = false } = {}) {
       ? `${correctCount} richtig, ${wrongCount} falsch. Korrigiere die rot markierten Antworten.`
       : `Test mit ${session.cards.length} Vokabeln. Fülle alle Antworten aus.`;
 
-  if (focusWrongAnswer) {
+  if (focusWrongAnswer && shouldAutoFocusTestAnswer()) {
     const firstWrongInput = elements.testTableBody.querySelector(".test-stage__row.is-wrong .test-stage__input");
     firstWrongInput?.focus();
     firstWrongInput?.select();
@@ -2023,7 +2036,9 @@ function startNewTestRound() {
   const selectedCards = selectRandomTestCards(state.allCards, state.activeTestCardCount);
   resetTestLearningState(selectedCards);
   renderTestSession();
-  elements.testTableBody.querySelector(".test-stage__input")?.focus();
+  if (shouldAutoFocusTestAnswer()) {
+    elements.testTableBody.querySelector(".test-stage__input")?.focus();
+  }
 }
 
 async function handleTestSubmit(event) {
@@ -2133,7 +2148,7 @@ async function startTestSet(
     console.error("Unable to start test set:", error);
     renderStudentLoadErrorState({
       title: "Set nicht verfügbar",
-      message: "Set konnte nicht geöffnet werden.",
+      message: error?.code === "SET_EMPTY" ? error.message : "Set konnte nicht geöffnet werden.",
       detail: "",
       primaryAction: "retry-set",
       primaryLabel: "Erneut",
@@ -2411,7 +2426,7 @@ function setStudentAppMode(mode) {
     delete elements.appShell.dataset.accessState;
   }
   if (mode !== APP_MODES.HOME) {
-    closeLaunchModeModal();
+    closeLaunchModeModal({ restoreScroll: false });
   }
   elements.appShell.dataset.appMode = mode;
   elements.studentScreen.hidden = mode === APP_MODES.FLASHCARD || mode === APP_MODES.INPUT || mode === APP_MODES.TEST;
@@ -7010,7 +7025,7 @@ function clearLaunchModeModalContent() {
   elements.launchSettingsAdditional.replaceChildren();
 }
 
-function closeLaunchModeModal() {
+function closeLaunchModeModal({ restoreScroll = true } = {}) {
   const restoreScrollY = state.launchModeScrollY;
   finishLaunchModeDetailTransition();
   finishLaunchModeActionTransition();
@@ -7033,7 +7048,9 @@ function closeLaunchModeModal() {
     after: () => {
       clearLaunchModeModalContent();
       document.body.classList.remove("launch-mode-modal-open");
-      window.scrollTo(0, restoreScrollY);
+      if (restoreScroll) {
+        window.scrollTo(0, restoreScrollY);
+      }
     },
   });
 }
@@ -7099,7 +7116,7 @@ async function startPendingLaunchMode() {
   if (isDirectionConfigurableMode(selectedModeKey)) {
     persistPreferredLearningDirection(setPath, selectedDirection);
   }
-  closeLaunchModeModal();
+  closeLaunchModeModal({ restoreScroll: false });
   state.requestedSetPath = setPath;
   state.requestedSetUrl = new URL(setPath, getAppBaseUrl()).href;
   window.history.replaceState({}, "", state.isTeacherPractice
@@ -8247,7 +8264,7 @@ function updateKnownTabletMeta(tablet) {
 
 function buildCards(data) {
   if (!data || !Array.isArray(data.cards) || data.cards.length === 0) {
-    throw new Error("Vocabulary set contains no cards.");
+    throw Object.assign(new Error("Dieses Set enthält noch keine vollständigen Vokabeln zum Lernen."), { code: "SET_EMPTY" });
   }
 
   return data.cards.map((card) => buildCardData(card, {
@@ -8264,31 +8281,87 @@ function orientLearningCards(cards, direction) {
   } : card);
 }
 
-function buildGeneratedHintReplacement(answer, revealFirstLetter) {
-  let firstLetterRevealed = false;
+function getHintWords(answer) {
+  return Array.from(answer.matchAll(/[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)*/gu));
+}
 
-  return Array.from(answer).map((character) => {
-    if (!/[\p{L}\p{N}]/u.test(character)) {
-      return character;
+function buildProgressiveHintReplacements(answer) {
+  const words = getHintWords(answer);
+  const longestWordLength = Math.max(
+    1,
+    ...words.map(([word]) => Array.from(word).filter((character) => /[\p{L}\p{N}]/u.test(character)).length),
+  );
+
+  const replacements = Array.from({ length: longestWordLength }, (_, levelIndex) => {
+    const revealedCharacters = levelIndex + 1;
+    let replacement = "";
+    let cursor = 0;
+
+    for (const match of words) {
+      const word = match[0];
+      const start = match.index ?? cursor;
+      const wordCharacters = Array.from(word);
+      const letterCount = wordCharacters.filter((character) => /[\p{L}\p{N}]/u.test(character)).length;
+      let revealedInWord = 0;
+
+      replacement += answer.slice(cursor, start);
+      replacement += wordCharacters.map((character) => {
+        if (!/[\p{L}\p{N}]/u.test(character)) {
+          return character;
+        }
+
+        revealedInWord += 1;
+        return letterCount <= 2 || revealedInWord <= revealedCharacters ? character : "_";
+      }).join("");
+      cursor = start + word.length;
     }
 
-    if (revealFirstLetter && !firstLetterRevealed) {
-      firstLetterRevealed = true;
-      return character;
+    return replacement + answer.slice(cursor);
+  });
+
+  return replacements.filter((replacement, index) => (
+    index === 0 || replacement !== replacements[index - 1]
+  ));
+}
+
+function buildProgressiveHints({
+  exampleText,
+  targetText,
+  acceptedAnswers,
+  preferAcceptedAnswers,
+}) {
+  const candidates = buildHintCandidates({
+    targetText,
+    acceptedAnswers,
+    preferAcceptedAnswers,
+  });
+
+  for (const candidate of candidates) {
+    const contextData = splitHintText(exampleText, candidate, candidate);
+
+    if (!contextData) {
+      continue;
     }
 
-    return "_";
-  }).join("");
+    const displayAnswer = formatLearningTermInline(contextData.matchText);
+    return buildProgressiveHintReplacements(displayAnswer).map((replacement) => ({
+      ...contextData,
+      matchLength: Array.from(replacement).length,
+      replacement,
+      accessibleText: `${contextData.beforeText}${replacement}${contextData.afterText}`,
+    }));
+  }
+
+  throw new Error("Unable to derive hint text from the first card.");
 }
 
 function buildAnswerOnlyHints(answer) {
-  return [false, true].map((revealFirstLetter) => buildHintData({
+  return buildProgressiveHints({
     exampleText: answer,
     targetText: answer,
     acceptedAnswers: [],
-    replacement: buildGeneratedHintReplacement(answer, revealFirstLetter),
     preferAcceptedAnswers: false,
-  }));
+  });
 }
 
 function buildCardData(card, { sourceLanguage = "", targetLanguage = "" } = {}) {
@@ -8298,8 +8371,6 @@ function buildCardData(card, { sourceLanguage = "", targetLanguage = "" } = {}) 
   const audioTarget = normalizeAudioPath(card?.audio?.target);
   const flashcardHintData = card?.hintData?.flashcard;
   const exampleId = flashcardHintData?.exampleId?.trim();
-  const maskedWord = flashcardHintData?.maskedWord?.trim();
-  const firstLetterHint = flashcardHintData?.firstLetterHint?.trim();
 
   if (
     typeof rawSourceText !== "string" ||
@@ -8312,11 +8383,7 @@ function buildCardData(card, { sourceLanguage = "", targetLanguage = "" } = {}) 
 
   if (
     typeof exampleId !== "string" ||
-    typeof maskedWord !== "string" ||
-    typeof firstLetterHint !== "string" ||
-    exampleId === "" ||
-    maskedWord === "" ||
-    firstLetterHint === ""
+    exampleId === ""
   ) {
     throw new Error("First card is missing flashcard hint data.");
   }
@@ -8400,22 +8467,12 @@ function buildCardData(card, { sourceLanguage = "", targetLanguage = "" } = {}) 
           targetText,
           acceptedAnswers: answers.slice(1),
         }),
-    hints: [
-      buildHintData({
-        exampleText: hintExampleText,
-        targetText,
-        acceptedAnswers: answers.slice(1),
-        replacement: maskedWord,
-        preferAcceptedAnswers: false,
-      }),
-      buildHintData({
-        exampleText: hintExampleText,
-        targetText,
-        acceptedAnswers: answers.slice(1),
-        replacement: firstLetterHint,
-        preferAcceptedAnswers: true,
-      }),
-    ],
+    hints: buildProgressiveHints({
+      exampleText: hintExampleText,
+      targetText,
+      acceptedAnswers: answers.slice(1),
+      preferAcceptedAnswers: false,
+    }),
     audioSource,
     audioTarget,
     visual: normalizeLearningVisual(card?.visual),
@@ -8525,31 +8582,6 @@ function resolveSetAssetPath(value) {
   }
 
   return new URL(normalizedValue, getAppBaseUrl()).href;
-}
-
-function buildHintData({
-  exampleText,
-  targetText,
-  acceptedAnswers,
-  replacement,
-  preferAcceptedAnswers,
-}) {
-  const candidates = buildHintCandidates({
-    targetText,
-    acceptedAnswers,
-    preferAcceptedAnswers,
-  });
-  const displayReplacement = formatLearningTermInline(replacement);
-
-  for (const candidate of candidates) {
-    const hintData = splitHintText(exampleText, candidate, displayReplacement);
-
-    if (hintData) {
-      return hintData;
-    }
-  }
-
-  throw new Error("Unable to derive hint text from the first card.");
 }
 
 function buildBackContextData({ exampleText, targetText, acceptedAnswers }) {
@@ -9645,20 +9677,23 @@ function renderBackContext(contextData) {
   elements.backHint.setAttribute("aria-label", contextData.accessibleText);
 }
 
-function createHintMask(replacement, matchLength) {
+function createHintMask(replacement) {
   const mask = document.createElement("span");
   mask.className = "flashcard__hint-mask";
   const characters = Array.from(replacement);
 
-  for (let index = 0; index < matchLength; index += 1) {
-    const character = characters[index] ?? "_";
+  for (const character of characters) {
     const slot = document.createElement("span");
     const isBlank = character === "_";
+    const isSeparator = !isBlank && !/[\p{L}\p{N}]/u.test(character);
 
-    slot.className = isBlank
-      ? "flashcard__hint-slot flashcard__hint-slot--blank"
-      : "flashcard__hint-slot flashcard__hint-slot--filled";
-    slot.textContent = isBlank ? "\u00a0" : character;
+    slot.className = isSeparator
+      ? "flashcard__hint-slot flashcard__hint-slot--separator"
+      : isBlank
+        ? "flashcard__hint-slot flashcard__hint-slot--blank"
+        : "flashcard__hint-slot flashcard__hint-slot--filled";
+    slot.classList.toggle("flashcard__hint-slot--word-gap", /\s/u.test(character));
+    slot.textContent = isBlank || /\s/u.test(character) ? "\u00a0" : character;
     mask.append(slot);
   }
 
@@ -9682,7 +9717,7 @@ function getActionLabel() {
     return "Hinweis folgt.";
   }
 
-  return state.hintLevel === 0 ? "Ersten Hinweis zeigen." : "Zweiten Hinweis zeigen.";
+  return state.hintLevel === 0 ? "Ersten Hinweis zeigen." : "Nächsten Hinweis zeigen.";
 }
 
 function getStatusMessage() {
@@ -9698,12 +9733,8 @@ function getStatusMessage() {
     return getCurrentRoundCardStatus();
   }
 
-  if (state.hintLevel === 1) {
-    return "Erster Hinweis.";
-  }
-
-  if (isHintSequenceComplete()) {
-    return "Zweiter Hinweis.";
+  if (state.hintLevel > 0) {
+    return `Hinweis ${state.hintLevel} von ${state.currentCard.hints.length}.`;
   }
 
   return state.hintReady

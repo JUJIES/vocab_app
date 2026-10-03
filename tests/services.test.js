@@ -185,92 +185,93 @@ test("teacher sets stay private while public codes remain resolvable", async () 
   });
 });
 
-test("teacher drafts persist incomplete work but stay unavailable to tablets", async () => {
+test("sets persist incomplete work immediately and learners only receive complete pairs", async () => {
   await withTempDirectory(async (directory) => {
     const service = new SetService({ dataDir: directory });
-    const draft = await service.createDraft("julius", {
-      title: "",
-      subject: "Englisch",
-      cards: [{ front: "Hund", back: "" }],
+    const empty = await service.createSet("julius", { title: "", cards: [] });
+    assert.equal(empty.status, "published");
+    assert.match(empty.shareCode, /^[A-HJ-NP-Z2-9]{6}$/);
+    const partial = await service.updateSet("julius", empty.id, {
+      sideSelection: { front: "de", back: "en" },
+      cards: [{ front: "Hund", back: "dog" }, { front: "Katze", back: "" }],
+      expectedContentRevision: empty.contentRevision,
     });
-
-    assert.equal(draft.status, "draft");
-    assert.equal(draft.title, "");
-    assert.equal(draft.shareCode, "");
-    assert.equal(draft.cards[0].front, "Hund");
-    assert.equal(draft.cards[0].back, "");
-    assert.equal((await service.listOwnedSets("julius"))[0].title, "Unbenanntes Set");
-    assert.equal(await service.findPublishedSetById(draft.id), null);
-    assert.equal(await service.resolveShareCode(draft.shareCode), null);
+    const reloaded = await new SetService({ dataDir: directory }).getOwnedSet("julius", empty.id);
+    assert.deepEqual(reloaded.cards, partial.cards);
+    assert.equal(reloaded.cardCount, 2);
+    assert.equal(reloaded.learningCardCount, 1);
+    assert.equal((await service.resolveShareCode(empty.shareCode)).cardCount, 1);
+    const document = service.toSetDocument(await service.findPublishedSetById(empty.id));
+    assert.equal(document.cards.length, 1);
+    assert.equal(document.cards[0].source.text, "Hund");
+    const cleared = await service.updateSet("julius", empty.id, { title: "", cards: [], expectedContentRevision: partial.contentRevision });
+    assert.equal(cleared.cards.length, 0);
+    assert.equal(cleared.shareCode, empty.shareCode);
+    assert.equal(cleared.path, empty.path);
+    await assert.rejects(service.updateSet("julius", empty.id, { cards: "invalid" }), { code: "INVALID_CARDS" });
+    await assert.rejects(service.updateSet("julius", empty.id, { sideSelection: { front: "unknown", back: "" } }), { code: "SIDE_CONFIGURATION_REQUIRED" });
+    assert.equal((await service.getOwnedSet("julius", empty.id)).contentRevision, cleared.contentRevision);
   });
 });
 
-test("publishing a draft keeps its identity and creates its first share code", async () => {
-  await withTempDirectory(async (directory) => {
+test("metadata autosaves preserve legacy card presentation and active images", async () => {
+  await withTempDirectory(async directory => {
     const service = new SetService({ dataDir: directory });
-    const createdDraft = await service.createDraft("julius", {
-      title: "Tiere",
-      cards: [{ front: "Hund", back: "" }],
+    const created = await service.createSet("julius", { ...germanEnglishSides, title: "Alt", cards: [{ front: "Hund", back: "dog" }] });
+    await service.store.mutate(store => {
+      const card = store.sets[0].cards[0];
+      card.presentation = { examples: [{ id: "sentence", source: "Ein Hund", target: "A dog" }] };
     });
-    const updatedDraft = await service.updateDraft("julius", createdDraft.id, {
-      title: "Tiere auf Englisch",
-      cards: [{ id: createdDraft.cards[0].id, front: "Hund", back: "dog" }],
-    });
-    const published = await service.updateSet("julius", createdDraft.id, {
-      ...germanEnglishSides,
-      title: "Tiere auf Englisch",
-      cards: updatedDraft.cards,
-    });
-
-    assert.equal(updatedDraft.id, createdDraft.id);
-    assert.equal(updatedDraft.cards[0].id, createdDraft.cards[0].id);
-    assert.equal(published.id, createdDraft.id);
-    assert.equal(published.path, createdDraft.path);
-    assert.equal(published.status, "published");
-    assert.match(published.shareCode, /^[A-HJ-NP-Z2-9]{6}$/);
-    assert.equal((await service.resolveShareCode(published.shareCode)).id, published.id);
-    await assert.rejects(
-      () => service.updateDraft("julius", published.id, {
-        title: "Darf nicht autospeichern",
-        cards: published.cards,
-      }),
-      (error) => error.code === "SET_NOT_DRAFT" && error.status === 409,
-    );
+    const before = await service.getOwnedSet("julius", created.id);
+    const after = await service.updateSet("julius", created.id, { ...before, title: "Neu", cards: before.cards.map(({ presentation, visual, ...card }) => card) });
+    assert.deepEqual(after.cards[0].presentation, before.cards[0].presentation);
+    assert.equal(after.cards[0].id, before.cards[0].id);
   });
 });
 
-test("new sets cannot publish without an explicit, matching side pair", async () => {
+test("autosave rejects concurrent content edits without treating image attachment as a content conflict", async () => {
   await withTempDirectory(async (directory) => {
     const service = new SetService({ dataDir: directory });
-    await assert.rejects(
-      () => service.createSet("julius", { title: "Ohne Zuordnung", cards: [{ front: "cat", back: "Katze" }] }),
-      { code: "SIDE_CONFIGURATION_REQUIRED" },
-    );
-    const draft = await service.createDraft("julius", {
-      title: "Fragen", cards: [{ front: "Was?", back: "Das." }],
-    });
-    assert.equal(draft.sidePreset, null);
-    await assert.rejects(
-      () => service.updateSet("julius", draft.id, { title: "Fragen", cards: draft.cards }),
-      { code: "SIDE_CONFIGURATION_REQUIRED" },
-    );
-    const selectedDraft = await service.updateDraft("julius", draft.id, {
-      title: "Fragen", cards: draft.cards, sidePreset: "question-answer",
-      sourceLabel: "Frage", targetLabel: "Antwort", sourceLanguage: "und", targetLanguage: "und",
-    });
-    assert.equal((await service.getOwnedSet("julius", draft.id)).sidePreset, "question-answer");
-    const published = await service.updateSet("julius", draft.id, {
-      title: "Fragen", cards: selectedDraft.cards,
-    });
-    assert.equal(published.sidePreset, "question-answer");
-    assert.equal(service.toSetDocument(await service.findPublishedSetById(draft.id)).set.labels.source, "Frage");
-    await assert.rejects(
-      () => service.createSet("julius", {
-        ...germanEnglishSides, sourceLanguage: "en", title: "Falsche Flagge",
-        cards: [{ front: "cat", back: "Katze" }],
-      }),
-      { code: "SIDE_CONFIGURATION_REQUIRED" },
-    );
+    const initial = await service.createSet("julius", { ...germanEnglishSides, title: "Tiere", cards: [{ front: "Hund", back: "dog" }] });
+    await service.store.mutate(store => { store.sets[0].revision += 1; }); // A picture changes the learner revision only.
+    const updated = await service.updateSet("julius", initial.id, { title: "Tiere neu", expectedContentRevision: initial.contentRevision });
+    assert.equal(updated.cards[0].id, initial.cards[0].id);
+    await assert.rejects(service.updateSet("julius", initial.id, { title: "Stale title", expectedContentRevision: initial.contentRevision }), { code: "SET_CONTENT_CONFLICT", status: 409 });
+    assert.equal((await service.getOwnedSet("julius", initial.id)).title, "Tiere neu");
+  });
+});
+
+test("side choices including a single selected side persist; incomplete configurations never enter learning", async () => {
+  await withTempDirectory(async (directory) => {
+    const service = new SetService({ dataDir: directory });
+    const created = await service.createSet("julius", { title: "Fragen", sideSelection: { front: "question", back: "" }, cards: [{ front: "Was?", back: "Das." }] });
+    const reloaded = await service.getOwnedSet("julius", created.id);
+    assert.deepEqual(reloaded.sideSelection, { front: "question", back: "" });
+    assert.equal(service.toSetDocument(await service.findPublishedSetById(created.id)).cards.length, 0);
+    const ready = await service.updateSet("julius", created.id, { sideSelection: { front: "question", back: "answer" } });
+    assert.equal(ready.sidePreset, "question-answer");
+    assert.equal(service.toSetDocument(await service.findPublishedSetById(created.id)).cards.length, 1);
+    await assert.rejects(service.updateSet("julius", created.id, { sideSelection: { front: "question", back: "de" } }), { code: "SIDE_CONFIGURATION_REQUIRED" });
+    await assert.rejects(service.createSet("julius", { ...germanEnglishSides, sourceLanguage: "en", title: "Falsche Flagge", cards: [{ front: "cat", back: "Katze" }] }), { code: "SIDE_CONFIGURATION_REQUIRED" });
+  });
+});
+
+test("old drafts migrate once without losing partial cards, units, or existing set identities", async () => {
+  await withTempDirectory(async (directory) => {
+    const service = new SetService({ dataDir: directory });
+    const unit = await service.saveUnit("julius", { name: "Unit 1" });
+    const initial = await service.createSet("julius", { title: "Draft", unitId: unit.id, cards: [{ front: "Hund", back: "" }] });
+    await service.store.mutate(store => { store.sets[0].status = "draft"; store.sets[0].shareCode = ""; });
+    await service.migrateAutosaveSets();
+    const migrated = await service.getOwnedSet("julius", initial.id);
+    assert.equal(migrated.status, "published");
+    assert.equal(migrated.unitId, unit.id);
+    assert.deepEqual(migrated.cards, initial.cards);
+    assert.match(migrated.shareCode, /^[A-HJ-NP-Z2-9]{6}$/);
+    await service.migrateAutosaveSets();
+    assert.deepEqual(await service.getOwnedSet("julius", initial.id), migrated);
+    const compatibility = await service.updateDraft("julius", initial.id, { title: "Same lifecycle" });
+    assert.equal(compatibility.shareCode, migrated.shareCode);
   });
 });
 

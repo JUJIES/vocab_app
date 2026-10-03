@@ -251,6 +251,43 @@ test("test mode ignores punctuation and keeps wrong answers editable until all a
   expect(responsiveLayout.submitFits).toBeTruthy();
 });
 
+test.describe("tablet test input", () => {
+  test.use({ hasTouch: true, viewport: { width: 1024, height: 600 } });
+
+  test("keeps the chosen row in view while typing", async ({ page }) => {
+    await prepareStudentHome(page);
+    await page.locator(".student-screen__library-card").first().click();
+    await page.locator('.launch-mode-modal__mode-card[data-mode-key="test"]').click();
+    await page.locator("#launch-mode-start").click();
+    await page.locator("#launch-settings-start").click();
+
+    const inputs = page.locator("#test-table-body .test-stage__input");
+    await expect(inputs).toHaveCount(8);
+    expect(await page.evaluate(() => window.matchMedia("(hover: hover) and (pointer: fine)").matches)).toBe(false);
+    expect(await page.evaluate(() => document.activeElement?.classList.contains("test-stage__input"))).toBe(false);
+    expect(await page.locator(".app-shell").evaluate((shell) => getComputedStyle(shell).overflowY)).toBe("visible");
+    expect(await page.locator(".test-stage__table-shell").evaluate((shell) => getComputedStyle(shell).overflowY)).toBe("clip");
+
+    const chosenInput = inputs.nth(6);
+    await chosenInput.click();
+    await chosenInput.press("a");
+    const scrollY = await page.evaluate(() => window.scrollY);
+    expect(scrollY).toBeGreaterThan(0);
+    await expect.poll(() => page.evaluate(() => document.body.classList.contains("launch-mode-modal-open"))).toBe(false);
+    const result = await chosenInput.evaluate((input) => ({
+      value: input.value,
+      focused: document.activeElement === input,
+      visible: input.getBoundingClientRect().top >= 0
+        && input.getBoundingClientRect().bottom <= window.innerHeight,
+      scrollY: window.scrollY,
+    }));
+    expect(result.value).toBe("a");
+    expect(result.focused).toBe(true);
+    expect(result.visible).toBe(true);
+    expect(Math.abs(result.scrollY - scrollY)).toBeLessThan(2);
+  });
+});
+
 test("practice starts with a shuffled card order", async ({ page }) => {
   await prepareStudentHome(page);
   await page.evaluate(() => {

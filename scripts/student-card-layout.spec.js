@@ -48,6 +48,28 @@ function buildVisualSet({ withVisual = true, revision = 1 } = {}) {
   };
 }
 
+function buildPhraseHintSet() {
+  const setData = buildVisualSet({ withVisual: false });
+  setData.cards[0] = {
+    ...setData.cards[0],
+    source: { text: "Feuer fangen / in Brand geraten" },
+    target: { text: "to catch fire" },
+    examples: [{
+      id: "answer",
+      source: "Feuer fangen / in Brand geraten",
+      target: "to catch fire",
+    }],
+    hintData: {
+      flashcard: {
+        exampleId: "answer",
+        maskedWord: "legacy mask is deliberately ignored",
+        firstLetterHint: "legacy hint is deliberately ignored",
+      },
+    },
+  };
+  return setData;
+}
+
 async function prepareStudentHome(page, options = {}) {
   await page.route("**/sets/*.json", (route) => route.fulfill({
     status: 200,
@@ -216,6 +238,35 @@ test("practice front keeps word and tip action in one balanced vertical composit
   await page.locator("#flashcard").screenshot({
     path: testInfo.outputPath("practice-front-desktop-with-hint.png"),
   });
+});
+
+test("phrase hints reveal every word progressively with clear word gaps", async ({ page }, testInfo) => {
+  await prepareStudentHome(page, { setProvider: buildPhraseHintSet });
+  await openMode(page, "practice");
+
+  const action = page.locator("#card-action");
+  const hint = page.locator("#front-hint");
+  await expect(action).toBeEnabled({ timeout: 3000 });
+  await action.click();
+  await expect(hint).toHaveAttribute("aria-label", "to c____ f___");
+  await expect(hint.locator(".flashcard__hint-slot--word-gap")).toHaveCount(2);
+  const wordGapBorders = await hint.locator(".flashcard__hint-slot--word-gap").evaluateAll(
+    (elements) => elements.map((element) => getComputedStyle(element).borderBottomWidth),
+  );
+  expect(wordGapBorders).toEqual(["0px", "0px"]);
+
+  await action.click();
+  await expect(hint).toHaveAttribute("aria-label", "to ca___ fi__");
+  await page.locator("#flashcard").screenshot({
+    path: testInfo.outputPath("practice-progressive-phrase-hint.png"),
+  });
+
+  await action.click();
+  await action.click();
+  await action.click();
+  await expect(hint).toHaveAttribute("aria-label", "to catch fire");
+  await expect(action).toHaveClass(/is-flip/);
+  await expect(action).toHaveAttribute("aria-label", "Aufdecken.");
 });
 
 test("front and back use the same type size for differently long terms", async ({ page }) => {

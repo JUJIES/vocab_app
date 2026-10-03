@@ -95,12 +95,10 @@ for (const [mode, id, name] of [
     await page.getByRole("tab", { name: "Tablets", exact: true }).click();
     await capture(page, `${id}-tablets`);
     await page.getByRole("tab", { name: "Lernsets", exact: true }).click();
-    await page.locator(".teacher-set-row__edit").first().click();
+    await page.locator(".workspace-set-row").first().click();
     await expect(page.locator("#set-editor-form")).toBeVisible();
     await capture(page, `${id}-editor`);
-    await page.locator("#set-editor-close").click();
-    await expect(page.locator("#set-editor-overlay")).toBeHidden();
-    await page.locator(".teacher-set-row__print").first().click();
+    await page.locator("#workspace-print").click();
     await page.getByRole("button", { name: "Vokabeltest", exact: true }).click();
     await expect(page.locator("#print-paper")).toBeVisible();
     await expect(page.locator("#print-paper.print-paper, #print-paper .print-paper").first()).toHaveCSS("background-color", "rgb(255, 255, 255)");
@@ -129,11 +127,9 @@ for (const [mode, id, name] of [
     await capture(page, `${id}-password`);
     await page.keyboard.press("Escape");
     await expect(page.locator("#password-overlay")).toBeHidden();
-    await page.getByRole("button", { name: "Neues Set", exact: true }).click();
-    await page.getByRole("button", { name: /Aus Material erstellen/ }).click();
+    await page.getByRole("button", { name: "+ Neues Set", exact: true }).click();
+    await page.getByRole("button", { name: "Importieren", exact: true }).click();
     await capture(page, `${id}-import`);
-    await page.locator("#set-editor-close").click();
-    await expect(page.locator("#set-editor-overlay")).toBeHidden();
     await page.route("**/api/teacher/session", (route) => route.fulfill({ status: 401, json: {} }));
     await page.reload();
     await expect(page.locator("#teacher-auth-panel")).toBeVisible();

@@ -85,6 +85,34 @@ test("single edit prompt treats the current image as a reference and the brief a
   assert.match(prompt, /semantic brief and teacher direction are authoritative/);
 });
 
+test("missing visual jobs can target only newly added cards", async () => {
+  const dataDir = await fs.mkdtemp(path.join(os.tmpdir(), "lerndeck-visual-target-test-"));
+  const setService = new SetService({ dataDir });
+  const visualService = new VisualService({ dataDir, setService, client: {} });
+  const createdSet = await setService.createSet("julius", {
+    sidePreset: "languages",
+    sourceLanguage: "de",
+    targetLanguage: "en",
+    sourceLabel: "Deutsch",
+    targetLabel: "Englisch",
+    title: "Targeted visuals",
+    cards: [
+      { front: "Alt ohne Bild", back: "old without image" },
+      { front: "Neu eins", back: "new one" },
+      { front: "Neu zwei", back: "new two" },
+    ],
+  });
+  visualService.createAndRunJob = async (input) => input;
+
+  const targetedCards = createdSet.cards.slice(1);
+  const job = await visualService.startMissingVisuals("julius", createdSet.id, {
+    cardIds: targetedCards.map((card) => card.id),
+  });
+
+  assert.deepEqual(job.cards.map((card) => card.id), targetedCards.map((card) => card.id));
+  assert.equal(job.type, "sheet");
+});
+
 test("semantic planning uses each vocabulary pair independently with contrastive examples", () => {
   const prompt = buildVisualPlanningPrompt([{
     id: "card_convenient",

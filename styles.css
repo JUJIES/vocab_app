@@ -3500,6 +3500,10 @@ button.student-screen__device-card {
   padding: 0;
 }
 
+.app-shell[data-app-mode="test"] {
+  overflow-y: visible;
+}
+
 .app-shell[data-app-mode="flashcard"] .card-stage,
 .app-shell[data-app-mode="input"] .input-stage,
 .app-shell[data-app-mode="test"] .test-stage {
@@ -4799,7 +4803,7 @@ button.student-screen__device-card {
 }
 
 .test-stage__table-shell {
-  overflow: hidden;
+  overflow: clip;
   border: 1px solid rgba(var(--learner-ui-rgb, 214, 224, 246), 0.1);
   border-radius: 1.25rem;
   background: rgba(var(--learner-panel-bottom-rgb, 24, 32, 46), 0.72);
@@ -7115,11 +7119,9 @@ button.student-screen__device-card {
 }
 
 .flashcard__hint-mask {
-  display: inline-grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 1ch;
+  display: inline-flex;
   align-items: baseline;
-  column-gap: 0.22em;
+  gap: 0.16em;
   margin-inline: 0.12em;
   vertical-align: baseline;
   white-space: nowrap;
@@ -7149,6 +7151,17 @@ button.student-screen__device-card {
 
 .flashcard__hint-slot--blank {
   color: transparent;
+}
+
+.flashcard__hint-slot--separator {
+  width: auto;
+  min-width: 0.42em;
+  color: var(--text-muted);
+  border-bottom: 0;
+}
+
+.flashcard__hint-slot--word-gap {
+  min-width: 0.72em;
 }
 
 .flashcard.is-loading .flashcard__word,

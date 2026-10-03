@@ -13,7 +13,7 @@ test.use({
   locale: "de-DE",
 });
 
-test("Monday MVP: teacher draft, stable code, tablet subscription and correction loop", async ({ page, request }) => {
+test("teacher autosave, deliberate sides, stable code, tablet subscription and correction loop", async ({ page, request }) => {
   test.skip(!TEACHER_PASSWORD, "TEACHER_PASSWORD fehlt für den isolierten Mutationstest.");
 
   const teacherLogin = await request.post("/api/teacher/session", {
@@ -28,6 +28,7 @@ test("Monday MVP: teacher draft, stable code, tablet subscription and correction
 
   await decoupleTablet();
 
+  let createdSetId = "";
   try {
     const importResponse = await request.post("/api/teacher/import-draft", {
       data: { text: "Hund; dog\nKatze; cat\nVogel; bird" },
@@ -38,6 +39,7 @@ test("Monday MVP: teacher draft, stable code, tablet subscription and correction
       ...draft,
       sourceLabel: "Deutsch",
       targetLabel: "Englisch",
+      sideSelection: { front: "de", back: "en" },
     };
 
     const createResponse = await request.post("/api/teacher/sets", {
@@ -45,6 +47,9 @@ test("Monday MVP: teacher draft, stable code, tablet subscription and correction
     });
     expect(createResponse.ok()).toBeTruthy();
     const createdSet = (await createResponse.json()).set;
+    createdSetId = createdSet.id;
+    expect(createdSet.status).toBe("published");
+    expect(createdSet.learningCardCount).toBe(3);
     expect(createdSet.shareCode).toMatch(/^[A-HJ-NP-Z2-9]{6}$/);
 
     const updateResponse = await request.put(`/api/teacher/sets/${createdSet.id}`, {
@@ -81,11 +86,11 @@ test("Monday MVP: teacher draft, stable code, tablet subscription and correction
     await expect(page.locator("#launch-settings-modal")).toBeVisible();
     await expect(page.locator('[data-learning-direction-group="launch"] [data-learning-direction="source-target"]')).toHaveAttribute(
       "aria-label",
-      "Deutsch zuerst, danach Englisch",
+      "Deutsch wird gezeigt, Englisch eingeben",
     );
     await expect(page.locator('[data-learning-direction-group="launch"] [data-learning-direction="target-source"]')).toHaveAttribute(
       "aria-label",
-      "Englisch zuerst, danach Deutsch",
+      "Englisch wird gezeigt, Deutsch eingeben",
     );
     await page.locator('[data-learning-direction-group="launch"] [data-learning-direction="source-target"]').click();
     await page.locator("#launch-settings-start").click();
@@ -101,15 +106,19 @@ test("Monday MVP: teacher draft, stable code, tablet subscription and correction
     await expect(prompt).toHaveText("Hund");
     await answer.fill("falsch");
     await page.getByRole("button", { name: "Antwort prüfen" }).click();
-    await expect(page.getByText("Noch nicht korrekt", { exact: true })).toBeVisible();
+    await expect(page.locator("#input-feedback-title")).toHaveText("Markierte Antwort verbessern.");
     await answer.fill("dog");
-    await page.getByRole("button", { name: "Antwort noch einmal eingeben" }).click();
-    await expect(page.getByText("Korrigiert", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Korrektur prüfen" }).click();
+    await expect(page.locator("#input-check-button")).toHaveText("Korrigiert");
 
     const healthResponse = await request.get("/health");
     expect(healthResponse.ok()).toBeTruthy();
     await expect(healthResponse.json()).resolves.toMatchObject({ status: "ok", service: "lerndeck" });
   } finally {
     await decoupleTablet();
+    if (createdSetId) {
+      const cleanup = await request.delete(`/api/teacher/sets/${createdSetId}`);
+      expect(cleanup.ok()).toBeTruthy();
+    }
   }
 });
