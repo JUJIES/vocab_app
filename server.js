@@ -8,6 +8,7 @@ const bcrypt = require("bcryptjs");
 const fsp = require("fs/promises");
 const path = require("path");
 const { SentenceService } = require("./lib/sentence-service");
+const { SentenceLogStore } = require("./lib/sentence-log-store");
 const { ImportService } = require("./lib/import-service");
 const { SetService } = require("./lib/set-service");
 const { TeacherService } = require("./lib/teacher-service");
@@ -76,7 +77,10 @@ const teacherService = new TeacherService({
 const setService = new SetService({ dataDir: DATA_DIR });
 const importService = new ImportService();
 const { SentenceOrderStore } = require("./lib/sentence-order-store");
-const sentenceService = new SentenceService({ orderStore: new SentenceOrderStore({ dataDir: DATA_DIR }) });
+const sentenceLogStore = new SentenceLogStore({ dataDir: DATA_DIR,
+  processorCodeSha256: crypto.createHash("sha256").update(fs.readFileSync(path.join(ROOT_DIR, "lib/sentence-service.js"), "utf8").replace(/\r\n/g, "\n")).digest("hex"),
+});
+const sentenceService = new SentenceService({ orderStore: new SentenceOrderStore({ dataDir: DATA_DIR }), logStore: sentenceLogStore });
 const visualService = new VisualService({ dataDir: DATA_DIR, setService });
 
 app.use("/api/teacher/import-draft", express.json({ limit: "18mb" }));
@@ -616,7 +620,7 @@ app.post("/api/sentence-practice/:action", async (request, response) => {
     const body = request.body;
     let run;
     switch (request.params.action) {
-      case "start": run = await sentenceService.start(actor, setPath, setService.toSetDocument(set), body.direction, body.count, body.difficulty); break;
+      case "start": run = await sentenceService.start(actor, setPath, setService.toSetDocument(set), body.direction, body.count, body.difficulty, { ownerTeacherId: set.ownerTeacherId }); break;
       case "shown": run = await sentenceService.shown(actor, body.id, setPath, body.promptId); break;
       case "resume": run = sentenceService.view(sentenceService.get(actor, body.id, setPath)); break;
       case "check": run = await sentenceService.check(actor, body.id, setPath, body.promptId, body.answer); break;
@@ -1566,6 +1570,7 @@ for (const publicDirectory of ["assets", "audio", "icons", "sets"]) {
 const shouldStartLocalHttps = !process.env.RENDER && fs.existsSync(HTTPS_KEY_PATH) && fs.existsSync(HTTPS_CERT_PATH);
 
 async function startServers() {
+  await sentenceLogStore.initialize();
   await setService.migrateAutosaveSets();
   await visualService.recoverInterruptedJobs();
   const migration = await migrateLegacySetsToJulius();

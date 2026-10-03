@@ -110,6 +110,8 @@ Folgende Dateien gehören zur Runtime und nie in einen Release-Cutover:
 - `data/teacher-sets.json`: private Set-Quellen, stabile Codes und Revisionen
 - `data/visual-assets.json` und `data/visual-assets/*.webp`: erzeugte Lernbilder und ihre wiederverwendbare Historie
 - `data/visual-jobs.json`: persistenter Fortschritt und Abschlussstatus der Bildgenerierung
+- `data/sentence-order.json`: Translation-Auswahlmetadaten ohne Sätze/Antworten
+- `data/translation-logs/`: dauerhafte Translation-Rohdaten, `format.json` plus eine JSON-Datei pro Durchgang in UTC-Datumsordnern; direkte Betreiber-Auslesung, keine öffentliche Route. Produktiver Pfad/Format/Aufbewahrung in [TRANSLATION_LOGS.md](TRANSLATION_LOGS.md). Auch bei Rollback/Reset/Set-Entfernung erhalten und zusammen mit der Runtime sichern.
 
 `data/tablets.seed.json` und `data/teachers.seed.json` sind dagegen versionskontrollierte, geheimnisfreie Vorlagen. Bestehende Tablet-Daten werden durch den neuen MVP nicht migriert oder gelöscht. Fehlende neue Lehrkraftdateien werden beim ersten Start aus dem Seed erzeugt; der normale Provisionierungslauf gleicht außerdem Rollen ab, ohne Passwörter oder Sitzungen zurückzusetzen.
 
