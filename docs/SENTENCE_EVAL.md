@@ -27,13 +27,17 @@ Der Datensatz umfasst jetzt 38 Fälle. Drei zusätzliche Fälle prüfen den Verl
 - Folgerunde: 36/38; `a visit` zu Besuch wurde zu eng bewertet und ein Schutz gegen angebotene Wortformen blockierte eine hilfreiche Zeitreihenfolge-Frage. Besuche dürfen ohne konkretere Quelle als Personen oder Besuchsvorgang übersetzt werden. Der Schutz beschränkt sich auf verwandte Wortform-/Schreibungsalternativen (z.B. `need oder needs`); konzeptionelle Fragen wie davor/danach oder Einzahl/Mehrzahl bleiben möglich.
 - Letzte gezielte Runde: **8/8**, einschließlich aller gefundenen Regressionen und der drei neuen Verlaufsfälle. Texte gelesen: behobene Schreibfehler/Häufigkeit/Verbformen werden konkret gewürdigt, verbleibende Referenten-/Grammatikfehler weiter abgelehnt. Keine fertige Aufgabenlösung im getesteten Fehlerfeedback, mindestens ein Emoji pro Rückmeldung. Nicht als 38/38 in einer einzigen letzten Vollrunde ausweisen.
 
-Der Dienst gibt die letzten drei validierten Versuche nur für denselben Satz mit. Fehlgeschlagene Prüfungen erweitern den Verlauf nicht; `Weiter` löscht ihn. Die Annahmeentscheidung bleibt vollständig von der aktuellen Antwort abhängig. Automatische Diensttests sichern Begrenzung, Providerfehler, private Browserantwort, Übergang zur nächsten Aufgabe und den Emoji-Zusatz unabhängig vom Modell.
+Der Dienst gibt inzwischen alle validierten Versuche (höchstens 40) nur für denselben Satz mit. Fehlgeschlagene Prüfungen erweitern den Verlauf nicht; `Weiter` löscht ihn. Die Annahmeentscheidung bleibt vollständig von der aktuellen Antwort abhängig. Automatische Diensttests sichern Begrenzung, Providerfehler, öffentliche Verlaufsprojektion ohne private Prüfkriterien, Übergang zur nächsten Aufgabe und den Emoji-Zusatz unabhängig vom Modell.
 
 ## Nachtest: Adverbstellung im neutralen Unterrichtssatz
 
 Der Datensatz umfasst 46 Fälle. Acht zusätzliche Fälle prüfen `I’m today sick` / `I am today sick` (ablehnen), `Today I’m sick` / `I’m sick today` (annehmen) und zulässige Stellungen mit `often`, `very`, `temporarily` sowie `every day` nach einer Schul-Aussage. Der Baseline-Prompt traf 1/2 Fehler-/Kontrollfälle; die ausgeschriebene falsche Stellung wurde akzeptiert.
 
 Nach der Promptänderung: **8/8 Entscheidungen und korrekte Kontrollantworten passend**. Fehlerfeedback gelesen: Selbstprüfung der Zeitposition statt fertiger Aufgabensatz; Korrekturen werden konkret gewürdigt, Emoji vorhanden. Keine pauschale Sperre aller Adverbien zwischen be und Adjektiv. Generierung wird zugleich zu natürlicher Ausgangssyntax angehalten. Wie immer ist das ein gezielter Modellnachtest, keine Garantie für jede Wortstellung; vorhandene 90 Dienst-/Produktprüfungen bleiben grün.
+
+## UI-Nachtest: sichtbarer Überarbeitungsverlauf
+
+Der Verlauf nutzt dieselben validierten Versuche wie der Modellkontext, mit öffentlicher Projektion für Satzzitat, Feedback und Hilfe. Tests prüfen mehr als drei Versuche, unveränderte ältere Einträge nach Providerfehler/korrektem Abschluss, Idempotenz, 40er-Grenze und Reset beim nächsten Satz. Browserprüfungen in Chromium/WebKit sichern Hell/Dunkel, Desktop/schmal, bestehende Markierungsauswahl, geöffnete Hilfe, Fehlerversuch ohne zusätzlichen Eintrag, Wiederaufnahme mit ungeprüftem Entwurf, Abschluss und reduzierte Bewegung. Diese UI-Änderung verändert keine Annahmeregeln; synthetisches Browserfeedback ist kein erneuter Modell-Wirksamkeitsnachweis.
 
 ## Grenzen
 

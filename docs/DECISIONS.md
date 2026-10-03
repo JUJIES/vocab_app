@@ -1,14 +1,21 @@
 # Produkt- und Architekturentscheidungen
 
+## 2026-10-03: Sichtbarer Translation-Überarbeitungsverlauf
+
+- Ein kanonisches `run.attempts` für den aktuellen Satz ersetzt die bisher auf drei Einträge gekürzte Historie. Alle validierten Versuche werden dem Modell als untrusted Daten mit Antwort, Feedback und Prüfkriterien mitgegeben; Annahme richtet sich weiterhin ausschließlich nach der aktuellen vollständigen Antwort. Höchstens 40 Versuche pro Satz begrenzen Speicher/Kontext ohne stillen Datenverlust. Technische Fehler und identische Wiederholungen erweitern den Verlauf nicht.
+- `view(run).history` projiziert nur ID, Antwort, Feedback, Status, Hilfe und Problemstelle. Browser zeigt chronologisch Satzzitat und zugehöriges Feedback mit Seitenlinie, ohne Chatblasen. Bestehende Einträge/Hilfen behalten ihren DOM-Zustand; nur neue werden sanft eingefügt. Live-Ansage umfasst nur die neue Rückmeldung, reduzierte Bewegung wird respektiert. Historische Markierungen bleiben am Zitat; nur die zur aktuellen Eingabe passende letzte Markierung ist eine Korrekturaktion.
+- Bestehende Tab-Speicherung/Server-Resume tragen Entwurf und Verlauf; kein zweites Datenmodell oder persistente Schülerantwort-Datei. Auch Reload der Lehrervorschau nimmt den tab-lokalen Translation-Lauf wieder auf. Neues Vorschaufenster zeigt weiterhin das Modusmenü; bewusster Rückweg zur Lehreransicht verwirft die tab-lokale Wiederaufnahme. `Weiter` auf einen neuen Satz leert den Verlauf; Abschluss behält den letzten. Export, Noten und Set-Persistenz sind nicht betroffen.
+- Ersetzt die frühere Drei-Versuch-Grenze und das Verwerfen sichtbarer Hinweise beim Tippen. Diensttests prüfen Projektion, Idempotenz, Fehler, Begrenzung und Reset; Chromium/WebKit prüfen beide Themes, schmale Darstellung, Auswahlmarkierungen, Hilfe, Reload und neue Satzgrenze.
+
 ## 2026-10-03: Wortstellung ist Bestandteil der Translation-Grammatikprüfung
 
 - Verständliche Wörter mit unnatürlicher neutraler Satzstellung reichen nicht für Annahme. Der bestehende `grammar`-Check prüft ausdrücklich Wortstellung und unterschiedliche Adverbrollen; kein neues Bewertungsfeld, Regex-Grammatikfilter oder paralleler Prüfdienst. `I’m today sick` / `I am today sick` werden in dieser neutralen Unterrichtsaufgabe überarbeitet; beide natürlichen Zeitpositionen bleiben zulässig. Häufigkeits-/Grad-/Zustandsadverbien zwischen be und Adjektiv sind nicht pauschal verboten.
 - Feedback darf nicht gleichzeitig eine notwendige Umstellung verlangen und die Antwort akzeptieren. Es nennt den vorhandenen Problemteil/Regel statt eines fertigen Aufgabensatzes. Auch die Quelle soll natürlich sein (`Ich bin heute krank`, kein künstliches Nachstellen von heute).
 - Acht synthetische echte Modellfälle einschließlich beider Fehlerformen, Anfang/Ende sowie often/very/temporarily und Zeitphrase nach school passten nach der Promptänderung. Baseline hatte die ausgeschriebene Fehlerform akzeptiert. Modellprüfung und Grenzen in `docs/SENTENCE_EVAL.md`. Sprachdidaktische Grundlage: [British Council, Adverbial position](https://africa.teachingenglish.org.uk/classroom/grammar/adverbial-position).
 
-## 2026-10-03: Persönliches Feedback mit begrenztem Verbesserungsverlauf
+## 2026-10-03: Persönliches Feedback mit begrenztem Verbesserungsverlauf (ursprüngliche Einführung)
 
-- Die letzten drei validierten Prüfversuche (Antwort, Rückmeldung, vier Prüfkriterien) desselben Satzes werden als untrusted Daten mitgegeben. Sie bleiben serverseitig im flüchtigen Lauf, gehen nicht in Auswahlmetadaten/Bewertungen oder die Browserantwort ein und werden bei `Weiter` gelöscht. Doppelte Eingaben und fehlgeschlagene Provider-/Validierungsversuche erweitern den Verlauf nicht.
+- Ursprünglich die letzten drei validierten Prüfversuche (Antwort, Rückmeldung, vier Prüfkriterien) desselben Satzes werden als untrusted Daten mitgegeben. Sie bleiben serverseitig im flüchtigen Lauf, gehen nicht in Auswahlmetadaten/Bewertungen oder die Browserantwort ein und werden bei `Weiter` gelöscht. Doppelte Eingaben und fehlgeschlagene Provider-/Validierungsversuche erweitern den Verlauf nicht.
 - Feedback benennt echte Fortschritte und noch offene Punkte. Der neue Versuch wird vollständig neu bewertet; alte Fehler werden nicht fortgeschrieben und ein behobener Fehler führt nicht allein zur Annahme. Mindestens ein passendes Emoji pro Rückmeldung; ein fehlendes Emoji ergänzt der Dienst rein gestalterisch, ohne die Wertung zu verändern.
 - Lexikalische Bindung betrifft nur die Zielvokabel samt hinterlegten Varianten. Wenn `flat tire` geübt wird, darf `cycle` als sinngleiches Begleitwort für Fahrrad stehen. Wenn `bicycle` mit Variante `bike` geübt wird, zählt ein nicht hinterlegtes `cycle` nicht als abgerufene Zielvokabel. Gültige Begleitvarianten werden ausdrücklich weiter erlaubt; keine allgemeine Schulwortliste.
 
@@ -25,7 +32,7 @@
 ## 2026-10-03 – Satzstufen, klare Annahme und übertragbare Zusatzhilfe
 
 - Einfach/Mittel/Schwer steuern Begleitsatz und bekannten Wortschatz, nicht Fehlertoleranz. Gemeinsame Stufendefinition für Browser/Server; keine neuen Übungsmodi. Annahme braucht Grammatik, gesamte Bedeutung, Zielwort **und Rechtschreibung**. Zeit/Häufigkeit/Ort/Menge/Bedingung/Verneinung sind Bestandteil der Aussage. Wortstellung, Flexionen und echte UK/US-Varianten bleiben erlaubt.
-- Kurzer persönlicher Hinweis plus optional eingeklappte Erklärung/anderer Grammatik-Beispielsatz. Kein korrigierter Aufgabensatz, kein übersetztes fehlendes Detail und kein verratenes Zielwort. Konkrete Provenienz-/Wortprüfungen verhindern problematische Extras; genau eine begrenzte Modellreparatur mit deaktivierter Zusatzhilfe, danach kontrollierter Fehler statt erfundener Bewertung. Hinweise, markierte Stelle und Zusatzhilfe verfallen beim Überarbeiten. Echte Modellprüfungen und Grenzen: `docs/SENTENCE_EVAL.md`.
+- Kurzer persönlicher Hinweis plus optional eingeklappte Erklärung/anderer Grammatik-Beispielsatz. Kein korrigierter Aufgabensatz, kein übersetztes fehlendes Detail und kein verratenes Zielwort. Konkrete Provenienz-/Wortprüfungen verhindern problematische Extras; genau eine begrenzte Modellreparatur mit deaktivierter Zusatzhilfe, danach kontrollierter Fehler statt erfundener Bewertung. Die ursprünglich flüchtige Anzeige wurde durch den unten beschriebenen satzbezogenen Feedbackverlauf ersetzt. Echte Modellprüfungen und Grenzen: `docs/SENTENCE_EVAL.md`.
 
 ## 2026-10-03 – Fortlaufende Satz-Auswahl ist Organisation, keine Bewertung
 

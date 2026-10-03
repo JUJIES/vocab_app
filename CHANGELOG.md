@@ -2,9 +2,11 @@
 
 ## Unreleased
 
+- Translation zeigt einen ruhigen Überarbeitungsverlauf mit zitiertem Satz und zugehörigem Feedback. Hinweise und geöffnete Hilfe bleiben beim Tippen erhalten, neue Einträge werden sanft angefügt. Alle validierten Versuche desselben Satzes werden dem Modell mitgegeben (maximal 40); Fehler/identische Prüfungen erzeugen keinen zusätzlichen Eintrag. Tab-Reload erhält Entwurf und Verlauf auch in der Lehrervorschau; beim nächsten Satz beginnt ein neuer Verlauf.
+
 - Translation prüft die Wortstellung ausdrücklich als Grammatik: verständliche, aber unnatürliche neutrale Satzfolgen wie `I’m today sick` werden überarbeitet. Zeitangaben am Anfang/Ende und zulässige Häufigkeits-/Gradadverbien bleiben erlaubt. Auch generierte Ausgangssätze sollen natürlich klingen; acht echte Modellfälle sichern die Abgrenzung.
 
-- Translation-Feedback greift die letzten drei validierten Versuche desselben Satzes auf, würdigt konkrete Verbesserungen und nennt weiterhin offene Probleme. Jede Rückmeldung enthält ein passendes Emoji. Zielwortbindung und erlaubte Begleitvarianten sind ausdrücklich getrennt; vollständige Bedeutung, Grammatik und Rechtschreibung bleiben erforderlich.
+- Translation-Feedback greift validierte Versuche desselben Satzes auf, würdigt konkrete Verbesserungen und nennt weiterhin offene Probleme. Jede Rückmeldung enthält ein passendes Emoji. Zielwortbindung und erlaubte Begleitvarianten sind ausdrücklich getrennt; vollständige Bedeutung, Grammatik und Rechtschreibung bleiben erforderlich.
 
 - Neue Bilder, 6er-Bildbögen und gezielte Bildkorrekturen nutzen `gpt-image-2.5-flare` über den bestehenden serverseitigen API-Key. Code- und Deployment-Standard sind synchron; vorhandene Bilder und Variantenhistorie bleiben erhalten.
 

@@ -123,7 +123,11 @@ test("localized feedback is tied to the checked attempt, never accepted or uncer
   assert.equal(revise.checkedAnswer, "The zoo ist temporarily closed.");
   assert.deepEqual(s.view(s.get("a", run.id, "sets/a.json")).problem, revise.problem);
   assert.equal((await check("The zoo ist closed temporarily.")).problem, null);
-  assert.equal((await check("The zoo is temporarily closed.")).problem, null);
+  const correct = await check("The zoo is temporarily closed.");
+  assert.equal(correct.problem, null);
+  assert.deepEqual(correct.history[0].problem, revise.problem);
+  assert.equal(correct.history[0].answer, revise.checkedAnswer);
+  assert.equal(correct.history.length, 3);
   assert.equal((await s.next("a", run.id, "sets/a.json", run.prompt.id)).problem, null);
 });
 
@@ -180,25 +184,35 @@ test("spelling feedback does not invent letter counts and repairs once", async (
   assert.equal(calls.length, 3);
 });
 
-test("revision context is bounded, private, validated and reset for the next sentence", async () => {
+test("revision history retains quotes, exposes no grading flags and resets for the next sentence", async () => {
   const revise = { ...accepted, grammar: false, hint: "Prüfe die Verbform. 🔎" };
   const { service: s, calls } = service([prompt, revise, revise, revise, revise, new Error("outage"), accepted, prompt, revise]);
   const doc = { ...document, cards: [...document.cards, { source: { text: "Fähre" }, target: { text: "ferry" } }] };
   const run = await s.start("a", "sets/a.json", doc, "source-target", 2);
   for (const word of ["one", "two", "three", "four"]) await s.check("a", run.id, "sets/a.json", run.prompt.id, "The zoo " + word + " temporarily closed.");
   const internal = s.get("a", run.id, "sets/a.json");
-  assert.equal(internal.attempts.length, 3);
-  assert.equal(internal.attempts[0].answer, "The zoo two temporarily closed.");
+  assert.equal(internal.attempts.length, 4);
+  assert.equal(internal.attempts[0].answer, "The zoo one temporarily closed.");
+  const history = s.view(internal).history;
+  assert.equal(history.length, 4);
+  assert.deepEqual(Object.keys(history[0]).sort(), ['answer', 'feedback', 'help', 'id', 'problem', 'status']);
+  assert.equal(history[0].answer, 'The zoo one temporarily closed.');
+  assert.equal(history[0].feedback, revise.hint);
   assert.equal(s.view(internal).attempts, undefined);
+  await s.check('a', run.id, 'sets/a.json', run.prompt.id, 'The zoo four temporarily closed.');
+  assert.deepEqual(s.view(internal).history, history, 'cached identical check does not append');
   await assert.rejects(s.check("a", run.id, "sets/a.json", run.prompt.id, "The zoo is temporarily closed."));
-  assert.equal(internal.attempts.length, 3);
+  assert.equal(internal.attempts.length, 4);
   const result = await s.check("a", run.id, "sets/a.json", run.prompt.id, "The zoo is temporarily closed.");
   const submitted = JSON.parse(calls[6].input[0].content);
-  assert.equal(submitted.previous_attempts.length, 3);
+  assert.equal(submitted.previous_attempts.length, 4);
   assert.equal(submitted.previous_attempts[2].feedback, revise.hint);
+  assert.equal(result.history.length, 5);
+  assert.deepEqual(result.history.slice(0, 4), history);
   assert.match(result.feedback, /\p{Extended_Pictographic}/u);
   const next = await s.next("a", run.id, "sets/a.json", run.prompt.id);
   assert.deepEqual(internal.attempts, []);
+  assert.deepEqual(next.history, []);
   await s.check("a", next.id, "sets/a.json", next.prompt.id, "Next attempt");
   assert.deepEqual(JSON.parse(calls.at(-1).input[0].content).previous_attempts, []);
 });
@@ -211,4 +225,17 @@ test("revision hints repair task-word choices without blocking grammar-category 
   const result = await s.check("a", run.id, "sets/a.json", run.prompt.id, "The zoo need repair temporarily.");
   assert.equal(result.feedback, safe.hint);
   assert.equal(calls.length, 3);
+});
+
+test("history limit preserves every validated attempt and still allows cached checks", async () => {
+  const revise = { ...accepted, grammar: false, hint: 'Prüfe die Verbform. 🔎' };
+  const { service: s, calls } = service([prompt, ...Array(40).fill(revise)]);
+  const run = await s.start('a', 'sets/a.json', document, 'source-target', 1);
+  for (let i = 0; i < 40; i++) await s.check('a', run.id, 'sets/a.json', run.prompt.id, `The zoo ${i} temporarily closed.`);
+  const result = await s.check('a', run.id, 'sets/a.json', run.prompt.id, 'The zoo 39 temporarily closed.');
+  assert.equal(result.history.length, 40);
+  assert.equal(result.history[0].answer, 'The zoo 0 temporarily closed.');
+  await assert.rejects(s.check('a', run.id, 'sets/a.json', run.prompt.id, 'Another attempt'), error => error.status === 409);
+  assert.equal(calls.length, 41);
+  assert.equal(s.view(s.get('a', run.id, 'sets/a.json')).history.length, 40);
 });

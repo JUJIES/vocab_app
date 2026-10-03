@@ -1,6 +1,16 @@
 const { test, expect } = require("playwright/test");
 const BASE_URL = process.env.BASE_URL || "http://127.0.0.1:4030";
 test.use({ baseURL: BASE_URL, viewport: { width: 1280, height: 850 }, locale: "de-DE", serviceWorkers: "block" });
+// Mirror the API's canonical, validated history rather than inventing it in the UI.
+function checked(run, answer, feedback, accepted = false, problem = null, help = null) {
+  const status = accepted ? 'accepted' : 'revise';
+  const history = run.history || [];
+  const entry = { id: `attempt-${history.length + 1}`, answer: answer.trim(), feedback, status, problem, help };
+  const updated = { ...run, accepted, status, checkedAnswer: answer.trim(), feedback, problem, help,
+    history: history.at(-1)?.answer === answer.trim() ? history : [...history, entry] };
+  Object.assign(run, updated);
+  return updated;
+}
 async function prepare(page, light = false) {
   const set = { id: "sentence-fixture", path: "sets/user/sentence-fixture.json", title: "Words in context", status: "published", sourceLanguage: "de", targetLanguage: "en", sourceLabel: "Deutsch", targetLabel: "Englisch", learningCardCount: 8, cards: [] };
   await page.route("**/api/teacher/session", route => route.fulfill({ json: { session: { teacherId: "julius" }, teacher: { id: "julius" } } }));
@@ -27,7 +37,7 @@ for (const light of [false, true]) test(`sentence feedback, revision, explicit n
     if (action === "check") {
       checks++;
       expect(body.promptId).toBe("prompt1");
-      return route.fulfill({ json: { run: { ...run, accepted: checks > 1, feedback: checks === 1 ? "Die Vokabel passt. Achte auf die Form von be." : "Richtig – die Vokabel passt im Satz." } } });
+      return route.fulfill({ json: { run: { ...checked(run, body.answer, checks === 1 ? "Die Vokabel passt. Achte auf die Form von be." : "Richtig – die Vokabel passt im Satz.", checks > 1) } } });
     }
     return route.fulfill({ json: { run: { ...run, accepted: true, complete: true } } });
   });
@@ -42,7 +52,7 @@ for (const light of [false, true]) test(`sentence feedback, revision, explicit n
   await expect(page.locator("#sentence-feedback")).toContainText("Form von be");
   await expect(page.locator("#sentence-answer")).toBeEditable();
   await page.locator("#sentence-answer").fill("The zoo is temporarily closed.");
-  await expect(page.locator("#sentence-feedback")).toBeHidden();
+  await expect(page.locator("#sentence-feedback")).toBeVisible();
   await page.locator("#sentence-submit").click();
   await expect(page.locator("#sentence-submit")).toHaveText("Weiter");
   await expect(page.locator("#sentence-answer")).not.toBeEditable();
@@ -100,7 +110,9 @@ test("tablet session gates paid calls and completed student run counts once with
     expect(route.request().headers().authorization).toBe(`Bearer ${token}`);
     expect(route.request().postDataJSON().tabletId).toBe("rot-1");
     const action = route.request().url().split("/").pop();
-    return route.fulfill({ json: { run: { ...base, accepted: action !== "start", complete: action === "next" || action === "resume" } } });
+    if (action === "check") checked(base, route.request().postDataJSON().answer, "🌟 Die Aussage stimmt.", true);
+    if (action === "next") base.complete = true;
+    return route.fulfill({ json: { run: base } });
   });
   await page.goto("/");
   await page.getByRole("button", { name: /^Food Basics/ }).click();
@@ -112,9 +124,11 @@ test("tablet session gates paid calls and completed student run counts once with
   await page.locator("#sentence-submit").click();
   await page.locator("#sentence-submit").click();
   await expect(page.locator("#sentence-prompt")).toHaveText("Geschafft!");
+  await expect(page.locator('.sentence-stage__feedback-excerpt')).toHaveText('The ingredient is fresh.');
   expect(progressWrites).toBe(1);
   await page.reload();
   await expect(page.locator("#sentence-prompt")).toHaveText("Geschafft!");
+  await expect(page.locator('.sentence-stage__feedback-excerpt')).toHaveText('The ingredient is fresh.');
   expect(progressWrites).toBe(1);
 });
 
@@ -127,8 +141,8 @@ for (const light of [false, true]) test(`specific feedback highlights only the p
     if (action === "check") {
       checks++;
       if (checks === 3) return route.fulfill({ status: 503, json: { error: "Prüfung momentan nicht verfügbar. Bitte erneut versuchen." } });
-      if (checks === 4) return route.fulfill({ json: { run: { ...run, accepted: true, status: "accepted", feedback: "Richtig.", problem: null } } });
-      return route.fulfill({ json: { run: { ...run, status: "revise", checkedAnswer: answer, problem: { start: 10, end: 13 }, feedback: "Die Vokabel passt. ‚ist‘ ist noch Deutsch; überprüfe die englische Verbform." } } });
+      if (checks === 4) return route.fulfill({ json: { run: { ...checked(run, route.request().postDataJSON().answer, "Richtig.", true) } } });
+      return route.fulfill({ json: { run: { ...checked(run, answer, "Die Vokabel passt. ‚ist‘ ist noch Deutsch; überprüfe die englische Verbform.", false, { start: 10, end: 13 }) } } });
     }
     return route.fulfill({ json: { run } });
   });
@@ -138,7 +152,7 @@ for (const light of [false, true]) test(`specific feedback highlights only the p
   await page.locator("#sentence-submit").click();
   await expect(page.locator("#sentence-feedback-text")).toContainText("‚ist‘ ist noch Deutsch");
   await expect(page.locator(".sentence-stage__feedback-label")).toHaveText("Feedback:");
-  const mark = page.locator(".sentence-stage__problem");
+  const mark = page.locator("button.sentence-stage__problem");
   await expect(mark).toHaveText("ist");
   expect(await mark.evaluate(el => getComputedStyle(el).textDecorationStyle)).toBe("wavy");
   await page.screenshot({ path: testInfo.outputPath("localized-feedback.png") });
@@ -147,8 +161,9 @@ for (const light of [false, true]) test(`specific feedback highlights only the p
   expect(await page.locator("#sentence-answer").evaluate(el => el.value.slice(el.selectionStart, el.selectionEnd))).toBe("ist");
   expect(checks).toBe(1);
   await page.keyboard.type("is");
-  await expect(page.locator("#sentence-feedback")).toBeHidden();
-  await expect(mark).toBeHidden();
+  await expect(page.locator("#sentence-feedback")).toBeVisible();
+  await expect(mark).toHaveCount(0);
+  await expect(page.locator("span.sentence-stage__problem")).toHaveText("ist");
   await page.setViewportSize({ width: 390, height: 844 });
   await page.locator("#sentence-answer").fill(answer);
   await page.locator("#sentence-submit").click();
@@ -173,7 +188,7 @@ for (const light of [false,true]) test(`difficulty and optional transfer help ($
     const body=route.request().postDataJSON();
     if(action==='start'){ expect(body.difficulty).toBe('hard');expect(body.count).toBe(2);return route.fulfill({json:{run}}); }
     if(action==='shown'){shown++;expect(body.promptId).toBe('help-prompt');return route.fulfill({json:{run:{...run,shown:true}}});}
-    return route.fulfill({json:{run:{...run,shown:true,status:'revise',checkedAnswer:'The ferry come every day.',feedback:'Fast da! 🔎 Die Häufigkeit stimmt. Prüfe die Verbform bei „come“: Die Fähre steht in der Einzahl.',problem:{start:10,end:14},help:{explanation:'Bei he, she, it verändert sich im einfachen Präsens die Verbform. Überlege, welche Form zu einem einzelnen Subjekt passt.',example:'The dog plays in the park.'}}}});
+    return route.fulfill({json:{run:{...checked(run,'The ferry come every day.','Fast da! 🔎 Die Häufigkeit stimmt. Prüfe die Verbform bei „come“: Die Fähre steht in der Einzahl.',false,{start:10,end:14},{explanation:'Bei he, she, it verändert sich im einfachen Präsens die Verbform. Überlege, welche Form zu einem einzelnen Subjekt passt.',example:'The dog plays in the park.'}),shown:true}}});
   });
   await prepare(page,light);
   await expect(page.getByRole('radio',{name:/Einfach/})).toBeChecked();
@@ -188,16 +203,82 @@ for (const light of [false,true]) test(`difficulty and optional transfer help ($
   await page.locator('#launch-settings-start').click();
   await page.locator('#sentence-answer').fill('The ferry come every day.');
   await page.locator('#sentence-submit').click();
-  await expect(page.locator('#sentence-help')).not.toHaveAttribute('open','');
-  await expect(page.locator('#sentence-help-example')).toBeHidden();
+  await expect(page.locator('.sentence-stage__help')).not.toHaveAttribute('open','');
+  await expect(page.locator('.sentence-stage__example > p')).toBeHidden();
   await page.getByText('Mehr Hilfe',{exact:true}).click();
-  await expect(page.locator('#sentence-help-example')).toHaveText('The dog plays in the park.');
+  await expect(page.locator('.sentence-stage__example > p')).toHaveText('The dog plays in the park.');
   await page.screenshot({path:testInfo.outputPath('sentence-help.png')});
   await page.setViewportSize({width:390,height:844});
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await page.screenshot({path:testInfo.outputPath('sentence-help-mobile.png'),fullPage:true});
   await page.locator('#sentence-answer').fill('The ferry comes every day.');
-  await expect(page.locator('#sentence-feedback')).toBeHidden();
-  await expect(page.locator('#sentence-help')).not.toHaveAttribute('open','');
+  await expect(page.locator('#sentence-feedback')).toBeVisible();
+  await expect(page.locator('.sentence-stage__help')).toHaveAttribute('open','');
+  await expect(page.locator('.sentence-stage__feedback-excerpt')).toHaveText('The ferry come every day.');
   expect(shown).toBe(1);
+});
+
+for (const light of [false, true]) test(`revision history survives edits, retries and reload, then resets (${light ? 'light' : 'dark'})`, async ({ page }, testInfo) => {
+  const errors = []; page.on('pageerror', error => errors.push(error.message));
+  const run = { id: 'history-run', total: 2, position: 1, targetLanguage: 'en', prompt: { id: 'history-prompt', prefix: 'Mein Fahrrad hat einen ', focus: 'platten Reifen', suffix: '.' }, accepted: false, status: 'ready', feedback: '', history: [], shown: true };
+  let failNext = false;
+  await page.route('**/api/sentence-practice/*', route => {
+    const action = route.request().url().split('/').pop();
+    const body = route.request().postDataJSON();
+    if (action === 'check') {
+      if (failNext) { failNext = false; return route.fulfill({ status: 503, json: { error: 'Prüfung momentan nicht verfügbar. Bitte erneut versuchen.' } }); }
+      const answer = body.answer.trim();
+      if (answer === 'My car has a flat type.') checked(run, answer, '🔎 Die Aussage ist erkennbar. Prüfe das Fahrzeug und die Schreibweise der Zielvokabel.', false, { start: 18, end: 22 }, { explanation: 'Lies die Aufgabe noch einmal: Welches Fahrzeug ist gemeint?', example: null });
+      else if (answer === 'My car has a flat tire.') checked(run, answer, '👍 Die Schreibweise passt jetzt! Prüfe noch das Fahrzeug: Ist es dasselbe wie in der Aufgabe?', false, { start: 3, end: 6 });
+      else checked(run, answer, '🌟 Jetzt stimmt auch das Fahrzeug. Dein Satz passt!', true);
+    }
+    if (action === 'next') Object.assign(run, { position: 2, prompt: { id: 'history-prompt-2', prefix: 'Der Zoo ist ', focus: 'vorübergehend', suffix: ' geschlossen.' }, accepted: false, status: 'ready', feedback: '', history: [], checkedAnswer: '', help: null, problem: null });
+    return route.fulfill({ json: { run } });
+  });
+  await prepare(page, light);
+  await page.locator('.launch-mode-modal__test-count-slider').fill('2');
+  await page.locator('#launch-settings-start').click();
+  const entries = page.locator('.sentence-stage__feedback-entry');
+  const quotes = page.locator('.sentence-stage__feedback-excerpt');
+  await page.locator('#sentence-answer').fill('My car has a flat type.');
+  await page.locator('#sentence-submit').click();
+  await expect(entries).toHaveCount(1);
+  await expect(entries.first()).toHaveClass(/feedback-entry--new/);
+  await page.getByText('Mehr Hilfe', { exact: true }).click();
+  await page.locator('#sentence-answer').fill('My car has a flat tire.');
+  await expect(quotes).toHaveText(['My car has a flat type.']);
+  await expect(entries.first().locator('details')).toHaveAttribute('open', '');
+  await expect(page.locator('button.sentence-stage__problem')).toHaveCount(0);
+  await page.locator('#sentence-submit').click();
+  await expect(entries).toHaveCount(2);
+  await expect(entries.first().locator('details')).toHaveAttribute('open', '');
+  await expect(quotes).toHaveText(['My car has a flat type.', 'My car has a flat tire.']);
+  failNext = true;
+  await page.locator('#sentence-answer').fill('My bike has a flat tire.');
+  await page.locator('#sentence-submit').click();
+  await expect(page.locator('#sentence-feedback-notice')).toContainText('nicht verfügbar');
+  await expect(entries).toHaveCount(2);
+  await page.locator('#sentence-answer').fill('My bike has a flat tire!');
+  // Draft saving and resuming use the existing run; the server history is authoritative.
+  await page.reload();
+  await expect(entries).toHaveCount(2);
+  await expect(page.locator('#sentence-answer')).toHaveValue('My bike has a flat tire!');
+  await expect(entries.first()).not.toHaveClass(/feedback-entry--new/);
+  await expect(page.locator('button.sentence-stage__problem')).toHaveCount(0);
+  await page.locator('#sentence-submit').click();
+  await expect(entries).toHaveCount(3);
+  await expect(page.locator('#sentence-submit')).toHaveText('Weiter');
+  await expect(quotes).toHaveText(['My car has a flat type.', 'My car has a flat tire.', 'My bike has a flat tire!']);
+  await expect(page.locator('#sentence-feedback-notice')).toBeHidden();
+  await page.screenshot({ animations: 'disabled', path: testInfo.outputPath(`translation-history-${light ? 'light' : 'dark'}.png`), fullPage: true });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  expect(await entries.last().evaluate(el => getComputedStyle(el).animationName)).toBe('none');
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ animations: 'disabled', path: testInfo.outputPath('translation-history-mobile.png'), fullPage: true });
+  await page.locator('#sentence-submit').click();
+  await expect(entries).toHaveCount(0);
+  await expect(page.locator('#sentence-feedback')).toBeHidden();
+  await expect(page.locator('#sentence-prompt strong')).toHaveText('vorübergehend');
+  expect(errors).toEqual([]);
 });

@@ -401,10 +401,8 @@ const elements = {
   sentenceSubmit: document.getElementById("sentence-submit"),
   sentenceFeedback: document.getElementById("sentence-feedback"),
   sentenceFeedbackText: document.getElementById("sentence-feedback-text"),
-  sentenceFeedbackExcerpt: document.getElementById("sentence-feedback-excerpt"),
-  sentenceHelp: document.getElementById("sentence-help"),
-  sentenceHelpExplanation: document.getElementById("sentence-help-explanation"),
-  sentenceHelpExample: document.getElementById("sentence-help-example"),
+  sentenceFeedbackList: document.getElementById("sentence-feedback-list"),
+  sentenceFeedbackNotice: document.getElementById("sentence-feedback-notice"),
   sentenceProgress: document.getElementById("sentence-progress"),
   sentencePrompt: document.getElementById("sentence-prompt"),
 
@@ -533,8 +531,7 @@ function bindEvents() {
       state.sentenceSession.problem = null;
       state.sentenceSession.help = null;
       state.sentenceSession.status = "ready";
-      elements.sentenceFeedback.hidden = true;
-      elements.sentenceHelp.open = false;
+      renderSentenceFeedback("", "ready", state.sentenceSession);
       elements.sentenceAnswer.removeAttribute("aria-invalid");
       elements.sentenceAnswer.dataset.status = "";
     }
@@ -677,6 +674,14 @@ async function initializeTeacherPractice({ setId, embedded }) {
   state.subscriptions = [subscription];
   state.requestedSetPath = setPath;
   state.requestedSetUrl = new URL(setPath, getAppBaseUrl()).href;
+  // A reload in this preview tab retains its Translation revision. A new
+  // preview tab has no tab-local run and still opens the familiar mode menu.
+  let savedSentenceRun;
+  try { savedSentenceRun = JSON.parse(sessionStorage.getItem(`lerndeck-sentence-run:teacher:${setPath}`)); } catch (_) { /* Restricted storage still permits a new preview. */ }
+  if (savedSentenceRun?.run?.id) {
+    await startSentenceSet(setPath, normalizeLearningDirection(savedSentenceRun.direction), savedSentenceRun.run.total, { resume: true });
+    return;
+  }
   renderStudentScreen({
     mode: APP_MODES.HOME,
     title: subscription.title,
@@ -4733,6 +4738,9 @@ function executeStudentScreenAction(action) {
 
 async function handleReturnToStudentHome() {
   if (state.isTeacherPractice) {
+    if (state.appMode === APP_MODES.SENTENCE) {
+      try { sessionStorage.removeItem(sentenceStorageKey()); } catch (_) { /* The explicit exit also works without storage. */ }
+    }
     returnToTeacherApp();
     return;
   }
@@ -9902,7 +9910,7 @@ function sentenceStorageKey() {
 
 function saveSentenceRun() {
   try {
-    sessionStorage.setItem(sentenceStorageKey(), JSON.stringify({ run: state.sentenceSession, answer: elements.sentenceAnswer.value }));
+    sessionStorage.setItem(sentenceStorageKey(), JSON.stringify({ run: state.sentenceSession, answer: elements.sentenceAnswer.value, direction: state.activeLearningDirection }));
   } catch (_) { /* Storage restrictions do not prevent practice. */ }
 }
 
@@ -9932,41 +9940,90 @@ function acknowledgeSentencePrompt() {
 
 function renderSentenceFeedback(message, status, run = null) {
   const feedback = elements.sentenceFeedback;
-  feedback.hidden = !message;
+  const list = elements.sentenceFeedbackList;
+  const history = run?.history || [];
+  const promptId = run?.prompt?.id || "";
+  const changedPrompt = list.dataset.promptId !== promptId;
+  if (changedPrompt) { list.replaceChildren(); list.dataset.promptId = promptId; }
+  const ids = new Set(history.map(entry => entry.id));
+  for (const item of [...list.children]) if (!ids.has(item.dataset.attemptId)) item.remove();
+  let added;
+  for (const entry of history) {
+    let item = [...list.children].find(node => node.dataset.attemptId === entry.id);
+    if (!item) {
+      item = document.createElement("li");
+      item.className = "sentence-stage__feedback-entry";
+      item.dataset.attemptId = entry.id;
+      item.dataset.status = entry.status;
+      const quote = document.createElement("blockquote");
+      quote.className = "sentence-stage__feedback-excerpt";
+      const text = document.createElement("p");
+      text.textContent = entry.feedback;
+      item.append(quote, text);
+      if (entry.help?.explanation) {
+        const help = document.createElement("details");
+        help.className = "sentence-stage__help";
+        const summary = document.createElement("summary");
+        summary.textContent = "Mehr Hilfe";
+        const explanation = document.createElement("p");
+        explanation.textContent = entry.help.explanation;
+        help.append(summary, explanation);
+        if (entry.help.example) {
+          const example = document.createElement("div");
+          example.className = "sentence-stage__example";
+          const label = document.createElement("strong");
+          label.textContent = "Beispiel";
+          const sentence = document.createElement("p");
+          sentence.textContent = entry.help.example;
+          example.append(label, sentence);
+          help.append(example);
+        }
+        item.append(help);
+      }
+      list.append(item);
+      if (!changedPrompt) { item.classList.add("sentence-stage__feedback-entry--new"); added = item; }
+    }
+    const isLatest = entry === history.at(-1);
+    item.classList.toggle("is-latest", isLatest);
+    const quote = item.querySelector("blockquote");
+    const span = entry.problem;
+    const checked = entry.answer;
+    quote.replaceChildren();
+    const validSpan = entry.status === "revise" && span && typeof checked === "string"
+      && Number.isInteger(span.start) && Number.isInteger(span.end)
+      && span.start >= 0 && span.end > span.start && span.end <= checked.length
+      && span.end - span.start <= 60 && span.end - span.start <= checked.length * .5;
+    if (!validSpan) { quote.textContent = checked; continue; }
+    // Old markings stay with their quoted attempt. Only a matching current
+    // draft can select the native input; historical entries never restore it.
+    const editable = isLatest && !state.sentenceBusy && !run?.error && !run?.accepted
+      && checked === elements.sentenceAnswer.value.trim();
+    const marker = document.createElement(editable ? "button" : "span");
+    marker.className = "sentence-stage__problem";
+    marker.textContent = checked.slice(span.start, span.end);
+    if (editable) {
+      marker.type = "button";
+      marker.setAttribute("aria-label", `Problemstelle „${marker.textContent}“ bearbeiten`);
+      marker.addEventListener("click", () => {
+        const answer = elements.sentenceAnswer;
+        if (checked !== answer.value.trim() || answer.disabled || answer.readOnly) return;
+        const offset = answer.value.length - answer.value.trimStart().length;
+        answer.focus(); answer.setSelectionRange(span.start + offset, span.end + offset);
+      });
+    }
+    quote.append(document.createTextNode(checked.slice(0, span.start)), marker, document.createTextNode(checked.slice(span.end)));
+  }
+  const notice = run?.error || !history.length || run?.complete ? message || "" : "";
+  elements.sentenceFeedbackNotice.textContent = notice;
+  elements.sentenceFeedbackNotice.hidden = !notice;
+  feedback.hidden = !history.length && !notice;
   feedback.dataset.status = status;
-  elements.sentenceFeedbackText.textContent = message || "";
-  const help = elements.sentenceHelp;
-  const explanation = status === "revise" && !state.sentenceBusy ? run?.help?.explanation : "";
-  help.hidden = !explanation;
-  help.open = false;
-  elements.sentenceHelpExplanation.textContent = explanation || "";
-  elements.sentenceHelpExample.textContent = run?.help?.example || "";
-  elements.sentenceHelpExample.parentElement.hidden = !explanation || !run?.help?.example;
-  const excerpt = elements.sentenceFeedbackExcerpt;
-  excerpt.replaceChildren();
-  excerpt.hidden = true;
-  const span = run?.problem;
-  const checked = run?.checkedAnswer;
-  // Mark only the exact still-visible checked attempt; never stale drafts.
-  if (state.sentenceBusy || status !== "revise" || !span || typeof checked !== "string"
-    || checked !== elements.sentenceAnswer.value.trim()
-    || !Number.isInteger(span.start) || !Number.isInteger(span.end)
-    || span.start < 0 || span.end <= span.start || span.end > checked.length || span.end - span.start > 60
-    || span.end - span.start > checked.length * .5) return;
-  const marker = document.createElement("button");
-  marker.type = "button";
-  marker.className = "sentence-stage__problem";
-  marker.textContent = checked.slice(span.start, span.end);
-  marker.setAttribute("aria-label", `Problemstelle „${marker.textContent}“ bearbeiten`);
-  marker.addEventListener("click", () => {
-    const answer = elements.sentenceAnswer;
-    if (checked !== answer.value.trim() || answer.disabled || answer.readOnly) return;
-    const offset = answer.value.length - answer.value.trimStart().length;
-    answer.focus();
-    answer.setSelectionRange(span.start + offset, span.end + offset);
+  if (elements.sentenceFeedbackText.textContent !== (message || "")) elements.sentenceFeedbackText.textContent = message || "";
+  if (added && !state.sentenceBusy) requestAnimationFrame(() => {
+    if (!added.isConnected || state.appMode !== APP_MODES.SENTENCE) return;
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    added.scrollIntoView({ block: "nearest", behavior: reduced ? "auto" : "smooth" });
   });
-  excerpt.append(document.createTextNode(checked.slice(0, span.start)), marker, document.createTextNode(checked.slice(span.end)));
-  excerpt.hidden = false;
 }
 
 function renderSentenceRun() {
@@ -9988,7 +10045,7 @@ function renderSentenceRun() {
   elements.sentenceLabel.textContent = run.targetLanguage === "en" ? "Dein Satz auf Englisch" : "Dein Satz auf Deutsch";
   if (run.complete) {
     prompt.textContent = "Geschafft!";
-    renderSentenceFeedback(`${run.total} ${run.total === 1 ? "Satz" : "Sätze"} geübt.`, "accepted");
+    renderSentenceFeedback(`${run.total} ${run.total === 1 ? "Satz" : "Sätze"} geübt.`, "accepted", run);
     answer.hidden = true;
     elements.sentenceLabel.hidden = true;
     button.textContent = "Zur Übersicht";
@@ -10063,7 +10120,6 @@ async function handleSentenceSubmit(event) {
   const requestId = ++state.sentenceRequestId;
   saveSentenceRun();
   state.sentenceBusy = true;
-  elements.sentenceFeedbackExcerpt.hidden = true;
   renderSentenceRun();
   try {
     await state.sentenceShownPromise;
