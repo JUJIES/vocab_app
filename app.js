@@ -9961,7 +9961,7 @@ function renderSentenceFeedback(message, status, run = null) {
       text.textContent = entry.feedback;
       item.append(quote, text);
       if (entry.issues?.length) {
-        const points = document.createElement("ol");
+        const points = document.createElement("ul");
         points.className = "sentence-stage__issues";
         for (const issue of entry.issues) {
           const point = document.createElement("li");
@@ -10001,7 +10001,7 @@ function renderSentenceFeedback(message, status, run = null) {
     const checked = entry.answer;
     quote.replaceChildren();
     const spans = (entry.status === "revise" ? entry.issues || [] : [])
-      .map((issue, index) => ({ ...issue.problem, number: index + 1 }))
+      .map(issue => issue.problem || {})
       .filter(span => typeof checked === "string" && Number.isInteger(span.start) && Number.isInteger(span.end)
         && span.start >= 0 && span.end > span.start && span.end <= checked.length
         && span.end - span.start <= 60 && span.end - span.start <= checked.length * .5)
@@ -10018,7 +10018,7 @@ function renderSentenceFeedback(message, status, run = null) {
       marker.textContent = checked.slice(span.start, span.end);
       if (editable) {
         marker.type = "button";
-        marker.setAttribute("aria-label", `Problemstelle „${marker.textContent}“ aus Hinweis ${span.number} bearbeiten`);
+        marker.setAttribute("aria-label", `Problemstelle „${marker.textContent}“ bearbeiten`);
         marker.addEventListener("click", () => {
           const answer = elements.sentenceAnswer;
           if (checked !== answer.value.trim() || answer.disabled || answer.readOnly) return;
@@ -10036,7 +10036,7 @@ function renderSentenceFeedback(message, status, run = null) {
   elements.sentenceFeedbackNotice.hidden = !notice;
   feedback.hidden = !history.length && !notice;
   feedback.dataset.status = status;
-  const spoken = message ? [message, ...(!run?.error && !run?.complete ? history.at(-1)?.issues || [] : []).map((issue, index) => `${index + 1}. ${issue.quote || "Satz"}: ${issue.message}`)].join(" ") : "";
+  const spoken = message ? [message, ...(!run?.error && !run?.complete ? history.at(-1)?.issues || [] : []).map(issue => `${issue.quote || "Satz"}: ${issue.message}`)].join(" ") : "";
   if (elements.sentenceFeedbackText.textContent !== spoken) elements.sentenceFeedbackText.textContent = spoken;
   if (added && !state.sentenceBusy) requestAnimationFrame(() => {
     if (!added.isConnected || state.appMode !== APP_MODES.SENTENCE) return;

@@ -294,20 +294,20 @@ for (const light of [false, true]) test(`structured points and several exact cor
     if(action==='check'){
       const answer=route.request().postDataJSON().answer.trim();checks++;
       const points=checks===1 ? [
-        ['listening','Often beschreibt eine Gewohnheit. Dafür brauchst du bei I die Grundform des Verbs im Simple Present. Überarbeite die Verbform.'],
-        ['musik','Hier steckt ein Schreibfehler. Kontrolliere die englische Schreibweise.'],
-        ['i','Das englische Pronomen für ich wird immer großgeschrieben. Passe die Großschreibung an.'],
-        ['make','Hier ist eine feste englische Wortverbindung nötig. Überprüfe das Verb für Aufgaben erledigen.'],
-        ['homeworks','Das englische Wort für Hausaufgaben ist nicht zählbar und hat kein Plural-s. Überarbeite die Endung.']
+        ['listening','Verbform: Often beschreibt eine Gewohnheit. Dafür brauchst du bei I die Grundform des Verbs im Simple Present. Überarbeite die Verbform.'],
+        ['musik','Rechtschreibung: Hier steckt ein Schreibfehler. Kontrolliere die englische Schreibweise.'],
+        ['i','Großschreibung: Das englische Pronomen für ich wird immer großgeschrieben. Passe die Großschreibung an.'],
+        ['make','Wortwahl: Hier ist eine feste englische Wortverbindung nötig. Überprüfe das Verb für Aufgaben erledigen.'],
+        ['homeworks','Mehrzahl: Das englische Wort für Hausaufgaben ist nicht zählbar und hat kein Plural-s. Überarbeite die Endung.']
       ] : [
-        ['make','Die englische Wortverbindung für Aufgaben erledigen braucht noch ein anderes Verb.'],
-        ['homeworks','Hausaufgaben ist im Englischen nicht zählbar: Das Wort hat kein Plural-s. Überarbeite die Endung.']
+        ['make','Wortwahl: Die englische Wortverbindung für Aufgaben erledigen braucht noch ein anderes Verb.'],
+        ['homeworks','Mehrzahl: Hausaufgaben ist im Englischen nicht zählbar: Das Wort hat kein Plural-s. Überarbeite die Endung.']
       ];
       const issues=points.map(([quote,message])=>{
         const start=quote==='i'?answer.indexOf(' i ')+1:answer.indexOf(quote);
         return {quote,message,problem:{start,end:start+quote.length}};
       });
-      Object.assign(run,{feedback:checks===1?'Die Häufigkeit hast du erkannt 👍':'👍 Verbform und Schreibweise sind jetzt richtig. Zwei Stellen brauchen noch Aufmerksamkeit.',status:'revise',checkedAnswer:answer,issues});
+      Object.assign(run,{feedback:checks===1?'Die Häufigkeit hast du richtig übersetzt 👍':'👍 Verbform und Schreibweise sind jetzt richtig. Zwei Stellen brauchen noch Aufmerksamkeit.',status:'revise',checkedAnswer:answer,issues});
       run.history.push({id:`multi-${checks}`,answer,feedback:run.feedback,status:'revise',issues,help:null});
     }
     return route.fulfill({json:{run}});
@@ -317,8 +317,12 @@ for (const light of [false, true]) test(`structured points and several exact cor
   const points=page.locator('.sentence-stage__feedback-entry').last().locator('.sentence-stage__issues > li');
   const marks=page.locator('button.sentence-stage__problem');
   await expect(points).toHaveCount(5);
+  await expect(page.locator('ol.sentence-stage__issues')).toHaveCount(0);
+  expect(await points.first().evaluate(el=>getComputedStyle(el).listStyleType)).toBe('disc');
   await expect(points.locator('strong')).toHaveText(['„listening“','„musik“','„i“','„make“','„homeworks“']);
   await expect(marks).toHaveText(['listening','musik','i','make','homeworks']);
+  await expect(marks.first()).toHaveAttribute('aria-label', 'Problemstelle „listening“ bearbeiten');
+  await expect(page.locator('#sentence-feedback-text')).not.toContainText('1.');
   await expect(points.last()).toContainText('nicht zählbar');
   for(const word of ['listening','musik','i','make','homeworks']) {
     await marks.filter({hasText:new RegExp('^'+word+'$')}).click();
