@@ -1,5 +1,10 @@
 # Produkt- und Architekturentscheidungen
 
+## 2026-10-03 – Bereichswechsel in der Überschrift
+
+- Ein Menü an der Bereichsüberschrift ersetzt die redundante Kombination aus Titel und Tabs. Der aktuelle Bereich wird einmal mit größerem Icon gezeigt; Admins wählen `Lernsets` oder `Tablets` im Menü. Normale Lehrkräfte sehen die einfache Lernsets-Überschrift. Das ersetzt die frühere Tab-Darstellung, ohne Bereiche, Rechte, Editorzustand oder Datenfluss zu ändern.
+- Der Menübutton und die Auswahl verwenden Menü-Semantik, Pfeil hoch/runter sowie Home/End navigieren ohne sofortigen Bereichswechsel. Enter bestätigt, Escape stellt den Fokus wieder her; Tab und Klick außerhalb schließen. Das bestehende Popover-/Motion-System bleibt die einzige Darstellungsschicht.
+
 ## 2026-10-03 – Lerndecks als frei benennbare Set-Ordner
 
 - `Lerndeck` ersetzt `Unit` als sichtbaren Organisationsbegriff. Ein Lerndeck enthält Sets und ist unabhängig von Buch-Units. Eine Ebene genügt; bestehende Zuordnungen, Eigentumsrechte und die technischen Namen `units`/`unitId` bleiben erhalten. Kein neues Datenmodell und keine Umbenennung bestehender Ordnernamen.

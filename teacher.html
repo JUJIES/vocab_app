@@ -20,7 +20,7 @@
     </script>
     <link rel="stylesheet" href="./pwa-splash.css?v=2026-09-30-splash-contrast-v2" />
     <script src="./appearance.js?v=2026-09-30-appearance-v4" data-appearance-scope="teacher"></script>
-    <link rel="stylesheet" href="./teacher.css?v=2026-10-03-lerndecks-v2" />
+    <link rel="stylesheet" href="./teacher.css?v=2026-10-03-section-menu-v1" />
     <link rel="stylesheet" href="./appearance.css?v=2026-09-30-appearance-v4" />
     <link rel="stylesheet" href="./ui-motion.css?v=2026-08-30-ui-motion-v1" />
     <script src="./pwa.js?v=2026-08-30-pwa-splash-v3" defer></script>
@@ -29,7 +29,7 @@
     <script src="./set-side-options.js?v=2026-09-13-side-selection-v1" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js" defer></script>
     <script src="./teacher-workspace.js?v=2026-10-03-lerndecks-v2" defer></script>
-    <script src="./teacher.js?v=2026-10-03-lerndecks-v2" defer></script>
+    <script src="./teacher.js?v=2026-10-03-section-menu-v1" defer></script>
   </head>
   <body>
     <div class="pwa-splash" role="status" aria-label="Lerndeck wird geladen">
@@ -91,9 +91,22 @@
       <header class="teacher-header">
         <div class="teacher-header__topline">
           <div class="teacher-header__identity">
-            <div class="teacher-header__title-row">
-              <img id="teacher-shell-icon" class="teacher-header__brand-icon" src="./assets/icons/lerndeck-stack.svg" alt="" decoding="async" data-section-icon="sets" />
-              <h1 id="teacher-shell-title" class="teacher-header__title">Lernsets</h1>
+            <div class="teacher-section-switch">
+              <h1 class="teacher-header__title">
+                <button id="teacher-section-toggle" class="teacher-section-switch__toggle" type="button" disabled aria-expanded="false" aria-controls="teacher-section-menu">
+                  <img id="teacher-shell-icon" class="teacher-header__brand-icon" src="./assets/icons/lerndeck-stack.svg" alt="" decoding="async" data-section-icon="sets" />
+                  <span id="teacher-shell-title">Lernsets</span>
+                  <span id="teacher-section-chevron" class="teacher-section-switch__chevron" aria-hidden="true" hidden></span>
+                </button>
+              </h1>
+              <div id="teacher-section-menu" class="teacher-section-switch__menu" role="menu" aria-label="Bereich wählen" hidden>
+                <button class="teacher-section-switch__item" type="button" role="menuitemradio" aria-checked="true" data-teacher-section="sets">
+                  <img src="./assets/icons/lerndeck-stack.svg" alt="" decoding="async" /><span>Lernsets</span>
+                </button>
+                <button class="teacher-section-switch__item" type="button" role="menuitemradio" aria-checked="false" data-teacher-section="tablets">
+                  <img src="./assets/icons/tablet-device.svg" alt="" decoding="async" /><span>Tablets</span>
+                </button>
+              </div>
             </div>
           </div>
           <div class="teacher-header__actions">
@@ -130,37 +143,14 @@
         <p id="teacher-shell-message" class="teacher-header__message">
           Lernsets verwalten, teilen und ihre Nutzung auf Tablets sehen.
         </p>
-        <div class="teacher-tabs" role="tablist" aria-label="Lehrerbereiche">
-          <button
-            class="teacher-tab-button"
-            type="button"
-            role="tab"
-            aria-selected="true"
-            aria-controls="teacher-panel-sets"
-            data-teacher-tab="sets"
-          >
-            <img class="teacher-tab-button__icon" src="./assets/icons/sets-tab.svg" alt="" decoding="async" />
-            <span>Lernsets</span>
-          </button>
-          <button
-            class="teacher-tab-button"
-            type="button"
-            role="tab"
-            aria-selected="false"
-            aria-controls="teacher-panel-tablets"
-            data-teacher-tab="tablets"
-          >
-            <img class="teacher-tab-button__icon" src="./assets/icons/tablet-device.svg" alt="" decoding="async" />
-            <span>Tablets</span>
-          </button>
-        </div>
+
       </header>
 
       <section
         id="teacher-panel-sets"
         class="teacher-section"
-        aria-labelledby="sets-title"
-        role="tabpanel"
+        aria-label="Lernsets"
+        role="region"
         data-teacher-panel="sets"
       >
         <div id="teacher-workspace" class="teacher-workspace" data-mobile-view="library">
@@ -305,7 +295,7 @@
         id="teacher-panel-tablets"
         class="teacher-section"
         aria-labelledby="tablets-title"
-        role="tabpanel"
+        role="region"
         data-teacher-panel="tablets"
         hidden
       >

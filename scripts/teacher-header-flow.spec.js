@@ -63,6 +63,7 @@ for (const viewport of [
   { name: "1150w", width: 1150, height: 760 },
   { name: "720w", width: 720, height: 760 },
   { name: "390w", width: 390, height: 760 },
+  { name: "320w", width: 320, height: 760 },
 ]) {
   test(`teacher header stays coherent (${viewport.name})`, async ({ page }) => {
     test.skip(!TEACHER_PASSWORD, "TEACHER_PASSWORD fehlt für den Lehrer-Header-Test.");
@@ -77,23 +78,30 @@ for (const viewport of [
     await expect(page.locator(".teacher-account-status__label")).toBeHidden();
     const accountNameBox = await page.locator(".teacher-account-status__name").boundingBox();
     const setIconBox = await page.locator("#teacher-shell-icon").boundingBox();
-    const setTabBox = await page.locator('[data-teacher-tab="sets"]').boundingBox();
-    const tabletTabBox = await page.locator('[data-teacher-tab="tablets"]').boundingBox();
+    const toggleBox = await page.locator("#teacher-section-toggle").boundingBox();
     expect(headerBox.x).toBeGreaterThanOrEqual(0);
     expect(headerBox.x + headerBox.width).toBeLessThanOrEqual(viewport.width + 1);
     expect(Math.abs(
       (accountBox.y + accountBox.height / 2)
       - (accountNameBox.y + accountNameBox.height / 2),
     )).toBeLessThan(1.5);
-    expect(Math.abs(setTabBox.height - tabletTabBox.height)).toBeLessThan(1.5);
-    expect(tabletTabBox.x).toBeGreaterThan(setTabBox.x + setTabBox.width);
-    expect(Math.abs(setTabBox.y - tabletTabBox.y)).toBeLessThan(1.5);
+    expect(toggleBox.x).toBeGreaterThanOrEqual(headerBox.x);
+    expect(toggleBox.x + toggleBox.width).toBeLessThan(accountBox.x);
+    await page.locator("#teacher-section-toggle").click();
+    const setChoiceBox = await page.locator('[data-teacher-section="sets"]').boundingBox();
+    const tabletChoiceBox = await page.locator('[data-teacher-section="tablets"]').boundingBox();
+    expect(tabletChoiceBox.y).toBeGreaterThanOrEqual(setChoiceBox.y + setChoiceBox.height);
+    expect(Math.abs(setChoiceBox.width - tabletChoiceBox.width)).toBeLessThan(1.5);
+    expect(tabletChoiceBox.x + tabletChoiceBox.width).toBeLessThanOrEqual(viewport.width);
+    await page.locator("#teacher-section-toggle").press("Escape");
 
     await page.locator(".teacher-header").screenshot({
       path: path.join(OUTPUT_DIR, `teacher-header-sets-${viewport.name}.png`),
     });
 
-    await page.getByRole("tab", { name: "Tablets" }).click();
+    await page.locator("#teacher-section-toggle").click();
+
+    await page.getByRole("menuitemradio", { name: "Tablets" }).click();
     await expect(page.getByRole("heading", { name: "Tablets", exact: true })).toBeVisible();
     const tabletIconBox = await page.locator("#teacher-shell-icon").boundingBox();
     expect(Math.abs(setIconBox.width - tabletIconBox.width)).toBeLessThan(1.5);

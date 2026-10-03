@@ -100,7 +100,7 @@ test("public flow works and protected APIs stay locked", async ({ page, request 
   await expect(page.locator("#teacher-shell")).toBeHidden();
 });
 
-test("teacher login and tabs only show the active panel", async ({ page }) => {
+test("teacher login and section menu only show the active panel", async ({ page }) => {
   test.skip(!TEACHER_PASSWORD, "TEACHER_PASSWORD fehlt fuer den Teacher-Login-Test.");
 
   await page.goto(TEACHER_PATH);
@@ -117,7 +117,8 @@ test("teacher login and tabs only show the active panel", async ({ page }) => {
   await expect(page.locator("#teacher-panel-sets")).toBeVisible();
   await expect(page.locator("#teacher-panel-tablets")).toBeHidden();
 
-  await page.getByRole("tab", { name: "Tablets" }).click();
+  await page.locator("#teacher-section-toggle").click();
+  await page.getByRole("menuitemradio", { name: "Tablets" }).click();
   await expect(page.locator("#teacher-shell .teacher-header__title")).toHaveText("Tablets");
   await expect(page.locator("#teacher-panel-tablets")).toBeVisible();
   await expect(page.locator("#teacher-panel-sets")).toBeHidden();
@@ -180,7 +181,8 @@ test.describe("live mutation flow", () => {
 
     await page.goto(TEACHER_PATH);
     await loginTeacher(page, request);
-    await page.getByRole("tab", { name: "Tablets" }).click();
+    await page.locator("#teacher-section-toggle").click();
+    await page.getByRole("menuitemradio", { name: "Tablets" }).click();
     const tabletRow = page.locator(".teacher-tablet-row", {
       has: page.getByText(TEST_TABLET_ID === "blau-1" ? "Blau 1" : TEST_TABLET_ID),
     });
@@ -253,12 +255,14 @@ async function loginTeacher(page, request) {
   await expect(page.locator("#teacher-panel-sets")).toBeVisible();
   await expect(page.locator("#teacher-panel-tablets")).toBeHidden();
 
-  await page.getByRole("tab", { name: "Tablets" }).click();
+  await page.locator("#teacher-section-toggle").click();
+  await page.getByRole("menuitemradio", { name: "Tablets" }).click();
   await expect(page.locator("#teacher-shell .teacher-header__title")).toHaveText("Tablets");
   await expect(page.locator("#teacher-panel-tablets")).toBeVisible();
   await expect(page.locator("#teacher-panel-sets")).toBeHidden();
 
-  await page.getByRole("tab", { name: "Lernsets" }).click();
+  await page.locator("#teacher-section-toggle").click();
+  await page.getByRole("menuitemradio", { name: "Lernsets" }).click();
   await expect(page.locator("#teacher-shell .teacher-header__title")).toHaveText("Lernsets");
   await expect(page.locator("#teacher-panel-sets")).toBeVisible();
   await expect(page.locator("#teacher-panel-tablets")).toBeHidden();

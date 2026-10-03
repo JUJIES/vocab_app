@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Für Admins öffnet die Bereichsüberschrift oben links ein kompaktes Menü mit `Lernsets` und `Tablets`; aktueller Titel und größeres Icon ersetzen die doppelte Überschrift-/Tab-Navigation. Normale Lehrkräfte behalten die einfache Überschrift. Tastaturbedienung, Fokusführung und Schließen bei Klick außerhalb sind integriert.
+
 - Die Set-Ordner heißen durchgängig Lerndecks statt Units. Die bestehenden Zuordnungen bleiben erhalten. `Lernen` ersetzt `Lernmodi öffnen` samt externem Pfeil; die Vokabelspalten zeigen nur noch die Inhalts-/Sprachwahl ohne zusätzliche Vorder-/Rückseiten-, Sternchen- oder Bildüberschrift.
 
 - Der Editor-Kopf bildet mit einer dezent abgesetzten Fläche über die volle Editorbreite einen klaren Bereich für Titel, Autosave-Status und Set-Aktionen. Leinen/Nachtblau verwenden bestehende Theme-Farben; die Speicherung und übrigen Abläufe bleiben unverändert.

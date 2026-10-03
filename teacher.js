@@ -96,6 +96,9 @@ const elements = {
   shell: document.getElementById("teacher-shell"),
   shellIcon: document.getElementById("teacher-shell-icon"),
   shellTitle: document.getElementById("teacher-shell-title"),
+  sectionToggle: document.getElementById("teacher-section-toggle"),
+  sectionMenu: document.getElementById("teacher-section-menu"),
+  sectionChevron: document.getElementById("teacher-section-chevron"),
   shellMessage: document.getElementById("teacher-shell-message"),
   accountStatus: document.getElementById("teacher-account-status"),
   profileName: document.getElementById("teacher-profile-name"),
@@ -119,8 +122,8 @@ const elements = {
   tabletsMeta: document.getElementById("tablets-meta"),
   tabletList: document.getElementById("teacher-tablet-list"),
   tabletEmptyState: document.getElementById("teacher-tablet-empty-state"),
-  tabButtons: document.querySelectorAll("[data-teacher-tab]"),
-  tabPanels: document.querySelectorAll("[data-teacher-panel]"),
+  sectionButtons: document.querySelectorAll("[data-teacher-section]"),
+  sectionPanels: document.querySelectorAll("[data-teacher-panel]"),
   emptyState: document.getElementById("teacher-empty-state"),
   errorState: document.getElementById("teacher-error-state"),
   errorMessage: document.getElementById("teacher-error-message"),
@@ -445,24 +448,35 @@ function bindEvents() {
     trigger.addEventListener("click", closePasswordDialog);
   }
 
-  for (const button of elements.tabButtons) {
+  elements.sectionToggle.addEventListener("click", () => toggleTeacherSectionMenu());
+  elements.sectionToggle.addEventListener("keydown", (event) => {
+    if (!["ArrowDown", "ArrowUp"].includes(event.key) || !isCurrentTeacherAdmin()) return;
+    event.preventDefault();
+    toggleTeacherSectionMenu(event.key === "ArrowUp" ? "last" : "first");
+  });
+  for (const button of elements.sectionButtons) {
     button.addEventListener("click", () => {
-      setActiveTeacherTab(button.dataset.teacherTab || "sets");
-    });
-    button.addEventListener("keydown", (event) => {
-      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
-      const tabs = [...elements.tabButtons].filter((tab) => !tab.hidden);
-      const index = tabs.indexOf(button);
-      const nextIndex = event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1
-        : (index + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
-      event.preventDefault();
-      setActiveTeacherTab(tabs[nextIndex].dataset.teacherTab);
-      tabs[nextIndex].focus();
+      setActiveTeacherSection(button.dataset.teacherSection || "sets");
+      closeTeacherSectionMenu({ restoreFocus: true });
     });
   }
+  elements.sectionMenu.addEventListener("keydown", (event) => {
+    if (event.key === "Tab") { closeTeacherSectionMenu(); return; }
+    if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+    const choices = [...elements.sectionButtons].filter((button) => !button.hidden);
+    const index = choices.indexOf(document.activeElement);
+    const nextIndex = event.key === "Home" ? 0 : event.key === "End" ? choices.length - 1
+      : (index + (event.key === "ArrowDown" ? 1 : -1) + choices.length) % choices.length;
+    event.preventDefault();
+    choices[nextIndex]?.focus();
+  });
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
+      if (!elements.sectionMenu.hidden) {
+        closeTeacherSectionMenu({ restoreFocus: true });
+        return;
+      }
       if (!elements.printOverlay.hidden) {
         closePrintOverlay();
         return;
@@ -493,6 +507,9 @@ function bindEvents() {
   });
 
   document.addEventListener("click", (event) => {
+    if (!(event.target instanceof Element) || !event.target.closest(".teacher-section-switch")) {
+      closeTeacherSectionMenu();
+    }
     if (!(event.target instanceof Element) || !event.target.closest(".teacher-settings")) {
       closeTeacherSettingsMenu();
     }
@@ -504,7 +521,7 @@ function bindEvents() {
 
 async function initializeTeacherApp() {
   state.publicOrigin = await loadTeacherShareOrigin();
-  setActiveTeacherTab(state.activeTab);
+  setActiveTeacherSection(state.activeTab);
   await loadTeacherAccounts();
 
   const sessionResponse = await requestJson("/api/teacher/session");
@@ -803,18 +820,18 @@ function renderSetList() {
   updateEditorStatusUi();
 }
 
-function setActiveTeacherTab(nextTab) {
+function setActiveTeacherSection(nextTab) {
   const previousTab = state.activeTab;
   state.activeTab = nextTab === "tablets" && isCurrentTeacherAdmin() ? "tablets" : "sets";
   updateTeacherShellCopy();
 
-  for (const button of elements.tabButtons) {
-    const isActive = button.dataset.teacherTab === state.activeTab;
-    button.setAttribute("aria-selected", isActive ? "true" : "false");
-    button.setAttribute("tabindex", isActive ? "0" : "-1");
+  for (const button of elements.sectionButtons) {
+    const isActive = button.dataset.teacherSection === state.activeTab;
+    button.setAttribute("aria-checked", isActive ? "true" : "false");
+    button.setAttribute("tabindex", "-1");
   }
 
-  for (const panel of elements.tabPanels) {
+  for (const panel of elements.sectionPanels) {
     const isActive = panel.dataset.teacherPanel === state.activeTab;
     panel.hidden = !isActive;
     panel.setAttribute("aria-hidden", isActive ? "false" : "true");
@@ -1240,6 +1257,7 @@ function showTeacherAuth(feedback = "") {
   hideSetEditor();
   workspace?.reset();
   closePasswordDialog();
+  closeTeacherSectionMenu();
   closeTeacherSettingsMenu();
   closeTabletActionMenus();
   state.authReady = false;
@@ -1268,11 +1286,15 @@ function showTeacherShell() {
   const displayName = state.currentTeacher?.displayName || "Lehrkraft";
   elements.profileName.textContent = displayName;
   const isAdmin = isCurrentTeacherAdmin();
-  for (const button of elements.tabButtons) {
-    if (button.dataset.teacherTab === "tablets") button.hidden = !isAdmin;
+  for (const button of elements.sectionButtons) {
+    if (button.dataset.teacherSection === "tablets") button.hidden = !isAdmin;
   }
-  document.querySelector(".teacher-tabs").hidden = !isAdmin;
-  setActiveTeacherTab(state.activeTab);
+  elements.sectionToggle.disabled = !isAdmin;
+  elements.sectionChevron.hidden = !isAdmin;
+  if (isAdmin) elements.sectionToggle.setAttribute("aria-haspopup", "menu");
+  else elements.sectionToggle.removeAttribute("aria-haspopup");
+  closeTeacherSectionMenu();
+  setActiveTeacherSection(state.activeTab);
   elements.profileRole.hidden = !isAdmin;
   elements.accountStatus.setAttribute("aria-label", `Angemeldet als ${displayName}${isAdmin ? ", Admin" : ""}`);
   closeTeacherSettingsMenu();
@@ -1283,7 +1305,29 @@ function isCurrentTeacherAdmin() {
   return state.currentTeacher?.role === "admin";
 }
 
+function toggleTeacherSectionMenu(focus = "active") {
+  if (!isCurrentTeacherAdmin()) return;
+  const shouldOpen = focus !== "active" || elements.sectionMenu.hidden
+    || elements.sectionMenu.classList.contains("ui-motion-popover-leaving");
+  if (!shouldOpen) { closeTeacherSectionMenu(); return; }
+  closeTeacherSettingsMenu();
+  closeTabletActionMenus();
+  elements.sectionToggle.setAttribute("aria-expanded", "true");
+  window.LerndeckUiMotion.revealPopover(elements.sectionMenu);
+  const choices = [...elements.sectionButtons].filter((button) => !button.hidden);
+  const target = focus === "first" ? choices[0] : focus === "last" ? choices.at(-1)
+    : choices.find((button) => button.dataset.teacherSection === state.activeTab);
+  target?.focus();
+}
+
+function closeTeacherSectionMenu({ restoreFocus = false } = {}) {
+  window.LerndeckUiMotion.hidePopover(elements.sectionMenu);
+  elements.sectionToggle.setAttribute("aria-expanded", "false");
+  if (restoreFocus && !elements.sectionToggle.disabled) elements.sectionToggle.focus();
+}
+
 function toggleTeacherSettingsMenu() {
+  closeTeacherSectionMenu();
   const shouldOpen = elements.settingsMenu.hidden
     || elements.settingsMenu.classList.contains("ui-motion-popover-leaving");
   elements.settingsButton.setAttribute("aria-expanded", shouldOpen ? "true" : "false");

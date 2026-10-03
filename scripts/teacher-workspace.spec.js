@@ -52,7 +52,7 @@ test("tablet connections require admin rights while device sessions keep their o
   page.on("request", request => { if (new URL(request.url()).pathname === "/api/tablets") directoryRequests++; });
   await login(page); await open(page, shops);
   await expect(page.getByRole("tablist")).toBeHidden();
-  await expect(page.locator('[data-teacher-tab="tablets"]')).toBeHidden();
+  await expect(page.locator('[data-teacher-section="tablets"]')).toBeHidden();
   await expect(page.locator("#workspace-tablet-usage")).toBeHidden();
   expect(directoryRequests).toBe(0);
   const admin = await playwright.request.newContext({ baseURL: BASE_URL });
@@ -97,23 +97,40 @@ test("tablet connections require admin rights while device sessions keep their o
   }
 });
 
-test("admin tabs work with keyboard and disappear when switching to a regular teacher", async ({ page }) => {
+test("admin heading menu supports keyboard and dismissal; regular teachers keep a plain heading", async ({ page }) => {
   await login(page, "julius");
-  const setsTab = page.getByRole("tab", { name: "Lernsets", exact: true });
-  const tabletsTab = page.getByRole("tab", { name: "Tablets", exact: true });
-  await setsTab.focus(); await setsTab.press("ArrowRight");
-  await expect(tabletsTab).toBeFocused(); await expect(tabletsTab).toHaveAttribute("aria-selected", "true");
+  const toggle = page.locator("#teacher-section-toggle");
+  const menu = page.locator("#teacher-section-menu");
+  const setsChoice = page.locator('[data-teacher-section="sets"]');
+  const tabletsChoice = page.locator('[data-teacher-section="tablets"]');
+  await expect(toggle).toBeEnabled();
+  await toggle.focus(); await toggle.press("ArrowDown");
+  await expect(menu).toBeVisible(); await expect(setsChoice).toBeFocused();
+  await setsChoice.press("End"); await expect(tabletsChoice).toBeFocused();
+  await expect(page.locator("#teacher-panel-sets")).toBeVisible();
+  await tabletsChoice.press("Enter");
   await expect(page.locator("#teacher-panel-tablets")).toBeVisible();
-  await tabletsTab.press("Home"); await expect(setsTab).toBeFocused();
-  await open(page, (await (await page.request.get("/api/sets")).json()).sets.find(set => set.status !== "draft" && set.ownerTeacherId === "julius"));
+  await expect(tabletsChoice).toHaveAttribute("aria-checked", "true");
+  await expect(toggle).toBeFocused(); await expect(toggle).toHaveText("Tablets");
+  await toggle.click(); await tabletsChoice.press("Home"); await expect(setsChoice).toBeFocused();
+  await setsChoice.press("Enter"); await expect(toggle).toHaveText("Lernsets");
+  await toggle.click(); await setsChoice.press("Escape");
+  await expect(menu).toBeHidden(); await expect(toggle).toBeFocused();
+  await toggle.click(); await page.locator("#teacher-profile-name").click();
+  await expect(menu).toBeHidden();
+  await toggle.click(); await setsChoice.press("Tab"); await expect(menu).toBeHidden();
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await open(page, (await (await page.request.get("/api/sets")).json()).sets.find(set => set.ownerTeacherId === "julius"));
   await expect(page.locator("#workspace-tablet-usage")).toBeVisible();
-  await tabletsTab.click();
+  await toggle.click(); await tabletsChoice.click();
   await page.getByRole("button", { name: "Einstellungen", exact: true }).click();
+  await expect(menu).toBeHidden();
   await page.getByRole("menuitem", { name: "Abmelden", exact: true }).click();
   await login(page); await open(page, shops);
   await expect(page.locator("#teacher-panel-sets")).toBeVisible();
   await expect(page.locator("#teacher-panel-tablets")).toBeHidden();
-  await expect(tabletsTab).toBeHidden();
+  await expect(toggle).toBeDisabled(); await expect(menu).toBeHidden();
+  await expect(page.locator("#teacher-section-chevron")).toBeHidden();
   await expect(page.locator("#workspace-tablet-usage")).toBeHidden();
 });
 
@@ -385,12 +402,14 @@ for (const mode of ["light", "dark"]) {
     await login(page, "julius");
     for (const width of [1440, 720, 390, 320]) {
       await page.setViewportSize({ width, height: 900 });
-      await page.getByRole("tab", { name: "Tablets", exact: true }).click();
+      await page.locator("#teacher-section-toggle").click();
+      await page.getByRole("menuitemradio", { name: "Tablets", exact: true }).click();
       await expect(page.locator("#teacher-panel-tablets")).toBeVisible();
       await expect(page.locator("#teacher-panel-tablets")).not.toHaveClass(/ui-motion-surface-entering/);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
       await page.screenshot({ path: `artifacts/teacher-workspace/admin-tabs-${mode}-${width}.png`, fullPage: true, animations: "disabled" });
-      await page.getByRole("tab", { name: "Lernsets", exact: true }).click();
+      await page.locator("#teacher-section-toggle").click();
+      await page.getByRole("menuitemradio", { name: "Lernsets", exact: true }).click();
     }
   });
 }

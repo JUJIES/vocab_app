@@ -92,9 +92,12 @@ for (const [mode, id, name] of [
     });
     for (const ratio of contrast) expect(ratio).toBeGreaterThanOrEqual(4.5);
 
-    await page.getByRole("tab", { name: "Tablets", exact: true }).click();
+    await page.locator("#teacher-section-toggle").click();
+
+    await page.getByRole("menuitemradio", { name: "Tablets", exact: true }).click();
     await capture(page, `${id}-tablets`);
-    await page.getByRole("tab", { name: "Lernsets", exact: true }).click();
+    await page.locator("#teacher-section-toggle").click();
+    await page.getByRole("menuitemradio", { name: "Lernsets", exact: true }).click();
     await page.locator(".workspace-set-row").first().click();
     await expect(page.locator("#set-editor-form")).toBeVisible();
     await capture(page, `${id}-editor`);
