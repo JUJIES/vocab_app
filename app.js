@@ -528,7 +528,7 @@ function bindEvents() {
   elements.sentenceAnswer.addEventListener("input", () => {
     if (state.sentenceSession && !state.sentenceSession.accepted && !state.sentenceBusy) {
       state.sentenceSession.feedback = "";
-      state.sentenceSession.problem = null;
+      state.sentenceSession.issues = [];
       state.sentenceSession.help = null;
       state.sentenceSession.status = "ready";
       renderSentenceFeedback("", "ready", state.sentenceSession);
@@ -9960,6 +9960,18 @@ function renderSentenceFeedback(message, status, run = null) {
       const text = document.createElement("p");
       text.textContent = entry.feedback;
       item.append(quote, text);
+      if (entry.issues?.length) {
+        const points = document.createElement("ol");
+        points.className = "sentence-stage__issues";
+        for (const issue of entry.issues) {
+          const point = document.createElement("li");
+          const label = document.createElement("strong");
+          label.textContent = issue.quote === null ? "Satz" : `„${issue.quote}“`;
+          point.append(label, document.createTextNode(` – ${issue.message}`));
+          points.append(point);
+        }
+        item.append(points);
+      }
       if (entry.help?.explanation) {
         const help = document.createElement("details");
         help.className = "sentence-stage__help";
@@ -9986,39 +9998,46 @@ function renderSentenceFeedback(message, status, run = null) {
     const isLatest = entry === history.at(-1);
     item.classList.toggle("is-latest", isLatest);
     const quote = item.querySelector("blockquote");
-    const span = entry.problem;
     const checked = entry.answer;
     quote.replaceChildren();
-    const validSpan = entry.status === "revise" && span && typeof checked === "string"
-      && Number.isInteger(span.start) && Number.isInteger(span.end)
-      && span.start >= 0 && span.end > span.start && span.end <= checked.length
-      && span.end - span.start <= 60 && span.end - span.start <= checked.length * .5;
-    if (!validSpan) { quote.textContent = checked; continue; }
+    const spans = (entry.status === "revise" ? entry.issues || [] : [])
+      .map((issue, index) => ({ ...issue.problem, number: index + 1 }))
+      .filter(span => typeof checked === "string" && Number.isInteger(span.start) && Number.isInteger(span.end)
+        && span.start >= 0 && span.end > span.start && span.end <= checked.length
+        && span.end - span.start <= 60 && span.end - span.start <= checked.length * .5)
+      .sort((a, b) => a.start - b.start);
     // Old markings stay with their quoted attempt. Only a matching current
     // draft can select the native input; historical entries never restore it.
     const editable = isLatest && !state.sentenceBusy && !run?.error && !run?.accepted
       && checked === elements.sentenceAnswer.value.trim();
-    const marker = document.createElement(editable ? "button" : "span");
-    marker.className = "sentence-stage__problem";
-    marker.textContent = checked.slice(span.start, span.end);
-    if (editable) {
-      marker.type = "button";
-      marker.setAttribute("aria-label", `Problemstelle „${marker.textContent}“ bearbeiten`);
-      marker.addEventListener("click", () => {
-        const answer = elements.sentenceAnswer;
-        if (checked !== answer.value.trim() || answer.disabled || answer.readOnly) return;
-        const offset = answer.value.length - answer.value.trimStart().length;
-        answer.focus(); answer.setSelectionRange(span.start + offset, span.end + offset);
-      });
+    let end = 0;
+    for (const span of spans) {
+      if (span.start < end) continue;
+      const marker = document.createElement(editable ? "button" : "span");
+      marker.className = "sentence-stage__problem";
+      marker.textContent = checked.slice(span.start, span.end);
+      if (editable) {
+        marker.type = "button";
+        marker.setAttribute("aria-label", `Problemstelle „${marker.textContent}“ aus Hinweis ${span.number} bearbeiten`);
+        marker.addEventListener("click", () => {
+          const answer = elements.sentenceAnswer;
+          if (checked !== answer.value.trim() || answer.disabled || answer.readOnly) return;
+          const offset = answer.value.length - answer.value.trimStart().length;
+          answer.focus(); answer.setSelectionRange(span.start + offset, span.end + offset);
+        });
+      }
+      quote.append(document.createTextNode(checked.slice(end, span.start)), marker);
+      end = span.end;
     }
-    quote.append(document.createTextNode(checked.slice(0, span.start)), marker, document.createTextNode(checked.slice(span.end)));
+    quote.append(document.createTextNode(checked.slice(end)));
   }
   const notice = run?.error || !history.length || run?.complete ? message || "" : "";
   elements.sentenceFeedbackNotice.textContent = notice;
   elements.sentenceFeedbackNotice.hidden = !notice;
   feedback.hidden = !history.length && !notice;
   feedback.dataset.status = status;
-  if (elements.sentenceFeedbackText.textContent !== (message || "")) elements.sentenceFeedbackText.textContent = message || "";
+  const spoken = message ? [message, ...(!run?.error && !run?.complete ? history.at(-1)?.issues || [] : []).map((issue, index) => `${index + 1}. ${issue.quote || "Satz"}: ${issue.message}`)].join(" ") : "";
+  if (elements.sentenceFeedbackText.textContent !== spoken) elements.sentenceFeedbackText.textContent = spoken;
   if (added && !state.sentenceBusy) requestAnimationFrame(() => {
     if (!added.isConnected || state.appMode !== APP_MODES.SENTENCE) return;
     const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -10093,7 +10112,7 @@ async function startSentenceSet(setPath, direction, count, { resume = false, dif
     if (saved && !run.accepted && String(saved.answer || "").trim() !== run.checkedAnswer) {
       state.sentenceSession.feedback = "";
       state.sentenceSession.status = "ready";
-      state.sentenceSession.problem = null;
+      state.sentenceSession.issues = [];
       state.sentenceSession.help = null;
     }
     persistActiveLearningSession(setPath, "sentence", APP_MODES.SENTENCE, direction, run.total);

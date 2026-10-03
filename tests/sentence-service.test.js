@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const { SentenceService, locateProblem } = require("../lib/sentence-service");
 const document = { set: { title: "Context", languages: { source: "de", target: "en" } }, cards: [{ source: { text: "vorübergehend" }, target: { text: "temporarily" }, acceptedAnswers: ["for a while"] }] };
 const prompt = { prefix: "Der Zoo ist ", focus: "vorübergehend", suffix: " geschlossen." };
-const accepted = { grammar: true, meaning: true, target: true, spelling: true, hint: "Gut.", help: null, problem: null };
+const accepted = { grammar: true, meaning: true, target: true, spelling: true, hint: "Gut.", help: null, issues: [] };
 function service(results) {
   const calls = [];
   return { calls, service: new SentenceService({ client: { responses: { create: async body => {
@@ -27,13 +27,15 @@ test("context prompt hides target and unrelated actor cannot resume/check a run"
   assert.deepEqual(JSON.parse(calls[1].input[0].content).accepted_variants, ["for a while"]);
   assert.equal(calls[0].model, "gpt-6-luna");
   assert.equal(calls[0].reasoning.effort, "none");
+  assert.equal(calls[1].reasoning.effort, "low", "revision assessment gets a small consistency check; generation stays immediate");
+  assert.equal(calls[1].model, calls[0].model);
   assert.equal(calls[0].store, false);
   await s.check("tablet:a", run.id, "sets/a.json", run.prompt.id, "The zoo is temporarily closed.");
   assert.equal(calls.length, 2);
   assert.equal((await s.next("tablet:a", run.id, "sets/a.json", run.prompt.id)).complete, true);
 });
 test("brief feedback permits revision, uncertainty never accepts, provider error preserves retry", async () => {
-  const { service: s, calls } = service([prompt, { ...accepted, grammar: false, hint: "Die Vokabel passt. Achte auf die Form von be." }, { ...accepted, meaning: null }, new Error("provider-secret"), accepted]);
+  const { service: s, calls } = service([prompt, { ...accepted, grammar: false, hint: "Die Vokabel passt. Achte auf die Form von be.", issues: [{quote:null,occurrence:0,message:"Das Subjekt ist Einzahl. Passe die Verbform dazu an."}] }, { ...accepted, meaning: null }, new Error("provider-secret"), accepted]);
   const run = await s.start("a", "sets/a.json", document, "source-target", 1);
   const check = answer => s.check("a", run.id, "sets/a.json", run.prompt.id, answer);
   assert.equal((await check("The zoo are temporarily closed.")).accepted, false);
@@ -106,29 +108,31 @@ test("problem quotes locate exact whole words and reject broad or invented marki
   assert.deepEqual(locateProblem(answer, { quote: "ist", occurrence: 0 }), { start: 10, end: 13 });
   assert.deepEqual(locateProblem(answer, { quote: "ist", occurrence: 1 }), { start: 24, end: 27 });
   assert.deepEqual(locateProblem("🍳 Breakfast ist included.", { quote: "ist", occurrence: 0 }), { start: 13, end: 16 });
+  const singleLetter = "I often listening to musik when i make homeworks.";
+  assert.deepEqual(locateProblem(singleLetter, {quote:"i",occurrence:0}), {start:32,end:33}, 'occurrence counts whole words, not letters inside listening or musik');
   for (const problem of [null, { quote: "is", occurrence: 0 }, { quote: answer, occurrence: 0 }, { quote: "Breakfast ist included.", occurrence: 0 }, { quote: ".", occurrence: 0 }, { quote: "missing", occurrence: 0 }, { quote: "ist", occurrence: -1 }, { quote: "ist", occurrence: 2 }]) {
     assert.equal(locateProblem(answer, problem), null);
   }
 });
 test("localized feedback is tied to the checked attempt, never accepted or uncertain answers", async () => {
   const { service: s } = service([prompt,
-    { ...accepted, grammar: false, hint: "Die Vokabel passt. ‚ist‘ ist noch Deutsch; überprüfe die englische Verbform.", problem: { quote: "ist", occurrence: 0 } },
-    { ...accepted, grammar: null, problem: { quote: "ist", occurrence: 0 } },
-    { ...accepted, problem: { quote: "is", occurrence: 0 } },
+    { ...accepted, grammar: false, hint: "Die Vokabel passt. ‚ist‘ ist noch Deutsch; überprüfe die englische Verbform.", issues: [{ quote: "ist", occurrence: 0, message: "Dieser Teil ist noch Deutsch. Für einen englischen Satz brauchst du die passende englische Verbform." }] },
+    { ...accepted, grammar: null },
+    accepted,
   ]);
   const run = await s.start("a", "sets/a.json", document, "source-target", 1);
   const check = answer => s.check("a", run.id, "sets/a.json", run.prompt.id, answer);
   const revise = await check("  The zoo ist temporarily closed.  ");
-  assert.deepEqual(revise.problem, { start: 8, end: 11 });
+  assert.deepEqual(revise.issues[0].problem, { start: 8, end: 11 });
   assert.equal(revise.checkedAnswer, "The zoo ist temporarily closed.");
-  assert.deepEqual(s.view(s.get("a", run.id, "sets/a.json")).problem, revise.problem);
-  assert.equal((await check("The zoo ist closed temporarily.")).problem, null);
+  assert.deepEqual(s.view(s.get("a", run.id, "sets/a.json")).issues[0].problem, revise.issues[0].problem);
+  assert.deepEqual((await check("The zoo ist closed temporarily.")).issues, []);
   const correct = await check("The zoo is temporarily closed.");
-  assert.equal(correct.problem, null);
-  assert.deepEqual(correct.history[0].problem, revise.problem);
+  assert.deepEqual(correct.issues, []);
+  assert.deepEqual(correct.history[0].issues[0].problem, revise.issues[0].problem);
   assert.equal(correct.history[0].answer, revise.checkedAnswer);
   assert.equal(correct.history.length, 3);
-  assert.equal((await s.next("a", run.id, "sets/a.json", run.prompt.id)).problem, null);
+  assert.deepEqual((await s.next("a", run.id, "sets/a.json", run.prompt.id)).issues, []);
 });
 
 test("difficulty controls generation and survives resume; invalid difficulty never calls the provider", async () => {
@@ -141,24 +145,24 @@ test("difficulty controls generation and survives resume; invalid difficulty nev
   assert.equal(JSON.parse(calls[0].input[0].content).difficulty, "hard");
 });
 test("recognizable typos block acceptance independently; corrections clear optional help", async () => {
-  const { service: s } = service([prompt, { ...accepted, spelling: false, hint: "Fast geschafft: Prüfe die Schreibweise von „temprarily“.", problem: { quote: "temprarily", occurrence: 0 } }, accepted]);
+  const { service: s } = service([prompt, { ...accepted, spelling: false, hint: "Fast geschafft: Prüfe die Schreibweise von „temprarily“.", issues: [{ quote: "temprarily", occurrence: 0, message: "Hier steckt ein Schreibfehler. Kontrolliere die Schreibweise der Zielvokabel noch einmal." }] }, accepted]);
   const run = await s.start("a", "sets/a.json", document, "source-target", 1);
   const revise = await s.check("a", run.id, "sets/a.json", run.prompt.id, "The zoo is temprarily closed.");
   assert.equal(revise.accepted, false);
   assert.equal(revise.status, "revise");
-  assert.deepEqual(revise.problem, { start: 11, end: 21 });
+  assert.deepEqual(revise.issues[0].problem, { start: 11, end: 21 });
   await assert.rejects(s.next("a", run.id, "sets/a.json", run.prompt.id));
   assert.equal((await s.check("a", run.id, "sets/a.json", run.prompt.id, "The zoo is temporarily closed.")).help, null);
 });
 test("unsafe transfer examples and invented translated quotes get one bounded repair", async () => {
-  const unsafe = { ...accepted, grammar: false, hint: "Prüfe die Verbform.", help: { explanation: "Das Subjekt steht in der Einzahl.", example: "The shop is temporarily closed." } };
+  const unsafe = { ...accepted, grammar: false, hint: "Prüfe die Verbform.", issues: [{quote:null,occurrence:0,message:"Das Subjekt steht in der Einzahl. Passe die Verbform an."}], help: { explanation: "Das Subjekt steht in der Einzahl.", example: "The shop is temporarily closed." } };
   const safe = { ...unsafe, help: null };
   const { service: s, calls } = service([prompt, unsafe, safe]);
   const run = await s.start("a", "sets/a.json", document, "source-target", 1);
   const result = await s.check("a", run.id, "sets/a.json", run.prompt.id, "The zoo are temporarily closed.");
   assert.equal(result.help, null);
   assert.equal(calls.length, 3);
-  const invented = { ...accepted, meaning: false, hint: "Ergänze „tomorrow“.", help: null };
+  const invented = { ...accepted, meaning: false, hint: "Ergänze „tomorrow“.", issues: [{quote:null,occurrence:0,message:"Die Zeitangabe fehlt."}], help: null };
   const rejected = service([prompt, invented, invented]).service;
   const second = await rejected.start("b", "sets/a.json", document, "source-target", 1);
   await assert.rejects(rejected.check("b", second.id, "sets/a.json", second.prompt.id, "The zoo is temporarily closed."), error => error.status === 503);
@@ -174,7 +178,7 @@ test("malformed optional help never partially accepts or caches a response", asy
 });
 
 test("spelling feedback does not invent letter counts and repairs once", async () => {
-  const unsafe = { ...accepted, spelling: false, hint: "Da fehlt ein Buchstabe." };
+  const unsafe = { ...accepted, spelling: false, hint: "Da fehlt ein Buchstabe.", issues: [{quote:"temprarily",occurrence:0,message:"Prüfe die Schreibweise."}] };
   const safe = { ...unsafe, hint: "Fast da! Prüfe die Schreibweise von temprarily.", help: null };
   const { service: s, calls } = service([prompt, unsafe, safe]);
   const run = await s.start("a", "sets/a.json", document, "source-target", 1);
@@ -184,8 +188,28 @@ test("spelling feedback does not invent letter counts and repairs once", async (
   assert.equal(calls.length, 3);
 });
 
+test("general letter checks are useful spelling guidance, while counts and positions still require repair", async () => {
+  const revise = message => ({ ...accepted, spelling: false, hint: "Die Aussage passt 👍", issues: [{quote:"temprarily",occurrence:0,message}] });
+  for (const message of ["Prüfe die Buchstaben dieses Wortes sorgfältig.", "Prüfe die Buchstabenfolge und überarbeite das Wort."]) {
+    const { service: s, calls } = service([prompt, revise(message)]);
+    const run = await s.start("a", "sets/a.json", document, "source-target", 1);
+    const result = await s.check("a", run.id, "sets/a.json", run.prompt.id, "The zoo is temprarily closed.");
+    assert.equal(calls.length, 2);
+    assert.equal(result.accepted, false);
+    assert.equal(result.issues[0].message, message);
+  }
+  for (const message of ["Das Wort braucht 11 Buchstaben.", "Prüfe die letzten Buchstaben an dieser Stelle.", "Die Buchstabenanzahl stimmt nicht."]) {
+    const { service: s, calls } = service([prompt, revise(message), revise("Prüfe die Schreibweise sorgfältig.")]);
+    const run = await s.start("a", "sets/a.json", document, "source-target", 1);
+    const result = await s.check("a", run.id, "sets/a.json", run.prompt.id, "The zoo is temprarily closed.");
+    assert.equal(calls.length, 3);
+    assert.equal(result.history.length, 1);
+    assert.equal(result.accepted, false);
+  }
+});
+
 test("revision history retains quotes, exposes no grading flags and resets for the next sentence", async () => {
-  const revise = { ...accepted, grammar: false, hint: "Prüfe die Verbform. 🔎" };
+  const revise = { ...accepted, grammar: false, hint: "Prüfe die Verbform. 🔎", issues: [{quote:null,occurrence:0,message:"Das Subjekt ist Einzahl. Passe die Verbform dazu an."}] };
   const { service: s, calls } = service([prompt, revise, revise, revise, revise, new Error("outage"), accepted, prompt, revise]);
   const doc = { ...document, cards: [...document.cards, { source: { text: "Fähre" }, target: { text: "ferry" } }] };
   const run = await s.start("a", "sets/a.json", doc, "source-target", 2);
@@ -195,7 +219,7 @@ test("revision history retains quotes, exposes no grading flags and resets for t
   assert.equal(internal.attempts[0].answer, "The zoo one temporarily closed.");
   const history = s.view(internal).history;
   assert.equal(history.length, 4);
-  assert.deepEqual(Object.keys(history[0]).sort(), ['answer', 'feedback', 'help', 'id', 'problem', 'status']);
+  assert.deepEqual(Object.keys(history[0]).sort(), ['answer', 'feedback', 'help', 'id', 'issues', 'status']);
   assert.equal(history[0].answer, 'The zoo one temporarily closed.');
   assert.equal(history[0].feedback, revise.hint);
   assert.equal(s.view(internal).attempts, undefined);
@@ -218,7 +242,7 @@ test("revision history retains quotes, exposes no grading flags and resets for t
 });
 
 test("revision hints repair task-word choices without blocking grammar-category questions", async () => {
-  const unsafe = { ...accepted, grammar: false, hint: "Muss es need oder needs heißen? 🔎" };
+  const unsafe = { ...accepted, grammar: false, hint: "Muss es need oder needs heißen? 🔎", issues: [{quote:null,occurrence:0,message:"Das Subjekt ist Einzahl. Passe die Verbform an."}] };
   const safe = { ...unsafe, hint: "Die Häufigkeit ist jetzt enthalten 👍 Prüfe die Verbform: Bezieht sie sich auf Einzahl oder Mehrzahl?" };
   const { service: s, calls } = service([prompt, unsafe, safe]);
   const run = await s.start("a", "sets/a.json", document, "source-target", 1);
@@ -228,7 +252,7 @@ test("revision hints repair task-word choices without blocking grammar-category 
 });
 
 test("history limit preserves every validated attempt and still allows cached checks", async () => {
-  const revise = { ...accepted, grammar: false, hint: 'Prüfe die Verbform. 🔎' };
+  const revise = { ...accepted, grammar: false, hint: 'Prüfe die Verbform. 🔎', issues: [{quote:null,occurrence:0,message:'Das Subjekt ist Einzahl. Passe die Verbform dazu an.'}] };
   const { service: s, calls } = service([prompt, ...Array(40).fill(revise)]);
   const run = await s.start('a', 'sets/a.json', document, 'source-target', 1);
   for (let i = 0; i < 40; i++) await s.check('a', run.id, 'sets/a.json', run.prompt.id, `The zoo ${i} temporarily closed.`);
@@ -238,4 +262,72 @@ test("history limit preserves every validated attempt and still allows cached ch
   await assert.rejects(s.check('a', run.id, 'sets/a.json', run.prompt.id, 'Another attempt'), error => error.status === 409);
   assert.equal(calls.length, 41);
   assert.equal(s.view(s.get('a', run.id, 'sets/a.json')).history.length, 40);
+});
+
+test("several issues bind individual rules to exact spans and remain in revision context", async () => {
+  const answer = 'I often listening to musik when i make homeworks.';
+  const issues = [
+    {quote:'listening',occurrence:0,message:'Often beschreibt eine Gewohnheit. Hier brauchst du bei I die Grundform des Verbs im Simple Present; überarbeite die Verbform.'},
+    {quote:'musik',occurrence:0,message:'Hier steckt ein Schreibfehler. Kontrolliere die englische Schreibweise.'},
+    {quote:'make',occurrence:0,message:'Hier ist eine feste englische Wortverbindung nötig. Überprüfe das Verb für Aufgaben erledigen.'},
+    {quote:'homeworks',occurrence:0,message:'Das englische Wort für Hausaufgaben ist nicht zählbar und hat kein Plural-s. Überarbeite die Endung.'},
+  ];
+  const revise = {...accepted, grammar:false, spelling:false, hint:'Die Häufigkeit hast du erkannt 👍', issues};
+  const {service:s,calls} = service([prompt,revise,accepted]);
+  const doc = {set:{title:'Context',languages:{source:'de',target:'en'}},cards:[{source:{text:'Musik'},target:{text:'music'}}]};
+  const run = await s.start('a','sets/a.json',doc,'source-target',1);
+  const result = await s.check('a',run.id,'sets/a.json',run.prompt.id,answer);
+  assert.deepEqual(result.issues.map(issue => answer.slice(issue.problem.start,issue.problem.end)), ['listening','musik','make','homeworks']);
+  assert.deepEqual(result.history[0].issues,result.issues);
+  await s.check('a',run.id,'sets/a.json',run.prompt.id,'I often listen to music when I do homework.');
+  assert.deepEqual(JSON.parse(calls[2].input[0].content).previous_attempts[0].issues,issues.map(({quote,message})=>({quote,message})));
+});
+
+test("invalid or overlapping issue quotes repair once; unrepaired feedback is never retained", async () => {
+  const bad = {...accepted,grammar:false,hint:'Noch nicht ganz 🔎',issues:[{quote:'ist',occurrence:0,message:'Hier ist noch ein deutsches Verb.'},{quote:'ist',occurrence:0,message:'Prüfe dieses Verb.'}]};
+  const safe = {...bad,issues:[bad.issues[0]]};
+  const {service:s,calls} = service([prompt,bad,safe]);
+  const run=await s.start('a','sets/a.json',document,'source-target',1);
+  const result=await s.check('a',run.id,'sets/a.json',run.prompt.id,'The zoo ist temporarily closed.');
+  assert.equal(calls.length,3);
+  assert.equal(result.issues.length,1);
+  assert.equal(result.history.length,1);
+  const invalid={...bad,issues:[{quote:'invented',occurrence:0,message:'Prüfe die Verbform.'}]};
+  const failed=service([prompt,invalid,invalid]).service;
+  const other=await failed.start('b','sets/a.json',document,'source-target',1);
+  await assert.rejects(failed.check('b',other.id,'sets/a.json',other.prompt.id,'The zoo ist temporarily closed.'),e=>e.status===503);
+  assert.deepEqual(failed.view(failed.get('b',other.id,'sets/a.json')).history,[]);
+});
+
+test("issue messages get the same no-solution safeguards; grammar rules themselves are permitted", async () => {
+  const bad={...accepted,spelling:false,hint:'Fast geschafft 🔎',issues:[{quote:'temprarily',occurrence:0,message:'Schreibe temporarily.'}]};
+  const safe={...bad,issues:[{quote:'temprarily',occurrence:0,message:'Hier steckt ein Schreibfehler. Kontrolliere die englische Schreibweise.'}]};
+  const {service:s,calls}=service([prompt,bad,safe]);
+  const run=await s.start('a','sets/a.json',document,'source-target',1);
+  const result=await s.check('a',run.id,'sets/a.json',run.prompt.id,'The zoo is temprarily closed.');
+  assert.equal(calls.length,3);
+  assert.equal(result.issues[0].message,safe.issues[0].message);
+  assert.equal(result.accepted,false);
+});
+
+test("missing content has a named rule but no invented marking; empty revision issues repair", async () => {
+  const bad={...accepted,meaning:false,hint:'Ein Detail fehlt 🔎',issues:[]};
+  const safe={...bad,issues:[{quote:null,occurrence:0,message:'Die Häufigkeit aus der Vorlage fehlt. Ergänze auch diese Information.'}]};
+  const {service:s,calls}=service([prompt,bad,safe]);
+  const run=await s.start('a','sets/a.json',document,'source-target',1);
+  const result=await s.check('a',run.id,'sets/a.json',run.prompt.id,'The zoo is temporarily closed.');
+  assert.equal(calls.length,3);
+  assert.equal(result.issues[0].problem,null);
+});
+
+test("acceptance cannot coexist with explicit correction points", async () => {
+  const contradictory={...accepted,hint:'Das passt 👍',issues:[{quote:'ist',occurrence:0,message:'Dieser Teil ist noch Deutsch. Du brauchst die englische Verbform.'}]};
+  const safe={...contradictory,grammar:false,hint:'Die Zielvokabel passt 👍'};
+  const {service:s,calls}=service([prompt,contradictory,safe]);
+  const run=await s.start('a','sets/a.json',document,'source-target',1);
+  const result=await s.check('a',run.id,'sets/a.json',run.prompt.id,'The zoo ist temporarily closed.');
+  assert.equal(calls.length,3);
+  assert.equal(result.accepted,false);
+  assert.equal(result.history.length,1);
+  assert.equal(result.history[0].status,'revise');
 });

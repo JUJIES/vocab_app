@@ -5,8 +5,9 @@ test.use({ baseURL: BASE_URL, viewport: { width: 1280, height: 850 }, locale: "d
 function checked(run, answer, feedback, accepted = false, problem = null, help = null) {
   const status = accepted ? 'accepted' : 'revise';
   const history = run.history || [];
-  const entry = { id: `attempt-${history.length + 1}`, answer: answer.trim(), feedback, status, problem, help };
-  const updated = { ...run, accepted, status, checkedAnswer: answer.trim(), feedback, problem, help,
+  const issues = accepted ? [] : [{quote: problem ? answer.trim().slice(problem.start,problem.end) : null, message: feedback, problem}];
+  const entry = { id: `attempt-${history.length + 1}`, answer: answer.trim(), feedback, status, issues, help };
+  const updated = { ...run, accepted, status, checkedAnswer: answer.trim(), feedback, issues, help,
     history: history.at(-1)?.answer === answer.trim() ? history : [...history, entry] };
   Object.assign(run, updated);
   return updated;
@@ -135,7 +136,7 @@ test("tablet session gates paid calls and completed student run counts once with
 for (const light of [false, true]) test(`specific feedback highlights only the problem and selects it for revision (${light ? "light" : "dark"})`, async ({ page }, testInfo) => {
   const answer = "Breakfast ist included\n.";
   let checks = 0;
-  const run = { id: "localized-run", total: 1, position: 1, targetLanguage: "en", prompt: { id: "localized-prompt", prefix: "Das Frühstück ist ", focus: "inklusive", suffix: "." }, accepted: false, feedback: "", status: "ready", problem: null };
+  const run = { id: "localized-run", total: 1, position: 1, targetLanguage: "en", prompt: { id: "localized-prompt", prefix: "Das Frühstück ist ", focus: "inklusive", suffix: "." }, accepted: false, feedback: "", status: "ready", issues: [] };
   await page.route("**/api/sentence-practice/*", route => {
     const action = route.request().url().split("/").pop();
     if (action === "check") {
@@ -232,7 +233,7 @@ for (const light of [false, true]) test(`revision history survives edits, retrie
       else if (answer === 'My car has a flat tire.') checked(run, answer, '👍 Die Schreibweise passt jetzt! Prüfe noch das Fahrzeug: Ist es dasselbe wie in der Aufgabe?', false, { start: 3, end: 6 });
       else checked(run, answer, '🌟 Jetzt stimmt auch das Fahrzeug. Dein Satz passt!', true);
     }
-    if (action === 'next') Object.assign(run, { position: 2, prompt: { id: 'history-prompt-2', prefix: 'Der Zoo ist ', focus: 'vorübergehend', suffix: ' geschlossen.' }, accepted: false, status: 'ready', feedback: '', history: [], checkedAnswer: '', help: null, problem: null });
+    if (action === 'next') Object.assign(run, { position: 2, prompt: { id: 'history-prompt-2', prefix: 'Der Zoo ist ', focus: 'vorübergehend', suffix: ' geschlossen.' }, accepted: false, status: 'ready', feedback: '', history: [], checkedAnswer: '', help: null, issues: [] });
     return route.fulfill({ json: { run } });
   });
   await prepare(page, light);
@@ -280,5 +281,61 @@ for (const light of [false, true]) test(`revision history survives edits, retrie
   await expect(entries).toHaveCount(0);
   await expect(page.locator('#sentence-feedback')).toBeHidden();
   await expect(page.locator('#sentence-prompt strong')).toHaveText('vorübergehend');
+  expect(errors).toEqual([]);
+});
+
+for (const light of [false, true]) test(`structured points and several exact correction marks (${light ? 'light' : 'dark'})`, async ({ page }, testInfo) => {
+  const errors=[];page.on('pageerror', error=>errors.push(error.message));
+  const initial='I often listening to musik when i make homeworks.';
+  const run={id:'multi-run',total:1,position:1,targetLanguage:'en',prompt:{id:'multi-prompt',prefix:'Ich höre oft ',focus:'Musik',suffix:', während ich Hausaufgaben mache.'},accepted:false,status:'ready',feedback:'',history:[],issues:[],shown:true};
+  let checks=0;
+  await page.route('**/api/sentence-practice/*',route=>{
+    const action=route.request().url().split('/').pop();
+    if(action==='check'){
+      const answer=route.request().postDataJSON().answer.trim();checks++;
+      const points=checks===1 ? [
+        ['listening','Often beschreibt eine Gewohnheit. Dafür brauchst du bei I die Grundform des Verbs im Simple Present. Überarbeite die Verbform.'],
+        ['musik','Hier steckt ein Schreibfehler. Kontrolliere die englische Schreibweise.'],
+        ['i','Das englische Pronomen für ich wird immer großgeschrieben. Passe die Großschreibung an.'],
+        ['make','Hier ist eine feste englische Wortverbindung nötig. Überprüfe das Verb für Aufgaben erledigen.'],
+        ['homeworks','Das englische Wort für Hausaufgaben ist nicht zählbar und hat kein Plural-s. Überarbeite die Endung.']
+      ] : [
+        ['make','Die englische Wortverbindung für Aufgaben erledigen braucht noch ein anderes Verb.'],
+        ['homeworks','Hausaufgaben ist im Englischen nicht zählbar: Das Wort hat kein Plural-s. Überarbeite die Endung.']
+      ];
+      const issues=points.map(([quote,message])=>{
+        const start=quote==='i'?answer.indexOf(' i ')+1:answer.indexOf(quote);
+        return {quote,message,problem:{start,end:start+quote.length}};
+      });
+      Object.assign(run,{feedback:checks===1?'Die Häufigkeit hast du erkannt 👍':'👍 Verbform und Schreibweise sind jetzt richtig. Zwei Stellen brauchen noch Aufmerksamkeit.',status:'revise',checkedAnswer:answer,issues});
+      run.history.push({id:`multi-${checks}`,answer,feedback:run.feedback,status:'revise',issues,help:null});
+    }
+    return route.fulfill({json:{run}});
+  });
+  await prepare(page,light);await page.locator('#launch-settings-start').click();
+  await page.locator('#sentence-answer').fill('  '+initial);await page.locator('#sentence-submit').click();
+  const points=page.locator('.sentence-stage__feedback-entry').last().locator('.sentence-stage__issues > li');
+  const marks=page.locator('button.sentence-stage__problem');
+  await expect(points).toHaveCount(5);
+  await expect(points.locator('strong')).toHaveText(['„listening“','„musik“','„i“','„make“','„homeworks“']);
+  await expect(marks).toHaveText(['listening','musik','i','make','homeworks']);
+  await expect(points.last()).toContainText('nicht zählbar');
+  for(const word of ['listening','musik','i','make','homeworks']) {
+    await marks.filter({hasText:new RegExp('^'+word+'$')}).click();
+    await expect(page.locator('#sentence-answer')).toBeFocused();
+    expect(await page.locator('#sentence-answer').evaluate(el=>el.value.slice(el.selectionStart,el.selectionEnd))).toBe(word);
+  }
+  await page.screenshot({path:testInfo.outputPath(`structured-feedback-${light?'light':'dark'}.png`),animations:'disabled',fullPage:true});
+  await page.setViewportSize({width:390,height:844});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.screenshot({path:testInfo.outputPath('structured-feedback-mobile.png'),animations:'disabled',fullPage:true});
+  await page.locator('#sentence-answer').fill('I often listen to music when I make homeworks.');
+  await expect(page.locator('span.sentence-stage__problem')).toHaveCount(5);
+  await expect(marks).toHaveCount(0);
+  await page.locator('#sentence-submit').click();
+  await expect(marks).toHaveText(['make','homeworks']);
+  await expect(points).toHaveCount(2);
+  await expect(page.locator('.sentence-stage__feedback-entry')).toHaveCount(2);
+  await expect(page.locator('#sentence-feedback-text')).not.toContainText('Grundform');
   expect(errors).toEqual([]);
 });

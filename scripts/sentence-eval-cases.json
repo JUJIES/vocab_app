@@ -289,7 +289,13 @@
     "answer": "Die Behörden kontrollieren Fahrkarten.",
     "correct": "Die Behörden kontrollieren Fahrkarten, wenn der Bahnhof voll ist.",
     "expected": false,
-    "issue": "Fehlende Bedingung in Gegenrichtung"
+    "issue": "Fehlende Bedingung in Gegenrichtung",
+    "revisions": [
+      {
+        "answer": "Die Behörden kontrollieren Fahrkarten, wenn am Bahnhof viel los ist.",
+        "expected": true
+      }
+    ]
   },
   {
     "id": "quantity-de",
@@ -529,5 +535,148 @@
     "expected": true,
     "correct": "She goes to school every day.",
     "issue": "Neutrale Stellung einer Zeitphrase am Ende"
+  },
+  {
+    "id": "multi-music",
+    "level": "medium",
+    "source": "Ich höre oft Musik, während ich Hausaufgaben mache.",
+    "focus": "Musik",
+    "target": "music",
+    "answer": "I often listening to musik when i make homeworks.",
+    "correct": "I often listen to music when I do homework.",
+    "expected": false,
+    "expectedMarked": [
+      "listening",
+      "musik",
+      "make",
+      "homeworks",
+      "i"
+    ],
+    "revisions": [
+      {
+        "answer": "I often listen to music when I make homeworks.",
+        "expected": false,
+        "expectedMarked": [
+          "make",
+          "homeworks"
+        ]
+      },
+      {
+        "answer": "I often listen to music when I make homework.",
+        "expected": false,
+        "expectedMarked": [
+          "make"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "multi-homework",
+    "level": "easy",
+    "source": "Ich mache jeden Tag Hausaufgaben.",
+    "focus": "Hausaufgaben",
+    "target": "homework",
+    "answer": "I do homeworks every day.",
+    "correct": "I do homework every day.",
+    "expected": false,
+    "expectedMarked": [
+      "homeworks"
+    ]
+  },
+  {
+    "id": "multi-music-typo",
+    "level": "medium",
+    "source": "Ich höre oft Musik, während ich Hausaufgaben mache.",
+    "focus": "Musik",
+    "target": "music",
+    "answer": "I often listen to musik when I do homework.",
+    "correct": "I often listen to music when I do homework.",
+    "expected": false,
+    "expectedMarked": [
+      "musik"
+    ]
+  },
+  {
+    "id": "multi-progressive-habit",
+    "level": "easy",
+    "source": "Ich höre oft Musik.",
+    "focus": "Musik",
+    "target": "music",
+    "answer": "I often listening to music.",
+    "correct": "I often listen to music.",
+    "expected": false,
+    "expectedMarked": [
+      "listening"
+    ]
+  },
+  {
+    "id": "multi-gerund-valid",
+    "level": "easy",
+    "source": "Ich höre gern Musik.",
+    "focus": "Musik",
+    "target": "music",
+    "answer": "I like listening to music.",
+    "correct": "I like listening to music.",
+    "expected": true
+  },
+  {
+    "id": "multi-progressive-valid",
+    "level": "easy",
+    "source": "Ich höre gerade Musik.",
+    "focus": "Musik",
+    "target": "music",
+    "answer": "I am listening to music right now.",
+    "correct": "I am listening to music right now.",
+    "expected": true
+  },
+  {
+    "id": "multi-frequency-missing",
+    "level": "easy",
+    "source": "Das Fahrrad braucht regelmäßige Wartung.",
+    "focus": "Wartung",
+    "target": "maintenance",
+    "answer": "The bike needs maintenance.",
+    "correct": "The bike needs regular maintenance.",
+    "expected": false,
+    "expectNoMarks": true
+  },
+  {
+    "id": "multi-go-school",
+    "level": "easy",
+    "source": "Sie geht jeden Tag zur Schule.",
+    "focus": "jeden Tag",
+    "target": "every day",
+    "answer": "She go to skool every day.",
+    "correct": "She goes to school every day.",
+    "expected": false,
+    "expectedMarked": [
+      "go",
+      "skool"
+    ]
+  },
+  {
+    "id": "multi-reverse",
+    "level": "easy",
+    "source": "The dog plays in the garden.",
+    "focus": "garden",
+    "target": "Garten",
+    "reverse": true,
+    "answer": "Der Hund spielen im Garte.",
+    "correct": "Der Hund spielt im Garten.",
+    "expected": false,
+    "expectedMarked": [
+      "spielen",
+      "Garte"
+    ]
+  },
+  {
+    "id": "multi-when-focus",
+    "level": "medium",
+    "source": "Ich höre Musik, während ich Hausaufgaben mache.",
+    "focus": "während",
+    "target": "while",
+    "answer": "I listen to music when I do homework.",
+    "correct": "I listen to music while I do homework.",
+    "expected": false
   }
 ]

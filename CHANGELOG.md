@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Translation gibt konkrete nummerierte Fehlerpunkte mit zitierter Stelle, verständlicher Regel und nächstem Schritt. Mehrere beanstandete Wörter werden getrennt markiert; jeder aktuelle passende Bereich lässt sich zur Korrektur auswählen. Regeln wie Grundform bei Gewohnheiten und fehlendes Plural-s bei nicht zählbaren Wörtern werden ausdrücklich erklärt, ohne Ersatzwort/fertigen Satz vorzugeben. Verlauf und Modellkontext bewahren alle Punkte; Teiltreffer in anderen Wörtern zählen beim Markieren nicht mehr als Wortvorkommen. Bewertung nutzt eine kurze interne Prüfung mit demselben kleinen Modell; Generierung bleibt ohne Reasoning.
+
 - Die Druckauswahl färbt ihre beiden Icons über die gemeinsame Theme-Iconfarbe; im hellen Leinen-Theme sind sie dunkel und klar lesbar.
 
 - Translation zeigt einen ruhigen Überarbeitungsverlauf mit zitiertem Satz und zugehörigem Feedback. Hinweise und geöffnete Hilfe bleiben beim Tippen erhalten, neue Einträge werden sanft angefügt. Alle validierten Versuche desselben Satzes werden dem Modell mitgegeben (maximal 40); Fehler/identische Prüfungen erzeugen keinen zusätzlichen Eintrag. Tab-Reload erhält Entwurf und Verlauf auch in der Lehrervorschau; beim nächsten Satz beginnt ein neuer Verlauf.

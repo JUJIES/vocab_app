@@ -7718,6 +7718,8 @@ html[data-tafelraum-embed="true"] .flashcard-shell {
 /* A revision is a quoted attempt with feedback, not a chat message. */
 .sentence-stage__feedback { margin: 0; color: rgb(var(--learner-text-rgb, 244, 247, 255)); line-height: 1.55; }
 .sentence-stage__feedback p { margin: .4rem 0 0; }
+.sentence-stage__issues { margin: .65rem 0 0; padding-inline-start: 1.4rem; display: grid; gap: .55rem; overflow-wrap: anywhere; }
+.sentence-stage__issues li::marker { font-weight: 700; color: rgba(var(--learner-text-rgb, 244, 247, 255), .7); }
 .sentence-stage__feedback-label { font-size: .85rem; font-weight: 700; }
 .sentence-stage__feedback-list { list-style: none; margin: .65rem 0 0; padding: 0; display: grid; gap: .85rem; }
 .sentence-stage__feedback-entry { padding: .8rem 1rem; border-inline-start: 3px solid rgba(var(--learner-warning-rgb, 255, 220, 158), .65); }
@@ -7727,7 +7729,8 @@ html[data-tafelraum-embed="true"] .flashcard-shell {
 .sentence-stage__feedback-entry[data-status="uncertain"] { border-inline-start-color: rgba(var(--learner-ui-rgb, 214, 224, 246), .3); }
 .sentence-stage__feedback-excerpt { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-style: italic; color: rgba(var(--learner-text-rgb, 244, 247, 255), .8); }
 .sentence-stage__problem { display: inline; padding: 0; border: 0; border-radius: 0; background: transparent; color: inherit; font: inherit; text-decoration: underline wavy rgb(var(--learner-danger-rgb, 225, 146, 136)); text-underline-offset: .25em; text-decoration-thickness: 1.5px; }
-button.sentence-stage__problem { cursor: pointer; }
+/* Give even a one-letter word a real inline box for Safari hit testing. */
+button.sentence-stage__problem { display: inline-block; min-width: .6em; padding-inline: .1em; margin-inline: -.1em; cursor: pointer; }
 .sentence-stage__problem:focus-visible { outline: 2px solid rgb(var(--learner-danger-rgb, 225, 146, 136)); outline-offset: 3px; }
 #sentence-feedback-notice { padding: .75rem 1rem; border-inline-start: 3px solid rgba(var(--learner-ui-rgb, 214, 224, 246), .3); }
 .sentence-stage__feedback-entry--new { animation: sentence-feedback-enter 260ms ease-out both; }

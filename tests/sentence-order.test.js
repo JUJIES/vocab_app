@@ -11,7 +11,7 @@ function service(orderStore) {
   const s = new SentenceService({ now:()=>clock, orderStore, client: { responses: { create: async body => {
     const data = JSON.parse(body.input[0].content);
     const result = body.text.format.name === 'sentence_prompt' ? { prefix: 'Ich kaufe ', focus: data.source_expression, suffix: '.' }
-      : { grammar: true, meaning: true, target: true, spelling: true, hint: 'Gut gemacht!', problem: null, help: null };
+      : { grammar: true, meaning: true, target: true, spelling: true, hint: 'Gut gemacht!', issues: [], help: null };
     return { status: 'completed', output_text: JSON.stringify(result) };
   } } } });
   s.advanceMinute=()=>{clock+=60001;};
