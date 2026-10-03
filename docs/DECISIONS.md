@@ -1,5 +1,9 @@
 # Produkt- und Architekturentscheidungen
 
+## 2026-10-03: Übungsname Translation
+
+- Sichtbarer Name der Satzübersetzungsübung: `Translation`. Interner Schlüssel `sentence` und bestehende API-/Speicherwege bleiben unverändert; keine Migration bestehender Durchgänge.
+
 ## 2026-10-03 – Satzstufen, klare Annahme und übertragbare Zusatzhilfe
 
 - Einfach/Mittel/Schwer steuern Begleitsatz und bekannten Wortschatz, nicht Fehlertoleranz. Gemeinsame Stufendefinition für Browser/Server; keine neuen Übungsmodi. Annahme braucht Grammatik, gesamte Bedeutung, Zielwort **und Rechtschreibung**. Zeit/Häufigkeit/Ort/Menge/Bedingung/Verneinung sind Bestandteil der Aussage. Wortstellung, Flexionen und echte UK/US-Varianten bleiben erlaubt.
@@ -25,7 +29,7 @@
 
 ## 2026-10-03 – Wörter im Kontext mit kurzem Satzfeedback
 
-- `Say it in a sentence` ergänzt die gemeinsame Lernansicht für Schüler, Touch und Lehrervorschau. Bestehende Modi bleiben bestehen. Start mit Sprachrichtung und 1–20 zufälligen vollständigen Vokabelpaaren. Kein Chat, keine Benotung: ein Satz, Eingabe, `Prüfen`, kurzer Hinweis, Überarbeiten bis angenommen, dann `Weiter`.
+- `Translation` ergänzt die gemeinsame Lernansicht für Schüler, Touch und Lehrervorschau. Bestehende Modi bleiben bestehen. Start mit Sprachrichtung und 1–20 zufälligen vollständigen Vokabelpaaren. Kein Chat, keine Benotung: ein Satz, Eingabe, `Prüfen`, kurzer Hinweis, Überarbeiten bis angenommen, dann `Weiter`.
 - Der Fokus stammt verbindlich aus der sichtbaren Set-Seite; das strukturierte Generierungsformat fixiert ihn per Enum. Damit kann das Modell nicht versehentlich die Zielvokabel zum markierten Ausdruck machen. Satzprüfung trennt Grammatik, Bedeutung und Zielwort; korrekte Varianten/Flexionen gelten. Unsicherheit oder Providerfehler sind keine falschen Antworten und keine Annahme.
 - Gemeinsamer serverseitiger Dienst statt Browser-Key oder zweitem Set-Modell. Jeder bezahlte Aufruf braucht eine aktuelle Tablet-Sitzung mit Abonnement oder Lehrkraftsitzung mit Set-Leserecht. Flüchtige, begrenzte Läufe halten zufällige Karten und Prüfziele serverseitig; Satz-/Lauf-IDs, Identitätssperre und wiederholbare Antworten verhindern fremde/stale und doppelte Aufrufe. Keine Inhalts-/Bildrevisionen oder Set-Änderungen durch Übungen.
 - Standard GPT‑6 Luna, Reasoning `none`, `store: false`, kurze strukturierte Ausgabe und begrenzte Anfragen. Keine Satzinhalte auf Platte/Logs. Reload innerhalb desselben Tabs setzt über Serverlauf plus `sessionStorage` fort; Serverneustart/12 Stunden verlangen Neustart. Durchgänge zählen ohne Score über den vorhandenen Lernstand, Lehrervorschau bleibt ohne Tablet-Schreibzugriff. Details/Konfiguration in README.

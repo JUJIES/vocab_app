@@ -45,7 +45,7 @@
     <script src="./irregular-verbs.js?v=2026-09-06-optional-to-v2" defer></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js" defer></script>
-    <script src="./app.js?v=2026-10-03-sentence-levels-v1" defer></script>
+    <script src="./app.js?v=2026-10-03-translation-v1" defer></script>
   </head>
   <body>
     <div class="pwa-splash" role="status" aria-label="Lerndeck wird geladen">
@@ -644,7 +644,7 @@
         <p id="input-status-message" class="status-message visually-hidden" role="status"></p>
       </section>
 
-      <section id="sentence-stage" class="input-stage sentence-stage" aria-label="Say it in a sentence" hidden>
+      <section id="sentence-stage" class="input-stage sentence-stage" aria-label="Translation" hidden>
         <header class="input-stage__menu">
           <button id="sentence-home" class="student-home-link" type="button" aria-label="Zur Übersicht"><span class="material-symbols-outlined" aria-hidden="true">arrow_back</span><span>Zur Übersicht</span></button>
           <span id="sentence-progress" class="sentence-stage__progress" role="status"></span>
@@ -653,7 +653,7 @@
         <div class="input-stage__shell">
           <article class="input-stage__card sentence-stage__card">
             <section class="input-stage__prompt-pane">
-              <p class="input-stage__prompt-kicker">Say it in a sentence</p>
+              <p class="input-stage__prompt-kicker">Translation</p>
               <h2 id="sentence-prompt" class="input-stage__prompt-word sentence-stage__prompt" aria-live="polite">Satz wird vorbereitet …</h2>
             </section>
             <section class="input-stage__response-pane">

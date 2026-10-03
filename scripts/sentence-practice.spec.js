@@ -7,6 +7,7 @@ async function prepare(page, light = false) {
   await page.route("**/api/teacher/sets/sentence-fixture", route => route.fulfill({ json: { set } }));
   if (light) await page.addInitScript(() => localStorage.setItem("lerndeck-teacher-appearance-v1", JSON.stringify({ mode: "light" })));
   await page.goto("/?teacherPractice=sentence-fixture");
+  await expect(page.locator('[data-mode-key="sentence"].launch-mode-modal__mode-card')).toContainText("Translation");
   await page.locator('[data-mode-key="sentence"].launch-mode-modal__mode-card').click();
   await page.locator("#launch-mode-start").click();
   await expect(page.locator("#launch-settings-title")).toHaveText("Wie viele Sätze möchtest du bilden?");
@@ -31,7 +32,9 @@ for (const light of [false, true]) test(`sentence feedback, revision, explicit n
     return route.fulfill({ json: { run: { ...run, accepted: true, complete: true } } });
   });
   await prepare(page, light);
+  await expect(page.locator("#launch-settings-start")).toHaveText("Translation starten");
   await page.locator("#launch-settings-start").click();
+  await expect(page.locator("#sentence-stage .input-stage__prompt-kicker")).toHaveText("Translation");
   await expect(page.locator("#sentence-prompt strong")).toHaveText("vorübergehend");
   await expect(page.locator("#sentence-stage")).not.toContainText("temporarily");
   await page.locator("#sentence-answer").fill("The zoo are temporarily closed.");

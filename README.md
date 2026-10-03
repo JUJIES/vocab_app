@@ -18,7 +18,7 @@ Einsatzbereit sind:
 - flüchtige PDF-Ausgabe vollständiger Vokabelpaare als zweisprachige Vokabelliste oder frei zusammengestellter Vokabeltest; beide zeigen eine HTML-Blattvorschau, beim Test ist sie direkt bearbeitbar, und nichts davon wird im Set gespeichert
 - Schülerübernahme per Code, QR oder Link; der Set-Inhalt wird nicht auf das Tablet kopiert
 - Modi `Üben`, `Eingabe` und `Testen`; `Üben` mischt beim Start und lässt auf beiden Kartenseiten frei vor- und zurückwischen, im Eingabemodus müssen falsche Antworten richtig wiederholt werden, und `Testen` fragt eine zufällig ausgewählte und gemischte Teilmenge von mindestens fünf bis allen Set-Karten ohne Bilder oder Hilfen als Liste ab und zeigt nach der ersten Prüfung eindeutige Haken/Kreuze sowie eine unverbindliche Notenorientierung
-- `Say it in a sentence`: 1–20 zufällige Vokabeln im Kontext übersetzen, mit kurzem Satzfeedback überarbeiten und nach Annahme bewusst weitergehen; für Deutsch–Englisch in beiden Richtungen, in Schüleransicht und Lehrervorschau
+- `Translation`: 1–20 zufällige Vokabeln im Kontext übersetzen, mit kurzem Satzfeedback überarbeiten und nach Annahme bewusst weitergehen; für Deutsch–Englisch in beiden Richtungen, in Schüleransicht und Lehrervorschau
 - Lernstand pro Tablet, Set und Lernmodus
 - installierbare Schüler-PWA für iPads/Relution und eigener Lehrkraft-Startpunkt für Mac-Web-Apps; der Browserzugang bleibt vollständig erhalten
 
@@ -102,7 +102,7 @@ Der Test erstellt ein Set und mutiert ein Tablet; niemals gegen echte Unterricht
 
 Die verbindlichen Beelink-Schritte stehen in [docs/DEPLOYMENT_BEELINK.md](docs/DEPLOYMENT_BEELINK.md). Die Installation auf Macs und die Verteilung per Relution beschreibt [docs/INSTALLATION.md](docs/INSTALLATION.md). Produktentscheidungen und vertagte Komponenten stehen in [docs/DECISIONS.md](docs/DECISIONS.md). Datenfluss und didaktische Regeln der Bildgenerierung sind in [docs/VISUAL_VOCABULARY_PLAN.md](docs/VISUAL_VOCABULARY_PLAN.md) festgehalten. Der Lehrerbereich ist unter `/teacher`, die Schüler-App unter `/` erreichbar.
 
-## Satzübung „Say it in a sentence“
+## Satzübung „Translation“
 
 Die gemeinsame Modusauswahl ergänzt die bisherigen Übungen. Sprachrichtung und Umfang (1 bis höchstens 20 vollständige Set-Karten, mit fortlaufender gemischter Set-Abdeckung) werden vor dem Start gewählt. Pro Karte erzeugt der Server einen kurzen Satz in der sichtbaren Sprache. Der fett markierte Ausdruck kommt aus der Set-Vokabel und ist im Antwortschema fest vorgegeben; die Übersetzung bleibt verborgen. Bei Alternativen wird ein Ausdruck, bei einer Verbformenreihe der Infinitiv fokussiert. Bereits hinterlegte ganze Sätze bleiben als Übersetzungsauftrag möglich.
 

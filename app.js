@@ -230,7 +230,7 @@ const LEARNING_MODES = Object.freeze([
     availabilityLabel: "Verfügbar",
   },
   {
-    key: "sentence", label: "Say it in a sentence",
+    key: "sentence", label: "Translation",
     description: "Vokabeln im Satz übersetzen und mit kurzem Feedback überarbeiten.",
     iconPath: LEARNING_MODE_ICON_PATHS.sentence,
     accentColor: "#7fa99d", accentRgb: "127, 169, 157", distributionPercent: 20,
@@ -9979,7 +9979,7 @@ function renderSentenceRun() {
   answer.disabled = state.sentenceBusy || !run || run.complete;
   answer.readOnly = Boolean(run?.accepted);
   if (!run) {
-    prompt.textContent = state.sentenceBusy ? "Satz wird vorbereitet …" : "Say it in a sentence";
+    prompt.textContent = state.sentenceBusy ? "Satz wird vorbereitet …" : "Translation";
     progress.textContent = "";
     button.textContent = state.sentenceBusy ? "Lädt …" : "Erneut versuchen";
     return;
