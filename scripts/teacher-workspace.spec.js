@@ -194,6 +194,37 @@ test("admin heading menu supports keyboard and dismissal; regular teachers keep 
   await expect(page.locator("#workspace-tablet-usage")).toBeHidden();
 });
 
+test("library has two categories, restores old all views and creates unfiled sets", async ({ page }) => {
+  await page.addInitScript(saved => localStorage.setItem("lerndeck-teacher-workspace-v1:aksana", JSON.stringify(saved)), { owner: "aksana", view: "all", selected: rooms.id });
+  await login(page);
+  await expect(page.locator('[data-library-view="all"]')).toHaveCount(0);
+  await expect(page.locator('#workspace-navigation h3')).toHaveCount(2);
+  await expect(page.getByRole("heading", { name: "Lerndecks", exact: true })).toBeVisible();
+  await expect(page.locator(`[data-library-view="${unit.id}"]`)).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#set-title-input")).toHaveValue(rooms.title);
+  await page.goto(`/teacher?owner=aksana&unit=all&set=${rooms.id}`);
+  await expect(page.locator("#sets-title")).toHaveText(unit.name);
+  await expect.poll(() => new URL(page.url()).searchParams.get("unit")).toBe(unit.id);
+  const unfiled = page.locator('[data-library-view="unfiled"]');
+  await unfiled.click();
+  await expect(unfiled).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("#sets-title")).toHaveText("Nicht eingeordnet");
+  await expect(page.locator("#teacher-empty-state")).toHaveText("Keine Sets");
+  await page.getByRole("button", { name: "Lernset anlegen", exact: true }).click();
+  await expect(page.locator("#set-title-input")).toHaveValue("Neues Lernset");
+  await expect.poll(() => new URL(page.url()).searchParams.get("set")).not.toBe(rooms.id);
+  await expect(page.locator("#workspace-save-status")).toHaveText("Gespeichert");
+  const id = new URL(page.url()).searchParams.get("set");
+  expect(id).toBeTruthy();
+  expect([shops.id, rooms.id]).not.toContain(id);
+  try {
+    expect((await (await page.request.get(`/api/teacher/sets/${id}`)).json()).set.unitId).toBe("");
+    await page.reload();
+    await expect(page.locator('[data-library-view="unfiled"]')).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator(`[data-open-set="${id}"]`)).toBeVisible();
+  } finally { await page.request.delete(`/api/teacher/sets/${id}`); }
+});
+
 test("organizes units, keeps content identities and flushes autosave before switching", async ({ page }) => {
   await login(page); await open(page, shops);
   await expect(page.locator("#set-editor-panel")).toHaveAttribute("role", "region");
@@ -352,6 +383,8 @@ test("units rename and remove without deleting their sets", async ({ page }) => 
   await dragToFolder(page, shops.id, created.unit.id);
   await expect.poll(async () => (await (await page.request.get(`/api/teacher/sets/${shops.id}`)).json()).set.unitId).toBe(created.unit.id);
   const deck = page.locator(`[data-library-view="${created.unit.id}"]`);
+  await deck.click();
+  await expect(deck).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".workspace-unit-row summary")).toHaveCount(0);
   await page.getByRole("button", { name: "Einstellungen", exact: true }).click();
   await deck.click({ button: "right" });
@@ -379,6 +412,8 @@ test("units rename and remove without deleting their sets", async ({ page }) => 
   await page.getByRole("menuitem", { name: "Entfernen", exact: true }).click();
   await expect(page.locator("#workspace-breadcrumb")).toContainText("Nicht eingeordnet");
   const retained = (await (await page.request.get(`/api/teacher/sets/${shops.id}`)).json()).set;
+  await expect(page.locator('[data-library-view="unfiled"]')).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(`[data-open-set="${shops.id}"]`)).toBeVisible();
   expect(retained.cards.map(card => card.id)).toEqual(shops.cards.map(card => card.id));
   expect(retained.shareCode).toBe(shops.shareCode);
 });

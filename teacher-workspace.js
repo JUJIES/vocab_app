@@ -1,7 +1,7 @@
 /* Library/navigation controller. Set content and saving remain in teacher.js. */
 window.LerndeckTeacherWorkspace = (() => {
   const escape = (value) => String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
-  const labels = { all: "Alle Sets", unfiled: "Nicht eingeordnet" };
+  const labels = { unfiled: "Nicht eingeordnet" };
 
   function create(config) {
     const byId = (id) => document.getElementById(id);
@@ -14,7 +14,7 @@ window.LerndeckTeacherWorkspace = (() => {
       unitCancel: byId("workspace-unit-cancel"), editor: byId("workspace-editor"),
       breadcrumb: byId("workspace-breadcrumb"),
     };
-    const state = { owner: "", view: "all", selected: "", search: "", mobile: "library", editUnit: "", loaded: false, intent: 0, restored: null, organizing: false, organizationPromise: null, drag: null, renderPending: false, suppressClickUntil: 0, suppressClickTarget: "", navMarkup: "" };
+    const state = { owner: "", view: "", selected: "", search: "", mobile: "library", editUnit: "", loaded: false, intent: 0, restored: null, organizing: false, organizationPromise: null, drag: null, renderPending: false, suppressClickUntil: 0, suppressClickTarget: "", navMarkup: "" };
     const unitMenu = document.createElement("div");
     unitMenu.className = "workspace-unit-menu"; unitMenu.hidden = true;
     unitMenu.setAttribute("role", "menu");
@@ -101,11 +101,11 @@ window.LerndeckTeacherWorkspace = (() => {
     const ownLibrary = () => state.owner === config.data().teacher?.id;
     const units = () => config.data().units.filter((unit) => unit.ownerTeacherId === state.owner).sort((a, b) => a.libraryOrder - b.libraryOrder);
     const sets = () => config.data().sets.filter((set) => set.ownerTeacherId === state.owner).sort((a, b) => a.libraryOrder - b.libraryOrder);
-    const name = () => labels[state.view] || units().find((unit) => unit.id === state.view)?.name || "Alle Sets";
+    const name = () => labels[state.view] || units().find((unit) => unit.id === state.view)?.name || labels.unfiled;
     const currentUnit = () => units().find((unit) => unit.id === state.view)?.id || "";
     const count = (view) => sets().filter((set) => matches(set, view)).length;
     function matches(set, view = state.view) {
-      return view === "all" || (view === "unfiled" ? !set.unitId : set.unitId === view);
+      return view === "unfiled" ? !set.unitId : set.unitId === view;
     }
     function read() {
       try { return JSON.parse(localStorage.getItem(key()) || "null") || {}; } catch (_) { return {}; }
@@ -174,7 +174,7 @@ window.LerndeckTeacherWorkspace = (() => {
         const saved = read(), params = new URLSearchParams(location.search);
         state.restored = saved;
         state.owner = params.get("owner") || saved.owner || data.teacher.id;
-        state.view = params.get("unit") || saved.view || "all";
+        state.view = params.get("unit") || saved.view || "";
         state.selected = params.get("set") || saved.selected || "";
         state.search = typeof saved.search === "string" ? saved.search : "";
         state.mobile = saved.mobile === "editor" ? "editor" : "library";
@@ -183,7 +183,10 @@ window.LerndeckTeacherWorkspace = (() => {
       const isAdmin = data.teacher.role === "admin";
       const owners = isAdmin ? data.accounts : [data.teacher];
       if (!owners.some((owner) => owner.id === state.owner)) state.owner = data.teacher.id;
-      if (!labels[state.view] && !units().some((unit) => unit.id === state.view)) state.view = "all";
+      if (!state.view || state.view === "all") {
+        const selected = sets().find((set) => set.id === state.selected);
+        state.view = selected ? units().find((unit) => unit.id === selected.unitId)?.id || "unfiled" : units()[0]?.id || "unfiled";
+      } else if (!labels[state.view] && !units().some((unit) => unit.id === state.view)) state.view = "unfiled";
       el.ownerField.hidden = !isAdmin;
       el.owner.replaceChildren(...owners.map((owner) => new Option(owner.displayName, owner.id)));
       el.owner.value = state.owner;
@@ -191,11 +194,10 @@ window.LerndeckTeacherWorkspace = (() => {
       el.search.value = state.search;
       const navScroll = el.units.scrollTop, listScroll = el.list.scrollTop;
       const handle = '<img class="workspace-drag-handle" src="./assets/icons/grip-vertical.svg" alt="" draggable="false" />';
-      const navButton = (view, text) => `<button type="button" class="workspace-nav-button" data-library-view="${escape(view)}" ${ownLibrary() && !labels[view] ? 'draggable="true" aria-haspopup="menu" aria-expanded="false" aria-keyshortcuts="Shift+F10 Alt+ArrowUp Alt+ArrowDown" aria-description="Rechtsklick, langes Drücken oder Umschalt und F10 für Optionen. Zum Sortieren ziehen oder Alt und Pfeil hoch oder runter verwenden."' : ''} aria-pressed="${state.view === view}">${ownLibrary() && !labels[view] ? handle : ''}<span>${escape(text)}</span><span class="workspace-count">${count(view)}</span></button>`;
-      const navMarkup = navButton("all", labels.all)
-        + '<p class="workspace-nav-caption">Lerndecks</p>'
+      const navButton = (view, text) => `<button type="button" class="workspace-nav-button${labels[view] ? ' workspace-nav-category' : ''}" data-library-view="${escape(view)}" ${ownLibrary() && !labels[view] ? 'draggable="true" aria-haspopup="menu" aria-expanded="false" aria-keyshortcuts="Shift+F10 Alt+ArrowUp Alt+ArrowDown" aria-description="Rechtsklick, langes Drücken oder Umschalt und F10 für Optionen. Zum Sortieren ziehen oder Alt und Pfeil hoch oder runter verwenden."' : ''} aria-pressed="${state.view === view}">${ownLibrary() && !labels[view] ? handle : ''}<span>${escape(text)}</span><span class="workspace-count">${count(view)}</span></button>`;
+      const navMarkup = '<h3 class="workspace-nav-caption"><span class="workspace-nav-caption-label">Lerndecks</span></h3>'
         + units().map((unit) => `<div class="workspace-unit-row">${navButton(unit.id, unit.name)}</div>`).join("")
-        + navButton("unfiled", labels.unfiled);
+        + `<h3 class="workspace-nav-caption">${navButton("unfiled", labels.unfiled)}</h3>`;
       if (navMarkup !== state.navMarkup) {
         closeUnitMenu(); cancelUnitHold();
         el.nav.innerHTML = navMarkup;
@@ -278,7 +280,7 @@ window.LerndeckTeacherWorkspace = (() => {
     el.search.addEventListener("input", () => { state.search = el.search.value; render(); remember(); });
     el.owner.addEventListener("change", () => {
       const owner = el.owner.value;
-      void navigate(async () => { state.owner = owner; state.view = "all"; state.selected = ""; state.search = "";
+      void navigate(async () => { state.owner = owner; state.view = ""; state.selected = ""; state.search = "";
         state.mobile = "library"; config.hideEditor(); el.unitForm.hidden = true; render(); }).finally(() => { el.owner.value = state.owner; });
     });
     el.newUnit.addEventListener("click", () => showUnitForm());
@@ -339,7 +341,7 @@ window.LerndeckTeacherWorkspace = (() => {
       const nav = target.closest("[data-library-view]");
       if (nav) {
         const view = nav.dataset.libraryView;
-        if (drag.kind === "sets" && view !== "all") return { node: nav, position: "inside", change: { kind: "assignment", id: drag.id, unitId: view === "unfiled" ? "" : view } };
+        if (drag.kind === "sets") return { node: nav, position: "inside", change: { kind: "assignment", id: drag.id, unitId: view === "unfiled" ? "" : view } };
         if (drag.kind === "units" && !labels[view] && view !== drag.id) return insertion(nav, "units", view, clientY);
         return null;
       }

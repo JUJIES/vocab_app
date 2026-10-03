@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Bibliothek auf die Oberkategorien `Lerndecks` / `Nicht eingeordnet` reduziert, beide mit identischer Überschrift-Gestaltung. `Alle Sets` entfällt; bisherige Gesamtansichten wechseln zum gewählten bzw. ersten Lerndeck. Zuordnungen, unzugeordnete Sets und gültige gespeicherte Ansichten bleiben erhalten.
+
 - Lehrer-/Admin-Oberfläche zusammengeführt: Topbar und sämtliche Hauptpanels ohne äußere Lücken, Rundungen oder Schatten. Theme-Kontraste und feine Linien strukturieren Bibliothek, Set-Liste, Editor und Tabletverwaltung. Gerätezeilen sowie Lade-/Leer-/Fehlerzustände folgen der flachen Gestaltung; Scroll- und Bedienabläufe bleiben erhalten.
 
 - Die redundante Set-Anzahl unter der Bibliothekssuche entfällt einschließlich ihrer Renderlogik und Abstände. Lerndeck-Zähler, Suche und Leer-/Fehlerzustände bleiben erhalten.
