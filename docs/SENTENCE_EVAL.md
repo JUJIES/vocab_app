@@ -29,6 +29,12 @@ Der Datensatz umfasst jetzt 38 Fälle. Drei zusätzliche Fälle prüfen den Verl
 
 Der Dienst gibt die letzten drei validierten Versuche nur für denselben Satz mit. Fehlgeschlagene Prüfungen erweitern den Verlauf nicht; `Weiter` löscht ihn. Die Annahmeentscheidung bleibt vollständig von der aktuellen Antwort abhängig. Automatische Diensttests sichern Begrenzung, Providerfehler, private Browserantwort, Übergang zur nächsten Aufgabe und den Emoji-Zusatz unabhängig vom Modell.
 
+## Nachtest: Adverbstellung im neutralen Unterrichtssatz
+
+Der Datensatz umfasst 46 Fälle. Acht zusätzliche Fälle prüfen `I’m today sick` / `I am today sick` (ablehnen), `Today I’m sick` / `I’m sick today` (annehmen) und zulässige Stellungen mit `often`, `very`, `temporarily` sowie `every day` nach einer Schul-Aussage. Der Baseline-Prompt traf 1/2 Fehler-/Kontrollfälle; die ausgeschriebene falsche Stellung wurde akzeptiert.
+
+Nach der Promptänderung: **8/8 Entscheidungen und korrekte Kontrollantworten passend**. Fehlerfeedback gelesen: Selbstprüfung der Zeitposition statt fertiger Aufgabensatz; Korrekturen werden konkret gewürdigt, Emoji vorhanden. Keine pauschale Sperre aller Adverbien zwischen be und Adjektiv. Generierung wird zugleich zu natürlicher Ausgangssyntax angehalten. Wie immer ist das ein gezielter Modellnachtest, keine Garantie für jede Wortstellung; vorhandene 90 Dienst-/Produktprüfungen bleiben grün.
+
 ## Grenzen
 
 Das ist ein gezielter synthetischer Test, keine Wirksamkeitsstudie mit Schülern und keine Garantie für beliebige Sätze. Modelle bleiben variabel. Das Feedback kann fachlich unvollkommen sein; unklare Ergebnisse werden nicht benotet/angenommen. Bei Prompt-/Modelländerungen gleiche Fälle erneut ausführen und besonders die Texte/Beispiele prüfen. Auswahl-Persistenz, sichtbare Bestätigung, Abbruch, Reset und Zyklusgrenzen werden unabhängig in `tests/sentence-order.test.js` getestet; UI in `scripts/sentence-practice.spec.js` (Chromium/WebKit, Hell/Dunkel, Desktop/schmal).

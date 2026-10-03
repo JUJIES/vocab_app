@@ -1,5 +1,11 @@
 # Produkt- und Architekturentscheidungen
 
+## 2026-10-03: Wortstellung ist Bestandteil der Translation-Grammatikprüfung
+
+- Verständliche Wörter mit unnatürlicher neutraler Satzstellung reichen nicht für Annahme. Der bestehende `grammar`-Check prüft ausdrücklich Wortstellung und unterschiedliche Adverbrollen; kein neues Bewertungsfeld, Regex-Grammatikfilter oder paralleler Prüfdienst. `I’m today sick` / `I am today sick` werden in dieser neutralen Unterrichtsaufgabe überarbeitet; beide natürlichen Zeitpositionen bleiben zulässig. Häufigkeits-/Grad-/Zustandsadverbien zwischen be und Adjektiv sind nicht pauschal verboten.
+- Feedback darf nicht gleichzeitig eine notwendige Umstellung verlangen und die Antwort akzeptieren. Es nennt den vorhandenen Problemteil/Regel statt eines fertigen Aufgabensatzes. Auch die Quelle soll natürlich sein (`Ich bin heute krank`, kein künstliches Nachstellen von heute).
+- Acht synthetische echte Modellfälle einschließlich beider Fehlerformen, Anfang/Ende sowie often/very/temporarily und Zeitphrase nach school passten nach der Promptänderung. Baseline hatte die ausgeschriebene Fehlerform akzeptiert. Modellprüfung und Grenzen in `docs/SENTENCE_EVAL.md`. Sprachdidaktische Grundlage: [British Council, Adverbial position](https://africa.teachingenglish.org.uk/classroom/grammar/adverbial-position).
+
 ## 2026-10-03: Persönliches Feedback mit begrenztem Verbesserungsverlauf
 
 - Die letzten drei validierten Prüfversuche (Antwort, Rückmeldung, vier Prüfkriterien) desselben Satzes werden als untrusted Daten mitgegeben. Sie bleiben serverseitig im flüchtigen Lauf, gehen nicht in Auswahlmetadaten/Bewertungen oder die Browserantwort ein und werden bei `Weiter` gelöscht. Doppelte Eingaben und fehlgeschlagene Provider-/Validierungsversuche erweitern den Verlauf nicht.

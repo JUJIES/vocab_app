@@ -441,5 +441,93 @@
     ],
     "correct": "The bike needs regular maintenance.",
     "issue": "Häufigkeit ergänzt, Verbform noch offen; abschließende Verbesserung würdigen"
+  },
+  {
+    "id": "word-order-sick",
+    "level": "easy",
+    "focus": "krank",
+    "target": "sick",
+    "source": "Ich bin heute krank.",
+    "answer": "I’m today sick.",
+    "expected": false,
+    "correct": "I’m sick today.",
+    "issue": "Zeitadverb trennt be vom prädikativen Adjektiv in einem neutralen Alltagssatz"
+  },
+  {
+    "id": "word-order-sick-expanded",
+    "level": "easy",
+    "focus": "krank",
+    "target": "sick",
+    "source": "Ich bin heute krank.",
+    "answer": "I am today sick.",
+    "expected": false,
+    "correct": "Today I’m sick.",
+    "issue": "Ausgeschriebene Kopula: gleiche unnatürliche Adverbstellung"
+  },
+  {
+    "id": "word-order-sick-valid-front",
+    "level": "easy",
+    "focus": "krank",
+    "target": "sick",
+    "source": "Ich bin heute krank.",
+    "answer": "Today I’m sick.",
+    "expected": true,
+    "correct": "Today I’m sick.",
+    "issue": "Zulässige Zeitangabe am Satzanfang"
+  },
+  {
+    "id": "word-order-sick-valid-end",
+    "level": "easy",
+    "focus": "krank",
+    "target": "sick",
+    "source": "Ich bin heute krank.",
+    "answer": "I’m sick today.",
+    "expected": true,
+    "correct": "I’m sick today.",
+    "issue": "Zulässige Zeitangabe am Satzende"
+  },
+  {
+    "id": "word-order-temporarily",
+    "level": "easy",
+    "focus": "krank",
+    "target": "sick",
+    "source": "Ich bin vorübergehend krank.",
+    "answer": "I’m temporarily sick.",
+    "expected": true,
+    "correct": "I’m temporarily sick.",
+    "issue": "Nicht jedes Adverb zwischen be und Adjektiv ist falsch"
+  },
+  {
+    "id": "word-order-frequency",
+    "level": "medium",
+    "focus": "krank",
+    "target": "sick",
+    "source": "Im Winter bin ich oft krank.",
+    "answer": "I’m often sick in winter.",
+    "expected": true,
+    "correct": "I’m often sick in winter.",
+    "issue": "Zulässiges Häufigkeitsadverb nach be"
+  },
+  {
+    "id": "word-order-degree",
+    "level": "medium",
+    "focus": "krank",
+    "target": "sick",
+    "source": "Ich bin heute sehr krank.",
+    "answer": "I’m very sick today.",
+    "expected": true,
+    "correct": "I’m very sick today.",
+    "issue": "Zulässiges Gradadverb vor Adjektiv"
+  },
+  {
+    "id": "word-order-school",
+    "level": "medium",
+    "focus": "Schule",
+    "target": "school",
+    "source": "Jeden Tag geht sie zur Schule.",
+    "answer": "She goes to school every day.",
+    "expected": true,
+    "correct": "She goes to school every day.",
+    "issue": "Neutrale Stellung einer Zeitphrase am Ende"
   }
 ]
