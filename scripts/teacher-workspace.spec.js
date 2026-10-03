@@ -129,7 +129,7 @@ test("organizes units, keeps content identities and flushes autosave before swit
   const saved = (await (await page.request.get(`/api/teacher/sets/${shops.id}`)).json()).set;
   expect(saved.cards.map(card => card.id)).toEqual(shops.cards.map(card => card.id));
   expect(saved.shareCode).toBe(shops.shareCode);
-  await page.getByRole("button", { name: "+ Unit anlegen", exact: true }).click();
+  await page.getByRole("button", { name: "+ Lerndeck anlegen", exact: true }).click();
   await page.locator("#workspace-unit-name").fill(prefix + " · Unit 2");
   await page.locator("#workspace-unit-form").getByRole("button", { name: "Speichern", exact: true }).click();
   await expect(page.locator("#set-unit-input option", { hasText: prefix + " · Unit 2" })).toHaveCount(1);
@@ -191,12 +191,12 @@ test("units rename and remove without deleting their sets", async ({ page }) => 
   await page.reload();
   await page.locator("#set-unit-input").selectOption(created.unit.id);
   await expect.poll(async () => (await (await page.request.get(`/api/teacher/sets/${shops.id}`)).json()).set.unitId).toBe(created.unit.id);
-  await page.getByLabel("Unit BL3 · Organisation verwalten").click();
+  await page.getByLabel("Lerndeck BL3 · Organisation verwalten").click();
   await page.getByRole("button", { name: "Umbenennen", exact: true }).click();
   await page.locator("#workspace-unit-name").fill("BL3 · Umbenannt");
   await page.locator("#workspace-unit-form").getByRole("button", { name: "Speichern", exact: true }).click();
   await expect(page.locator("#set-unit-input")).toHaveValue(created.unit.id);
-  await page.getByLabel("Unit BL3 · Umbenannt verwalten").click();
+  await page.getByLabel("Lerndeck BL3 · Umbenannt verwalten").click();
   page.once("dialog", dialog => dialog.accept());
   await page.getByRole("button", { name: "Entfernen", exact: true }).click();
   await expect(page.locator("#set-unit-input")).toHaveValue("");
@@ -306,11 +306,11 @@ test("a library refresh failure after confirmation retains the saved content and
   const saved = (await (await page.request.get(`/api/teacher/sets/${rooms.id}`)).json()).set;
   expect(saved.title).toBe(rooms.title + " saved");
   expect(saved.cards[0].id).toBe(rooms.cards[0].id);
-  await page.getByRole("button", { name: "+ Unit anlegen", exact: true }).click();
+  await page.getByRole("button", { name: "+ Lerndeck anlegen", exact: true }).click();
   await page.locator("#workspace-unit-name").fill("BL3 · Gesichert");
   await page.locator("#workspace-unit-form").getByRole("button", { name: "Speichern", exact: true }).click();
-  await expect(page.getByLabel("Unit BL3 · Gesichert verwalten")).toBeVisible();
-  await expect(page.locator("#workspace-library-feedback")).toHaveText("Unit gespeichert. Die Bibliothek konnte gerade nicht aktualisiert werden.");
+  await expect(page.getByLabel("Lerndeck BL3 · Gesichert verwalten")).toBeVisible();
+  await expect(page.locator("#workspace-library-feedback")).toHaveText("Lerndeck gespeichert. Die Bibliothek konnte gerade nicht aktualisiert werden.");
   const createdUnitId = await page.locator("#set-unit-input option", { hasText: "BL3 · Gesichert" }).getAttribute("value");
   await page.locator("#set-unit-input").selectOption(createdUnitId);
   await expect(page.locator("#set-editor-feedback")).toHaveText("Zuordnung gespeichert. Die Bibliothek konnte gerade nicht aktualisiert werden.");
@@ -352,7 +352,7 @@ test("learning opens the familiar student mode selection in another tab and keep
   await context.route("**/api/tablets/**/learning-progress/**", async route => { progressWrites++; await route.abort(); });
   await page.locator("#set-title-input").fill(rooms.title + " for learning");
   const newPage = context.waitForEvent("page");
-  await page.getByRole("link", { name: "Lernmodi öffnen", exact: false }).click();
+  await page.getByRole("link", { name: "Lernen", exact: true }).click();
   const learning = await newPage;
   await expect(learning.locator("#launch-mode-modal")).toBeVisible();
   await expect(learning.locator(".launch-mode-modal__mode-card")).toHaveCount(3);

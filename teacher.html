@@ -20,7 +20,7 @@
     </script>
     <link rel="stylesheet" href="./pwa-splash.css?v=2026-09-30-splash-contrast-v2" />
     <script src="./appearance.js?v=2026-09-30-appearance-v4" data-appearance-scope="teacher"></script>
-    <link rel="stylesheet" href="./teacher.css?v=2026-10-03-editor-header-v1" />
+    <link rel="stylesheet" href="./teacher.css?v=2026-10-03-lerndecks-v2" />
     <link rel="stylesheet" href="./appearance.css?v=2026-09-30-appearance-v4" />
     <link rel="stylesheet" href="./ui-motion.css?v=2026-08-30-ui-motion-v1" />
     <script src="./pwa.js?v=2026-08-30-pwa-splash-v3" defer></script>
@@ -28,8 +28,8 @@
     <script src="./tafelraum-embed.js?v=2026-09-08-content-zoom-layout-v2" defer></script>
     <script src="./set-side-options.js?v=2026-09-13-side-selection-v1" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js" defer></script>
-    <script src="./teacher-workspace.js?v=2026-10-03-autosave-v1" defer></script>
-    <script src="./teacher.js?v=2026-10-03-autosave-v1" defer></script>
+    <script src="./teacher-workspace.js?v=2026-10-03-lerndecks-v2" defer></script>
+    <script src="./teacher.js?v=2026-10-03-lerndecks-v2" defer></script>
   </head>
   <body>
     <div class="pwa-splash" role="status" aria-label="Lerndeck wird geladen">
@@ -164,13 +164,13 @@
         data-teacher-panel="sets"
       >
         <div id="teacher-workspace" class="teacher-workspace" data-mobile-view="library">
-          <aside id="workspace-units" class="workspace-units" aria-label="Units">
+          <aside id="workspace-units" class="workspace-units" aria-label="Lerndecks">
             <h2 class="workspace-heading">Bibliothek</h2>
             <label id="workspace-owner-field" class="workspace-owner-field" hidden><span>Lehrkraft</span><select id="workspace-owner" aria-label="Bibliothek der Lehrkraft"></select></label>
             <nav id="workspace-navigation" aria-label="Set-Bibliothek"></nav>
-            <button id="workspace-create-unit" class="workspace-unit-create" type="button">+ Unit anlegen</button>
+            <button id="workspace-create-unit" class="workspace-unit-create" type="button">+ Lerndeck anlegen</button>
             <form id="workspace-unit-form" class="workspace-unit-form" hidden>
-              <label for="workspace-unit-name">Unit-Name</label><input id="workspace-unit-name" maxlength="80" required />
+              <label for="workspace-unit-name">Lerndeck-Name</label><input id="workspace-unit-name" maxlength="80" required />
               <div class="workspace-inline-actions"><button class="teacher-button" type="submit">Speichern</button><button id="workspace-unit-cancel" class="teacher-button teacher-button--secondary" type="button">Abbrechen</button></div>
             </form>
             <p id="workspace-library-feedback" class="teacher-auth__feedback" role="status" aria-live="polite"></p>
@@ -214,7 +214,7 @@
                     </div>
                   </div>
                   <div id="workspace-use-actions" class="workspace-use-actions" role="group" aria-label="Lernset verwenden" hidden>
-                    <a id="workspace-practice" class="teacher-button teacher-button--secondary workspace-action" target="_blank" rel="noopener"><img class="teacher-button__icon" src="./assets/icons/learning-modes-open.svg" alt="" />Lernmodi öffnen ↗</a>
+                    <a id="workspace-practice" class="teacher-button teacher-button--secondary workspace-action" target="_blank" rel="noopener"><img class="teacher-button__icon" src="./assets/icons/learning-modes-open.svg" alt="" />Lernen</a>
                     <button id="workspace-print" class="teacher-button teacher-button--secondary workspace-action" type="button"><img class="teacher-button__icon" src="./assets/icons/print.svg" alt="" />Drucken</button>
                     <button id="workspace-share" class="teacher-button teacher-button--secondary workspace-action" type="button"><img class="teacher-button__icon" src="./assets/icons/share-2.svg" alt="" />Teilen</button>
                   </div>
@@ -255,7 +255,7 @@
                       <input id="set-title-input" name="title" type="text" maxlength="160" required />
                     </label>
                     <label class="set-editor-field" for="set-unit-input">
-                      <span>Unit</span>
+                      <span>Lerndeck</span>
                       <select id="set-unit-input"><option value="">Nicht eingeordnet</option></select>
                     </label>
                   </div>

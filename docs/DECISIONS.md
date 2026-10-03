@@ -1,5 +1,10 @@
 # Produkt- und Architekturentscheidungen
 
+## 2026-10-03 – Lerndecks als frei benennbare Set-Ordner
+
+- `Lerndeck` ersetzt `Unit` als sichtbaren Organisationsbegriff. Ein Lerndeck enthält Sets und ist unabhängig von Buch-Units. Eine Ebene genügt; bestehende Zuordnungen, Eigentumsrechte und die technischen Namen `units`/`unitId` bleiben erhalten. Kein neues Datenmodell und keine Umbenennung bestehender Ordnernamen.
+- Die Set-Aktionen heißen `Lernen`, `Drucken`, `Teilen`; der zusätzliche externe Pfeil entfällt. Lernen verwendet weiterhin die gemeinsame Schüleroberfläche im eigenen Tab. Die Tabellenköpfe bestehen allein aus der Inhalts-/Sprachwahl. Sichtbare Vorder-/Rückseiten- und Bildüberschriften entfallen; Pflichtauswahl und zugängliche Feldnamen bleiben erhalten.
+
 ## 2026-10-03 – Direkte Set-Anlage und einheitliches Autosave
 
 - Neues Set legt sofort ein Dokument in der gewählten Unit an. Ein expliziter Speichern-/Veröffentlichungsschritt und die Entwurfsansicht entfallen. Die Bestätigung rechts am Titel zeigt den tatsächlich bestätigten Speicherstand ohne Toasts. Diese Entscheidung ersetzt die frühere Trennung zwischen Entwurfs-Autosave und manueller Veröffentlichung.

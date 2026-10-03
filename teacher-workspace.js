@@ -108,8 +108,8 @@ window.LerndeckTeacherWorkspace = (() => {
       const navScroll = el.units.scrollTop, listScroll = el.list.scrollTop;
       const navButton = (view, text) => `<button type="button" class="workspace-nav-button" data-library-view="${escape(view)}" aria-pressed="${state.view === view}"><span>${escape(text)}</span><span class="workspace-count">${count(view)}</span></button>`;
       const navMarkup = navButton("all", labels.all)
-        + '<p class="workspace-nav-caption">Units</p>'
-        + units().map((unit) => `<div class="workspace-unit-row">${navButton(unit.id, unit.name)}${ownLibrary() ? `<details class="workspace-unit-menu" data-unit-id="${escape(unit.id)}"><summary aria-label="Unit ${escape(unit.name)} verwalten">•••</summary><div><button type="button" data-unit-rename="${escape(unit.id)}">Umbenennen</button><button type="button" data-unit-delete="${escape(unit.id)}">Entfernen</button></div></details>` : ""}</div>`).join("")
+        + '<p class="workspace-nav-caption">Lerndecks</p>'
+        + units().map((unit) => `<div class="workspace-unit-row">${navButton(unit.id, unit.name)}${ownLibrary() ? `<details class="workspace-unit-menu" data-unit-id="${escape(unit.id)}"><summary aria-label="Lerndeck ${escape(unit.name)} verwalten">•••</summary><div><button type="button" data-unit-rename="${escape(unit.id)}">Umbenennen</button><button type="button" data-unit-delete="${escape(unit.id)}">Entfernen</button></div></details>` : ""}</div>`).join("")
         + navButton("unfiled", labels.unfiled);
       if (navMarkup !== state.navMarkup) {
         const openUnits = new Set([...el.nav.querySelectorAll(".workspace-unit-menu[open]")].map((menu) => menu.dataset.unitId));
@@ -173,11 +173,11 @@ window.LerndeckTeacherWorkspace = (() => {
         const menu = button.closest("details"); if (menu) menu.open = false;
         void (async () => {
           const unit = units().find((unit) => unit.id === button.dataset.unitDelete);
-          if (!unit || !confirm(`Unit „${unit.name}“ entfernen? Die Sets bleiben unter „Nicht eingeordnet“ erhalten.`)) return;
+          if (!unit || !confirm(`Lerndeck „${unit.name}“ entfernen? Die Sets bleiben unter „Nicht eingeordnet“ erhalten.`)) return;
           try {
             const result = await request(`/api/teacher/units/${encodeURIComponent(unit.id)}`, { method: "DELETE" });
             config.unitCommitted(result.unit, true);
-            await refreshAfterCommit("Unit entfernt. Die Bibliothek konnte gerade nicht aktualisiert werden.");
+            await refreshAfterCommit("Lerndeck entfernt. Die Bibliothek konnte gerade nicht aktualisiert werden.");
             refreshEditorUnit(); remember(); writeUrl();
           }
           catch (error) { showError(error); }
@@ -204,7 +204,7 @@ window.LerndeckTeacherWorkspace = (() => {
           const result = await request(path, { method: state.editUnit ? "PUT" : "POST", body: { name: el.unitName.value } });
           config.unitCommitted(result.unit);
           el.unitForm.hidden = true; feedback("");
-          await refreshAfterCommit("Unit gespeichert. Die Bibliothek konnte gerade nicht aktualisiert werden.");
+          await refreshAfterCommit("Lerndeck gespeichert. Die Bibliothek konnte gerade nicht aktualisiert werden.");
         } catch (error) { showError(error); } finally { button.disabled = false; }
       })();
     });

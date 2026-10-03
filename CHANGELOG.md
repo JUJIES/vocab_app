@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Die Set-Ordner heißen durchgängig Lerndecks statt Units. Die bestehenden Zuordnungen bleiben erhalten. `Lernen` ersetzt `Lernmodi öffnen` samt externem Pfeil; die Vokabelspalten zeigen nur noch die Inhalts-/Sprachwahl ohne zusätzliche Vorder-/Rückseiten-, Sternchen- oder Bildüberschrift.
+
 - Der Editor-Kopf bildet mit einer dezent abgesetzten Fläche über die volle Editorbreite einen klaren Bereich für Titel, Autosave-Status und Set-Aktionen. Leinen/Nachtblau verwenden bestehende Theme-Farben; die Speicherung und übrigen Abläufe bleiben unverändert.
 
 - Neue Lernsets werden sofort in ihrer Unit angelegt; alle Änderungen einschließlich halbfertiger Vokabeln speichern automatisch. Oben rechts zeigt eine ruhige Bestätigung den Speicherstand, bei Fehlern bleibt der Editor offen und bietet einen erneuten Versuch. Speichern-/Veröffentlichen-Buttons, Entwurfsansicht und Wechsel-Dialog entfallen. Lernen, Druck und Bilder nutzen vollständige Paare mit gültiger Seitenkonfiguration; alte Entwürfe werden ohne Inhaltsverlust übernommen. Gleichzeitige Inhaltsänderungen werden erkannt.

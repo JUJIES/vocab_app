@@ -1465,10 +1465,6 @@ body.has-modal-open {
   cursor: not-allowed;
 }
 
-.set-card-editor-columns__image {
-  text-align: center;
-}
-
 .set-side-feedback {
   margin: 0;
   color: var(--danger);

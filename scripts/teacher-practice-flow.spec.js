@@ -86,7 +86,7 @@ test("teacher opens shared learning modes without writing tablet progress", asyn
     window.localStorage.setItem("dino-vocab-tablet-session-v1", JSON.stringify({ tabletId: "rot-1", token: "stale-token" }));
   });
   await teacherPage.getByRole("button", { name: "Set Means of transport öffnen" }).click();
-  const practiceButton = teacherPage.getByRole("link", { name: "Lernmodi öffnen", exact: false });
+  const practiceButton = teacherPage.getByRole("link", { name: "Lernen", exact: true });
   await expect(practiceButton).toBeVisible();
   await expect(practiceButton.locator("img")).toHaveAttribute("src", "./assets/icons/learning-modes-open.svg");
   await teacherPage.locator("#workspace-editor-actions").screenshot({ path: testInfo.outputPath("teacher-set-practice-icon.png") });
@@ -157,7 +157,7 @@ test("generic sets show readable words instead of flags in direction choices", a
   await teacherPage.goto("/teacher", { waitUntil: "networkidle" });
   await teacherPage.getByRole("button", { name: "Set Begriffe öffnen" }).click();
   const newPage = context.waitForEvent("page");
-  await teacherPage.getByRole("link", { name: "Lernmodi öffnen", exact: false }).click();
+  await teacherPage.getByRole("link", { name: "Lernen", exact: true }).click();
   const page = await newPage;
   await page.locator('.launch-mode-modal__mode-card[data-mode-key="practice"]').click();
   await page.locator("#launch-mode-start").click();

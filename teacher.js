@@ -2934,12 +2934,11 @@ function renderEditorCards() {
   columns.className = "set-card-editor-columns";
   const spacer = document.createElement("span");
   spacer.setAttribute("aria-hidden", "true");
-  const imageLabel = document.createElement("span");
-  imageLabel.className = "set-card-editor-columns__image";
-  imageLabel.textContent = "Bild";
+  const imageSpacer = document.createElement("span");
+  imageSpacer.setAttribute("aria-hidden", "true");
   const endSpacer = document.createElement("span");
   endSpacer.setAttribute("aria-hidden", "true");
-  columns.append(spacer, createEditorSideSelect("front"), createEditorSideSelect("back"), imageLabel, endSpacer);
+  columns.append(spacer, createEditorSideSelect("front"), createEditorSideSelect("back"), imageSpacer, endSpacer);
   elements.setCardList.append(columns);
 
   state.editorCards.forEach((card, index) => {
@@ -2992,11 +2991,10 @@ function renderEditorCards() {
 }
 
 function createEditorSideSelect(side) {
-  const field = document.createElement("label");
+  const field = document.createElement("div");
   field.className = "set-card-editor-columns__side";
-  const title = document.createElement("span");
-  title.textContent = side === "front" ? "Vorderseite *" : "Rückseite *";
   const select = document.createElement("select");
+  select.setAttribute("aria-label", side === "front" ? "Inhalt der linken Spalte" : "Inhalt der rechten Spalte");
   select.dataset.editorSideSelect = side;
   select.required = true;
   const placeholder = new Option("Auswählen …", "");
@@ -3042,7 +3040,7 @@ function createEditorSideSelect(side) {
     });
     scheduleEditorSave();
   });
-  field.append(title, select);
+  field.append(select);
   return field;
 }
 
