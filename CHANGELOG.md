@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Translation-Feedback greift die letzten drei validierten Versuche desselben Satzes auf, würdigt konkrete Verbesserungen und nennt weiterhin offene Probleme. Jede Rückmeldung enthält ein passendes Emoji. Zielwortbindung und erlaubte Begleitvarianten sind ausdrücklich getrennt; vollständige Bedeutung, Grammatik und Rechtschreibung bleiben erforderlich.
+
 - Neue Bilder, 6er-Bildbögen und gezielte Bildkorrekturen nutzen `gpt-image-2.5-flare` über den bestehenden serverseitigen API-Key. Code- und Deployment-Standard sind synchron; vorhandene Bilder und Variantenhistorie bleiben erhalten.
 
 - Die Satzübersetzungsübung heißt in Menü, Startansicht und Übung jetzt `Translation`. Der interne Modusschlüssel `sentence`, gespeicherte Durchgänge und Lernlogik bleiben gleich.

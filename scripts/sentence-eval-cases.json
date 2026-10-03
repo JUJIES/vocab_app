@@ -393,5 +393,53 @@
     "correct": "The bus usually arrives on time.",
     "expected": false,
     "issue": "Weiteres ausgelassenes Häufigkeitswort"
+  },
+  {
+    "id": "revision-flat-tire",
+    "level": "easy",
+    "focus": "platten Reifen",
+    "target": "flat tire",
+    "source": "Mein Fahrrad hat einen platten Reifen.",
+    "answer": "My car has a flat type.",
+    "expected": false,
+    "revisions": [
+      {
+        "answer": "My car has a flat tire.",
+        "expected": false
+      }
+    ],
+    "correct": "My cycle has a flat tire.",
+    "issue": "Verlauf: Schreibfehler korrigiert, falsches Fahrzeug bleibt; cycle ist gültiges Begleitwort"
+  },
+  {
+    "id": "target-bicycle-cycle",
+    "level": "easy",
+    "focus": "Fahrrad",
+    "target": "bicycle",
+    "variants": [
+      "bike"
+    ],
+    "source": "Mein Fahrrad hat einen platten Reifen.",
+    "answer": "My cycle has a flat tire.",
+    "expected": false,
+    "correct": "My bike has a flat tire.",
+    "issue": "cycle ist nicht die hinterlegte Zielvariante bicycle/bike"
+  },
+  {
+    "id": "revision-frequency-grammar",
+    "level": "medium",
+    "focus": "Wartung",
+    "target": "maintenance",
+    "source": "Das Fahrrad braucht regelmäßige Wartung.",
+    "answer": "The bike needs maintenance.",
+    "expected": false,
+    "revisions": [
+      {
+        "answer": "The bike need regular maintenance.",
+        "expected": false
+      }
+    ],
+    "correct": "The bike needs regular maintenance.",
+    "issue": "Häufigkeit ergänzt, Verbform noch offen; abschließende Verbesserung würdigen"
   }
 ]

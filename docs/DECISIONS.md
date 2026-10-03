@@ -1,5 +1,11 @@
 # Produkt- und Architekturentscheidungen
 
+## 2026-10-03: Persönliches Feedback mit begrenztem Verbesserungsverlauf
+
+- Die letzten drei validierten Prüfversuche (Antwort, Rückmeldung, vier Prüfkriterien) desselben Satzes werden als untrusted Daten mitgegeben. Sie bleiben serverseitig im flüchtigen Lauf, gehen nicht in Auswahlmetadaten/Bewertungen oder die Browserantwort ein und werden bei `Weiter` gelöscht. Doppelte Eingaben und fehlgeschlagene Provider-/Validierungsversuche erweitern den Verlauf nicht.
+- Feedback benennt echte Fortschritte und noch offene Punkte. Der neue Versuch wird vollständig neu bewertet; alte Fehler werden nicht fortgeschrieben und ein behobener Fehler führt nicht allein zur Annahme. Mindestens ein passendes Emoji pro Rückmeldung; ein fehlendes Emoji ergänzt der Dienst rein gestalterisch, ohne die Wertung zu verändern.
+- Lexikalische Bindung betrifft nur die Zielvokabel samt hinterlegten Varianten. Wenn `flat tire` geübt wird, darf `cycle` als sinngleiches Begleitwort für Fahrrad stehen. Wenn `bicycle` mit Variante `bike` geübt wird, zählt ein nicht hinterlegtes `cycle` nicht als abgerufene Zielvokabel. Gültige Begleitvarianten werden ausdrücklich weiter erlaubt; keine allgemeine Schulwortliste.
+
 ## 2026-10-03: Flare für Vokabelbilder
 
 - Code-Standard und Beelink-Deployment verwenden für Generierung und Bearbeitung `gpt-image-2.5-flare`; kein Wechsel des API-Keys oder der Endpunkte. Medium, WebP, 1536×1024 für 6er-Sheets und 1024×1024 für einzelne Varianten bleiben bestehen. Vorhandene Assets behalten ihre ursprüngliche Modellhistorie.

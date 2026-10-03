@@ -18,6 +18,17 @@ Automatisches Ergebnis: erwartete Annahmeentscheidung, angenommene Kontrollantwo
 - Fünf weitere Grenzfälle ergänzen die Basis: natürliche Alternative `a visit`, gültige US-Schreibweise, fehlender wortinterner Apostroph, Satzfragment und weiteres ausgelassenes Häufigkeitswort. Alle fünf zusätzlichen Entscheidungen und ihre Kontrollantworten passten im Nachtest. Sie bleiben als wiederholbare Regressionen im Datensatz.
 - Die zuletzt erzeugten Basis-Sätze hatten bei Einfach 3–5, Mittel 7–12 und Schwer 8–14 Wörter. Das bestätigt unterschiedliche Umfänge, ersetzt aber keine pädagogische Einstufung. Begleitwortschatz/Satzbau wurden gelesen; feste schwere Vokabeln werden nicht durch eine Stufe vereinfacht.
 
+## Nachtest: persönliches Feedback und Verbesserungsverlauf
+
+Der Datensatz umfasst jetzt 38 Fälle. Drei zusätzliche Fälle prüfen den Verlauf `car … type → car … tire → cycle … tire`, die Unterscheidung von Zielwort/Begleitwort und `fehlende Häufigkeit → Häufigkeit mit Verbfehler → korrekt`. Optionale `variants` und `revisions` im Eval-Datensatz prüfen diese Schritte und verlangen ein Emoji in jeder Rückmeldung.
+
+- Erste gezielte Runde: 2/3; die strenge Zielwortregel wurde unzulässig auf das Begleitwort Fahrrad übertragen. Präzisiert: Zielbindung gilt nur für das tatsächlich hinterlegte Zielwort, sinngleiche Begleitwörter bleiben erlaubt. Nachtest 3/3.
+- Vollständige 38er-Runde: 37/38; US-Schreibweise fälschlich abgelehnt. Zielwortregel nennt UK-/US-Schreibungen und Flexionen jetzt ausdrücklich als dasselbe Wort.
+- Folgerunde: 36/38; `a visit` zu Besuch wurde zu eng bewertet und ein Schutz gegen angebotene Wortformen blockierte eine hilfreiche Zeitreihenfolge-Frage. Besuche dürfen ohne konkretere Quelle als Personen oder Besuchsvorgang übersetzt werden. Der Schutz beschränkt sich auf verwandte Wortform-/Schreibungsalternativen (z.B. `need oder needs`); konzeptionelle Fragen wie davor/danach oder Einzahl/Mehrzahl bleiben möglich.
+- Letzte gezielte Runde: **8/8**, einschließlich aller gefundenen Regressionen und der drei neuen Verlaufsfälle. Texte gelesen: behobene Schreibfehler/Häufigkeit/Verbformen werden konkret gewürdigt, verbleibende Referenten-/Grammatikfehler weiter abgelehnt. Keine fertige Aufgabenlösung im getesteten Fehlerfeedback, mindestens ein Emoji pro Rückmeldung. Nicht als 38/38 in einer einzigen letzten Vollrunde ausweisen.
+
+Der Dienst gibt die letzten drei validierten Versuche nur für denselben Satz mit. Fehlgeschlagene Prüfungen erweitern den Verlauf nicht; `Weiter` löscht ihn. Die Annahmeentscheidung bleibt vollständig von der aktuellen Antwort abhängig. Automatische Diensttests sichern Begrenzung, Providerfehler, private Browserantwort, Übergang zur nächsten Aufgabe und den Emoji-Zusatz unabhängig vom Modell.
+
 ## Grenzen
 
 Das ist ein gezielter synthetischer Test, keine Wirksamkeitsstudie mit Schülern und keine Garantie für beliebige Sätze. Modelle bleiben variabel. Das Feedback kann fachlich unvollkommen sein; unklare Ergebnisse werden nicht benotet/angenommen. Bei Prompt-/Modelländerungen gleiche Fälle erneut ausführen und besonders die Texte/Beispiele prüfen. Auswahl-Persistenz, sichtbare Bestätigung, Abbruch, Reset und Zyklusgrenzen werden unabhängig in `tests/sentence-order.test.js` getestet; UI in `scripts/sentence-practice.spec.js` (Chromium/WebKit, Hell/Dunkel, Desktop/schmal).

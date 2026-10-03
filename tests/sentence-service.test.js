@@ -176,6 +176,39 @@ test("spelling feedback does not invent letter counts and repairs once", async (
   const run = await s.start("a", "sets/a.json", document, "source-target", 1);
   const result = await s.check("a", run.id, "sets/a.json", run.prompt.id, "The zoo is temprarily closed.");
   assert.equal(result.accepted, false);
+  assert.equal(result.feedback, "🔎 " + safe.hint);
+  assert.equal(calls.length, 3);
+});
+
+test("revision context is bounded, private, validated and reset for the next sentence", async () => {
+  const revise = { ...accepted, grammar: false, hint: "Prüfe die Verbform. 🔎" };
+  const { service: s, calls } = service([prompt, revise, revise, revise, revise, new Error("outage"), accepted, prompt, revise]);
+  const doc = { ...document, cards: [...document.cards, { source: { text: "Fähre" }, target: { text: "ferry" } }] };
+  const run = await s.start("a", "sets/a.json", doc, "source-target", 2);
+  for (const word of ["one", "two", "three", "four"]) await s.check("a", run.id, "sets/a.json", run.prompt.id, "The zoo " + word + " temporarily closed.");
+  const internal = s.get("a", run.id, "sets/a.json");
+  assert.equal(internal.attempts.length, 3);
+  assert.equal(internal.attempts[0].answer, "The zoo two temporarily closed.");
+  assert.equal(s.view(internal).attempts, undefined);
+  await assert.rejects(s.check("a", run.id, "sets/a.json", run.prompt.id, "The zoo is temporarily closed."));
+  assert.equal(internal.attempts.length, 3);
+  const result = await s.check("a", run.id, "sets/a.json", run.prompt.id, "The zoo is temporarily closed.");
+  const submitted = JSON.parse(calls[6].input[0].content);
+  assert.equal(submitted.previous_attempts.length, 3);
+  assert.equal(submitted.previous_attempts[2].feedback, revise.hint);
+  assert.match(result.feedback, /\p{Extended_Pictographic}/u);
+  const next = await s.next("a", run.id, "sets/a.json", run.prompt.id);
+  assert.deepEqual(internal.attempts, []);
+  await s.check("a", next.id, "sets/a.json", next.prompt.id, "Next attempt");
+  assert.deepEqual(JSON.parse(calls.at(-1).input[0].content).previous_attempts, []);
+});
+
+test("revision hints repair task-word choices without blocking grammar-category questions", async () => {
+  const unsafe = { ...accepted, grammar: false, hint: "Muss es need oder needs heißen? 🔎" };
+  const safe = { ...unsafe, hint: "Die Häufigkeit ist jetzt enthalten 👍 Prüfe die Verbform: Bezieht sie sich auf Einzahl oder Mehrzahl?" };
+  const { service: s, calls } = service([prompt, unsafe, safe]);
+  const run = await s.start("a", "sets/a.json", document, "source-target", 1);
+  const result = await s.check("a", run.id, "sets/a.json", run.prompt.id, "The zoo need repair temporarily.");
   assert.equal(result.feedback, safe.hint);
   assert.equal(calls.length, 3);
 });
