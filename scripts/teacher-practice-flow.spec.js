@@ -98,7 +98,7 @@ test("teacher opens shared learning modes without writing tablet progress", asyn
   await expect(page.locator("html")).toHaveAttribute("data-appearance-mode", "light");
   await expect(page.locator("#launch-mode-modal")).toBeVisible();
   await expect(page.locator("#launch-mode-title")).toHaveText("Means of transport");
-  await expect(page.locator(".launch-mode-modal__mode-card")).toHaveCount(3);
+  await expect(page.locator(".launch-mode-modal__mode-card")).toHaveCount(4);
   await page.screenshot({ path: testInfo.outputPath("teacher-mode-selection.png"), fullPage: true });
 
   await page.locator('.launch-mode-modal__mode-card[data-mode-key="test"]').click();

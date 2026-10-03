@@ -18,6 +18,7 @@ Einsatzbereit sind:
 - flüchtige PDF-Ausgabe vollständiger Vokabelpaare als zweisprachige Vokabelliste oder frei zusammengestellter Vokabeltest; beide zeigen eine HTML-Blattvorschau, beim Test ist sie direkt bearbeitbar, und nichts davon wird im Set gespeichert
 - Schülerübernahme per Code, QR oder Link; der Set-Inhalt wird nicht auf das Tablet kopiert
 - Modi `Üben`, `Eingabe` und `Testen`; `Üben` mischt beim Start und lässt auf beiden Kartenseiten frei vor- und zurückwischen, im Eingabemodus müssen falsche Antworten richtig wiederholt werden, und `Testen` fragt eine zufällig ausgewählte und gemischte Teilmenge von mindestens fünf bis allen Set-Karten ohne Bilder oder Hilfen als Liste ab und zeigt nach der ersten Prüfung eindeutige Haken/Kreuze sowie eine unverbindliche Notenorientierung
+- `Say it in a sentence`: 1–20 zufällige Vokabeln im Kontext übersetzen, mit kurzem Satzfeedback überarbeiten und nach Annahme bewusst weitergehen; für Deutsch–Englisch in beiden Richtungen, in Schüleransicht und Lehrervorschau
 - Lernstand pro Tablet, Set und Lernmodus
 - installierbare Schüler-PWA für iPads/Relution und eigener Lehrkraft-Startpunkt für Mac-Web-Apps; der Browserzugang bleibt vollständig erhalten
 
@@ -100,3 +101,15 @@ Der Test erstellt ein Set und mutiert ein Tablet; niemals gegen echte Unterricht
 ## Betrieb
 
 Die verbindlichen Beelink-Schritte stehen in [docs/DEPLOYMENT_BEELINK.md](docs/DEPLOYMENT_BEELINK.md). Die Installation auf Macs und die Verteilung per Relution beschreibt [docs/INSTALLATION.md](docs/INSTALLATION.md). Produktentscheidungen und vertagte Komponenten stehen in [docs/DECISIONS.md](docs/DECISIONS.md). Datenfluss und didaktische Regeln der Bildgenerierung sind in [docs/VISUAL_VOCABULARY_PLAN.md](docs/VISUAL_VOCABULARY_PLAN.md) festgehalten. Der Lehrerbereich ist unter `/teacher`, die Schüler-App unter `/` erreichbar.
+
+## Satzübung „Say it in a sentence“
+
+Die gemeinsame Modusauswahl ergänzt die bisherigen Übungen. Sprachrichtung und Umfang (1 bis höchstens 20 vollständige Set-Karten, ohne Wiederholung) werden vor dem Start gewählt. Pro Karte erzeugt der Server einen kurzen Satz in der sichtbaren Sprache. Der fett markierte Ausdruck kommt aus der Set-Vokabel und ist im Antwortschema fest vorgegeben; die Übersetzung bleibt verborgen. Bei Alternativen wird ein Ausdruck, bei einer Verbformenreihe der Infinitiv fokussiert. Bereits hinterlegte ganze Sätze bleiben als Übersetzungsauftrag möglich.
+
+`lib/sentence-service.js` prüft Verständlichkeit/Grammatik, vollständige Bedeutung und Zielvokabel separat. Richtige Satzstellung, Flexionen und hinterlegte Antwortvarianten sind erlaubt. Ein kurzer deutscher Hinweis unterstützt die Überarbeitung, ohne eine fertige Übersetzung zu liefern. Unsicherheit und technische Fehler nehmen keinen Satz an. `Weiter` wird erst nach Annahme angeboten; der vollständige Lauf zählt wertungsfrei im bestehenden `modeProgress.sentence`. Lehrervorschauen schreiben keine Tablet-Lernstände.
+
+`POST /api/sentence-practice/:action` (`start`, `resume`, `check`, `next`) verlangt bei jedem Aufruf eine aktive Tablet-Sitzung plus Set-Abonnement oder Lehrkraftsitzung plus bestehendes Set-Leserecht. Set-Inhalte, Ziele und Kartenwahl kommen vom Server. Lauf-ID und Satz-ID verhindern fremde/alte Prüfungen und übersprungene Aufgaben. Gleiche Antworten und wiederholte Weiter-Anfragen sind idempotent. Pro Identität höchstens 3 Starts und 40 Prüf-/Weiter-Anfragen pro Minute, global 8 parallele Aufrufe; Läufe sind auf 1000 begrenzt.
+
+Konfiguration: `OPENAI_SENTENCE_API_KEY` optional, sonst vorhandener serverseitiger `OPENAI_API_KEY`; `OPENAI_SENTENCE_MODEL` standardmäßig `gpt-6-luna`, Responses API mit `reasoning.effort: none`, strukturiertem JSON, `store: false`, 20 Sekunden Timeout und ohne automatische Provider-Retries. Keine Schlüssel im Browser. Eine Generierung pro benötigtem Satz und eine Prüfung pro geändertem Versuch; keine Vorabgenerierung ungenutzter Sätze. Anbieteraufrufe werden in Tests injiziert/gemockt.
+
+Läufe und letzte Versuche bleiben höchstens 12 Stunden im Server-Arbeitsspeicher; keine Satzinhalte in Runtime-JSON oder Logs. Im aktuellen Browser-Tab hält `sessionStorage` Lauf-ID und Eingabe für Reloads bereit. Nach Serverneustart/Fristablauf bietet die Oberfläche einen bewussten Neustart an. Set-Editor, Bildgenerierung, Export und die bisherigen Übungen bleiben eigene Abläufe. Modellfeedback kann pädagogisch falsch liegen; deshalb keine Note, keine automatische Beherrschungsbehauptung und bei Unklarheit Überarbeiten/Lehrkraft.

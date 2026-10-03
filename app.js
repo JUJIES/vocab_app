@@ -81,6 +81,10 @@ const state = {
   pendingLaunchSetTitle: "",
   pendingLaunchModeKey: "practice",
   pendingLaunchDirection: "source-target",
+  pendingSentenceCount: 5,
+  sentenceSession: null,
+  sentenceRequestId: 0,
+  sentenceBusy: false,
   pendingTestCardCount: TEST_DEFAULT_CARD_COUNT,
   activeTestCardCount: TEST_DEFAULT_CARD_COUNT,
   launchModeScrollY: 0,
@@ -138,6 +142,7 @@ const APP_MODES = Object.freeze({
   FLASHCARD: "flashcard",
   INPUT: "input",
   TEST: "test",
+  SENTENCE: "sentence",
   LOAD_ERROR: "load-error",
 });
 
@@ -174,11 +179,13 @@ const LEARNING_MODE_ICON_PATHS = Object.freeze({
   practice: "./assets/icons/learning-mode-practice.svg",
   write: "./assets/icons/learning-mode-write.svg",
   test: "./assets/icons/learning-mode-test.svg",
+  sentence: "./assets/icons/learning-mode-write.svg",
 });
 const LEARNING_MODE_KEYS = Object.freeze([
   "practice",
   "write",
   "test",
+  "sentence",
 ]);
 const DEFAULT_LEARNING_MODE_KEY = "practice";
 const LEARNING_DIRECTIONS = Object.freeze({
@@ -193,7 +200,7 @@ const LEARNING_MODES = Object.freeze([
     iconPath: LEARNING_MODE_ICON_PATHS.practice,
     accentColor: "#7c95c9",
     accentRgb: "124, 149, 201",
-    distributionPercent: 40,
+    distributionPercent: 30,
     isAvailable: true,
     availabilityLabel: "Verfügbar",
   },
@@ -215,9 +222,16 @@ const LEARNING_MODES = Object.freeze([
     iconPath: LEARNING_MODE_ICON_PATHS.test,
     accentColor: "#d2a96c",
     accentRgb: "210, 169, 108",
-    distributionPercent: 35,
+    distributionPercent: 25,
     isAvailable: true,
     availabilityLabel: "Verfügbar",
+  },
+  {
+    key: "sentence", label: "Say it in a sentence",
+    description: "Vokabeln im Satz übersetzen und mit kurzem Feedback überarbeiten.",
+    iconPath: LEARNING_MODE_ICON_PATHS.sentence,
+    accentColor: "#7fa99d", accentRgb: "127, 169, 157", distributionPercent: 20,
+    isAvailable: true, availabilityLabel: "Verfügbar",
   },
 ]);
 const STUDENT_SET_COLOR_PALETTE = Object.freeze([
@@ -375,6 +389,17 @@ const elements = {
   inputHomeLink: document.getElementById("input-home-link"),
   cardStage: document.getElementById("card-stage"),
   inputStage: document.getElementById("input-stage"),
+  sentenceStage: document.getElementById("sentence-stage"),
+  sentenceHome: document.getElementById("sentence-home"),
+  sentenceLogout: document.getElementById("sentence-logout"),
+  sentenceForm: document.getElementById("sentence-form"),
+  sentenceAnswer: document.getElementById("sentence-answer"),
+  sentenceLabel: document.getElementById("sentence-label"),
+  sentenceSubmit: document.getElementById("sentence-submit"),
+  sentenceFeedback: document.getElementById("sentence-feedback"),
+  sentenceProgress: document.getElementById("sentence-progress"),
+  sentencePrompt: document.getElementById("sentence-prompt"),
+
   flashcard: document.getElementById("flashcard"),
   flashcardMotion: document.getElementById("flashcard-motion"),
   progressShell: document.getElementById("progress-shell"),
@@ -490,6 +515,17 @@ function bindEvents() {
   elements.studentHomeLink.addEventListener("click", handleReturnToStudentHome);
   elements.inputHomeLink.addEventListener("click", handleReturnToStudentHome);
   elements.testHomeLink.addEventListener("click", handleReturnToStudentHome);
+  elements.sentenceHome.addEventListener("click", handleReturnToStudentHome);
+  elements.sentenceLogout.addEventListener("click", () => elements.inputMenuLogout.click());
+  elements.sentenceForm.addEventListener("submit", handleSentenceSubmit);
+  elements.sentenceAnswer.addEventListener("input", () => {
+    saveSentenceRun();
+    if (!state.sentenceSession?.accepted && !state.sentenceBusy) {
+      elements.sentenceFeedback.hidden = true;
+      elements.sentenceAnswer.removeAttribute("aria-invalid");
+      elements.sentenceAnswer.dataset.status = "";
+    }
+  });
   elements.flashcardMenuLogout.addEventListener("click", handleFlashcardMenuLogout);
   elements.flashcardSettingsButton.addEventListener("click", handleFlashcardSettingsToggle);
   for (const directionButton of elements.learningDirectionButtons) {
@@ -679,6 +715,9 @@ function returnToTeacherApp() {
 }
 
 function configureTeacherPracticeNavigation() {
+  elements.sentenceHome.setAttribute("aria-label", "Zur Lehreransicht");
+  elements.sentenceHome.lastElementChild.textContent = "Zur Lehreransicht";
+  elements.sentenceLogout.hidden = true;
   for (const button of [elements.studentHomeLink, elements.inputHomeLink, elements.testHomeLink]) {
     button.setAttribute("aria-label", "Zur Lehreransicht");
     const label = button.querySelector("span:not(.material-symbols-outlined)");
@@ -1187,7 +1226,7 @@ function getLearningDirectionChoice(direction, labels = state.currentSetLanguage
 }
 
 function isDirectionConfigurableMode(modeKey) {
-  return modeKey === "practice" || modeKey === "write" || modeKey === "test";
+  return modeKey === "practice" || modeKey === "write" || modeKey === "test" || modeKey === "sentence";
 }
 
 function syncLearningDirectionGroup(groupName, selectedDirection, labels) {
@@ -2411,6 +2450,7 @@ function getAppBaseUrl() {
 
 function setStudentAppMode(mode) {
   const previousMode = state.appMode;
+  if (mode !== APP_MODES.SENTENCE) { state.sentenceRequestId += 1; state.sentenceBusy = false; }
   if (mode !== APP_MODES.INPUT) {
     clearInputAdvanceTimeout();
     closeInputSettingsMenu();
@@ -2429,10 +2469,11 @@ function setStudentAppMode(mode) {
     closeLaunchModeModal({ restoreScroll: false });
   }
   elements.appShell.dataset.appMode = mode;
-  elements.studentScreen.hidden = mode === APP_MODES.FLASHCARD || mode === APP_MODES.INPUT || mode === APP_MODES.TEST;
+  elements.studentScreen.hidden = mode === APP_MODES.FLASHCARD || mode === APP_MODES.INPUT || mode === APP_MODES.TEST || mode === APP_MODES.SENTENCE;
   elements.cardStage.hidden = mode !== APP_MODES.FLASHCARD;
   elements.inputStage.hidden = mode !== APP_MODES.INPUT;
   elements.testStage.hidden = mode !== APP_MODES.TEST;
+  elements.sentenceStage.hidden = mode !== APP_MODES.SENTENCE;
   if (previousMode !== mode) {
     const activeSurface = mode === APP_MODES.FLASHCARD
       ? elements.cardStage
@@ -2440,7 +2481,9 @@ function setStudentAppMode(mode) {
         ? elements.inputStage
         : mode === APP_MODES.TEST
           ? elements.testStage
-          : elements.studentScreen;
+          : mode === APP_MODES.SENTENCE
+            ? elements.sentenceStage
+            : elements.studentScreen;
     window.LerndeckUiMotion.revealSurface(activeSurface);
   }
   updateStudentShareBlock();
@@ -6537,6 +6580,7 @@ function ensureLaunchModeDistributionStructure() {
 }
 
 function createLaunchModeCard(subscription, mode) {
+  mode = getSubscriptionMode(subscription, mode);
   const progress = getSubscriptionLearningModeProgress(subscription, mode.key);
   const isSelected = state.pendingLaunchModeKey === mode.key;
 
@@ -6593,7 +6637,8 @@ function renderLaunchModeCards(subscription, { forceRebuild = false } = {}) {
     return;
   }
 
-  for (const mode of LEARNING_MODES) {
+  for (let mode of LEARNING_MODES) {
+    mode = getSubscriptionMode(subscription, mode);
     const card = elements.launchModeModes.querySelector(`[data-mode-key="${mode.key}"]`);
     if (!(card instanceof HTMLButtonElement)) {
       continue;
@@ -6758,10 +6803,11 @@ function getLaunchModeTransitionDirection(previousModeKey, nextModeKey) {
   return nextIndex > previousIndex ? 1 : -1;
 }
 
-function createTestCardCountControl(subscription) {
-  const { minimum, maximum } = getTestCardCountRange(subscription);
-  const selectedCount = clampTestCardCount(state.pendingTestCardCount, subscription);
-  state.pendingTestCardCount = selectedCount;
+function createTestCardCountControl(subscription, sentence = false) {
+  const { minimum, maximum } = sentence ? { minimum: 1, maximum: Math.min(20, getSubscriptionCardCount(subscription)) } : getTestCardCountRange(subscription);
+  const selectedCount = sentence ? clamp(state.pendingSentenceCount, minimum, maximum) : clampTestCardCount(state.pendingTestCardCount, subscription);
+  if (sentence) state.pendingSentenceCount = selectedCount;
+  else state.pendingTestCardCount = selectedCount;
 
   const control = document.createElement("div");
   control.className = "launch-mode-modal__test-count";
@@ -6775,7 +6821,7 @@ function createTestCardCountControl(subscription) {
 
   const output = document.createElement("output");
   output.className = "launch-mode-modal__test-count-value";
-  output.textContent = `${selectedCount} von ${maximum} Vokabeln`;
+  output.textContent = sentence ? `${selectedCount} ${selectedCount === 1 ? "Satz" : "Sätze"}` : `${selectedCount} von ${maximum} Vokabeln`;
 
   const slider = document.createElement("input");
   slider.className = "launch-mode-modal__test-count-slider";
@@ -6784,10 +6830,15 @@ function createTestCardCountControl(subscription) {
   slider.max = String(maximum);
   slider.step = "1";
   slider.value = String(selectedCount);
-  slider.setAttribute("aria-label", `Anzahl der Vokabeln, mindestens ${minimum}, höchstens ${maximum}`);
+  slider.setAttribute("aria-label", `Anzahl der ${sentence ? "Sätze" : "Vokabeln"}, mindestens ${minimum}, höchstens ${maximum}`);
   slider.addEventListener("input", () => {
-    state.pendingTestCardCount = clampTestCardCount(slider.value, subscription);
-    output.textContent = `${state.pendingTestCardCount} von ${maximum} Vokabeln`;
+    if (sentence) {
+      state.pendingSentenceCount = clamp(Number(slider.value), minimum, maximum);
+      output.textContent = `${state.pendingSentenceCount} ${state.pendingSentenceCount === 1 ? "Satz" : "Sätze"}`;
+    } else {
+      state.pendingTestCardCount = clampTestCardCount(slider.value, subscription);
+      output.textContent = `${state.pendingTestCardCount} von ${maximum} Vokabeln`;
+    }
   });
 
   heading.append(label, output);
@@ -6955,6 +7006,7 @@ function openLaunchModeModal(setPath) {
     || LEARNING_DIRECTIONS.SOURCE_TARGET;
   const { maximum } = getTestCardCountRange(subscription);
   state.pendingTestCardCount = Math.min(TEST_DEFAULT_CARD_COUNT, maximum);
+  state.pendingSentenceCount = Math.min(5, maximum);
   state.launchModeScrollY = window.scrollY || window.pageYOffset || 0;
   renderLaunchModeModal({
     forceRebuildCards: true,
@@ -6967,6 +7019,7 @@ function openLaunchModeModal(setPath) {
 }
 
 function getLaunchSettingsTitle(modeKey) {
+  if (modeKey === "sentence") return "Wie viele Sätze möchtest du bilden?";
   return "Wie möchtest du abgefragt werden?";
 }
 
@@ -6974,12 +7027,12 @@ function renderLaunchSettings(subscription, selectedMode) {
   elements.launchSettingsTitle.textContent = getLaunchSettingsTitle(selectedMode.key);
   elements.launchSettingsStartLabel.textContent = `${selectedMode.label} starten`;
   elements.launchSettingsAdditional.replaceChildren();
-  elements.launchSettingsAdditional.hidden = selectedMode.key !== "test";
-  if (selectedMode.key === "test") {
+  elements.launchSettingsAdditional.hidden = selectedMode.key !== "test" && selectedMode.key !== "sentence";
+  if (selectedMode.key === "test" || selectedMode.key === "sentence") {
     const group = document.createElement("section");
     group.className = "launch-settings-modal__group";
     group.setAttribute("aria-label", "Testumfang");
-    group.append(createTestCardCountControl(subscription));
+    group.append(createTestCardCountControl(subscription, selectedMode.key === "sentence"));
     elements.launchSettingsAdditional.append(group);
   }
 }
@@ -7109,6 +7162,7 @@ async function startPendingLaunchMode() {
   const setPath = state.pendingLaunchSetPath;
   const selectedModeKey = state.pendingLaunchModeKey;
   const selectedDirection = state.pendingLaunchDirection;
+  const sentenceCount = state.pendingSentenceCount;
   const selectedTestCardCount = clampTestCardCount(
     state.pendingTestCardCount,
     getPendingLaunchSubscription(),
@@ -7122,6 +7176,10 @@ async function startPendingLaunchMode() {
   window.history.replaceState({}, "", state.isTeacherPractice
     ? buildTeacherPracticeLearningUrl()
     : buildCanonicalStudentSetUrl(setPath));
+  if (selectedModeKey === "sentence") {
+    await startSentenceSet(setPath, selectedDirection, sentenceCount);
+    return;
+  }
   if (selectedModeKey === "test") {
     await startTestSet(
       setPath,
@@ -7281,7 +7339,9 @@ function loadActiveLearningSession() {
     return {
       setPath,
       modeKey: normalizeLearningModeKey(parsed?.modeKey),
-      appMode: parsed?.appMode === APP_MODES.INPUT
+      appMode: parsed?.appMode === APP_MODES.SENTENCE
+        ? APP_MODES.SENTENCE
+        : parsed?.appMode === APP_MODES.INPUT
         ? APP_MODES.INPUT
         : parsed?.appMode === APP_MODES.TEST
           ? APP_MODES.TEST
@@ -7317,7 +7377,9 @@ function persistActiveLearningSession(
   persistPersistentStorageItem(ACTIVE_LEARNING_SESSION_STORAGE_KEY, JSON.stringify({
     setPath: normalizedSetPath,
     modeKey: normalizeLearningModeKey(modeKey),
-    appMode: appMode === APP_MODES.INPUT
+    appMode: appMode === APP_MODES.SENTENCE
+      ? APP_MODES.SENTENCE
+      : appMode === APP_MODES.INPUT
       ? APP_MODES.INPUT
       : appMode === APP_MODES.TEST
         ? APP_MODES.TEST
@@ -7354,6 +7416,10 @@ async function resumeActiveLearningSession(setPath) {
   state.requestedSetPath = setPath;
   state.requestedSetUrl = setUrl;
 
+  if (activeSession.modeKey === "sentence") {
+    await startSentenceSet(setPath, activeSession.direction, activeSession.testCardCount, true);
+    return true;
+  }
   if (activeSession.appMode === APP_MODES.TEST || activeSession.modeKey === "test") {
     await startTestSet(
       setPath,
@@ -9766,4 +9832,155 @@ function getAccessibleTargetAnswer() {
   return formattedAlternatives.length > 0
     ? `${targetText}. Weitere gültige Antworten: ${formattedAlternatives.join(", ")}`
     : targetText || "Antwort nicht verfügbar";
+}
+
+function getSubscriptionMode(subscription, mode) {
+  if (mode.key !== "sentence") return mode;
+  const labels = getSubscriptionDirectionMetadata(subscription);
+  const available = [labels.sourceLanguage, labels.targetLanguage].every(x => ["de", "en"].includes(x)) && labels.sourceLanguage !== labels.targetLanguage;
+  return available ? mode : { ...mode, isAvailable: false, availabilityLabel: "Sprachpaar erforderlich" };
+}
+
+function sentenceStorageKey() {
+  return `lerndeck-sentence-run:${state.isTeacherPractice ? "teacher" : loadLocalTabletId()}:${state.currentSetPath}`;
+}
+
+function saveSentenceRun() {
+  try {
+    sessionStorage.setItem(sentenceStorageKey(), JSON.stringify({ run: state.sentenceSession, answer: elements.sentenceAnswer.value }));
+  } catch (_) { /* Storage restrictions do not prevent practice. */ }
+}
+
+async function sentenceRequest(action, body = {}) {
+  const response = await apiRequest(`/api/sentence-practice/${action}`, {
+    method: "POST", auth: state.isTeacherPractice ? undefined : "tablet",
+    headers: state.teacherPracticeEmbedded ? { "X-Lerndeck-Embed": "tafelraum" } : {},
+    body: { ...body, setPath: state.currentSetPath, tabletId: state.isTeacherPractice ? undefined : loadLocalTabletId() },
+  });
+  if (!response.ok) throw Object.assign(new Error(getApiErrorMessage(response, "Server nicht erreichbar. Bitte erneut versuchen.")), { status: response.status });
+  return response.data.run;
+}
+
+function renderSentenceRun() {
+  const run = state.sentenceSession;
+  const prompt = elements.sentencePrompt;
+  const answer = elements.sentenceAnswer;
+  const button = elements.sentenceSubmit;
+  const feedback = elements.sentenceFeedback;
+  const progress = elements.sentenceProgress;
+  button.disabled = state.sentenceBusy;
+  answer.disabled = state.sentenceBusy || !run || run.complete;
+  answer.readOnly = Boolean(run?.accepted);
+  if (!run) {
+    prompt.textContent = state.sentenceBusy ? "Satz wird vorbereitet …" : "Say it in a sentence";
+    progress.textContent = "";
+    button.textContent = state.sentenceBusy ? "Lädt …" : "Erneut versuchen";
+    return;
+  }
+  progress.textContent = `${run.position} / ${run.total}`;
+  elements.sentenceLabel.textContent = run.targetLanguage === "en" ? "Dein Satz auf Englisch" : "Dein Satz auf Deutsch";
+  if (run.complete) {
+    prompt.textContent = "Geschafft!";
+    feedback.textContent = `${run.total} ${run.total === 1 ? "Satz" : "Sätze"} geübt.`;
+    feedback.hidden = false;
+    answer.hidden = true;
+    elements.sentenceLabel.hidden = true;
+    button.textContent = "Zur Übersicht";
+    return;
+  }
+  const focus = document.createElement("strong");
+  focus.textContent = run.prompt.focus;
+  prompt.replaceChildren(document.createTextNode(run.prompt.prefix), focus, document.createTextNode(run.prompt.suffix));
+  feedback.textContent = run.feedback;
+  feedback.hidden = !run.feedback;
+  feedback.dataset.status = run.error || run.status === "uncertain" ? "error" : run.accepted ? "accepted" : "revise";
+  answer.dataset.status = run.accepted ? "accepted" : run.feedback && !run.error && run.status !== "uncertain" ? "revise" : "";
+  answer.setAttribute("aria-invalid", String(Boolean(run.feedback) && !run.accepted && !run.error && run.status !== "uncertain"));
+  button.textContent = state.sentenceBusy ? "Prüft …" : run.accepted ? "Weiter" : "Prüfen";
+}
+
+async function startSentenceSet(setPath, direction, count, resume = false) {
+  state.currentSetPath = setPath;
+  state.activeLearningModeKey = "sentence";
+  state.activeLearningDirection = direction;
+  state.activeTestCardCount = count;
+  state.sentenceSession = null;
+  setStudentAppMode(APP_MODES.SENTENCE);
+  const requestId = ++state.sentenceRequestId;
+  state.sentenceBusy = true;
+  const answer = elements.sentenceAnswer;
+  answer.value = "";
+  answer.hidden = false;
+  elements.sentenceLabel.hidden = false;
+  elements.sentenceFeedback.hidden = true;
+  renderSentenceRun();
+  try {
+    let saved;
+    if (resume) {
+      try { saved = JSON.parse(sessionStorage.getItem(sentenceStorageKey())); } catch (_) { /* Start new if no saved run. */ }
+    }
+    const run = saved?.run?.id
+      ? await sentenceRequest("resume", { id: saved.run.id })
+      : await sentenceRequest("start", { direction, count });
+    if (requestId !== state.sentenceRequestId || state.appMode !== APP_MODES.SENTENCE) return;
+    state.sentenceSession = { ...run, counted: Boolean(saved?.run?.counted) };
+    answer.value = saved?.answer || "";
+    if (saved && !run.accepted && saved.answer !== run.checkedAnswer) {
+      state.sentenceSession.feedback = "";
+      state.sentenceSession.status = "ready";
+    }
+    persistActiveLearningSession(setPath, "sentence", APP_MODES.SENTENCE, direction, run.total);
+    saveSentenceRun();
+  } catch (error) {
+    if (requestId !== state.sentenceRequestId) return;
+    const feedback = elements.sentenceFeedback;
+    feedback.textContent = error.message || "Server nicht erreichbar. Bitte erneut versuchen.";
+    feedback.hidden = false;
+  } finally {
+    if (requestId === state.sentenceRequestId) {
+      state.sentenceBusy = false;
+      renderSentenceRun();
+    }
+  }
+}
+
+async function handleSentenceSubmit(event) {
+  event.preventDefault();
+  if (state.sentenceBusy) return;
+  const current = state.sentenceSession;
+  if (!current) { await startSentenceSet(state.currentSetPath, state.activeLearningDirection, state.activeTestCardCount); return; }
+  if (current.complete) { await handleReturnToStudentHome(); return; }
+  const answer = elements.sentenceAnswer;
+  const requestId = ++state.sentenceRequestId;
+  saveSentenceRun();
+  state.sentenceBusy = true;
+  renderSentenceRun();
+  try {
+    const run = await sentenceRequest(current.accepted ? "next" : "check", { id: current.id, promptId: current.prompt.id, answer: answer.value });
+    if (requestId !== state.sentenceRequestId || state.appMode !== APP_MODES.SENTENCE) return;
+    state.sentenceSession = { ...run, counted: current.counted };
+    if (run.prompt.id !== current.prompt.id) answer.value = "";
+    if (run.complete && !current.counted) {
+      // Same completion convention as Üben: count a round, never grade revisions.
+      state.sentenceSession.counted = true;
+      saveSentenceRun();
+      await persistCompletedRoundCount({ modeKey: "sentence" });
+    }
+    saveSentenceRun();
+  } catch (error) {
+    if (requestId !== state.sentenceRequestId) return;
+    current.error = true;
+    current.feedback = error.message || "Server nicht erreichbar. Bitte erneut versuchen.";
+    if (error.status === 410) state.sentenceSession = null;
+  } finally {
+    if (requestId === state.sentenceRequestId) {
+      state.sentenceBusy = false;
+      renderSentenceRun();
+      if (!state.sentenceSession) {
+        const feedback = elements.sentenceFeedback;
+        feedback.textContent = "Durchgang abgelaufen. Bitte neu starten.";
+        feedback.hidden = false;
+      }
+    }
+  }
 }

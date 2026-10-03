@@ -3488,7 +3488,7 @@ button.student-screen__device-card {
 }
 
 .app-shell[data-app-mode="flashcard"],
-.app-shell[data-app-mode="input"],
+.app-shell:is([data-app-mode="input"], [data-app-mode="sentence"]),
 .app-shell[data-app-mode="test"] {
   --learning-stage-inline: clamp(1rem, 3vw, 1.8rem);
   --learning-topbar-button-size: 3.1rem;
@@ -3505,7 +3505,7 @@ button.student-screen__device-card {
 }
 
 .app-shell[data-app-mode="flashcard"] .card-stage,
-.app-shell[data-app-mode="input"] .input-stage,
+.app-shell:is([data-app-mode="input"], [data-app-mode="sentence"]) .input-stage,
 .app-shell[data-app-mode="test"] .test-stage {
   width: 100%;
   max-width: none;
@@ -3518,7 +3518,7 @@ button.student-screen__device-card {
 }
 
 .app-shell[data-app-mode="flashcard"] .card-stage__topbar,
-.app-shell[data-app-mode="input"] .input-stage__menu,
+.app-shell:is([data-app-mode="input"], [data-app-mode="sentence"]) .input-stage__menu,
 .app-shell[data-app-mode="test"] .test-stage__menu {
   position: sticky;
   top: 0;
@@ -3541,7 +3541,7 @@ button.student-screen__device-card {
   -webkit-backdrop-filter: blur(18px) saturate(1.04);
 }
 
-.app-shell[data-app-mode="input"] .input-stage__menu {
+.app-shell:is([data-app-mode="input"], [data-app-mode="sentence"]) .input-stage__menu {
   width: calc(100% + (var(--learning-stage-inline) * 2));
   margin-inline: calc(var(--learning-stage-inline) * -1);
 }
@@ -3560,10 +3560,10 @@ button.student-screen__device-card {
 }
 
 .app-shell[data-app-mode="flashcard"] .student-home-link,
-.app-shell[data-app-mode="input"] .student-home-link,
+.app-shell:is([data-app-mode="input"], [data-app-mode="sentence"]) .student-home-link,
 .app-shell[data-app-mode="test"] .student-home-link,
 .app-shell[data-app-mode="flashcard"] .card-stage__menu-logout,
-.app-shell[data-app-mode="input"] .input-stage__menu-logout,
+.app-shell:is([data-app-mode="input"], [data-app-mode="sentence"]) .input-stage__menu-logout,
 .app-shell[data-app-mode="test"] .test-stage__menu-logout {
   width: var(--learning-topbar-button-size);
   min-width: var(--learning-topbar-button-size);
@@ -3593,10 +3593,10 @@ button.student-screen__device-card {
 .app-shell[data-app-mode="flashcard"] .student-home-link:focus-visible,
 .app-shell[data-app-mode="flashcard"] .card-stage__menu-logout:hover,
 .app-shell[data-app-mode="flashcard"] .card-stage__menu-logout:focus-visible,
-.app-shell[data-app-mode="input"] .student-home-link:hover,
-.app-shell[data-app-mode="input"] .student-home-link:focus-visible,
-.app-shell[data-app-mode="input"] .input-stage__menu-logout:hover,
-.app-shell[data-app-mode="input"] .input-stage__menu-logout:focus-visible,
+.app-shell:is([data-app-mode="input"], [data-app-mode="sentence"]) .student-home-link:hover,
+.app-shell:is([data-app-mode="input"], [data-app-mode="sentence"]) .student-home-link:focus-visible,
+.app-shell:is([data-app-mode="input"], [data-app-mode="sentence"]) .input-stage__menu-logout:hover,
+.app-shell:is([data-app-mode="input"], [data-app-mode="sentence"]) .input-stage__menu-logout:focus-visible,
 .app-shell[data-app-mode="test"] .student-home-link:hover,
 .app-shell[data-app-mode="test"] .student-home-link:focus-visible,
 .app-shell[data-app-mode="test"] .test-stage__menu-logout:hover,
@@ -3679,7 +3679,7 @@ button.student-screen__device-card {
 }
 
 .app-shell[data-app-mode="flashcard"] .student-home-link .material-symbols-outlined,
-.app-shell[data-app-mode="input"] .student-home-link .material-symbols-outlined,
+.app-shell:is([data-app-mode="input"], [data-app-mode="sentence"]) .student-home-link .material-symbols-outlined,
 .app-shell[data-app-mode="test"] .student-home-link .material-symbols-outlined {
   font-size: var(--learning-topbar-icon-size);
   font-variation-settings:
@@ -3690,10 +3690,10 @@ button.student-screen__device-card {
 }
 
 .app-shell[data-app-mode="flashcard"] .student-home-link > span:not(.material-symbols-outlined),
-.app-shell[data-app-mode="input"] .student-home-link > span:not(.material-symbols-outlined),
+.app-shell:is([data-app-mode="input"], [data-app-mode="sentence"]) .student-home-link > span:not(.material-symbols-outlined),
 .app-shell[data-app-mode="test"] .student-home-link > span:not(.material-symbols-outlined),
 .app-shell[data-app-mode="flashcard"] .card-stage__menu-logout > span:not(.student-screen__action-icon),
-.app-shell[data-app-mode="input"] .input-stage__menu-logout > span:not(.student-screen__action-icon),
+.app-shell:is([data-app-mode="input"], [data-app-mode="sentence"]) .input-stage__menu-logout > span:not(.student-screen__action-icon),
 .app-shell[data-app-mode="test"] .test-stage__menu-logout > span:not(.student-screen__action-icon) {
   display: none;
 }
@@ -5216,8 +5216,8 @@ button.student-screen__device-card {
 
 .launch-mode-modal__modes {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1.15rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
   width: 100%;
   margin: 0 auto;
 }
@@ -7706,3 +7706,16 @@ html[data-tafelraum-embed="true"] .progress-shell,
 html[data-tafelraum-embed="true"] .flashcard-shell {
   width: min(100%, 58rem);
 }
+
+/* Context sentences share the Eingabe surface, with one quiet response field. */
+.sentence-stage .input-stage__menu { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.sentence-stage__progress { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.sentence-stage__prompt { max-width: 36ch; display: block; font-size: clamp(1.5rem, 3vw, 2.3rem); font-weight: 400; line-height: 1.5; }
+.sentence-stage__prompt strong { font-weight: 750; }
+.sentence-stage__answer { border: 1px solid rgba(var(--learner-ui-rgb, 214, 224, 246), .16); background: rgba(var(--learner-ui-rgb, 214, 224, 246), .035); width: 100%; min-height: 7rem; resize: vertical; padding: 1rem; font: inherit; line-height: 1.6; border-radius: 1rem; }
+.sentence-stage__answer[data-status="accepted"] { border-color: rgba(var(--learner-success-rgb, 166, 244, 195), .65); }
+.sentence-stage__answer[data-status="revise"] { border-color: rgba(var(--learner-warning-rgb, 255, 220, 158), .65); }
+.sentence-stage__feedback { margin: 0; color: var(--text-muted); line-height: 1.5; }
+.sentence-stage__feedback[data-status="accepted"] { color: rgb(var(--learner-success-rgb, 166, 244, 195)); }
+.sentence-stage__card .input-stage__form { gap: 1rem; }
+@media (max-width: 1000px) and (min-width: 621px) { .launch-mode-modal__modes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

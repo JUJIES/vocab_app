@@ -7,6 +7,7 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const fsp = require("fs/promises");
 const path = require("path");
+const { SentenceService } = require("./lib/sentence-service");
 const { ImportService } = require("./lib/import-service");
 const { SetService } = require("./lib/set-service");
 const { TeacherService } = require("./lib/teacher-service");
@@ -50,6 +51,7 @@ const LEARNING_MODE_KEYS = Object.freeze([
   "practice",
   "write",
   "test",
+  "sentence",
 ]);
 const DEFAULT_LEARNING_MODE_KEY = "practice";
 const ROOT_DIR = __dirname;
@@ -73,6 +75,7 @@ const teacherService = new TeacherService({
 });
 const setService = new SetService({ dataDir: DATA_DIR });
 const importService = new ImportService();
+const sentenceService = new SentenceService();
 const visualService = new VisualService({ dataDir: DATA_DIR, setService });
 
 app.use("/api/teacher/import-draft", express.json({ limit: "18mb" }));
@@ -578,6 +581,49 @@ app.get("/api/set-codes/:shareCode", async (request, response) => {
     response.json({ set: setEntry });
   } catch (error) {
     handleApiError(response, error, "Set-Code konnte nicht geprüft werden.");
+  }
+});
+
+// Both learner runs and teacher previews use the same checker. Paid calls require
+// an active identity and access to the current published set on every request.
+app.post("/api/sentence-practice/:action", async (request, response) => {
+  response.set("Cache-Control", "no-store");
+  try {
+    const setPath = normalizeSetPath(request.body?.setPath);
+    if (!setPath) { response.status(400).json({ error: "Gültiger Set-Pfad fehlt." }); return; }
+    let actor;
+    const tabletId = request.body?.tabletId;
+    if (tabletId) {
+      const session = requireTabletSession(request, tabletId);
+      if (!session.ok) { response.status(session.status).json({ error: session.error }); return; }
+      const tablet = findTablet(await readTabletStore(), tabletId);
+      if (!tablet?.registered || !(tablet.subscriptions || []).some(entry => entry.setPath === setPath)) {
+        response.status(403).json({ error: "Öffne ein Lernset aus deiner Bibliothek." }); return;
+      }
+      actor = `tablet:${tabletId}`;
+    } else {
+      const session = requireTeacherSession(request);
+      if (!session.ok) { response.status(session.status).json({ error: session.error }); return; }
+      const set = await setService.findPublishedSetByPath(setPath);
+      if (!set || !await resolveManagedSetAccess(session, set.id)) {
+        response.status(403).json({ error: "Lernset nicht verfügbar." }); return;
+      }
+      actor = `teacher:${session.teacherId}`;
+    }
+    const set = await setService.findPublishedSetByPath(setPath);
+    if (!set) { response.status(404).json({ error: "Lernset nicht verfügbar." }); return; }
+    const body = request.body;
+    let run;
+    switch (request.params.action) {
+      case "start": run = await sentenceService.start(actor, setPath, setService.toSetDocument(set), body.direction, body.count); break;
+      case "resume": run = sentenceService.view(sentenceService.get(actor, body.id, setPath)); break;
+      case "check": run = await sentenceService.check(actor, body.id, setPath, body.promptId, body.answer); break;
+      case "next": run = await sentenceService.next(actor, body.id, setPath, body.promptId); break;
+      default: response.status(404).json({ error: "Aktion nicht gefunden." }); return;
+    }
+    response.json({ run });
+  } catch (error) {
+    response.status(error.status || 503).json({ error: error.status ? error.message : "Satzübung momentan nicht verfügbar. Bitte erneut versuchen." });
   }
 });
 

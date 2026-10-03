@@ -143,7 +143,7 @@ test("test mode ignores punctuation and keeps wrong answers editable until all a
   await page.locator(".student-screen__library-card").first().click();
 
   const modeCards = page.locator(".launch-mode-modal__mode-card");
-  await expect(modeCards).toHaveCount(3);
+  await expect(modeCards).toHaveCount(4);
   await expect(page.locator('[data-mode-key="view"]')).toHaveCount(0);
   await expect(page.locator("[data-star-button]" )).toHaveCount(0);
 

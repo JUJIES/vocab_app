@@ -110,9 +110,9 @@ test("input settings apply immediately during mandatory correction flow", async 
   await expect(popover).toHaveAttribute("aria-hidden", "false");
   await expect(page.locator('[data-learning-direction-group="input"] [data-learning-direction="source-target"]')).toHaveAttribute(
     "aria-label",
-    /.+ zuerst, danach .+/,
+    /.+ wird gezeigt, .+ eingeben/,
   );
-  await expect(page.locator('[data-learning-direction-group="input"] .learning-direction-control__flag')).toHaveCount(2);
+  await expect(page.locator('[data-learning-direction-group="input"] .learning-direction-control__flag')).toHaveCount(4);
   await page.locator('[data-learning-direction-group="input"] [data-learning-direction="target-source"]').click();
   await expect(promptWord).toHaveText(firstCard.target.text.trim());
 
