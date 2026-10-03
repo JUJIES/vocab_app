@@ -397,6 +397,8 @@ const elements = {
   sentenceLabel: document.getElementById("sentence-label"),
   sentenceSubmit: document.getElementById("sentence-submit"),
   sentenceFeedback: document.getElementById("sentence-feedback"),
+  sentenceFeedbackText: document.getElementById("sentence-feedback-text"),
+  sentenceFeedbackExcerpt: document.getElementById("sentence-feedback-excerpt"),
   sentenceProgress: document.getElementById("sentence-progress"),
   sentencePrompt: document.getElementById("sentence-prompt"),
 
@@ -519,12 +521,15 @@ function bindEvents() {
   elements.sentenceLogout.addEventListener("click", () => elements.inputMenuLogout.click());
   elements.sentenceForm.addEventListener("submit", handleSentenceSubmit);
   elements.sentenceAnswer.addEventListener("input", () => {
-    saveSentenceRun();
-    if (!state.sentenceSession?.accepted && !state.sentenceBusy) {
+    if (state.sentenceSession && !state.sentenceSession.accepted && !state.sentenceBusy) {
+      state.sentenceSession.feedback = "";
+      state.sentenceSession.problem = null;
+      state.sentenceSession.status = "ready";
       elements.sentenceFeedback.hidden = true;
       elements.sentenceAnswer.removeAttribute("aria-invalid");
       elements.sentenceAnswer.dataset.status = "";
     }
+    saveSentenceRun();
   });
   elements.flashcardMenuLogout.addEventListener("click", handleFlashcardMenuLogout);
   elements.flashcardSettingsButton.addEventListener("click", handleFlashcardSettingsToggle);
@@ -9865,12 +9870,43 @@ async function sentenceRequest(action, body = {}) {
   return response.data.run;
 }
 
+function renderSentenceFeedback(message, status, run = null) {
+  const feedback = elements.sentenceFeedback;
+  feedback.hidden = !message;
+  feedback.dataset.status = status;
+  elements.sentenceFeedbackText.textContent = message || "";
+  const excerpt = elements.sentenceFeedbackExcerpt;
+  excerpt.replaceChildren();
+  excerpt.hidden = true;
+  const span = run?.problem;
+  const checked = run?.checkedAnswer;
+  // Mark only the exact still-visible checked attempt; never stale drafts.
+  if (state.sentenceBusy || status !== "revise" || !span || typeof checked !== "string"
+    || checked !== elements.sentenceAnswer.value.trim()
+    || !Number.isInteger(span.start) || !Number.isInteger(span.end)
+    || span.start < 0 || span.end <= span.start || span.end > checked.length || span.end - span.start > 60
+    || span.end - span.start > checked.length * .5) return;
+  const marker = document.createElement("button");
+  marker.type = "button";
+  marker.className = "sentence-stage__problem";
+  marker.textContent = checked.slice(span.start, span.end);
+  marker.setAttribute("aria-label", `Problemstelle „${marker.textContent}“ bearbeiten`);
+  marker.addEventListener("click", () => {
+    const answer = elements.sentenceAnswer;
+    if (checked !== answer.value.trim() || answer.disabled || answer.readOnly) return;
+    const offset = answer.value.length - answer.value.trimStart().length;
+    answer.focus();
+    answer.setSelectionRange(span.start + offset, span.end + offset);
+  });
+  excerpt.append(document.createTextNode(checked.slice(0, span.start)), marker, document.createTextNode(checked.slice(span.end)));
+  excerpt.hidden = false;
+}
+
 function renderSentenceRun() {
   const run = state.sentenceSession;
   const prompt = elements.sentencePrompt;
   const answer = elements.sentenceAnswer;
   const button = elements.sentenceSubmit;
-  const feedback = elements.sentenceFeedback;
   const progress = elements.sentenceProgress;
   button.disabled = state.sentenceBusy;
   answer.disabled = state.sentenceBusy || !run || run.complete;
@@ -9885,8 +9921,7 @@ function renderSentenceRun() {
   elements.sentenceLabel.textContent = run.targetLanguage === "en" ? "Dein Satz auf Englisch" : "Dein Satz auf Deutsch";
   if (run.complete) {
     prompt.textContent = "Geschafft!";
-    feedback.textContent = `${run.total} ${run.total === 1 ? "Satz" : "Sätze"} geübt.`;
-    feedback.hidden = false;
+    renderSentenceFeedback(`${run.total} ${run.total === 1 ? "Satz" : "Sätze"} geübt.`, "accepted");
     answer.hidden = true;
     elements.sentenceLabel.hidden = true;
     button.textContent = "Zur Übersicht";
@@ -9895,9 +9930,7 @@ function renderSentenceRun() {
   const focus = document.createElement("strong");
   focus.textContent = run.prompt.focus;
   prompt.replaceChildren(document.createTextNode(run.prompt.prefix), focus, document.createTextNode(run.prompt.suffix));
-  feedback.textContent = run.feedback;
-  feedback.hidden = !run.feedback;
-  feedback.dataset.status = run.error || run.status === "uncertain" ? "error" : run.accepted ? "accepted" : "revise";
+  renderSentenceFeedback(run.feedback, run.error || run.status === "uncertain" ? "error" : run.accepted ? "accepted" : "revise", run);
   answer.dataset.status = run.accepted ? "accepted" : run.feedback && !run.error && run.status !== "uncertain" ? "revise" : "";
   answer.setAttribute("aria-invalid", String(Boolean(run.feedback) && !run.accepted && !run.error && run.status !== "uncertain"));
   button.textContent = state.sentenceBusy ? "Prüft …" : run.accepted ? "Weiter" : "Prüfen";
@@ -9932,14 +9965,13 @@ async function startSentenceSet(setPath, direction, count, resume = false) {
     if (saved && !run.accepted && saved.answer !== run.checkedAnswer) {
       state.sentenceSession.feedback = "";
       state.sentenceSession.status = "ready";
+      state.sentenceSession.problem = null;
     }
     persistActiveLearningSession(setPath, "sentence", APP_MODES.SENTENCE, direction, run.total);
     saveSentenceRun();
   } catch (error) {
     if (requestId !== state.sentenceRequestId) return;
-    const feedback = elements.sentenceFeedback;
-    feedback.textContent = error.message || "Server nicht erreichbar. Bitte erneut versuchen.";
-    feedback.hidden = false;
+    renderSentenceFeedback(error.message || "Server nicht erreichbar. Bitte erneut versuchen.", "error");
   } finally {
     if (requestId === state.sentenceRequestId) {
       state.sentenceBusy = false;
@@ -9958,6 +9990,7 @@ async function handleSentenceSubmit(event) {
   const requestId = ++state.sentenceRequestId;
   saveSentenceRun();
   state.sentenceBusy = true;
+  elements.sentenceFeedbackExcerpt.hidden = true;
   renderSentenceRun();
   try {
     const run = await sentenceRequest(current.accepted ? "next" : "check", { id: current.id, promptId: current.prompt.id, answer: answer.value });
@@ -9981,9 +10014,7 @@ async function handleSentenceSubmit(event) {
       state.sentenceBusy = false;
       renderSentenceRun();
       if (!state.sentenceSession) {
-        const feedback = elements.sentenceFeedback;
-        feedback.textContent = "Durchgang abgelaufen. Bitte neu starten.";
-        feedback.hidden = false;
+        renderSentenceFeedback("Durchgang abgelaufen. Bitte neu starten.", "error");
       }
     }
   }

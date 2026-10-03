@@ -1,9 +1,9 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { SentenceService } = require("../lib/sentence-service");
+const { SentenceService, locateProblem } = require("../lib/sentence-service");
 const document = { set: { title: "Context", languages: { source: "de", target: "en" } }, cards: [{ source: { text: "vorübergehend" }, target: { text: "temporarily" }, acceptedAnswers: ["for a while"] }] };
 const prompt = { prefix: "Der Zoo ist ", focus: "vorübergehend", suffix: " geschlossen." };
-const accepted = { grammar: true, meaning: true, target: true, hint: "Gut." };
+const accepted = { grammar: true, meaning: true, target: true, hint: "Gut.", problem: null };
 function service(results) {
   const calls = [];
   return { calls, service: new SentenceService({ client: { responses: { create: async body => {
@@ -99,4 +99,30 @@ test("parallel requests are bounded per identity and expired runs cannot be used
   clock = 12 * 60 * 60 * 1000 + 1;
   assert.throws(() => s.get("a", run.id, "sets/a.json"), error => error.status === 410);
   assert.equal(s.runs.size, 0);
+});
+
+test("problem quotes locate exact whole words and reject broad or invented markings", () => {
+  const answer = "Breakfast ist included. ist";
+  assert.deepEqual(locateProblem(answer, { quote: "ist", occurrence: 0 }), { start: 10, end: 13 });
+  assert.deepEqual(locateProblem(answer, { quote: "ist", occurrence: 1 }), { start: 24, end: 27 });
+  assert.deepEqual(locateProblem("🍳 Breakfast ist included.", { quote: "ist", occurrence: 0 }), { start: 13, end: 16 });
+  for (const problem of [null, { quote: "is", occurrence: 0 }, { quote: answer, occurrence: 0 }, { quote: "Breakfast ist included.", occurrence: 0 }, { quote: ".", occurrence: 0 }, { quote: "missing", occurrence: 0 }, { quote: "ist", occurrence: -1 }, { quote: "ist", occurrence: 2 }]) {
+    assert.equal(locateProblem(answer, problem), null);
+  }
+});
+test("localized feedback is tied to the checked attempt, never accepted or uncertain answers", async () => {
+  const { service: s } = service([prompt,
+    { ...accepted, grammar: false, hint: "Die Vokabel passt. ‚ist‘ ist noch Deutsch; überprüfe die englische Verbform.", problem: { quote: "ist", occurrence: 0 } },
+    { ...accepted, grammar: null, problem: { quote: "ist", occurrence: 0 } },
+    { ...accepted, problem: { quote: "is", occurrence: 0 } },
+  ]);
+  const run = await s.start("a", "sets/a.json", document, "source-target", 1);
+  const check = answer => s.check("a", run.id, "sets/a.json", run.prompt.id, answer);
+  const revise = await check("  The zoo ist temporarily closed.  ");
+  assert.deepEqual(revise.problem, { start: 8, end: 11 });
+  assert.equal(revise.checkedAnswer, "The zoo ist temporarily closed.");
+  assert.deepEqual(s.view(s.get("a", run.id, "sets/a.json")).problem, revise.problem);
+  assert.equal((await check("The zoo ist closed temporarily.")).problem, null);
+  assert.equal((await check("The zoo is temporarily closed.")).problem, null);
+  assert.equal((await s.next("a", run.id, "sets/a.json", run.prompt.id)).problem, null);
 });

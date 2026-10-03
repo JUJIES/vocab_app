@@ -1,5 +1,10 @@
 # Produkt- und Architekturentscheidungen
 
+## 2026-10-03 – Konkretes Satzfeedback mit gezielter Problemstelle
+
+- Feedback erhält eine beschriftete Fläche mit Seitenlinie und 1–2 kurze, konkrete Hinweise ohne vorgegebene Lösung. Eine optionale kurze Problemstelle stammt als Zitat/Vorkommen aus derselben strukturierten Modellantwort; der Server bestimmt geprüfte Wortgrenzen und Positionen. Keine Tool-Aktion, kein HTML oder frei übernommene Modell-Offsets. Ganze Sätze und unpassende Stellvertreter für fehlende Wörter werden nicht markiert.
+- Das native Textfeld bleibt erhalten: Die geprüfte Antwort erscheint nur bei einer gültigen Problemstelle im Feedback, ein Klick auf die Unterstreichung wählt das Wort im Feld aus. Bearbeiten, neue Prüfung, Annahme und technische/unsichere Ergebnisse entfernen die Markierung. Keine Änderung an Set-Daten, Export, Benotung oder Zugriffsrechten.
+
 ## 2026-10-03 – Führendes Infinitiv-„to“ auch bei normalen Vokabeln optional
 
 - Eine ausdrücklich mit führendem `to` gespeicherte englische Antwort wie `to expect` oder `to pull a suitcase` akzeptiert auch die Grundform ohne dieses Präfix. Die gemeinsame Bewertung in `answer-rules.js` gilt für Eingabe und Testen und erhält die ursprüngliche Antwort für Anzeige/Feedback. Die App übergibt die Antwortsprache entsprechend der gewählten Richtung; deutsche und generische Antworten bleiben strikt. Artikel und `to` innerhalb einer Phrase/eines Satzes bleiben erforderlich. Kein Umformen gespeicherter Karten, keine Import-/Exportänderung, keine Änderung der freien KI-Satzprüfung. Die vorhandenen getrennten Infinitivvarianten der unregelmäßigen Verben bleiben kompatibel.

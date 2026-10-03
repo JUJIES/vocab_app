@@ -33,7 +33,7 @@
     </script>
     <script src="./appearance.js?v=2026-09-30-appearance-v4" data-appearance-scope="student"></script>
     <link rel="stylesheet" href="./pwa-splash.css?v=2026-09-30-splash-contrast-v2" />
-    <link rel="stylesheet" href="./styles.css?v=2026-10-03-sentence-v1" />
+    <link rel="stylesheet" href="./styles.css?v=2026-10-03-sentence-feedback-v1" />
     <link rel="stylesheet" href="./appearance.css?v=2026-09-30-appearance-v4" />
     <link rel="stylesheet" href="./ui-motion.css?v=2026-08-30-ui-motion-v1" />
     <script src="./pwa.js?v=2026-08-30-pwa-splash-v3" defer></script>
@@ -44,7 +44,7 @@
     <script src="./irregular-verbs.js?v=2026-09-06-optional-to-v2" defer></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js" defer></script>
-    <script src="./app.js?v=2026-10-03-optional-infinitive-v1" defer></script>
+    <script src="./app.js?v=2026-10-03-sentence-feedback-v1" defer></script>
   </head>
   <body>
     <div class="pwa-splash" role="status" aria-label="Lerndeck wird geladen">
@@ -659,7 +659,11 @@
               <form id="sentence-form" class="input-stage__form">
                 <label id="sentence-label" class="input-stage__label" for="sentence-answer">Dein Satz</label>
                 <textarea id="sentence-answer" class="input-stage__input sentence-stage__answer" rows="3" maxlength="600" autocomplete="off" spellcheck="false" placeholder="Deinen Satz eingeben" required></textarea>
-                <p id="sentence-feedback" class="sentence-stage__feedback" role="status" hidden></p>
+                <section id="sentence-feedback" class="sentence-stage__feedback" role="status" hidden>
+                  <strong class="sentence-stage__feedback-label">Feedback:</strong>
+                  <p id="sentence-feedback-text"></p>
+                  <p id="sentence-feedback-excerpt" class="sentence-stage__feedback-excerpt" hidden></p>
+                </section>
                 <button id="sentence-submit" class="input-stage__button input-stage__button--enter" type="submit" disabled>Prüfen</button>
               </form>
             </section>

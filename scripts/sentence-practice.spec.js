@@ -114,3 +114,50 @@ test("tablet session gates paid calls and completed student run counts once with
   await expect(page.locator("#sentence-prompt")).toHaveText("Geschafft!");
   expect(progressWrites).toBe(1);
 });
+
+for (const light of [false, true]) test(`specific feedback highlights only the problem and selects it for revision (${light ? "light" : "dark"})`, async ({ page }, testInfo) => {
+  const answer = "Breakfast ist included\n.";
+  let checks = 0;
+  const run = { id: "localized-run", total: 1, position: 1, targetLanguage: "en", prompt: { id: "localized-prompt", prefix: "Das Frühstück ist ", focus: "inklusive", suffix: "." }, accepted: false, feedback: "", status: "ready", problem: null };
+  await page.route("**/api/sentence-practice/*", route => {
+    const action = route.request().url().split("/").pop();
+    if (action === "check") {
+      checks++;
+      if (checks === 3) return route.fulfill({ status: 503, json: { error: "Prüfung momentan nicht verfügbar. Bitte erneut versuchen." } });
+      if (checks === 4) return route.fulfill({ json: { run: { ...run, accepted: true, status: "accepted", feedback: "Richtig.", problem: null } } });
+      return route.fulfill({ json: { run: { ...run, status: "revise", checkedAnswer: answer, problem: { start: 10, end: 13 }, feedback: "Die Vokabel passt. ‚ist‘ ist noch Deutsch; überprüfe die englische Verbform." } } });
+    }
+    return route.fulfill({ json: { run } });
+  });
+  await prepare(page, light);
+  await page.locator("#launch-settings-start").click();
+  await page.locator("#sentence-answer").fill("  " + answer);
+  await page.locator("#sentence-submit").click();
+  await expect(page.locator("#sentence-feedback-text")).toContainText("‚ist‘ ist noch Deutsch");
+  await expect(page.locator(".sentence-stage__feedback-label")).toHaveText("Feedback:");
+  const mark = page.locator(".sentence-stage__problem");
+  await expect(mark).toHaveText("ist");
+  expect(await mark.evaluate(el => getComputedStyle(el).textDecorationStyle)).toBe("wavy");
+  await page.screenshot({ path: testInfo.outputPath("localized-feedback.png") });
+  await mark.click();
+  await expect(page.locator("#sentence-answer")).toBeFocused();
+  expect(await page.locator("#sentence-answer").evaluate(el => el.value.slice(el.selectionStart, el.selectionEnd))).toBe("ist");
+  expect(checks).toBe(1);
+  await page.keyboard.type("is");
+  await expect(page.locator("#sentence-feedback")).toBeHidden();
+  await expect(mark).toBeHidden();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.locator("#sentence-answer").fill(answer);
+  await page.locator("#sentence-submit").click();
+  await expect(mark).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath("localized-feedback-mobile.png") });
+  await page.locator("#sentence-submit").click();
+  await expect(page.locator("#sentence-feedback-text")).toContainText("nicht verfügbar");
+  await expect(mark).toHaveCount(0);
+  await expect(page.locator("#sentence-answer")).toHaveAttribute("aria-invalid", "false");
+  await page.locator("#sentence-answer").fill("Breakfast is included.");
+  await page.locator("#sentence-submit").click();
+  await expect(page.locator("#sentence-submit")).toHaveText("Weiter");
+  await expect(mark).toHaveCount(0);
+});

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Satzfeedback ist als eigener Bereich mit Seitenlinie hervorgehoben und benennt konkrete Probleme ohne fertige Lösung. Eine kurze, serverseitig validierte Problemstelle wird rot unterstrichen; Klick wählt sie zur Überarbeitung im Eingabefeld aus. Alte, unklare und technische Fehlermarkierungen bleiben ausgeschlossen.
+
 - Korrigiert: Normale englische Infinitiv-Vokabeln mit führendem `to` akzeptieren in Eingabe und Testen auch die Grundform (`expect` für `to expect`). Die gewählte Antwortsprache wird berücksichtigt; andere Wörter und satzinterne `to` bleiben unverändert erforderlich.
 
 - Neuer Lernmodus `Say it in a sentence`: zufällige Vokabeln im Satzkontext, wählbarer Umfang und Sprachrichtung, fett markierter Ausgangsausdruck, kurze Rückmeldung und Überarbeitung bis zur Annahme. Gemeinsame Schüler-/Lehrervorschau in Leinen und Nachtblau. Serverseitiges GPT‑6 Luna ohne Reasoning, geschützte begrenzte Aufrufe und flüchtige wiederaufnehmbare Läufe; abgeschlossene Durchgänge zählen ohne Note.

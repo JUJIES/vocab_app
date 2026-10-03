@@ -7715,7 +7715,14 @@ html[data-tafelraum-embed="true"] .flashcard-shell {
 .sentence-stage__answer { border: 1px solid rgba(var(--learner-ui-rgb, 214, 224, 246), .16); background: rgba(var(--learner-ui-rgb, 214, 224, 246), .035); width: 100%; min-height: 7rem; resize: vertical; padding: 1rem; font: inherit; line-height: 1.6; border-radius: 1rem; }
 .sentence-stage__answer[data-status="accepted"] { border-color: rgba(var(--learner-success-rgb, 166, 244, 195), .65); }
 .sentence-stage__answer[data-status="revise"] { border-color: rgba(var(--learner-warning-rgb, 255, 220, 158), .65); }
-.sentence-stage__feedback { margin: 0; color: var(--text-muted); line-height: 1.5; }
-.sentence-stage__feedback[data-status="accepted"] { color: rgb(var(--learner-success-rgb, 166, 244, 195)); }
+.sentence-stage__feedback { margin: 0; padding: .85rem 1rem; border-inline-start: 3px solid rgba(var(--learner-warning-rgb, 255, 220, 158), .8); border-radius: 0 .65rem .65rem 0; background: rgba(var(--learner-ui-rgb, 214, 224, 246), .055); color: rgb(var(--learner-text-rgb, 244, 247, 255)); line-height: 1.55; }
+.sentence-stage__feedback p { margin: .35rem 0 0; }
+.sentence-stage__feedback-label { font-size: .85rem; font-weight: 700; }
+.sentence-stage__feedback[data-status="error"] { border-inline-start-color: rgba(var(--learner-ui-rgb, 214, 224, 246), .3); }
+.sentence-stage__feedback-excerpt { white-space: pre-wrap; overflow-wrap: anywhere; color: rgba(var(--learner-text-rgb, 244, 247, 255), .9); }
+.sentence-stage__problem { display: inline; padding: 0; border: 0; border-radius: 0; background: transparent; color: inherit; font: inherit; text-decoration: underline wavy rgb(var(--learner-danger-rgb, 225, 146, 136)); text-underline-offset: .25em; text-decoration-thickness: 1.5px; cursor: pointer; }
+.sentence-stage__problem:focus-visible { outline: 2px solid rgb(var(--learner-danger-rgb, 225, 146, 136)); outline-offset: 3px; }
+
+.sentence-stage__feedback[data-status="accepted"] { border-inline-start-color: rgb(var(--learner-success-rgb, 166, 244, 195)); color: rgb(var(--learner-success-rgb, 166, 244, 195)); }
 .sentence-stage__card .input-stage__form { gap: 1rem; }
 @media (max-width: 1000px) and (min-width: 621px) { .launch-mode-modal__modes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
