@@ -9959,7 +9959,10 @@ function renderSentenceFeedback(message, status, run = null) {
       quote.className = "sentence-stage__feedback-excerpt";
       const text = document.createElement("p");
       text.textContent = entry.feedback;
-      item.append(quote, text);
+      const body = document.createElement("div");
+      body.className = "sentence-stage__feedback-body";
+      body.append(text);
+      item.append(quote, body);
       if (entry.issues?.length) {
         const points = document.createElement("ul");
         points.className = "sentence-stage__issues";
@@ -9970,7 +9973,7 @@ function renderSentenceFeedback(message, status, run = null) {
           point.append(label, document.createTextNode(` – ${issue.message}`));
           points.append(point);
         }
-        item.append(points);
+        body.append(points);
       }
       if (entry.help?.explanation) {
         const help = document.createElement("details");
@@ -9990,7 +9993,7 @@ function renderSentenceFeedback(message, status, run = null) {
           example.append(label, sentence);
           help.append(example);
         }
-        item.append(help);
+        body.append(help);
       }
       list.append(item);
       if (!changedPrompt) { item.classList.add("sentence-stage__feedback-entry--new"); added = item; }

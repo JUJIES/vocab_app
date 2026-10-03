@@ -245,6 +245,9 @@ for (const light of [false, true]) test(`revision history survives edits, retrie
   await page.locator('#sentence-submit').click();
   await expect(entries).toHaveCount(1);
   await expect(entries.first()).toHaveClass(/feedback-entry--new/);
+  await expect(entries.first().locator(":scope > blockquote")).toHaveText("My car has a flat type.");
+  await expect(entries.first().locator(":scope > .sentence-stage__feedback-body")).toContainText(run.feedback);
+  await expect(entries.first().locator(".sentence-stage__feedback-body blockquote")).toHaveCount(0);
   await page.getByText('Mehr Hilfe', { exact: true }).click();
   await page.locator('#sentence-answer').fill('My car has a flat tire.');
   await expect(quotes).toHaveText(['My car has a flat type.']);

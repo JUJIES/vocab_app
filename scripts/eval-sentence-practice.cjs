@@ -36,7 +36,7 @@ for (const item of selected) {
   const originalAsk = service.ask.bind(service);
   service.ask = async (name, format, instructions, data) => {
     const result = await originalAsk(name, format, instructions, data);
-    traces.push({ name, repair: instructions.split("REPAIR REQUIRED: ")[1] || "", key: data.learner_answer || data.source_expression, difficulty: data.difficulty, result });
+    traces.push({ name, repair: instructions.split("REPAIR REQUIRED: ")[1] || "", key: data.learner_answer || data.source_expression, difficulty: data.difficulty, source: data.source_sentence, focus: data.focus, result });
     return result;
   };
   await Promise.all(['easy', 'medium', 'hard'].map(async level => {
@@ -76,7 +76,7 @@ for (const item of selected) {
           return (!fixture.expectedMarked || fixture.expectedMarked.every(word => marked.some(quote => quote.split(/\s+/).includes(word)))) && (!fixture.expectNoMarks || !marked.length);
         };
         const markingPass = marksMatch(item, first) && revisions.every(revision => marksMatch(revision, revision.result));
-        const record = { ...item, generated, providerMetrics: providerMetrics.filter(metric => [item.focus, item.answer, item.correct, ...(item.revisions || []).map(revision => revision.answer)].includes(metric.key)), markingPass, first, revisions, corrected, complete, pass: markingPass && first.accepted === item.expected && revisions.every(revision => revision.result.accepted === revision.expected) && corrected.accepted && complete && [first, ...revisions.map(revision => revision.result), corrected].every(result => /\p{Extended_Pictographic}/u.test(result.feedback)) };
+        const record = { ...item, generated, modelChecks: traces.filter(trace => trace.name === "sentence_check" && trace.source === item.source && trace.focus === item.focus && trace.difficulty === item.level), providerMetrics: providerMetrics.filter(metric => [item.focus, item.answer, item.correct, ...(item.revisions || []).map(revision => revision.answer)].includes(metric.key)), markingPass, first, revisions, corrected, complete, pass: markingPass && first.accepted === item.expected && revisions.every(revision => revision.result.accepted === revision.expected) && corrected.accepted && complete && [first, ...revisions.map(revision => revision.result), corrected].every(result => /\p{Extended_Pictographic}/u.test(result.feedback)) };
         records.push(record);
         console.log(JSON.stringify(record));
       } catch (error) { const record = { ...item, pass: false, error: error.message, providerFailures: providerFailures.filter(failure => [item.focus, item.answer, item.correct].includes(failure.key)), trace: traces.filter(trace => trace.difficulty === item.level && [item.focus, item.answer, item.correct].includes(trace.key)) }; records.push(record); console.log(JSON.stringify(record)); }

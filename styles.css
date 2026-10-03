@@ -7722,12 +7722,15 @@ html[data-tafelraum-embed="true"] .flashcard-shell {
 .sentence-stage__issues li::marker { font-weight: 700; color: rgba(var(--learner-text-rgb, 244, 247, 255), .7); }
 .sentence-stage__feedback-label { font-size: .85rem; font-weight: 700; }
 .sentence-stage__feedback-list { list-style: none; margin: .65rem 0 0; padding: 0; display: grid; gap: .85rem; }
-.sentence-stage__feedback-entry { padding: .8rem 1rem; border-inline-start: 3px solid rgba(var(--learner-warning-rgb, 255, 220, 158), .65); }
-.sentence-stage__feedback-entry.is-latest { border-radius: 0 .65rem .65rem 0; background: rgba(var(--learner-ui-rgb, 214, 224, 246), .055); }
-.sentence-stage__feedback-entry[data-status="accepted"] { border-inline-start-color: rgb(var(--learner-success-rgb, 166, 244, 195)); }
-.sentence-stage__feedback-entry[data-status="accepted"] > p { color: rgb(var(--learner-success-rgb, 166, 244, 195)); }
-.sentence-stage__feedback-entry[data-status="uncertain"] { border-inline-start-color: rgba(var(--learner-ui-rgb, 214, 224, 246), .3); }
-.sentence-stage__feedback-excerpt { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-style: italic; color: rgba(var(--learner-text-rgb, 244, 247, 255), .8); }
+/* Each bubble belongs to the submitted sentence immediately above it. */
+.sentence-stage__feedback-entry { min-width: 0; }
+.sentence-stage__feedback-body { --feedback-border: rgba(var(--learner-ui-rgb, 214, 224, 246), .18); --feedback-bg: color-mix(in srgb, rgb(var(--learner-ui-rgb, 214, 224, 246)) 5%, var(--surface)); position: relative; margin-top: .65rem; padding: .8rem 1rem; border: 1px solid var(--feedback-border); border-radius: .3rem 1rem 1rem 1rem; background: var(--feedback-bg); }
+.sentence-stage__feedback-body::before { content: ""; position: absolute; top: -.4rem; inset-inline-start: 1.2rem; width: .7rem; height: .7rem; border-top: 1px solid var(--feedback-border); border-inline-start: 1px solid var(--feedback-border); background: var(--feedback-bg); transform: rotate(45deg); }
+.sentence-stage__feedback-body > p:first-child { margin-top: 0; }
+.sentence-stage__feedback-entry.is-latest .sentence-stage__feedback-body { --feedback-border: rgba(var(--learner-ui-rgb, 214, 224, 246), .3); }
+.sentence-stage__feedback-entry[data-status="accepted"] .sentence-stage__feedback-body { --feedback-border: rgba(var(--learner-success-rgb, 166, 244, 195), .35); }
+.sentence-stage__feedback-entry[data-status="accepted"] .sentence-stage__feedback-body > p { color: rgb(var(--learner-success-rgb, 166, 244, 195)); }
+.sentence-stage__feedback-excerpt { margin: 0; padding-inline: .7rem; white-space: pre-wrap; overflow-wrap: anywhere; font-style: italic; color: rgba(var(--learner-text-rgb, 244, 247, 255), .8); }
 .sentence-stage__problem { display: inline; padding: 0; border: 0; border-radius: 0; background: transparent; color: inherit; font: inherit; text-decoration: underline wavy rgb(var(--learner-danger-rgb, 225, 146, 136)); text-underline-offset: .25em; text-decoration-thickness: 1.5px; }
 /* Give even a one-letter word a real inline box for Safari hit testing. */
 button.sentence-stage__problem { display: inline-block; min-width: .6em; padding-inline: .1em; margin-inline: -.1em; cursor: pointer; }

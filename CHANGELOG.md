@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Translation-Prüfprompt gestrafft und in eine einzige lesbare Quelle (`lib/sentence-feedback-prompt.js`) ausgelagert: Bewertungsregeln, Begleitung und Lösungsschutz getrennt, neun Few-shot-Beispiele statt starrer Textvorlagen. Feedback-Verlauf als ruhige Blasen mit zugehörigem Satzzitat darüber; Markierungen, Hilfe, native Eingabe, Bewegungseinstellungen und Serverprotokoll bleiben erhalten. Markierungszitate werden bereits im Antwortschema auf tatsächlich vorhandene, mit dem bestehenden Locator validierte kurze Spannen begrenzt; abgeschnittene Wörter werden nicht nachträglich repariert oder erfunden. Modell/Reasoning und die vier Annahmekriterien unverändert.
+
 - Translation-Feedback nutzt Aufzählungspunkte statt Nummern, auch ohne Nummern in Live-Ansagen/Markierungsnamen. Kurze schülerverständliche Fehlerkategorien und konkrete Übersetzungs-/Verbesserungsformulierungen ersetzen abstraktes Lob; der Ton variiert passend zum Überarbeitungsverlauf. Bewertungsregeln, Markierungen, Verlauf und Serverprotokoll bleiben unverändert.
 
 - Bibliothek auf die Oberkategorien `Lerndecks` / `Nicht eingeordnet` reduziert, beide mit identischer Überschrift-Gestaltung. `Alle Sets` entfällt; bisherige Gesamtansichten wechseln zum gewählten bzw. ersten Lerndeck. Zuordnungen, unzugeordnete Sets und gültige gespeicherte Ansichten bleiben erhalten.

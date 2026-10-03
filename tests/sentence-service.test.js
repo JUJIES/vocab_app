@@ -331,3 +331,40 @@ test("acceptance cannot coexist with explicit correction points", async () => {
   assert.equal(result.history.length,1);
   assert.equal(result.history[0].status,'revise');
 });
+
+test("few-shot coaching examples pass the same checks as real feedback without repair", async () => {
+  const { buildSentenceFeedbackPrompt } = require("../lib/sentence-feedback-prompt");
+  const examples = JSON.parse(buildSentenceFeedbackPrompt(40).split("# Beispiele (keine Textschablonen)\n")[1]);
+  for (const { input, output } of examples) {
+    const at = input.source_sentence.indexOf(input.focus);
+    assert.ok(at >= 0, "example focus belongs to its source");
+    const doc = { set: { title: "Coaching example", languages: { source: input.source_language, target: input.target_language } }, cards: [{ source: { text: input.focus }, target: { text: input.target_vocabulary }, acceptedAnswers: input.accepted_variants }] };
+    const generated = { prefix: input.source_sentence.slice(0, at), focus: input.focus, suffix: input.source_sentence.slice(at + input.focus.length) };
+    const { service: s, calls } = service([generated, output]);
+    const run = await s.start("example", "sets/example.json", doc, "source-target", 1, "medium");
+    const checked = await s.check("example", run.id, "sets/example.json", run.prompt.id, input.learner_answer);
+    assert.equal(checked.accepted, [output.grammar, output.meaning, output.target, output.spelling].every(value => value === true));
+    assert.equal(calls.length, 2, "illustrative feedback must satisfy schema, quote provenance and solution protection without repair");
+    assert.ok(/\p{Extended_Pictographic}/u.test(checked.feedback));
+    assert.equal(checked.issues.length, output.issues.length);
+  }
+});
+
+test("provider quote choices contain real complete spans, including contractions, within schema limits", async () => {
+  for (const answer of ["Wir kommen vor dem Mittagessen an.", "I'm today sick.\nI’m also tired.", Array.from({ length: 290 }, (_, index) => String.fromCodePoint(0x4e00 + index)).join(" ")]) {
+    const { service: s, calls } = service([prompt, accepted]);
+    const run = await s.start("quotes", "sets/quotes.json", document, "source-target", 1);
+    await s.check("quotes", run.id, "sets/quotes.json", run.prompt.id, answer);
+    const quotes = calls[1].text.format.schema.properties.issues.items.properties.quote.enum;
+    assert.ok(quotes.includes(null), "missing content remains representable");
+    assert.ok(quotes.length <= 1000);
+    assert.ok(quotes.filter(Boolean).reduce((length, quote) => length + quote.length, 0) <= 15000);
+    for (const quote of quotes.filter(Boolean)) assert.ok(locateProblem(answer.trim(), { quote, occurrence: 0 }));
+    if (answer.startsWith("Wir")) {
+      assert.ok(quotes.includes("vor"));
+      assert.ok(!quotes.includes("vor dem Mittag"));
+      assert.ok(!quotes.includes("vor dem Mittagess"));
+    }
+    if (answer.startsWith("I'm")) assert.ok(quotes.includes("I'm"));
+  }
+});
