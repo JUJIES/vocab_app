@@ -253,14 +253,10 @@ body.has-modal-open {
 
 .teacher-account-status {
   min-height: 2.55rem;
-  padding: 0.55rem 0.82rem;
+  padding: 0;
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  border: 1px solid rgba(var(--ui-rgb), 0.07);
-  border-radius: var(--radius-pill);
-  background: rgba(var(--ui-rgb), 0.045);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  gap: 0.5rem;
   white-space: nowrap;
 }
 
@@ -542,12 +538,9 @@ body.has-modal-open {
 }
 
 .teacher-account-status__role {
-  padding: 0.16rem 0.42rem;
-  border-radius: 999px;
-  background: rgba(var(--accent-rgb), 0.14);
-  color: var(--accent);
+  color: var(--text-muted);
   font-size: 0.68rem;
-  font-weight: 800;
+  font-weight: 650;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -822,6 +815,23 @@ body.has-modal-open {
 .teacher-button--secondary:focus-visible {
   background: rgba(var(--ui-rgb), 0.06);
   color: var(--text);
+}
+
+.teacher-button.teacher-settings__toggle {
+  border-radius: 0.45rem;
+  background: transparent;
+  box-shadow: none;
+}
+
+.teacher-button.teacher-settings__toggle:hover,
+.teacher-button.teacher-settings__toggle[aria-expanded="true"] {
+  background: rgba(var(--ui-rgb), 0.045);
+}
+
+.teacher-button.teacher-settings__toggle:focus-visible {
+  background: transparent;
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .teacher-button--danger .teacher-button__icon {

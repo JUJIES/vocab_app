@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Lehrer-/Admin-Header reduziert: Name und Admin-Rolle ohne Pill-Hintergründe, Zahnrad ohne dauerhafte Kreisfläche. Dezenter Hover-/Menüstatus und klarer Tastaturfokus bleiben in beiden Themes erhalten.
+
 - Bibliothek und Set-Liste haben oben bündige Überschriften und gleich gestaltete `+ Lerndeck` / `+ Lernset`-Aktionen direkt darunter. Der große Set-Button entfällt; lange Titel behalten die volle Breite. Anlegen und Eigentumsrechte bleiben unverändert.
 
 - Lerndecks zeigen keine Drei-Punkte-Schaltfläche mehr. Rechtsklick öffnet die bestehenden Optionen Umbenennen/Entfernen; Tastatur und langes Drücken unterstützen denselben Ablauf. Menü bleibt im Fenster und nutzt die Theme-Farben; Eigentumsrechte, Bestätigung und Erhalt der Sets bleiben unverändert. Direkt nach Drag-and-drop bleiben Klicks auf andere Lerndecks möglich.
