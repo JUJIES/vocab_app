@@ -3248,8 +3248,8 @@ body.teacher-workspace-visible { overflow: hidden; }
 .workspace-count { font-size: 0.68rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .workspace-unit-row { display: flex; align-items: center; gap: 0.1rem; position: relative; }
 .workspace-unit-menu { flex-shrink: 0; }
-.workspace-unit-menu summary, .workspace-set-menu summary { list-style: none; cursor: pointer; color: var(--text-muted); padding: 0.5rem 0.35rem; }
-.workspace-unit-menu summary::-webkit-details-marker, .workspace-set-menu summary::-webkit-details-marker { display: none; }
+.workspace-unit-menu summary { list-style: none; cursor: pointer; color: var(--text-muted); padding: 0.5rem 0.35rem; }
+.workspace-unit-menu summary::-webkit-details-marker { display: none; }
 .workspace-unit-menu[open] { z-index: 5; }
 .workspace-unit-menu > div { position: absolute; right: 0; top: 100%; min-width: 9rem; padding: 0.3rem;
   background: var(--surface); border: 1px solid var(--line); border-radius: 0.7rem; box-shadow: var(--shadow); }
@@ -3290,10 +3290,7 @@ body.teacher-workspace-visible { overflow: hidden; }
 .workspace-editor-actions #set-editor-feedback { grid-column: 1 / -1; margin: 0; }
 .workspace-editor-actions #set-editor-feedback:empty { display: none; }
 .workspace-save-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 0.4rem; margin-left: auto; }
-.workspace-set-menu { position: relative; }
-.workspace-set-menu summary { display: grid; place-items: center; width: 2.3rem; height: 2.3rem; border-radius: 0.45rem; }
-.workspace-set-menu summary:hover, .workspace-set-menu summary:focus-visible { background: var(--surface-soft); }
-.workspace-set-menu > button { position: absolute; right: 0; top: 100%; white-space: nowrap; background: var(--surface); color: var(--danger); border: 1px solid var(--line); }
+.teacher-editor .workspace-delete { color: var(--danger); }
 .workspace-metadata > summary { cursor: pointer; color: var(--text-muted); font-size: 0.78rem; }
 .workspace-metadata > .set-editor-grid { margin-top: 0.75rem; }
 .teacher-editor .set-editor-field input { background: var(--surface); border: 1px solid var(--line); border-radius: 0.6rem; font-size: 0.84rem; }

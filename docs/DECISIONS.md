@@ -1,5 +1,9 @@
 # Produkt- und Architekturentscheidungen
 
+## 2026-10-03 – Set löschen als direkte Aktion
+
+- Ein beschrifteter `Set löschen`-Button ersetzt das Drei-Punkte-Menü mit nur einem Eintrag. Sichtbarkeit folgt weiterhin dem serverseitig abgeleiteten Löschrecht; fremde Sets bleiben nicht löschbar. Der bestehende Bestätigungsdialog mit Abbrechen/Bestätigen und die bisherige Archivierung/Tablet-Bereinigung werden unverändert verwendet. Kein weiterer Löschpfad.
+
 ## 2026-10-03 – Bereichswechsel in der Überschrift
 
 - Ein Menü an der Bereichsüberschrift ersetzt die redundante Kombination aus Titel und Tabs. Der aktuelle Bereich wird einmal mit größerem Icon gezeigt; Admins wählen `Lernsets` oder `Tablets` im Menü. Normale Lehrkräfte sehen die einfache Lernsets-Überschrift. Das ersetzt die frühere Tab-Darstellung, ohne Bereiche, Rechte, Editorzustand oder Datenfluss zu ändern.

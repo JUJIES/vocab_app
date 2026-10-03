@@ -198,7 +198,6 @@ test("teacher editor creates sets directly and autosaves manual and imported add
 
   await expect(page.locator("#workspace-save-status")).toHaveText("Gespeichert");
   const publishedSetAfterEdit = page.locator(".workspace-set-row").filter({ hasText: "Tiere auf Englisch" });
-  await page.locator("#workspace-set-menu summary").click();
   const deletePublishedSet = page.locator("#workspace-delete");
   await expect(deletePublishedSet).toBeVisible();
   await deletePublishedSet.click();
@@ -216,7 +215,6 @@ test("teacher editor creates sets directly and autosaves manual and imported add
 
   const savedDraft = page.locator(".workspace-set-row").filter({ hasText: "Manueller Entwurf bleibt erhalten" });
   await savedDraft.click();
-  await page.locator("#workspace-set-menu summary").click();
   await page.locator("#workspace-delete").click();
   await page.locator("#delete-set-confirm").click();
   await expect(savedDraft).toHaveCount(0);

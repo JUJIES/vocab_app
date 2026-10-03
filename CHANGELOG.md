@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- `Set löschen` steht direkt als ruhiger Button im Editor-Kopf. Das Drei-Punkte-Menü mit nur dieser Aktion entfällt; Bestätigungsdialog und Löschrechte bleiben erhalten.
+
 - Für Admins öffnet die Bereichsüberschrift oben links ein kompaktes Menü mit `Lernsets` und `Tablets`; aktueller Titel und größeres Icon ersetzen die doppelte Überschrift-/Tab-Navigation. Normale Lehrkräfte behalten die einfache Überschrift. Tastaturbedienung, Fokusführung und Schließen bei Klick außerhalb sind integriert.
 
 - Die Set-Ordner heißen durchgängig Lerndecks statt Units. Die bestehenden Zuordnungen bleiben erhalten. `Lernen` ersetzt `Lernmodi öffnen` samt externem Pfeil; die Vokabelspalten zeigen nur noch die Inhalts-/Sprachwahl ohne zusätzliche Vorder-/Rückseiten-, Sternchen- oder Bildüberschrift.

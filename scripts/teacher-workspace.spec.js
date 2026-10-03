@@ -232,7 +232,7 @@ test("new sets exist immediately in their unit; partial rows and side choices su
   const id = new URL(page.url()).searchParams.get("set");
   expect((await (await page.request.get(`/api/teacher/sets/${id}`)).json()).set.cards).toHaveLength(0);
   await expect(page.locator("#workspace-share")).toBeEnabled();
-  await expect(page.locator("#workspace-set-menu")).toBeVisible();
+  await expect(page.locator("#workspace-delete")).toBeVisible();
   await page.locator("#set-title-input").fill("BL3 · Neues Set");
   await page.locator('[data-editor-side-select="front"]').selectOption("en");
   const fields = page.locator(".set-card-editor-row").first().locator("input");

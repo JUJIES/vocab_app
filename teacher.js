@@ -2730,7 +2730,6 @@ async function confirmEditorLeave() {
 }
 
 function applyEditableSet(editableSet) {
-  document.getElementById("workspace-set-menu").open = false;
   resetEditorSaveState({ status: editableSet.status });
   state.editorSetId = editableSet.id;
   state.editorContentRevision = editableSet.contentRevision || 1;
@@ -2870,7 +2869,6 @@ function updateEditorStatusUi() {
   elements.workspacePrint.disabled = !available || !ready;
   elements.workspaceShare.disabled = !available;
   elements.workspaceDelete.hidden = !entry?.deletable;
-  document.getElementById("workspace-set-menu").hidden = !entry?.deletable;
   elements.workspaceUsage.replaceChildren();
   elements.workspaceUsage.hidden = !available || !isCurrentTeacherAdmin();
   if (!elements.workspaceUsage.hidden) elements.workspaceUsage.append(createTabletUsageBlock(entry));
