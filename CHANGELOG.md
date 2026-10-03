@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Lehrer-/Admin-Oberfläche zusammengeführt: Topbar und sämtliche Hauptpanels ohne äußere Lücken, Rundungen oder Schatten. Theme-Kontraste und feine Linien strukturieren Bibliothek, Set-Liste, Editor und Tabletverwaltung. Gerätezeilen sowie Lade-/Leer-/Fehlerzustände folgen der flachen Gestaltung; Scroll- und Bedienabläufe bleiben erhalten.
+
 - Die redundante Set-Anzahl unter der Bibliothekssuche entfällt einschließlich ihrer Renderlogik und Abstände. Lerndeck-Zähler, Suche und Leer-/Fehlerzustände bleiben erhalten.
 
 - Lehrer-/Admin-Header reduziert: Name und Admin-Rolle ohne Pill-Hintergründe, Zahnrad ohne dauerhafte Kreisfläche. Dezenter Hover-/Menüstatus und klarer Tastaturfokus bleiben in beiden Themes erhalten.
