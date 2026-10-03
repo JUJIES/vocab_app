@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Die redundante Set-Anzahl unter der Bibliothekssuche entfällt einschließlich ihrer Renderlogik und Abstände. Lerndeck-Zähler, Suche und Leer-/Fehlerzustände bleiben erhalten.
+
 - Lehrer-/Admin-Header reduziert: Name und Admin-Rolle ohne Pill-Hintergründe, Zahnrad ohne dauerhafte Kreisfläche. Dezenter Hover-/Menüstatus und klarer Tastaturfokus bleiben in beiden Themes erhalten.
 
 - Bibliothek und Set-Liste haben oben bündige Überschriften und gleich gestaltete `+ Lerndeck` / `+ Lernset`-Aktionen direkt darunter. Der große Set-Button entfällt; lange Titel behalten die volle Breite. Anlegen und Eigentumsrechte bleiben unverändert.

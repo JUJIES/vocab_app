@@ -116,7 +116,6 @@ const elements = {
   passwordDialogClose: document.getElementById("password-dialog-close"),
   passwordDialogCancel: document.getElementById("password-dialog-cancel"),
   closePasswordTriggers: document.querySelectorAll("[data-close-password]"),
-  setsMeta: document.getElementById("sets-meta"),
   setList: document.getElementById("teacher-set-list"),
   tabletsMeta: document.getElementById("tablets-meta"),
   tabletList: document.getElementById("teacher-tablet-list"),
@@ -1276,7 +1275,6 @@ function renderErrorState(message) {
   elements.tabletEmptyState.hidden = true;
   elements.errorState.hidden = false;
   elements.errorMessage.textContent = message;
-  elements.setsMeta.textContent = "Fehler";
   elements.tabletsMeta.textContent = "";
 }
 

@@ -8,7 +8,7 @@ window.LerndeckTeacherWorkspace = (() => {
     const el = {
       root: byId("teacher-workspace"), nav: byId("workspace-navigation"), owner: byId("workspace-owner"),
       ownerField: byId("workspace-owner-field"), units: byId("workspace-units"), library: byId("workspace-library"),
-      search: byId("workspace-search"), list: byId("teacher-set-list"), title: byId("sets-title"), meta: byId("sets-meta"),
+      search: byId("workspace-search"), list: byId("teacher-set-list"), title: byId("sets-title"),
       empty: byId("teacher-empty-state"), feedback: byId("workspace-library-feedback"), newSet: byId("create-set-button"),
       newUnit: byId("workspace-create-unit"), unitForm: byId("workspace-unit-form"), unitName: byId("workspace-unit-name"),
       unitCancel: byId("workspace-unit-cancel"), editor: byId("workspace-editor"),
@@ -224,7 +224,7 @@ window.LerndeckTeacherWorkspace = (() => {
         }
         row.append(content); el.list.append(row);
       }
-      el.title.textContent = name(); el.meta.textContent = `${filtered.length} Set${filtered.length === 1 ? "" : "s"}`;
+      el.title.textContent = name();
       el.empty.hidden = filtered.length > 0;
       el.empty.querySelector("p").textContent = needle ? "Keine Treffer" : "Keine Sets";
       el.units.scrollTop = navScroll; el.list.scrollTop = listScroll;

@@ -3137,7 +3137,6 @@ body.teacher-workspace-visible { overflow: hidden; }
 .workspace-unit-form { display: grid; gap: 0.55rem; margin-top: 0.75rem; font-size: 0.78rem; }
 .workspace-inline-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 0.55rem; }
 .workspace-unit-form .teacher-button { height: 2.2rem; padding: 0 0.5rem; font-size: 0.75rem; }
-.workspace-library #sets-meta { font-size: 0.7rem; margin-bottom: 0.65rem; }
 .workspace-library .teacher-set-list { display: block; min-height: 0; overflow: auto; overscroll-behavior: contain; }
 .workspace-set-row { display: grid; gap: 0.25rem; width: 100%; padding: 0.8rem 0.7rem; margin-bottom: 0.3rem;
   background: transparent; color: var(--text); border: 0; border-radius: 0.65rem; font: inherit; text-align: left; cursor: pointer; }
