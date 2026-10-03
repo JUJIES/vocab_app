@@ -3168,8 +3168,19 @@ body.teacher-workspace-visible { overflow: hidden; }
 .teacher-editor .set-card-editor-heading__actions .teacher-button { width: auto; height: 2.25rem; font-size: 0.74rem; }
 .workspace-owner-field select { min-height: 2.6rem; }
 .teacher-editor .set-card-editor-columns, .teacher-editor .set-card-editor-row { grid-template-columns: 1.8rem minmax(0, 1fr) minmax(0, 1fr) 2.7rem 2.2rem; }
-.teacher-editor .set-card-editor-row { padding: 0.6rem; }
-.teacher-editor .set-card-editor-list { background: transparent; }
+/* The vocabulary list is an open editor surface, not a nested modal card. */
+.teacher-editor .set-card-editor-list { border: 0; border-radius: 0; background: transparent; gap: 0; }
+.teacher-editor .set-card-editor-columns { padding: 0.35rem 0 0.65rem; border: 0; border-radius: 0; background: transparent; }
+.teacher-editor .set-card-editor-columns__side select { padding: 0.45rem 0.5rem; border-color: transparent; border-radius: 0.3rem; background: transparent; }
+.teacher-editor .set-card-editor-columns__side select:hover:not(:disabled) { background: var(--surface-soft); }
+.teacher-editor .set-card-editor-columns__side select:focus-visible { outline-color: var(--accent); }
+.teacher-editor .set-card-editor-row { padding: 0.65rem 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; }
+.teacher-editor .set-card-editor-row:hover, .teacher-editor .set-card-editor-row:focus-within { background: rgba(var(--ui-rgb), 0.025); }
+.teacher-editor .set-card-editor-row .set-editor-field input { padding: 0.6rem 0.5rem; border-color: transparent; border-radius: 0.3rem; background: transparent; font-weight: 500; text-overflow: ellipsis; }
+.teacher-editor .set-card-editor-row .set-editor-field input:focus { background: var(--surface); border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: -1px; text-overflow: clip; }
+.teacher-editor .set-card-editor-row__number { font-weight: 500; }
+.teacher-editor .set-card-editor-add { border: 0; border-top: 1px solid var(--line); border-radius: 0; background: transparent; }
+.teacher-editor .set-card-editor-add:hover, .teacher-editor .set-card-editor-add:focus-visible { background: var(--surface-soft); }
 .workspace-tablet-usage { position: relative; }
 .workspace-tablet-info-panel {
   position: absolute; z-index: 20; top: calc(100% + 0.4rem); left: 0;
@@ -3212,7 +3223,7 @@ body.teacher-workspace-visible { overflow: hidden; }
   .teacher-editor .set-editor-grid { grid-template-columns: 1fr; }
   .teacher-editor .set-card-editor-columns { grid-template-columns: 1fr 1fr; }
   .teacher-editor .set-card-editor-columns > span { display: none; }
-  .teacher-editor .set-card-editor-row { grid-template-columns: 1.5rem minmax(0, 1fr) 2.7rem 2.2rem; }
+  .teacher-editor .set-card-editor-row { grid-template-columns: 1.5rem minmax(0, 1fr) 2.7rem 2.2rem; padding-block: 0.85rem; }
   .teacher-editor .set-card-editor-row__number { grid-row: 1 / span 2; }
   .teacher-editor .set-editor-field--card[data-side="front"] { grid-column: 2; }
   .teacher-editor .set-editor-field--card[data-side="back"] { grid-column: 2; grid-row: 2; }

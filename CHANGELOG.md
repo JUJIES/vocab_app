@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Die Vokabelliste ist eine offene Tabelle im Editor: kein äußerer Kasten, feine Zeilentrenner und transparente Sprachwahl/Textfelder. Beim Bearbeiten wird die Zelle klar hervorgehoben; Bilder und Hinzufügen-Zeile bleiben erhalten. Auf schmalen Geräten stehen die Wortpaare weiterhin beschriftet untereinander, ohne einzelne Kartenrahmen.
+
 - Lerndeck-Zuordnung und Reihenfolge liegen vollständig in der linken Bibliothek: Sets in Lerndecks oder `Nicht eingeordnet` ziehen; Sets und Lerndecks per Ziehen sortieren. Griffe unterstützen Touch und Alt-Pfeiltasten. Der Editor verliert das Zuordnungsfeld, behält den Pfad. Die persistente Bibliotheksordnung (Store-Version 4) bleibt bei Autosave und Reload erhalten; Inhalte, Codes und Schüler-Lernstände werden nicht verändert.
 
 - `Importieren` nutzt das passende Lucide-Import-Icon mit derselben Größe und Theme-Färbung wie die übrigen Editoraktionen; das Icon ist im PWA-Cache enthalten.
