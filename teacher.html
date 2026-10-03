@@ -20,7 +20,7 @@
     </script>
     <link rel="stylesheet" href="./pwa-splash.css?v=2026-09-30-splash-contrast-v2" />
     <script src="./appearance.js?v=2026-09-30-appearance-v4" data-appearance-scope="teacher"></script>
-    <link rel="stylesheet" href="./teacher.css?v=2026-10-03-deck-context-menu-v1" />
+    <link rel="stylesheet" href="./teacher.css?v=2026-10-03-library-create-actions-v1" />
     <link rel="stylesheet" href="./appearance.css?v=2026-09-30-appearance-v4" />
     <link rel="stylesheet" href="./ui-motion.css?v=2026-08-30-ui-motion-v1" />
     <script src="./pwa.js?v=2026-08-30-pwa-splash-v3" defer></script>
@@ -155,19 +155,21 @@
       >
         <div id="teacher-workspace" class="teacher-workspace" data-mobile-view="library">
           <aside id="workspace-units" class="workspace-units" aria-label="Lerndecks">
-            <h2 class="workspace-heading">Bibliothek</h2>
-            <label id="workspace-owner-field" class="workspace-owner-field" hidden><span>Lehrkraft</span><select id="workspace-owner" aria-label="Bibliothek der Lehrkraft"></select></label>
-            <nav id="workspace-navigation" aria-label="Set-Bibliothek"></nav>
-            <button id="workspace-create-unit" class="workspace-unit-create" type="button">+ Lerndeck anlegen</button>
+            <div class="workspace-panel-header">
+              <h2 class="workspace-heading">Bibliothek</h2>
+              <button id="workspace-create-unit" class="workspace-create-action" type="button" aria-label="Lerndeck anlegen"><img src="./assets/icons/plus.svg" alt="" decoding="async" /><span>Lerndeck</span></button>
+            </div>
             <form id="workspace-unit-form" class="workspace-unit-form" hidden>
               <label for="workspace-unit-name">Lerndeck-Name</label><input id="workspace-unit-name" maxlength="80" required />
               <div class="workspace-inline-actions"><button class="teacher-button" type="submit">Speichern</button><button id="workspace-unit-cancel" class="teacher-button teacher-button--secondary" type="button">Abbrechen</button></div>
             </form>
+            <label id="workspace-owner-field" class="workspace-owner-field" hidden><span>Lehrkraft</span><select id="workspace-owner" aria-label="Bibliothek der Lehrkraft"></select></label>
+            <nav id="workspace-navigation" aria-label="Set-Bibliothek"></nav>
             <p id="workspace-library-feedback" class="teacher-auth__feedback" role="status" aria-live="polite"></p>
           </aside>
           <section id="workspace-library" class="workspace-library" aria-label="Lernsets">
             <div class="workspace-library-controls">
-            <div class="workspace-library-header"><h2 id="sets-title" class="workspace-heading">Alle Sets</h2><button id="create-set-button" class="teacher-button" type="button">+ Neues Set</button></div>
+            <div class="workspace-panel-header"><h2 id="sets-title" class="workspace-heading">Alle Sets</h2><button id="create-set-button" class="workspace-create-action" type="button" aria-label="Lernset anlegen"><img src="./assets/icons/plus.svg" alt="" decoding="async" /><span>Lernset</span></button></div>
             <input id="workspace-search" class="workspace-search" type="search" aria-label="Sets suchen" placeholder="Sets suchen" />
             <p id="sets-meta" class="teacher-section__meta"></p>
             </div>

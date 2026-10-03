@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Bibliothek und Set-Liste haben oben bündige Überschriften und gleich gestaltete `+ Lerndeck` / `+ Lernset`-Aktionen direkt darunter. Der große Set-Button entfällt; lange Titel behalten die volle Breite. Anlegen und Eigentumsrechte bleiben unverändert.
+
 - Lerndecks zeigen keine Drei-Punkte-Schaltfläche mehr. Rechtsklick öffnet die bestehenden Optionen Umbenennen/Entfernen; Tastatur und langes Drücken unterstützen denselben Ablauf. Menü bleibt im Fenster und nutzt die Theme-Farben; Eigentumsrechte, Bestätigung und Erhalt der Sets bleiben unverändert. Direkt nach Drag-and-drop bleiben Klicks auf andere Lerndecks möglich.
 
 - Translation protokolliert automatisch für alle Lehrkräfte/Schüler die Aufgaben und vollständigen Überarbeitungsschleifen als dauerhafte Server-Rohdaten (`DATA_DIR/translation-logs`, eine JSON-Datei je Durchgang). Eingaben, tatsächliches Feedback, Fehlerpunkte/Hilfen, Modellkontext-Verknüpfungen und Zeitstempel bleiben auch nach Weiter/Neustart erhalten. Technische Fehlversuche sind getrennt erkennbar; wiederholte Anfragen erzeugen keine Duplikate. Pflichtspeicherung vor Modellanfrage/Rückgabe mit kostenfreier Speicherwiederholung. Keine Schüleridentitäten, keine neue UI-/Exportfunktion oder Bewertung. Format/Zugriff/Aufbewahrung in `docs/TRANSLATION_LOGS.md`.

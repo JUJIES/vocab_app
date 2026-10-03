@@ -206,7 +206,7 @@ test("organizes units, keeps content identities and flushes autosave before swit
   const saved = (await (await page.request.get(`/api/teacher/sets/${shops.id}`)).json()).set;
   expect(saved.cards.map(card => card.id)).toEqual(shops.cards.map(card => card.id));
   expect(saved.shareCode).toBe(shops.shareCode);
-  await page.getByRole("button", { name: "+ Lerndeck anlegen", exact: true }).click();
+  await page.getByRole("button", { name: "Lerndeck anlegen", exact: true }).click();
   await page.locator("#workspace-unit-name").fill(prefix + " · Unit 2");
   await page.locator("#workspace-unit-form").getByRole("button", { name: "Speichern", exact: true }).click();
   const folder = page.locator("[data-library-view]", { hasText: prefix + " · Unit 2" });
@@ -409,7 +409,7 @@ test("touch long press opens deck options without switching the library or start
 test("new sets exist immediately in their unit; partial rows and side choices survive reload without publication", async ({ page }) => {
   await login(page);
   await page.locator(`[data-library-view="${unit.id}"]`).click();
-  await page.getByRole("button", { name: "+ Neues Set", exact: true }).click();
+  await page.getByRole("button", { name: "Lernset anlegen", exact: true }).click();
   await expect(page.locator("#set-editor-form")).toBeVisible();
   await expect(page.locator("#workspace-breadcrumb")).toContainText(unit.name);
   await expect(page.locator("#workspace-save-status")).toHaveText("Gespeichert");
@@ -507,7 +507,7 @@ test("a library refresh failure after confirmation retains the saved content and
   const saved = (await (await page.request.get(`/api/teacher/sets/${rooms.id}`)).json()).set;
   expect(saved.title).toBe(rooms.title + " saved");
   expect(saved.cards[0].id).toBe(rooms.cards[0].id);
-  await page.getByRole("button", { name: "+ Lerndeck anlegen", exact: true }).click();
+  await page.getByRole("button", { name: "Lerndeck anlegen", exact: true }).click();
   await page.locator("#workspace-unit-name").fill("BL3 · Gesichert");
   await page.locator("#workspace-unit-form").getByRole("button", { name: "Speichern", exact: true }).click();
   await expect(page.locator("[data-library-view]", { hasText: "BL3 · Gesichert" })).toBeVisible();
