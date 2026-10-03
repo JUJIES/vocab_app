@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Die Druckauswahl färbt ihre beiden Icons über die gemeinsame Theme-Iconfarbe; im hellen Leinen-Theme sind sie dunkel und klar lesbar.
+
 - Translation zeigt einen ruhigen Überarbeitungsverlauf mit zitiertem Satz und zugehörigem Feedback. Hinweise und geöffnete Hilfe bleiben beim Tippen erhalten, neue Einträge werden sanft angefügt. Alle validierten Versuche desselben Satzes werden dem Modell mitgegeben (maximal 40); Fehler/identische Prüfungen erzeugen keinen zusätzlichen Eintrag. Tab-Reload erhält Entwurf und Verlauf auch in der Lehrervorschau; beim nächsten Satz beginnt ein neuer Verlauf.
 
 - Translation prüft die Wortstellung ausdrücklich als Grammatik: verständliche, aber unnatürliche neutrale Satzfolgen wie `I’m today sick` werden überarbeitet. Zeitangaben am Anfang/Ende und zulässige Häufigkeits-/Gradadverbien bleiben erlaubt. Auch generierte Ausgangssätze sollen natürlich klingen; acht echte Modellfälle sichern die Abgrenzung.

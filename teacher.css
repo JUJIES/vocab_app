@@ -2135,6 +2135,7 @@ body.has-modal-open {
 }
 
 .print-mode-card__icon {
+  filter: var(--icon-filter);
   width: 3.3rem;
   height: 3.3rem;
   display: block;
