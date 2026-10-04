@@ -378,6 +378,19 @@ test("issue messages get the same no-solution safeguards; grammar rules themselv
   assert.equal(result.accepted,false);
 });
 
+test("language-reference formatting preserves solution protection and factual grammar guidance", async () => {
+  for (const message of ["Schreibe `temporarily`.", "Wähle `need` oder `needs`."]) {
+    const bad = { ...accepted, spelling: false, hint: "Fast geschafft 🔎", issues: [{ quote: "temprarily", occurrence: 0, message }] };
+    const safe = { ...bad, issues: [{ ...bad.issues[0], message: "Rechtschreibung: Prüfe die Schreibweise von `temprarily`. Bei `I` steht die Grundform von `to have`." }] };
+    const { service: s, calls } = service([prompt, bad, safe]);
+    const run = await s.start("forms", "sets/forms.json", document, "source-target", 1);
+    const result = await s.check("forms", run.id, "sets/forms.json", run.prompt.id, "I need the zoo to be temprarily closed.");
+    assert.equal(calls.length, 3, "formatting must not hide a correction or candidate word pair");
+    assert.equal(result.issues[0].message, safe.issues[0].message);
+    assert.equal(result.accepted, false);
+  }
+});
+
 test("missing content has a named rule but no invented marking; empty revision issues repair", async () => {
   const bad={...accepted,meaning:false,hint:'Ein Detail fehlt 🔎',issues:[]};
   const safe={...bad,issues:[{quote:null,occurrence:0,message:'Die Häufigkeit aus der Vorlage fehlt. Ergänze auch diese Information.'}]};

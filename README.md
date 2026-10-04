@@ -104,6 +104,8 @@ Die verbindlichen Beelink-Schritte stehen in [docs/DEPLOYMENT_BEELINK.md](docs/D
 
 ## Satzübung „Translation“
 
+Besprochene Sprachformen im Feedback (z. B. I, he, to have) werden kräftig kursiv von der deutschen Erklärung getrennt. Der Prüfprompt nutzt dafür einzelne Backticks in den vorhandenen Textfeldern; `sentence-feedback-text.js` stellt ausschließlich sichere Textknoten/Sprachreferenzen dar und liefert Klartext für die Live-Region. Alte Anführungszeichen werden mit dargestellt. Schülerantworten, Fehler-Unterstreichungen und Transferbeispiele bleiben wörtlich; die Bewertung ändert sich dadurch nicht. Rohdaten enthalten die Originalmarker.
+
 Die gemeinsame Modusauswahl ergänzt die bisherigen Übungen. Sprachrichtung und Umfang (1 bis höchstens 20 vollständige Set-Karten, mit fortlaufender gemischter Set-Abdeckung) werden vor dem Start gewählt. Pro Karte erzeugt der Server einen kurzen Satz in der sichtbaren Sprache. Der fett markierte Ausdruck kommt aus der Set-Vokabel und ist im Antwortschema fest vorgegeben; die Übersetzung bleibt verborgen. Bei Alternativen wird ein Ausdruck, bei einer Verbformenreihe der Infinitiv fokussiert. Bereits hinterlegte ganze Sätze bleiben als Übersetzungsauftrag möglich.
 
 Translation: `Neuer Satz` erzeugt einen anderen vollständigen Kontext zur gleichen Vokabel/Schwierigkeit, ohne die Aufgabenposition weiterzuzählen. Alte Rückmeldungen bleiben im Serverprotokoll verknüpft erhalten; Fehler behalten Entwurf und Aufgabe. Satzanfänge mit `…` werden für die Übung ergänzt, nicht als fertige Aussage übernommen.

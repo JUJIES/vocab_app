@@ -1513,6 +1513,7 @@ const PUBLIC_ROOT_FILES = new Map([
   ["/answer-rules.js", "answer-rules.js"],
   ["/grading-rules.js", "grading-rules.js"],
   ["/sentence-options.js", "sentence-options.js"],
+  ["/sentence-feedback-text.js", "sentence-feedback-text.js"],
   ["/teacher.html", "teacher.html"],
   ["/teacher.css", "teacher.css"],
   ["/appearance.js", "appearance.js"],

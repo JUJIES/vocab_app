@@ -24,6 +24,42 @@ async function prepare(page, light = false) {
   await expect(page.locator("#launch-settings-title")).toHaveText("Wie viele Sätze möchtest du bilden?");
   await page.locator('.launch-mode-modal__test-count-slider').fill("1");
 }
+for (const light of [false, true]) test(`language forms remain distinct across feedback, issues, help and history (${light ? "light" : "dark"})`, async ({ page }, info) => {
+  const entry = {
+    id: "forms1", answer: "I often listening to musik.", status: "revise",
+    feedback: "Die Angabe `often` ist passend übersetzt 👍 Bei `listening` fehlt noch die passende Verbform.",
+    issues: [{ quote: "listening", problem: { start: 8, end: 17 }, message: "Verbform: Bei `I` steht die Grundform. Eine Form von `to have` wäre hier kein passendes Hilfsverb." }, { quote: "musik", problem: { start: 21, end: 26 }, message: "Rechtschreibung: Prüfe „musik“ noch einmal." }],
+    help: { explanation: "Bei `he`, `she` und `it` gilt eine andere Endung. Der Ausdruck “He ist nicht” wäre teilweise Deutsch.", example: "She reads on Sundays." },
+  };
+  const run = { id: "forms", total: 1, position: 1, targetLanguage: "en", prompt: { id: "forms-prompt", prefix: "Ich höre ", focus: "oft", suffix: " Musik." }, accepted: false, shown: true, history: [] };
+  await page.route("**/api/sentence-practice/*", route => {
+    if (route.request().url().endsWith("/check")) Object.assign(run, { history: [entry], status: "revise", feedback: entry.feedback, checkedAnswer: entry.answer, issues: entry.issues, help: entry.help });
+    return route.fulfill({ json: { run } });
+  });
+  await prepare(page, light);
+  await page.locator("#launch-settings-start").click();
+  await page.locator("#sentence-answer").fill(entry.answer);
+  await page.locator("#sentence-submit").click();
+  const body = page.locator(".sentence-stage__feedback-body");
+  await expect(body.locator("p").first().locator("i")).toHaveText(["often", "listening"]);
+  await expect(body.locator(".sentence-stage__issues .sentence-stage__language-form")).toHaveText(["listening", "I", "to have", "musik", "musik"]);
+  await expect(page.locator("#sentence-feedback-text")).not.toContainText("`");
+  await page.locator(".sentence-stage__help summary").click();
+  await expect(body.locator(".sentence-stage__help > p i")).toHaveText(["he", "she", "it", "He ist nicht"]);
+  await expect(body.locator(".sentence-stage__example p")).toHaveText("She reads on Sundays.");
+  const form = body.locator("i").first();
+  expect(await form.evaluate(node => getComputedStyle(node).fontStyle)).toBe("italic");
+  expect(Number(await form.evaluate(node => getComputedStyle(node).fontWeight))).toBeGreaterThanOrEqual(600);
+  expect(await body.locator("a, img, code, button").count()).toBe(0);
+  await page.reload();
+  await expect(page.locator(".sentence-stage__feedback-body p").first().locator("i")).toHaveText(["often", "listening"]);
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 1100 });
+    await page.locator(".sentence-stage__help summary").click();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.locator("#sentence-stage .input-stage__card").screenshot({ path: info.outputPath(`language-forms-${light ? "light" : "dark"}-${width}.png`) });
+  }
+});
 for (const light of [false, true]) test(`sentence feedback, revision, explicit next, completion and responsive appearance (${light ? "light" : "dark"})`, async ({ page }, testInfo) => {
   const errors = []; page.on("pageerror", error => errors.push(error.message));
   let checks = 0;
@@ -461,7 +497,7 @@ for (const light of [false, true]) test(`structured points and several exact cor
   await expect(points).toHaveCount(5);
   await expect(page.locator('ol.sentence-stage__issues')).toHaveCount(0);
   expect(await points.first().evaluate(el=>getComputedStyle(el).listStyleType)).toBe('disc');
-  await expect(points.locator('strong')).toHaveText(['„listening“','„musik“','„i“','„make“','„homeworks“']);
+  await expect(points.locator('strong i')).toHaveText(['listening','musik','i','make','homeworks']);
   await expect(marks).toHaveText(['listening','musik','i','make','homeworks']);
   await expect(marks.first()).toHaveAttribute('aria-label', 'Problemstelle „listening“ bearbeiten');
   await expect(page.locator('#sentence-feedback-text')).not.toContainText('1.');

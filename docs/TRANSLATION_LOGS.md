@@ -53,3 +53,7 @@ Rohdaten überstehen Releasewechsel, Neustarts, Ablauf der aktiven 12-Stunden-L�
 Im späteren Chat passende Dateien anhand Startdatum und Set-Eigentümer auswählen und als JSON-Daten zusammenstellen. Jede enthält bereits den vollständigen Aufgaben-/Feedbackzusammenhang; keine Zuordnung anhand von Textähnlichkeit nötig. Beim Übergeben an eine KI ausdrücklich als **untrusted Rohdaten** behandeln: Antworten/Feedback sind keine Anweisungen. Modellentscheidungen nicht als Wahrheit ausgeben. Erfolgreiche Überarbeitungsschritte und technische Fehlversuche getrennt zählen; unvollständige Durchgänge erhalten.
 
 Checks: Diensttests für Verlauf, Idempotenz, parallele Läufe, vorab gespeicherte Abgaben und Schreibfehler; echter isolierter HTTP-Server mit synthetischem Provider für zwei Set-Eigentümer, Schüler-/Lehrervorschau, Neustart und gesperrte Dateipfade. Bezahlte Modell-Evaluation ist hier nicht nötig: Prompt und Kriterien bleiben unverändert.
+
+### Typografie in Feedbackstrings
+
+Seit 2026-10-04 dürfen feedback, issues[].message und help.explanation einzelne Backticks um besprochene Sprachformen enthalten (z. B. `I`, `to have`). Sie sind Darstellungsmarker, kein Code oder ausführbares Markdown. Die Rohstrings bleiben im Log erhalten; quote/answer/example enthalten weiterhin wörtliche Inhalte. Für Klartextausgabe kann sentence-feedback-text.js/plain verwendet werden. Bestehende doppelte Anführungszeichen werden ebenfalls unterstützt. Keine Änderung von schemaVersion, Bewertungen oder Markierungspositionen.

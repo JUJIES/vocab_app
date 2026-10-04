@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Translation-Feedback hebt besprochene Sprachformen wie I, he oder to have in kräftiger Kursivschrift hervor, einschließlich Fehlerpunkten und zusätzlicher Hilfe. Ältere Rückmeldungen mit Anführungszeichen bleiben lesbar; sichtbare Formatierungszeichen entfallen. Bewertung, Lösungs- und HTML-Schutz bleiben bestehen.
+
 - Translation erzeugt vollständige Aufgaben auch aus Satzanfängen mit Auslassungspunkten; doppelte Fokus-Phrasen und erkennbare Fragmente werden vor Anzeige repariert oder abgewiesen. Dezentes `Neuer Satz` liefert einen anderen Kontext zur gleichen Vokabel ohne Zählfortschritt. Alte Feedbackschleifen bleiben verknüpft auf dem Server gespeichert; Fehler behalten Entwurf/Aufgabe, Wiederholungen sind idempotent. Satzanfang-Feedback benennt fehlende Fortsetzungen statt gültiger Artikelvarianten.
 
 - Translation-Schwierigkeiten mit zusammenpassenden, per Imagegen erstellten 3D-Icons: Pflänzchen, Berggipfel und Rakete, echte transparente Hintergründe, kompakte WebP-Assets und gleiche 48-px-Darstellung in beiden Themes. Bestehende Auswahl/Bewertung bleibt unverändert; Prompts und Herkunft bei den Assets dokumentiert, PWA-Cache aktualisiert.

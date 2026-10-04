@@ -10180,7 +10180,7 @@ function renderSentenceFeedback(message, status, run = null) {
       header.append(ownLabel, result);
       submission.append(header, quote);
       const text = document.createElement("p");
-      text.textContent = entry.feedback;
+      LerndeckFeedbackText.append(text, entry.feedback);
       const body = document.createElement("div");
       body.className = "sentence-stage__feedback-body";
       const feedbackLabel = document.createElement("strong");
@@ -10194,8 +10194,15 @@ function renderSentenceFeedback(message, status, run = null) {
         for (const issue of entry.issues) {
           const point = document.createElement("li");
           const label = document.createElement("strong");
-          label.textContent = issue.quote === null ? "Satz" : `„${issue.quote}“`;
-          point.append(label, document.createTextNode(` – ${issue.message}`));
+          if (issue.quote === null) label.textContent = "Satz";
+          else {
+            const form = document.createElement("i");
+            form.className = "sentence-stage__language-form";
+            form.textContent = issue.quote;
+            label.append(form);
+          }
+          point.append(label, document.createTextNode(" – "));
+          LerndeckFeedbackText.append(point, issue.message);
           points.append(point);
         }
         body.append(points);
@@ -10206,7 +10213,7 @@ function renderSentenceFeedback(message, status, run = null) {
         const summary = document.createElement("summary");
         summary.textContent = "Mehr Hilfe";
         const explanation = document.createElement("p");
-        explanation.textContent = entry.help.explanation;
+        LerndeckFeedbackText.append(explanation, entry.help.explanation);
         help.append(summary, explanation);
         if (entry.help.example) {
           const example = document.createElement("div");
@@ -10266,7 +10273,8 @@ function renderSentenceFeedback(message, status, run = null) {
   feedback.hidden = !history.length && !notice;
   feedback.dataset.status = status;
   const spoken = message ? [message, ...(!run?.error && !run?.complete ? history.at(-1)?.issues || [] : []).map(issue => `${issue.quote || "Satz"}: ${issue.message}`)].join(" ") : "";
-  if (elements.sentenceFeedbackText.textContent !== spoken) elements.sentenceFeedbackText.textContent = spoken;
+  const spokenText = LerndeckFeedbackText.plain(spoken);
+  if (elements.sentenceFeedbackText.textContent !== spokenText) elements.sentenceFeedbackText.textContent = spokenText;
   if (added && !state.sentenceBusy) requestAnimationFrame(() => {
     if (!added.isConnected || added.hidden || state.appMode !== APP_MODES.SENTENCE) return;
     const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;

@@ -1,5 +1,12 @@
 # Satzübung: gezielte Modell-Evaluation (2026-10-03)
 
+## 2026-10-04: Sprachreferenzen im Feedback
+
+Drei synthetische Überarbeitungsschleifen mit festen Quellsätzen und echten Modellprüfungen (insgesamt sechs Prüfungen): mehrere Fehler bei Musik/Hausaufgaben, she have bei Katzen, deutsches ist im englischen Satz. Alle drei fehlerhaften Antworten abgewiesen, alle drei vollständigen Korrekturen angenommen. Texte gelesen: besprochene Formen often, I, -ing, she, have, not und tired werden über die neuen Marker kenntlich gemacht; keine korrigierten Aufgabensätze oder neuen Annahmeregeln. Die korrigierten Schritte würdigen die konkrete Verbesserung. Die feste synthetische Vorlage isoliert den Prüfprompt; dies ist kein neuer Generierungstest.
+
+Die echten Versuche/Feedbacks sind in separaten Server-Rohdaten unter `_runtime/Lerndeck/preflight/feedback-language-forms-20261004/data/translation-logs` gespeichert. Diensttests sichern weiter Lösungsschutz auch mit markierten Kandidaten/fehlender Zielvokabel; Formattertests sichern Apostrophe, alte Zitate, unveränderten Alttext und reine Textdarstellung von HTML. Chromium/WebKit prüfen beide Themes, Desktop/schmal, Fehlerpunkte, Hilfe, Klartext-Live-Region und Reload. Grenzen: Nur ausdrücklich markierte Referenzen werden hervorgehoben; unmarkierte historische Formen werden bewusst nicht erraten.
+
+
 ## 2026-10-04: Satzanfänge, vollständige Aufgaben und neuer Kontext
 
 - Produktives Rohdatenbeispiel bestätigt: Ausgangsvokabel `Ein Nachteil ist …`, generierter Satz `Ein Nachteil ist Ein Nachteil ist …`. Satzanfangs-Platzhalter und Wiederholung wurden bisher nicht fachlich abgefangen; `A disadvantage is` wurde zudem als grammatisch vollständige Aussage bewertet und A falsch kritisiert.

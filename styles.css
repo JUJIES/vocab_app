@@ -7739,6 +7739,7 @@ html[data-tafelraum-embed="true"] .flashcard-shell {
 .sentence-stage__feedback-entry[data-status="accepted"] .sentence-stage__feedback-result { color: rgb(var(--learner-success-rgb, 166, 244, 195)); background: rgba(var(--learner-success-rgb, 166, 244, 195), .09); }
 .sentence-stage__feedback-entry[data-status="uncertain"] .sentence-stage__feedback-result { color: rgba(var(--learner-text-rgb, 244, 247, 255), .75); background: rgba(var(--learner-ui-rgb, 214, 224, 246), .08); }
 .sentence-stage__feedback-body { padding: 1rem 1.2rem 1.2rem; overflow-wrap: anywhere; }
+.sentence-stage__language-form { font-style: italic; font-weight: 650; padding-inline: .06em; color: rgb(var(--learner-text-rgb, 244, 247, 255)); }
 .sentence-stage__feedback-excerpt { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 1.1rem; font-weight: 550; color: rgb(var(--learner-text-rgb, 244, 247, 255)); }
 .sentence-stage__feedback-nav { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-top: .75rem; }
 .sentence-stage__feedback-nav[hidden] { display: none; }
