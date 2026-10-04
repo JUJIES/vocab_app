@@ -35,7 +35,9 @@ test("the real API logs student loops from multiple teachers, preserves files ac
     constructor() { this.responses = { create: async body => {
       const data = JSON.parse(body.input[0].content);
       if (data.learner_answer === "MODEL_FAIL") throw Error("private-provider-error");
-      const result = body.text.format.name === "sentence_prompt"
+      const result = body.text.format.name === "sentence_summary"
+        ? { praise: "Du hast alle Sätze passend übersetzt 👍", points: [] }
+        : body.text.format.name === "sentence_prompt"
         ? { complete: true, prefix: data.previous_source_sentences?.length ? "Das Auto braucht regelmäßige " : "Das Fahrrad braucht regelmäßige ", focus: data.source_expression, suffix: "." }
         : { grammar: true, meaning: data.learner_answer.includes("regular"), target: true, spelling: true,
           hint: data.learner_answer.includes("regular") ? "Jetzt ist die Häufigkeit auch dabei 🌟" : "Die Vokabel passt 👍",
@@ -91,6 +93,7 @@ test("the real API logs student loops from multiple teachers, preserves files ac
     const body = { tabletId: "blau-1", setPath: set.path };
     let run = await practice("start", { ...body, count: 1, difficulty: "easy", ownerTeacherId: "forged-client-owner" }, studentHeaders);
     const identifiers = { ...body, id: run.id, promptId: run.prompt.id };
+    assert.equal((await post("/api/sentence-practice/summary", identifiers, studentHeaders)).status, 409);
     await practice("shown", identifiers, studentHeaders);
     const revised = await practice("check", { ...identifiers, answer: "My bike needs maintenance." }, studentHeaders);
     assert.equal(revised.accepted, false);
@@ -106,7 +109,13 @@ test("the real API logs student loops from multiple teachers, preserves files ac
     run = await practice("check", { ...identifiers, answer: set === owned[0] ? "My car needs regular maintenance." : "My bike needs regular maintenance." }, studentHeaders);
     assert.equal(run.accepted, true);
     assert.equal(run.history.length, set === owned[0] ? 1 : 2);
-    assert.equal((await practice("next", identifiers, studentHeaders)).complete, true);
+    const completed = await practice("next", identifiers, studentHeaders);
+    assert.equal(completed.complete, true);
+    assert.equal(completed.completion.sentences[0].attemptCount, set === owned[0] ? 1 : 2);
+    assert.equal((await post("/api/sentence-practice/summary", identifiers)).status, 401);
+    const summarized = await practice("summary", identifiers, studentHeaders);
+    assert.ok(summarized.completion.summary.praise);
+    assert.deepEqual((await practice("summary", identifiers, studentHeaders)).completion, summarized.completion);
     runs.push({ run, revised });
   }
   const account = credentials.find(entry => entry.id === "aksana");
@@ -141,7 +150,10 @@ test("the real API logs student loops from multiple teachers, preserves files ac
     assert.equal(attempts[2].feedback, runs[index].run.feedback);
     assert.deepEqual(attempts[2].previousAttemptIds, index === 0 ? [] : [attempts[0].id]);
     assert.match(record.processorCodeSha256, /^[a-f0-9]{64}$/);
-    assert.equal(JSON.stringify(record).includes("blau-1"), false);
+    assert.equal(record.tabletId, "blau-1", "trusted device ID now supports the requested longitudinal evaluation");
+    assert.equal(record.summaries.length, 1);
+    assert.equal(record.summaries[0].status, "completed");
+    assert.ok(record.summaries[0].result.praise);
     assert.equal(JSON.stringify(record).includes(token), false);
     assert.equal(JSON.stringify(record).includes("synthetic-test-key"), false);
   }

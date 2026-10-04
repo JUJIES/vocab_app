@@ -4,6 +4,7 @@ const { SentenceService, locateProblem } = require("../lib/sentence-service");
 const document = { set: { title: "Context", languages: { source: "de", target: "en" } }, cards: [{ source: { text: "vorübergehend" }, target: { text: "temporarily" }, acceptedAnswers: ["for a while"] }] };
 const prompt = { complete: true, prefix: "Der Zoo ist ", focus: "vorübergehend", suffix: " geschlossen." };
 const accepted = { grammar: true, meaning: true, target: true, spelling: true, hint: "Gut.", help: null, issues: [] };
+const summaryResult = (attemptId) => ({ praise: "Du hast die Aussage passend übersetzt und den Tippfehler verbessert 👍", points: [{ title: "Rechtschreibung", tip: "Prüfe die Schreibweise sorgfältig.", examples: [{ attemptId, wrong: "temprarily", right: "temporarily" }] }] });
 function service(results) {
   const calls = [];
   return { calls, service: new SentenceService({ client: { responses: { create: async body => {
@@ -448,4 +449,66 @@ test("provider quote choices contain real complete spans, including contractions
     }
     if (answer.startsWith("I'm")) assert.ok(quotes.includes("I'm"));
   }
+});
+
+test("completion and requested summary use durable solved attempts, preserve device context and cache paid output", async () => {
+  const revise = { ...accepted, spelling: false, hint: "Fast geschafft 🔎", issues: [{ quote: "temprarily", occurrence: 0, message: "Rechtschreibung: Prüfe dieses Wort." }] };
+  const results = [prompt, revise, { ...prompt, prefix: "Der Park ist " }, new Error("private-provider-key"), revise, accepted];
+  const { service: s, calls } = service(results);
+  const actor = "tablet:blau-1", setPath = "sets/context.json";
+  let run = await s.start(actor, setPath, document, "source-target", 1, "easy", { tabletId: "blau-1", ownerTeacherId: "julius" });
+  await assert.rejects(s.summary(actor, run.id, setPath), error => error.status === 409);
+  await s.check(actor, run.id, setPath, run.prompt.id, "The zoo is temprarily closed.");
+  run = await s.replace(actor, run.id, setPath, run.prompt.id);
+  await assert.rejects(s.check(actor, run.id, setPath, run.prompt.id, "MODEL_FAIL"));
+  const revision = await s.check(actor, run.id, setPath, run.prompt.id, "The park is temprarily closed.");
+  await s.check(actor, run.id, setPath, run.prompt.id, "The park is temporarily closed.");
+  run = await s.next(actor, run.id, setPath, run.prompt.id);
+  assert.equal(run.completion.sentences.length, 1);
+  assert.equal(run.completion.sentences[0].attemptCount, 2);
+  assert.equal(run.completion.sentences[0].answer, "The park is temporarily closed.");
+  assert.equal(run.completion.summary, null);
+  results.push(summaryResult(revision.history[0].id));
+  const final = await s.summary(actor, run.id, setPath);
+  const input = JSON.parse(calls.at(-1).input[0].content);
+  assert.equal(input.sentences.length, 1); assert.equal(input.sentences[0].attemptCount, 2);
+  assert.deepEqual(input.sentences[0].attempts.map(x => x.answer), ["The park is temprarily closed.", "The park is temporarily closed."]);
+  assert.equal(calls.at(-1).text.format.name, "sentence_summary");
+  assert.equal(calls.at(-1).reasoning.effort, "low");
+  const raw = await s.logStore.read(s.get(actor, run.id, setPath));
+  assert.equal(raw.tabletId, "blau-1"); assert.equal(raw.summaries.length, 1);
+  assert.deepEqual(raw.summaries[0].result, final.completion.summary);
+  assert.deepEqual(raw.summaries[0].sourceAttemptIds, input.sentences[0].attempts.map(x => x.id));
+  const count = calls.length;
+  assert.deepEqual((await s.summary(actor, run.id, setPath)).completion, final.completion);
+  assert.equal(calls.length, count, "cached summary must not call the provider again");
+  await assert.rejects(s.summary("tablet:rot-1", run.id, setPath), error => error.status === 410);
+});
+
+test("summary retries retain paid result on storage failure; provider failure records no unsafe feedback", async () => {
+  const revise = { ...accepted, spelling: false, hint: "Prüfe das Wort 🔎", issues: [{ quote: "temprarily", occurrence: 0, message: "Rechtschreibung: Prüfe die Schreibweise." }] };
+  const results = [prompt, revise, accepted, new Error("private-provider-secret")];
+  const { service: s, calls } = service(results);
+  let run = await s.start("teacher:julius", "sets/context.json", document, "source-target", 1);
+  const checked = await s.check("teacher:julius", run.id, "sets/context.json", run.prompt.id, "The zoo is temprarily closed.");
+  await s.check("teacher:julius", run.id, "sets/context.json", run.prompt.id, "The zoo is temporarily closed.");
+  run = await s.next("teacher:julius", run.id, "sets/context.json", run.prompt.id);
+  await assert.rejects(s.summary("teacher:julius", run.id, "sets/context.json"), error => error.status === 503 && !error.message.includes("private-provider"));
+  let raw = await s.logStore.read(s.get("teacher:julius", run.id, "sets/context.json"));
+  assert.equal(raw.summaries[0].status, "error"); assert.equal(raw.summaries[0].result, null);
+  const example = summaryResult(checked.history[0].id);
+  results.push({ ...example, points: [{ ...example.points[0], examples: [{ ...example.points[0].examples[0], wrong: "invented" }] }] }, example);
+  const finish = s.logStore.summaryFinished.bind(s.logStore);
+  let failWrite = true;
+  s.logStore.summaryFinished = async (...args) => { if (failWrite) { failWrite = false; throw new Error("disk failed"); } return finish(...args); };
+  await assert.rejects(s.summary("teacher:julius", run.id, "sets/context.json"), error => error.status === 503);
+  assert.equal(s.view(s.get("teacher:julius", run.id, "sets/context.json")).completion.summary, null);
+  const requests = calls.length;
+  const completed = await s.summary("teacher:julius", run.id, "sets/context.json");
+  assert.equal(calls.length, requests, "storage-only retry reuses the validated provider result");
+  assert.deepEqual(completed.completion.summary, example);
+  raw = await s.logStore.read(s.get("teacher:julius", run.id, "sets/context.json"));
+  assert.equal(raw.summaries.length, 2); assert.equal(raw.summaries[1].modelRequests, 2);
+  assert.equal(raw.summaries[1].status, "completed");
+  assert.equal(JSON.stringify(raw).includes("invented"), false);
 });
