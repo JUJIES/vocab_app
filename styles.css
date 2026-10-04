@@ -7711,27 +7711,36 @@ html[data-tafelraum-embed="true"] .flashcard-shell {
 /* Context sentences share the Eingabe surface, with one quiet response field. */
 .sentence-stage .input-stage__menu { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .sentence-stage__progress { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.sentence-stage .input-stage__prompt-pane { min-height: 8rem; padding: clamp(1.4rem, 3vw, 2rem); }
 .sentence-stage__prompt { max-width: 36ch; display: block; font-size: clamp(1.5rem, 3vw, 2.3rem); font-weight: 400; line-height: 1.5; }
 .sentence-stage__prompt strong { font-weight: 750; }
 .sentence-stage__answer { border: 1px solid rgba(var(--learner-ui-rgb, 214, 224, 246), .16); background: rgba(var(--learner-ui-rgb, 214, 224, 246), .035); width: 100%; min-height: 7rem; resize: vertical; padding: 1rem; font: inherit; line-height: 1.6; border-radius: 1rem; }
 .sentence-stage__answer[data-status="accepted"] { border-color: rgba(var(--learner-success-rgb, 166, 244, 195), .65); }
 .sentence-stage__answer[data-status="revise"] { border-color: rgba(var(--learner-warning-rgb, 255, 220, 158), .65); }
-/* A revision is a quoted attempt with feedback, not a chat message. */
-.sentence-stage__feedback { margin: 0; color: rgb(var(--learner-text-rgb, 244, 247, 255)); line-height: 1.55; }
-.sentence-stage__feedback p { margin: .4rem 0 0; }
-.sentence-stage__issues { list-style-type: disc; margin: .65rem 0 0; padding-inline-start: 1.4rem; display: grid; gap: .55rem; overflow-wrap: anywhere; }
-.sentence-stage__issues li::marker { font-weight: 700; color: rgba(var(--learner-text-rgb, 244, 247, 255), .7); }
-.sentence-stage__feedback-label { font-size: .85rem; font-weight: 700; }
-.sentence-stage__feedback-list { list-style: none; margin: .65rem 0 0; padding: 0; display: grid; gap: .85rem; }
-/* Each bubble belongs to the submitted sentence immediately above it. */
-.sentence-stage__feedback-entry { min-width: 0; }
-.sentence-stage__feedback-body { --feedback-border: rgba(var(--learner-ui-rgb, 214, 224, 246), .18); --feedback-bg: color-mix(in srgb, rgb(var(--learner-ui-rgb, 214, 224, 246)) 5%, var(--surface)); position: relative; margin-top: .65rem; padding: .8rem 1rem; border: 1px solid var(--feedback-border); border-radius: .3rem 1rem 1rem 1rem; background: var(--feedback-bg); }
-.sentence-stage__feedback-body::before { content: ""; position: absolute; top: -.4rem; inset-inline-start: 1.2rem; width: .7rem; height: .7rem; border-top: 1px solid var(--feedback-border); border-inline-start: 1px solid var(--feedback-border); background: var(--feedback-bg); transform: rotate(45deg); }
-.sentence-stage__feedback-body > p:first-child { margin-top: 0; }
-.sentence-stage__feedback-entry.is-latest .sentence-stage__feedback-body { --feedback-border: rgba(var(--learner-ui-rgb, 214, 224, 246), .3); }
-.sentence-stage__feedback-entry[data-status="accepted"] .sentence-stage__feedback-body { --feedback-border: rgba(var(--learner-success-rgb, 166, 244, 195), .35); }
-.sentence-stage__feedback-entry[data-status="accepted"] .sentence-stage__feedback-body > p { color: rgb(var(--learner-success-rgb, 166, 244, 195)); }
-.sentence-stage__feedback-excerpt { margin: 0; padding-inline: .7rem; white-space: pre-wrap; overflow-wrap: anywhere; font-style: italic; color: rgba(var(--learner-text-rgb, 244, 247, 255), .8); }
+/* One submitted sentence and its feedback form a browsable revision card. */
+.sentence-stage__feedback { margin: 0; color: rgb(var(--learner-text-rgb, 244, 247, 255)); line-height: 1.6; }
+.sentence-stage__feedback p { margin: .45rem 0 0; }
+.sentence-stage__issues { list-style-type: disc; margin: .85rem 0 0; padding-inline-start: 1.25rem; display: grid; gap: .75rem; overflow-wrap: anywhere; }
+.sentence-stage__issues li::marker { color: rgba(var(--learner-text-rgb, 244, 247, 255), .55); }
+.sentence-stage__feedback-label { font-size: .85rem; font-weight: 700; color: rgba(var(--learner-text-rgb, 244, 247, 255), .7); }
+.sentence-stage__feedback-list { list-style: none; margin: 0; padding: 0; touch-action: pan-y pinch-zoom; border-radius: 1.15rem; overflow: hidden; }
+.sentence-stage__feedback-list:focus-visible { outline: 2px solid rgba(var(--learner-ui-rgb, 214, 224, 246), .7); outline-offset: 4px; }
+.sentence-stage__feedback-entry { min-width: 0; border-radius: 1.15rem; background: rgba(var(--learner-ui-rgb, 214, 224, 246), .045); overflow: hidden; }
+.sentence-stage__submission { padding: 1rem 1.2rem; background: rgba(var(--learner-ui-rgb, 214, 224, 246), .065); }
+.sentence-stage__submission-header { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .55rem; font-size: .8rem; }
+.sentence-stage__submission-header > strong { color: rgba(var(--learner-text-rgb, 244, 247, 255), .7); font-weight: 700; }
+.sentence-stage__feedback-result { padding: .2rem .65rem; border-radius: 2rem; font-size: .75rem; font-weight: 650; color: rgb(var(--learner-warning-rgb, 255, 220, 158)); background: rgba(var(--learner-warning-rgb, 255, 220, 158), .09); }
+.sentence-stage__feedback-entry[data-status="accepted"] .sentence-stage__feedback-result { color: rgb(var(--learner-success-rgb, 166, 244, 195)); background: rgba(var(--learner-success-rgb, 166, 244, 195), .09); }
+.sentence-stage__feedback-entry[data-status="uncertain"] .sentence-stage__feedback-result { color: rgba(var(--learner-text-rgb, 244, 247, 255), .75); background: rgba(var(--learner-ui-rgb, 214, 224, 246), .08); }
+.sentence-stage__feedback-body { padding: 1rem 1.2rem 1.2rem; overflow-wrap: anywhere; }
+.sentence-stage__feedback-excerpt { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 1.1rem; font-weight: 550; color: rgb(var(--learner-text-rgb, 244, 247, 255)); }
+.sentence-stage__feedback-nav { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-top: .75rem; }
+.sentence-stage__feedback-nav[hidden] { display: none; }
+.sentence-stage__feedback-arrow { display: grid; place-items: center; flex: 0 0 3rem; width: 3rem; height: 3rem; padding: 0; border: 0; border-radius: 50%; color: rgb(var(--learner-text-rgb, 244, 247, 255)); background: rgba(var(--learner-ui-rgb, 214, 224, 246), .08); cursor: pointer; }
+.sentence-stage__feedback-arrow:hover:not(:disabled) { background: rgba(var(--learner-ui-rgb, 214, 224, 246), .15); }
+.sentence-stage__feedback-arrow:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.sentence-stage__feedback-arrow:disabled { opacity: .3; cursor: default; }
+.sentence-stage__feedback-position { text-align: center; font-size: .85rem; font-weight: 650; }
 .sentence-stage__problem { display: inline; padding: 0; border: 0; border-radius: 0; background: transparent; color: inherit; font: inherit; text-decoration: underline wavy rgb(var(--learner-danger-rgb, 225, 146, 136)); text-underline-offset: .25em; text-decoration-thickness: 1.5px; }
 /* Give even a one-letter word a real inline box for Safari hit testing. */
 button.sentence-stage__problem { display: inline-block; min-width: .6em; padding-inline: .1em; margin-inline: -.1em; cursor: pointer; }
@@ -7751,6 +7760,7 @@ button.sentence-stage__problem { display: inline-block; min-width: .6em; padding
 .sentence-difficulty__choice { position: relative; min-width: 0; cursor: pointer; }
 .sentence-difficulty__choice input { position: absolute; opacity: 0; width: 1px; height: 1px; }
 .sentence-difficulty__content { display: grid; justify-items: center; gap: .2rem; padding: .7rem .3rem; border: 1px solid rgba(var(--learner-ui-rgb, 214, 224, 246), .14); border-radius: 1rem; background: rgba(var(--learner-ui-rgb, 214, 224, 246), .025); }
+.sentence-difficulty__content img { display: block; width: 3rem; height: 3rem; object-fit: contain; }
 .sentence-difficulty__content strong { font-size: .95rem; }
 .sentence-difficulty__content small { font-size: .75rem; color: rgba(var(--learner-text-rgb, 244, 247, 255), .65); }
 .sentence-difficulty__choice input:checked + .sentence-difficulty__content { border-color: rgba(var(--mode-accent-rgb, 174, 183, 220), .65); background: rgba(var(--learner-ui-rgb, 214, 224, 246), .1); }

@@ -33,19 +33,19 @@
     </script>
     <script src="./appearance.js?v=2026-09-30-appearance-v4" data-appearance-scope="student"></script>
     <link rel="stylesheet" href="./pwa-splash.css?v=2026-09-30-splash-contrast-v2" />
-    <link rel="stylesheet" href="./styles.css?v=2026-10-04-stable-mode-height-v1" />
+    <link rel="stylesheet" href="./styles.css?v=2026-10-04-feedback-motion-difficulty-icons-v1" />
     <link rel="stylesheet" href="./appearance.css?v=2026-09-30-appearance-v4" />
     <link rel="stylesheet" href="./ui-motion.css?v=2026-08-30-ui-motion-v1" />
     <script src="./pwa.js?v=2026-08-30-pwa-splash-v3" defer></script>
     <script src="./ui-motion.js?v=2026-08-30-ui-motion-v1" defer></script>
     <script src="./tafelraum-embed.js?v=2026-09-08-content-zoom-layout-v2" defer></script>
     <script src="./answer-rules.js?v=2026-10-03-optional-infinitive-v3" defer></script>
-    <script src="./sentence-options.js?v=2026-10-03-sentence-levels-v1" defer></script>
+    <script src="./sentence-options.js?v=2026-10-04-difficulty-icons-v1" defer></script>
     <script src="./grading-rules.js?v=2026-09-10-ihk-v1" defer></script>
     <script src="./irregular-verbs.js?v=2026-09-06-optional-to-v2" defer></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js" defer></script>
-    <script src="./app.js?v=2026-10-04-stable-mode-height-v1" defer></script>
+    <script src="./app.js?v=2026-10-04-feedback-motion-v1" defer></script>
   </head>
   <body>
     <div class="pwa-splash" role="status" aria-label="Lerndeck wird geladen">
@@ -662,8 +662,12 @@
                 <textarea id="sentence-answer" class="input-stage__input sentence-stage__answer" rows="3" maxlength="600" autocomplete="off" spellcheck="false" placeholder="Deinen Satz eingeben" required></textarea>
                 <button id="sentence-submit" class="input-stage__button input-stage__button--enter" type="submit" disabled>Prüfen</button>
                 <section id="sentence-feedback" class="sentence-stage__feedback" aria-label="Feedbackverlauf" hidden>
-                  <strong class="sentence-stage__feedback-label">Feedback:</strong>
-                  <ol id="sentence-feedback-list" class="sentence-stage__feedback-list"></ol>
+                  <ol id="sentence-feedback-list" class="sentence-stage__feedback-list" tabindex="0" aria-label="Dein Satz und Feedback. Mit den Pfeiltasten blättern."></ol>
+                  <nav id="sentence-feedback-nav" class="sentence-stage__feedback-nav" aria-label="Feedbackverlauf durchsehen" hidden>
+                    <button id="sentence-feedback-previous" class="sentence-stage__feedback-arrow" type="button" aria-label="Vorheriges Feedback" aria-controls="sentence-feedback-list"><span class="material-symbols-outlined" aria-hidden="true">chevron_left</span></button>
+                    <div class="sentence-stage__feedback-position"><span>Dein Feedback</span><span id="sentence-feedback-position" class="visually-hidden" role="status" aria-live="polite"></span></div>
+                    <button id="sentence-feedback-next" class="sentence-stage__feedback-arrow" type="button" aria-label="Nächstes Feedback" aria-controls="sentence-feedback-list"><span class="material-symbols-outlined" aria-hidden="true">chevron_right</span></button>
+                  </nav>
                   <p id="sentence-feedback-notice" hidden></p>
                   <p id="sentence-feedback-text" class="visually-hidden" role="status" aria-live="polite"></p>
                 </section>

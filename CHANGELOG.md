@@ -2,9 +2,15 @@
 
 ## Unreleased
 
+- Translation-Schwierigkeiten mit zusammenpassenden, per Imagegen erstellten 3D-Icons: Pflänzchen, Berggipfel und Rakete, echte transparente Hintergründe, kompakte WebP-Assets und gleiche 48-px-Darstellung in beiden Themes. Bestehende Auswahl/Bewertung bleibt unverändert; Prompts und Herkunft bei den Assets dokumentiert, PWA-Cache aktualisiert.
+
+- Translation-Feedback folgt beim Wischen dem Finger und gleitet mit der Bremskurve der Lernkarten weiter. Pfeile/Tastatur animieren ebenso, unterschiedliche Rückmeldungshöhen gleichen sich sanft an, kurze/abgebrochene Gesten federn zurück. Randwiderstand, sichere Unterbrechung und sofortiger Wechsel bei Reduced Motion; keine Änderung am Verlauf oder an der Bewertung.
+
 - Lernmodus-Auswahl reserviert bei jeder Fensterbreite den Platz des höchsten Detailinhalts aller vier Modi. Translation, kürzere Beschreibungen und Durchgangsstatus verändern beim Wechsel weder Modalhöhe noch Position. Natürliche Messung über denselben Renderer, Neuberechnung beim Öffnen/Zurückkehren, Fensteränderungen und geladenen Fonts; kein Abschneiden oder feste Desktophöhe auf Mobilgeräten.
 
 - Set-Löschen im Editor als dezentes rotes Papierkorb-Icon aus dem bestehenden SVG-Set. Zugänglicher Name/Tooltip, Bestätigungsdialog und Eigentumsrechte bleiben erhalten; Theme-Filter und PWA-Assets aktualisiert.
+
+- Translation zeigt jeweils einen Versuch als klare Karte: hervorgehobener „Dein Satz“ und Feedback ohne Sprechblase. Frühere Versuche sind über große Chevron-Pfeile, horizontales Wischen oder Pfeiltasten erreichbar. Zwischen den Pfeilen steht „Dein Feedback“ statt Versuchszähler und Wisch-Hinweis; die Position bleibt für Screenreader verfügbar. Neue Prüfungen öffnen den neuesten Versuch; Entwurf, vollständiger Verlauf, geöffnete Hilfe, Markierungen und Serverprotokoll bleiben erhalten. Beide Themes und PWA-Assets aktualisiert.
 
 - Tablet-SVG auf die gemeinsame 24-px-Zeichenfläche und Strichstärke der Aktionsicons angepasst, mit sicherem Abstand der Kontur zum Rand. Der Editor-Kopf bleibt ohne bisherigen 1-px-Versatz beim Scrollen ausgerichtet; gemeinsames Asset und PWA-Cache werden aktualisiert. Keine Änderung an Gerätezugriffen oder Tablet-Info-Abläufen.
 

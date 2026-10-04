@@ -83,6 +83,28 @@ test("provider failure preserves the draft, gives neutral feedback and supports 
   await page.locator("#sentence-submit").click();
   await expect(page.locator("#sentence-submit")).toHaveText("Weiter");
 });
+test("uncertain feedback stays neutral and is preserved when editing", async ({ page }) => {
+  const run = { id: "uncertain-run", total: 1, position: 1, targetLanguage: "en", prompt: { id: "uncertain-prompt", prefix: "Der Zoo ist ", focus: "vorübergehend", suffix: " geschlossen." }, accepted: false, status: "ready", feedback: "", history: [], shown: true };
+  await page.route("**/api/sentence-practice/*", route => {
+    if (route.request().url().endsWith("/check")) {
+      const feedback = "Ich bin mir bei der Prüfung nicht sicher. Bitte frage deine Lehrkraft. 🔎";
+      const answer = route.request().postDataJSON().answer;
+      Object.assign(run, { status: "uncertain", checkedAnswer: answer, feedback, issues: [], history: [{ id: "uncertain-attempt", answer, feedback, status: "uncertain", issues: [], help: null }] });
+    }
+    return route.fulfill({ json: { run } });
+  });
+  await prepare(page);
+  await page.locator("#launch-settings-start").click();
+  await page.locator("#sentence-answer").fill("The zoo is temporarily closed.");
+  await page.locator("#sentence-submit").click();
+  await expect(page.locator(".sentence-stage__feedback-result")).toHaveText("Nicht sicher");
+  await expect(page.locator("#sentence-answer")).toHaveAttribute("aria-invalid", "false");
+  await expect(page.locator("#sentence-submit")).toHaveText("Prüfen");
+  await page.locator("#sentence-answer").fill("The zoo is temporarily closed!");
+  await expect(page.locator(".sentence-stage__feedback-result")).toHaveText("Nicht sicher");
+  await expect(page.locator("button.sentence-stage__problem")).toHaveCount(0);
+});
+
 test("tablet session gates paid calls and completed student run counts once without a grade", async ({ page }) => {
   const anonymous = await page.request.post("/api/sentence-practice/start", { data: { setPath: "sets/food-basics-01.json", count: 1 } });
   expect(anonymous.status()).toBe(401);
@@ -152,7 +174,7 @@ for (const light of [false, true]) test(`specific feedback highlights only the p
   await page.locator("#sentence-answer").fill("  " + answer);
   await page.locator("#sentence-submit").click();
   await expect(page.locator("#sentence-feedback-text")).toContainText("‚ist‘ ist noch Deutsch");
-  await expect(page.locator(".sentence-stage__feedback-label")).toHaveText("Feedback:");
+  await expect(page.locator(".sentence-stage__feedback-label")).toHaveText("Feedback");
   const mark = page.locator("button.sentence-stage__problem");
   await expect(mark).toHaveText("ist");
   expect(await mark.evaluate(el => getComputedStyle(el).textDecorationStyle)).toBe("wavy");
@@ -219,7 +241,7 @@ for (const light of [false,true]) test(`difficulty and optional transfer help ($
   expect(shown).toBe(1);
 });
 
-for (const light of [false, true]) test(`revision history survives edits, retries and reload, then resets (${light ? 'light' : 'dark'})`, async ({ page }, testInfo) => {
+for (const light of [false, true]) test(`revision history survives edits, retries and reload, then resets (${light ? 'light' : 'dark'})`, async ({ page, browserName }, testInfo) => {
   const errors = []; page.on('pageerror', error => errors.push(error.message));
   const run = { id: 'history-run', total: 2, position: 1, targetLanguage: 'en', prompt: { id: 'history-prompt', prefix: 'Mein Fahrrad hat einen ', focus: 'platten Reifen', suffix: '.' }, accepted: false, status: 'ready', feedback: '', history: [], shown: true };
   let failNext = false;
@@ -241,11 +263,18 @@ for (const light of [false, true]) test(`revision history survives edits, retrie
   await page.locator('#launch-settings-start').click();
   const entries = page.locator('.sentence-stage__feedback-entry');
   const quotes = page.locator('.sentence-stage__feedback-excerpt');
+  const active = page.locator('.sentence-stage__feedback-entry:visible');
+  const previous = page.getByRole('button', { name: 'Vorheriges Feedback' });
+  const next = page.getByRole('button', { name: 'Nächstes Feedback' });
+  const position = page.locator('#sentence-feedback-position');
   await page.locator('#sentence-answer').fill('My car has a flat type.');
   await page.locator('#sentence-submit').click();
   await expect(entries).toHaveCount(1);
+  await expect(active).toHaveCount(1);
+  await expect(active.locator('.sentence-stage__submission-header')).toContainText('Dein Satz:');
+  await expect(page.locator('#sentence-feedback-nav')).toBeHidden();
   await expect(entries.first()).toHaveClass(/feedback-entry--new/);
-  await expect(entries.first().locator(":scope > blockquote")).toHaveText("My car has a flat type.");
+  await expect(entries.first().locator(".sentence-stage__submission > blockquote")).toHaveText("My car has a flat type.");
   await expect(entries.first().locator(":scope > .sentence-stage__feedback-body")).toContainText(run.feedback);
   await expect(entries.first().locator(".sentence-stage__feedback-body blockquote")).toHaveCount(0);
   await page.getByText('Mehr Hilfe', { exact: true }).click();
@@ -257,16 +286,48 @@ for (const light of [false, true]) test(`revision history survives edits, retrie
   await expect(entries).toHaveCount(2);
   await expect(entries.first().locator('details')).toHaveAttribute('open', '');
   await expect(quotes).toHaveText(['My car has a flat type.', 'My car has a flat tire.']);
+  await expect(active).toHaveCount(1);
+  await expect(active.locator('blockquote')).toHaveText('My car has a flat tire.');
+  await expect(position).toHaveText('Feedback 2 von 2');
+  await expect(position).toHaveClass('visually-hidden');
+  await expect(page.locator('.sentence-stage__feedback-position > span').first()).toHaveText('Dein Feedback');
+  await expect(page.locator('#sentence-feedback-nav small')).toHaveCount(0);
+  await expect(next).toBeDisabled();
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.screenshot({ animations: 'disabled', path: testInfo.outputPath('translation-revision-tablet.png'), fullPage: true });
+  await previous.click();
+  expect(await page.locator('#sentence-feedback-list').evaluate(list => list.getAnimations({ subtree: true }).length)).toBeGreaterThan(0);
+  await expect(active.locator('blockquote')).toHaveText('My car has a flat type.');
+  await expect(position).toHaveText('Feedback 1 von 2');
+  await expect(previous).toBeDisabled();
+  await expect(active.locator('details')).toHaveAttribute('open', '');
+  await expect(active.locator('button.sentence-stage__problem')).toHaveCount(0);
+  await expect(page.locator('#sentence-answer')).toHaveValue('My car has a flat tire.');
+  await page.locator('#sentence-feedback-list').focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(position).toHaveText('Feedback 2 von 2');
+  await expect(active.locator('button.sentence-stage__problem')).toHaveCount(1);
+  await page.keyboard.press('ArrowRight');
+  await expect(position).toHaveText('Feedback 2 von 2');
+  await page.keyboard.press('ArrowLeft');
+  await expect(position).toHaveText('Feedback 1 von 2');
+  await page.locator('#sentence-submit').click();
+  await expect(entries).toHaveCount(2);
+  await expect(position).toHaveText('Feedback 1 von 2');
   failNext = true;
   await page.locator('#sentence-answer').fill('My bike has a flat tire.');
   await page.locator('#sentence-submit').click();
   await expect(page.locator('#sentence-feedback-notice')).toContainText('nicht verfügbar');
   await expect(entries).toHaveCount(2);
+  await expect(position).toHaveText('Feedback 1 von 2');
+  await expect(active).toHaveCount(1);
   await page.locator('#sentence-answer').fill('My bike has a flat tire!');
   // Draft saving and resuming use the existing run; the server history is authoritative.
   await page.reload();
   await expect(entries).toHaveCount(2);
   await expect(page.locator('#sentence-answer')).toHaveValue('My bike has a flat tire!');
+  await expect(position).toHaveText('Feedback 2 von 2');
+  await expect(active).toHaveCount(1);
   await expect(entries.first()).not.toHaveClass(/feedback-entry--new/);
   await expect(page.locator('button.sentence-stage__problem')).toHaveCount(0);
   await page.locator('#sentence-submit').click();
@@ -274,12 +335,90 @@ for (const light of [false, true]) test(`revision history survives edits, retrie
   await expect(page.locator('#sentence-submit')).toHaveText('Weiter');
   await expect(quotes).toHaveText(['My car has a flat type.', 'My car has a flat tire.', 'My bike has a flat tire!']);
   await expect(page.locator('#sentence-feedback-notice')).toBeHidden();
+  await expect(position).toHaveText('Feedback 3 von 3');
+  await expect(active).toHaveCount(1);
+  await expect(active.locator('.sentence-stage__feedback-result')).toHaveText('Passt');
+  await expect(page.locator('#sentence-answer')).toHaveValue('My bike has a flat tire!');
+  // Desktop mouse drags select text rather than browsing feedback.
+  const box = await active.locator('blockquote').boundingBox();
+  await page.mouse.move(box.x + 10, box.y + 10);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 150, box.y + 10);
+  await page.mouse.up();
+  await expect(position).toHaveText('Feedback 3 von 3');
+  await page.evaluate(() => window.getSelection().removeAllRanges());
+  // Chromium exercises native touch; WebKit receives touch pointer events
+  // with real capture, without stubbing the navigation handler.
+  const touch = browserName === 'chromium' ? await page.context().newCDPSession(page) : null;
+  if (touch) await touch.send('Emulation.setTouchEmulationEnabled', { enabled: true });
+  async function swipe(dx, dy = 0, cancel = false) {
+    await expect.poll(() => page.locator('#sentence-feedback-list').evaluate(list => list.getAnimations({ subtree: true }).filter(animation => animation.playState === 'running').length)).toBe(0);
+    const area = await active.locator('.sentence-stage__submission-header').boundingBox();
+    const x = area.x + area.width / 2, y = area.y + area.height / 2;
+    const before = await position.textContent();
+    async function checkFingerFollow() {
+      if (Math.abs(dx) < 48 || Math.abs(dx) <= Math.abs(dy) * 1.4) return;
+      await expect.poll(() => active.evaluate(item => Math.abs(new DOMMatrixReadOnly(getComputedStyle(item).transform).m41))).toBeGreaterThan(0);
+      await expect(position).toHaveText(before);
+    }
+    if (touch) {
+      await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+      for (let step = 1; step <= 4; step++) {
+        await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x + dx * step / 4, y: y + dy * step / 4 }] });
+      }
+      await checkFingerFollow();
+      await touch.send('Input.dispatchTouchEvent', { type: cancel ? 'touchCancel' : 'touchEnd', touchPoints: [] });
+      return;
+    }
+    await page.evaluate(() => {
+      window.feedbackPointerId = null;
+      document.addEventListener('pointerdown', event => { window.feedbackPointerId = event.pointerId; }, { once: true });
+    });
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    const pointerId = await page.evaluate(() => window.feedbackPointerId);
+    const options = { pointerId, pointerType: 'touch', isPrimary: true, clientX: x, clientY: y };
+    await page.locator('#sentence-feedback-list').dispatchEvent('pointerdown', options);
+    await page.locator('#sentence-feedback-list').dispatchEvent('pointermove', { ...options, clientX: x + dx, clientY: y + dy });
+    await checkFingerFollow();
+    await page.locator('#sentence-feedback-list').dispatchEvent(cancel ? 'pointercancel' : 'pointerup', { ...options, clientX: x + dx, clientY: y + dy });
+    await page.mouse.up();
+  }
+  await page.locator('#sentence-answer').focus();
+  await page.locator('#sentence-answer').evaluate(input => input.setSelectionRange(0, 7));
+  await swipe(90);
+  await expect(position).toHaveText('Feedback 2 von 3');
+  await swipe(-90);
+  await expect(position).toHaveText('Feedback 3 von 3');
+  await swipe(10);
+  await swipe(70, 120);
+  await swipe(90, 0, true);
+  await expect(position).toHaveText('Feedback 3 von 3');
+  await expect.poll(() => active.evaluate(item => item.style.transform)).toBe('');
+  await page.locator('#sentence-feedback-list').focus();
+  await page.keyboard.press('ArrowLeft');
+  await page.keyboard.press('ArrowLeft');
+  await expect(position).toHaveText('Feedback 1 von 3');
+  await page.keyboard.press('ArrowRight');
+  await page.setViewportSize({ width: 1000, height: 768 });
+  await expect(position).toHaveText('Feedback 2 von 3');
+  await page.keyboard.press('ArrowRight');
+  await expect(position).toHaveText('Feedback 3 von 3');
+  await expect.poll(() => page.locator('#sentence-feedback-list').evaluate(list => list.getAnimations({ subtree: true }).filter(animation => animation.playState === 'running').length)).toBe(0);
+  await page.setViewportSize({ width: 1024, height: 768 });
   await page.screenshot({ animations: 'disabled', path: testInfo.outputPath(`translation-history-${light ? 'light' : 'dark'}.png`), fullPage: true });
   await page.emulateMedia({ reducedMotion: 'reduce' });
+  await previous.click();
+  await expect(position).toHaveText('Feedback 2 von 3');
+  expect(await page.locator('#sentence-feedback-list').evaluate(list => list.getAnimations({ subtree: true }).length)).toBe(0);
+  await next.click();
+  await expect(position).toHaveText('Feedback 3 von 3');
   expect(await entries.last().evaluate(el => getComputedStyle(el).animationName)).toBe('none');
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ animations: 'disabled', path: testInfo.outputPath('translation-history-mobile.png'), fullPage: true });
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await previous.click();
   await page.locator('#sentence-submit').click();
   await expect(entries).toHaveCount(0);
   await expect(page.locator('#sentence-feedback')).toBeHidden();

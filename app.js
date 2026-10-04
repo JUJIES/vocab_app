@@ -88,6 +88,9 @@ const state = {
   sentenceRequestId: 0,
   sentenceBusy: false,
   sentenceShownPromise: null,
+  sentenceFeedbackMotion: null,
+  sentenceFeedbackGesture: null,
+  sentenceFeedbackFrameId: null,
   pendingTestCardCount: TEST_DEFAULT_CARD_COUNT,
   activeTestCardCount: TEST_DEFAULT_CARD_COUNT,
   launchModeScrollY: 0,
@@ -402,6 +405,10 @@ const elements = {
   sentenceFeedback: document.getElementById("sentence-feedback"),
   sentenceFeedbackText: document.getElementById("sentence-feedback-text"),
   sentenceFeedbackList: document.getElementById("sentence-feedback-list"),
+  sentenceFeedbackNav: document.getElementById("sentence-feedback-nav"),
+  sentenceFeedbackPrevious: document.getElementById("sentence-feedback-previous"),
+  sentenceFeedbackNext: document.getElementById("sentence-feedback-next"),
+  sentenceFeedbackPosition: document.getElementById("sentence-feedback-position"),
   sentenceFeedbackNotice: document.getElementById("sentence-feedback-notice"),
   sentenceProgress: document.getElementById("sentence-progress"),
   sentencePrompt: document.getElementById("sentence-prompt"),
@@ -524,6 +531,7 @@ function bindEvents() {
   elements.sentenceHome.addEventListener("click", handleReturnToStudentHome);
   elements.sentenceLogout.addEventListener("click", () => elements.inputMenuLogout.click());
   elements.sentenceForm.addEventListener("submit", handleSentenceSubmit);
+  bindSentenceFeedbackNavigation();
   document.addEventListener("visibilitychange", () => { if (!document.hidden) acknowledgeSentencePrompt(); });
   elements.sentenceAnswer.addEventListener("input", () => {
     if (state.sentenceSession && !state.sentenceSession.accepted && !state.sentenceBusy) {
@@ -2470,6 +2478,7 @@ function getAppBaseUrl() {
 }
 
 function setStudentAppMode(mode) {
+  if (mode !== APP_MODES.SENTENCE) cancelSentenceFeedbackMotion();
   const previousMode = state.appMode;
   if (mode !== APP_MODES.SENTENCE) { state.sentenceRequestId += 1; state.sentenceBusy = false; }
   if (mode !== APP_MODES.INPUT) {
@@ -9959,13 +9968,191 @@ function acknowledgeSentencePrompt() {
     .finally(() => { run.acknowledging = false; });
 }
 
+function updateSentenceFeedbackSelection(attemptId) {
+  const list = elements.sentenceFeedbackList;
+  const items = [...list.children];
+  let index = items.findIndex(item => item.dataset.attemptId === attemptId);
+  if (index < 0) index = items.length - 1;
+  list.dataset.activeAttemptId = items[index]?.dataset.attemptId || "";
+  items.forEach((item, position) => {
+    item.hidden = position !== index;
+    item.setAttribute("aria-label", `Feedback ${position + 1} von ${items.length}`);
+  });
+  list.hidden = !items.length;
+  elements.sentenceFeedbackNav.hidden = items.length < 2;
+  elements.sentenceFeedbackPrevious.disabled = index <= 0;
+  elements.sentenceFeedbackNext.disabled = index >= items.length - 1;
+  const position = items.length ? `Feedback ${index + 1} von ${items.length}` : "";
+  if (elements.sentenceFeedbackPosition.textContent !== position) elements.sentenceFeedbackPosition.textContent = position;
+}
+
+function cancelSentenceFeedbackMotion() {
+  const motion = state.sentenceFeedbackMotion;
+  state.sentenceFeedbackMotion = null;
+  state.sentenceFeedbackGesture = null;
+  if (state.sentenceFeedbackFrameId !== null) cancelAnimationFrame(state.sentenceFeedbackFrameId);
+  state.sentenceFeedbackFrameId = null;
+  motion?.animations.forEach(animation => animation.cancel());
+  elements.sentenceFeedbackList.style.removeProperty("height");
+  for (const item of elements.sentenceFeedbackList.children) {
+    item.style.removeProperty("transform");
+    item.style.removeProperty("opacity");
+    item.style.removeProperty("will-change");
+  }
+}
+
+function animateSentenceFeedbackBack() {
+  const list = elements.sentenceFeedbackList;
+  const item = [...list.children].find(node => node.dataset.attemptId === list.dataset.activeAttemptId);
+  const transform = item ? getComputedStyle(item).transform : "none";
+  const opacity = item ? getComputedStyle(item).opacity : "1";
+  cancelSentenceFeedbackMotion();
+  if (!item || transform === "none" || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const animation = item.animate([{ transform, opacity }, { transform: "translate3d(0, 0, 0)", opacity: 1 }], {
+    duration: 220, easing: "cubic-bezier(0.16, 0.84, 0.25, 1)", fill: "both",
+  });
+  const motion = { animations: [animation] };
+  state.sentenceFeedbackMotion = motion;
+  animation.finished.then(() => {
+    if (state.sentenceFeedbackMotion === motion) cancelSentenceFeedbackMotion();
+  }).catch(() => { /* A new interaction or render superseded this return. */ });
+}
+
+function moveSentenceFeedback(offset) {
+  const list = elements.sentenceFeedbackList;
+  const items = [...list.children];
+  // Rapid taps advance from the requested destination, without stale callbacks.
+  const index = items.findIndex(item => item.dataset.attemptId === (state.sentenceFeedbackMotion?.targetAttemptId || list.dataset.activeAttemptId));
+  const next = items[index + offset];
+  if (!next) {
+    if (state.sentenceFeedbackGesture) animateSentenceFeedbackBack();
+    return;
+  }
+  const current = items.find(item => item.dataset.attemptId === list.dataset.activeAttemptId);
+  if (next === current) { animateSentenceFeedbackBack(); return; }
+  const from = current ? getComputedStyle(current).transform : "none";
+  const opacity = current ? getComputedStyle(current).opacity : "1";
+  const oldHeight = list.getBoundingClientRect().height;
+  const width = list.clientWidth;
+  cancelSentenceFeedbackMotion();
+  if (!current || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    updateSentenceFeedbackSelection(next.dataset.attemptId);
+    return;
+  }
+  current.classList.remove("sentence-stage__feedback-entry--new");
+  next.classList.remove("sentence-stage__feedback-entry--new");
+  list.style.height = `${oldHeight}px`;
+  const options = { duration: 220, easing: "cubic-bezier(0.16, 0.84, 0.25, 1)", fill: "both" };
+  const outgoing = current.animate([
+    { transform: from, opacity },
+    { transform: `translate3d(${-offset * width}px, 0, 0)`, opacity: 0 },
+  ], { ...options, duration: 180 });
+  const motion = { targetAttemptId: next.dataset.attemptId, animations: [outgoing] };
+  state.sentenceFeedbackMotion = motion;
+  outgoing.finished.then(() => {
+    if (state.sentenceFeedbackMotion !== motion) return;
+    updateSentenceFeedbackSelection(next.dataset.attemptId);
+    outgoing.cancel();
+    const newHeight = next.getBoundingClientRect().height;
+    const incoming = next.animate([
+      { transform: `translate3d(${offset * width}px, 0, 0)`, opacity: 0 },
+      { transform: "translate3d(0, 0, 0)", opacity: 1 },
+    ], options);
+    const height = list.animate([{ height: `${oldHeight}px` }, { height: `${newHeight}px` }], options);
+    motion.animations = [incoming, height];
+    return Promise.all(motion.animations.map(animation => animation.finished)).then(() => {
+      if (state.sentenceFeedbackMotion === motion) cancelSentenceFeedbackMotion();
+    });
+  }).catch(() => { /* New navigation, editing or a prompt change cancels safely. */ });
+}
+
+function bindSentenceFeedbackNavigation() {
+  const list = elements.sentenceFeedbackList;
+  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  elements.sentenceFeedbackPrevious.addEventListener("click", () => moveSentenceFeedback(-1));
+  elements.sentenceFeedbackNext.addEventListener("click", () => moveSentenceFeedback(1));
+  reducedMotion.addEventListener("change", () => {
+    const target = state.sentenceFeedbackMotion?.targetAttemptId;
+    cancelSentenceFeedbackMotion();
+    if (target) updateSentenceFeedbackSelection(target);
+  });
+  window.addEventListener("resize", () => {
+    const target = state.sentenceFeedbackMotion?.targetAttemptId;
+    cancelSentenceFeedbackMotion();
+    if (target) updateSentenceFeedbackSelection(target);
+  });
+  elements.sentenceFeedback.addEventListener("keydown", event => {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey
+      || event.target.closest("details, .sentence-stage__problem")
+      || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+    event.preventDefault();
+    moveSentenceFeedback(event.key === "ArrowLeft" ? -1 : 1);
+  });
+  list.addEventListener("pointerdown", event => {
+    // Mouse selection and inline correction/help controls keep their native behavior.
+    const selection = window.getSelection();
+    if (!event.isPrimary || event.pointerType === "mouse" || event.button !== 0
+      || event.target.closest("button, details, a") || list.children.length < 2
+      || (selection && !selection.isCollapsed && list.contains(selection.anchorNode))) return;
+    const item = [...list.children].find(node => node.dataset.attemptId === list.dataset.activeAttemptId);
+    const appearance = getComputedStyle(item);
+    const originX = reducedMotion.matches || appearance.transform === "none" ? 0 : new DOMMatrixReadOnly(appearance.transform).m41;
+    const opacity = appearance.opacity;
+    cancelSentenceFeedbackMotion();
+    if (originX) {
+      item.style.transform = `translate3d(${originX}px, 0, 0)`;
+      item.style.opacity = opacity;
+    }
+    state.sentenceFeedbackGesture = { id: event.pointerId, x: event.clientX, y: event.clientY, dx: 0, dy: 0, originX, item, width: list.clientWidth, dragging: false };
+    list.setPointerCapture(event.pointerId);
+  });
+  list.addEventListener("pointermove", event => {
+    const gesture = state.sentenceFeedbackGesture;
+    if (!gesture || gesture.id !== event.pointerId) return;
+    gesture.dx = event.clientX - gesture.x;
+    gesture.dy = event.clientY - gesture.y;
+    if (!gesture.dragging) {
+      if (Math.abs(gesture.dy) > 8 && Math.abs(gesture.dy) >= Math.abs(gesture.dx)) {
+        cancelSentenceFeedbackMotion();
+        return;
+      }
+      if (Math.abs(gesture.dx) < 8 || Math.abs(gesture.dx) <= Math.abs(gesture.dy) * 1.4) return;
+      gesture.dragging = true;
+      gesture.item.classList.remove("sentence-stage__feedback-entry--new");
+      gesture.item.style.willChange = "transform";
+    }
+    if (reducedMotion.matches || state.sentenceFeedbackFrameId !== null) return;
+    state.sentenceFeedbackFrameId = requestAnimationFrame(() => {
+      state.sentenceFeedbackFrameId = null;
+      if (state.sentenceFeedbackGesture !== gesture) return;
+      const items = [...list.children];
+      const index = items.indexOf(gesture.item);
+      const hasNeighbor = Boolean(items[index + (gesture.dx < 0 ? 1 : -1)]);
+      const x = gesture.originX + clamp(gesture.dx * (hasNeighbor ? .92 : .18), -gesture.width * .8, gesture.width * .8);
+      gesture.item.style.transform = `translate3d(${x}px, 0, 0)`;
+    });
+  });
+  list.addEventListener("pointerup", event => {
+    const gesture = state.sentenceFeedbackGesture;
+    if (!gesture || gesture.id !== event.pointerId) return;
+    const dx = event.clientX - gesture.x;
+    const dy = event.clientY - gesture.y;
+    if (Math.abs(dx) >= 48 && Math.abs(dx) > Math.abs(dy) * 1.4) moveSentenceFeedback(dx < 0 ? 1 : -1);
+    else animateSentenceFeedbackBack();
+  });
+  const cancelGesture = () => { if (state.sentenceFeedbackGesture) animateSentenceFeedbackBack(); };
+  list.addEventListener("pointercancel", cancelGesture);
+  list.addEventListener("lostpointercapture", cancelGesture);
+}
+
 function renderSentenceFeedback(message, status, run = null) {
+  cancelSentenceFeedbackMotion();
   const feedback = elements.sentenceFeedback;
   const list = elements.sentenceFeedbackList;
   const history = run?.history || [];
   const promptId = run?.prompt?.id || "";
   const changedPrompt = list.dataset.promptId !== promptId;
-  if (changedPrompt) { list.replaceChildren(); list.dataset.promptId = promptId; }
+  if (changedPrompt) { list.replaceChildren(); list.dataset.promptId = promptId; delete list.dataset.activeAttemptId; }
   const ids = new Set(history.map(entry => entry.id));
   for (const item of [...list.children]) if (!ids.has(item.dataset.attemptId)) item.remove();
   let added;
@@ -9978,12 +10165,26 @@ function renderSentenceFeedback(message, status, run = null) {
       item.dataset.status = entry.status;
       const quote = document.createElement("blockquote");
       quote.className = "sentence-stage__feedback-excerpt";
+      const submission = document.createElement("div");
+      submission.className = "sentence-stage__submission";
+      const header = document.createElement("div");
+      header.className = "sentence-stage__submission-header";
+      const ownLabel = document.createElement("strong");
+      ownLabel.textContent = "Dein Satz:";
+      const result = document.createElement("span");
+      result.className = "sentence-stage__feedback-result";
+      result.textContent = entry.status === "accepted" ? "Passt" : entry.status === "uncertain" ? "Nicht sicher" : "Überarbeiten";
+      header.append(ownLabel, result);
+      submission.append(header, quote);
       const text = document.createElement("p");
       text.textContent = entry.feedback;
       const body = document.createElement("div");
       body.className = "sentence-stage__feedback-body";
-      body.append(text);
-      item.append(quote, body);
+      const feedbackLabel = document.createElement("strong");
+      feedbackLabel.className = "sentence-stage__feedback-label";
+      feedbackLabel.textContent = "Feedback";
+      body.append(feedbackLabel, text);
+      item.append(submission, body);
       if (entry.issues?.length) {
         const points = document.createElement("ul");
         points.className = "sentence-stage__issues";
@@ -10017,10 +10218,10 @@ function renderSentenceFeedback(message, status, run = null) {
         body.append(help);
       }
       list.append(item);
+      list.dataset.activeAttemptId = entry.id;
       if (!changedPrompt) { item.classList.add("sentence-stage__feedback-entry--new"); added = item; }
     }
     const isLatest = entry === history.at(-1);
-    item.classList.toggle("is-latest", isLatest);
     const quote = item.querySelector("blockquote");
     const checked = entry.answer;
     quote.replaceChildren();
@@ -10055,6 +10256,7 @@ function renderSentenceFeedback(message, status, run = null) {
     }
     quote.append(document.createTextNode(checked.slice(end)));
   }
+  updateSentenceFeedbackSelection(list.dataset.activeAttemptId);
   const notice = run?.error || !history.length || run?.complete ? message || "" : "";
   elements.sentenceFeedbackNotice.textContent = notice;
   elements.sentenceFeedbackNotice.hidden = !notice;
@@ -10063,7 +10265,7 @@ function renderSentenceFeedback(message, status, run = null) {
   const spoken = message ? [message, ...(!run?.error && !run?.complete ? history.at(-1)?.issues || [] : []).map(issue => `${issue.quote || "Satz"}: ${issue.message}`)].join(" ") : "";
   if (elements.sentenceFeedbackText.textContent !== spoken) elements.sentenceFeedbackText.textContent = spoken;
   if (added && !state.sentenceBusy) requestAnimationFrame(() => {
-    if (!added.isConnected || state.appMode !== APP_MODES.SENTENCE) return;
+    if (!added.isConnected || added.hidden || state.appMode !== APP_MODES.SENTENCE) return;
     const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
     added.scrollIntoView({ block: "nearest", behavior: reduced ? "auto" : "smooth" });
   });
