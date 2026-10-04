@@ -33,7 +33,7 @@
     </script>
     <script src="./appearance.js?v=2026-09-30-appearance-v4" data-appearance-scope="student"></script>
     <link rel="stylesheet" href="./pwa-splash.css?v=2026-09-30-splash-contrast-v2" />
-    <link rel="stylesheet" href="./styles.css?v=2026-10-04-feedback-forms-v1" />
+    <link rel="stylesheet" href="./styles.css?v=2026-10-04-local-speech-v1" />
     <link rel="stylesheet" href="./appearance.css?v=2026-09-30-appearance-v4" />
     <link rel="stylesheet" href="./ui-motion.css?v=2026-08-30-ui-motion-v1" />
     <script src="./pwa.js?v=2026-08-30-pwa-splash-v3" defer></script>
@@ -46,7 +46,8 @@
     <script src="./irregular-verbs.js?v=2026-09-06-optional-to-v2" defer></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js" defer></script>
-    <script src="./app.js?v=2026-10-04-feedback-forms-v1" defer></script>
+    <script src="./local-speech.js?v=2026-10-04-local-speech-v1" defer></script>
+    <script src="./app.js?v=2026-10-04-local-speech-v1" defer></script>
   </head>
   <body>
     <div class="pwa-splash" role="status" aria-label="Lerndeck wird geladen">
@@ -524,6 +525,10 @@
                     <span>lang</span>
                   </div>
                 </div>
+                <label class="input-stage__settings-block input-speech-setting">
+                  <input id="input-speech-toggle" type="checkbox" />
+                  <span>Englische Aussprache nach richtiger Antwort abspielen</span>
+                </label>
               </section>
             </div>
 
@@ -545,6 +550,10 @@
               <p id="input-prompt-kicker" class="input-stage__prompt-kicker">Eingabe</p>
               <img id="input-prompt-visual" class="input-stage__prompt-visual" alt="" hidden />
               <h2 id="input-prompt-word" class="input-stage__prompt-word">Lädt</h2>
+              <button id="input-audio-button" class="card-audio input-audio-button" type="button" aria-label="Aussprache anhören" hidden>
+                <span class="material-symbols-outlined card-audio__icon" aria-hidden="true">volume_up</span>
+              </button>
+              <p id="input-audio-feedback" class="input-audio-feedback" role="status"></p>
               <p id="input-prompt-detail" class="input-stage__prompt-detail">Set wird geöffnet.</p>
             </section>
 

@@ -7777,3 +7777,13 @@ button.sentence-stage__problem { display: inline-block; min-width: .6em; padding
 .sentence-stage__help summary:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
 .sentence-stage__example { margin-top: .7rem; padding: .6rem .8rem; border-radius: .5rem; background: rgba(var(--learner-ui-rgb, 214, 224, 246), .07); }
 .sentence-stage__example > strong { font-size: .8rem; }
+
+/* Pronunciation shares the learner palette and existing audio control. */
+.input-audio-button { min-width: 44px; min-height: 44px; }
+.input-audio-feedback { margin: 0; font-size: .85rem; color: var(--text-muted); }
+.input-audio-feedback:empty { display: none; }
+.input-speech-setting { display: flex; align-items: center; gap: .75rem; cursor: pointer; font-size: .85rem; }
+.input-speech-setting input { width: 1.2rem; height: 1.2rem; flex: none; accent-color: var(--accent); }
+/* Teacher previews omit the logout control; keep their menus inside the viewport. */
+.app-shell[data-teacher-practice="true"] .input-stage__menu-context .input-stage__settings-popover,
+.app-shell[data-teacher-practice="true"] .card-stage__topbar-context .input-stage__settings-popover { right: 0; }

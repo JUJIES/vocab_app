@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Lokale Vokabelaussprache in Üben und Eingabe: passende lokale Gerätestimmen, Qualitäts-/Sprachwahl und vorhandene MP3-Dateien als Ersatz. Englische Antworten erst nach vollständig richtiger Eingabe hörbar; automatisches Abspielen im Zahnrad freiwillig und browserlokal gespeichert. Weitergehen wartet auf die Aussprache; Wechsel/Verlassen stoppt sie, Fehler blockieren die Übung nicht. Keine API-Kosten oder Änderungen am Set-/Lernstandmodell; Testen bleibt ohne Audio. PWA-Shell v208.
+
 - Translation-Feedback hebt besprochene Sprachformen wie I, he oder to have in kräftiger Kursivschrift hervor, einschließlich Fehlerpunkten und zusätzlicher Hilfe. Ältere Rückmeldungen mit Anführungszeichen bleiben lesbar; sichtbare Formatierungszeichen entfallen. Bewertung, Lösungs- und HTML-Schutz bleiben bestehen.
 
 - Translation erzeugt vollständige Aufgaben auch aus Satzanfängen mit Auslassungspunkten; doppelte Fokus-Phrasen und erkennbare Fragmente werden vor Anzeige repariert oder abgewiesen. Dezentes `Neuer Satz` liefert einen anderen Kontext zur gleichen Vokabel ohne Zählfortschritt. Alte Feedbackschleifen bleiben verknüpft auf dem Server gespeichert; Fehler behalten Entwurf/Aufgabe, Wiederholungen sind idempotent. Satzanfang-Feedback benennt fehlende Fortsetzungen statt gültiger Artikelvarianten.

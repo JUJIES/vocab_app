@@ -1,3 +1,12 @@
+const localSpeech = window.LerndeckLocalSpeech.createPlayer(window);
+const INPUT_SPEECH_STORAGE_KEY = "lerndeck-input-speech-v1";
+function readInputSpeechPreference() {
+  try { return window.localStorage.getItem(INPUT_SPEECH_STORAGE_KEY) === "true"; }
+  catch { return false; }
+}
+let inputSpeechPlaybackId = 0;
+let recordingCompletion = null;
+
 const DEFAULT_INPUT_CORRECT_ADVANCE_DELAY_MS = 2000;
 const DEFAULT_INPUT_INCORRECT_ADVANCE_DELAY_MS = 4000;
 const INPUT_CORRECT_ADVANCE_MAX_MS = 3000;
@@ -115,6 +124,7 @@ const state = {
   activeTabletPairingId: "",
   inputAdvanceTimeoutId: null,
   inputSettingsOpen: false,
+  inputSpeechEnabled: readInputSpeechPreference(),
   inputCorrectionModeEnabled: true,
   inputDelayEditorType: "correct",
   inputCorrectAdvanceDelayMs: DEFAULT_INPUT_CORRECT_ADVANCE_DELAY_MS,
@@ -444,6 +454,9 @@ const elements = {
   inputProgressFill: document.getElementById("input-progress-fill"),
   inputMenuContext: document.getElementById("input-menu-context"),
   inputMenuLogout: document.getElementById("input-menu-logout"),
+  inputSpeechToggle: document.getElementById("input-speech-toggle"),
+  inputAudioButton: document.getElementById("input-audio-button"),
+  inputAudioFeedback: document.getElementById("input-audio-feedback"),
   inputSettingsShell: document.getElementById("input-settings-shell"),
   inputSettingsButton: document.getElementById("input-settings-button"),
   inputSettingsPopover: document.getElementById("input-settings-popover"),
@@ -556,6 +569,27 @@ function bindEvents() {
   elements.inputMenuLogout.addEventListener("click", handleInputMenuLogout);
   elements.testMenuLogout.addEventListener("click", handleInputMenuLogout);
   elements.inputSettingsButton.addEventListener("click", handleInputSettingsToggle);
+  elements.inputAudioButton.addEventListener("click", () => { void playInputPronunciation(); });
+  elements.inputSpeechToggle.addEventListener("change", () => {
+    state.inputSpeechEnabled = elements.inputSpeechToggle.checked;
+    try { window.localStorage.setItem(INPUT_SPEECH_STORAGE_KEY, String(state.inputSpeechEnabled)); }
+    catch { /* Preference still applies during this visit. */ }
+    if (!state.inputSpeechEnabled) {
+      stopCurrentAudio();
+      if (state.inputSession.evaluation) scheduleInputAdvance(state.inputSession.evaluation);
+    }
+  });
+  window.speechSynthesis?.addEventListener("voiceschanged", () => {
+    updateAudioButtons();
+    updateInputAudioButton();
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      stopCurrentAudio();
+      if (state.appMode === APP_MODES.INPUT && state.inputSession.evaluation) scheduleInputAdvance(state.inputSession.evaluation);
+    }
+  });
+  window.addEventListener("pagehide", stopCurrentAudio);
   elements.inputCorrectionToggle?.addEventListener("change", handleInputCorrectionToggleChange);
   elements.inputDelayTypeCorrect.addEventListener("click", handleInputDelayTypeSelect);
   elements.inputDelayTypeWrong.addEventListener("click", handleInputDelayTypeSelect);
@@ -959,6 +993,7 @@ function createInputSessionState(cards = []) {
 }
 
 function resetInputLearningState(cards = []) {
+  stopCurrentAudio();
   clearInputAdvanceTimeout();
   state.inputSolutionRevealed = false;
   state.inputSession = createInputSessionState(cards);
@@ -1640,6 +1675,7 @@ function syncInputSettingsControls() {
     return;
   }
 
+  elements.inputSpeechToggle.checked = state.inputSpeechEnabled;
   const isOpen = state.inputSettingsOpen;
   elements.inputSettingsShell?.setAttribute("data-open", String(isOpen));
   elements.inputSettingsButton.setAttribute("aria-expanded", String(isOpen));
@@ -1726,7 +1762,7 @@ function applyInputSettingsToCurrentSession() {
 }
 
 function scheduleInputAdvance(evaluation) {
-  if (!evaluation || state.inputSession.isComplete || isInputCorrectionRequired(state.inputSession)) {
+  if (localSpeech.isSpeaking() || recordingCompletion || !evaluation || state.inputSession.isComplete || isInputCorrectionRequired(state.inputSession)) {
     clearInputAdvanceTimeout();
     return;
   }
@@ -1817,6 +1853,7 @@ function renderInputCompletionState() {
 function renderInputSession() {
   const session = state.inputSession;
   updateInputStageSummary();
+  updateInputAudioButton();
 
   if (session.isComplete) {
     renderInputCompletionState();
@@ -4796,6 +4833,7 @@ function handleInputAnswerSubmit(event) {
     return;
   }
 
+  stopCurrentAudio();
   const rawValues = getInputAnswerValues(card);
   const evaluation = hasIrregularVerbAnswer(card)
     ? window.LerndeckIrregularVerbs.evaluateInputs(
@@ -4811,7 +4849,12 @@ function handleInputAnswerSubmit(event) {
     focusFirstInputAnswerField(card);
     document.activeElement?.select?.();
   }
-  scheduleInputAdvance(evaluation);
+  if (state.inputSpeechEnabled && evaluation.status === "correct"
+    && getLearningSideLanguage("back").split("-")[0] === "en") {
+    void playInputPronunciation();
+  } else {
+    scheduleInputAdvance(evaluation);
+  }
 }
 
 function handleInputAnswerEdit(event) {
@@ -4854,6 +4897,7 @@ function handleInputRevealAnswer() {
 
 async function handleInputAdvance() {
   clearInputAdvanceTimeout();
+  stopCurrentAudio();
 
   if (state.inputSession.isComplete) {
     resetInputLearningState([...state.allCards]);
@@ -9037,11 +9081,12 @@ function triggerAudioPlayback(audioButton, event) {
   const face = audioButton?.dataset?.audioFace === "back" ? "back" : "front";
   const audioState = getAudioStateForFace(state.currentCard, face);
 
-  if (!audioState.path) {
-    return;
-  }
-
-  playAudio(audioState.path);
+  const card = state.currentCard;
+  const playback = playPronunciation(audioState);
+  const playbackId = inputSpeechPlaybackId;
+  void playback.then((success) => {
+    if (!success && card === state.currentCard && playbackId === inputSpeechPlaybackId) elements.statusMessage.textContent = "Aussprache konnte nicht abgespielt werden. Prüfe Lautstärke und verfügbare Gerätestimmen.";
+  });
 }
 
 function startPracticeSession(cards) {
@@ -9598,7 +9643,7 @@ function updateAudioButtons() {
     const face = audioButton.dataset.audioFace === "back" ? "back" : "front";
     const isVisibleFace = showAudioButtons && (face === "back" ? state.isFlipped : !state.isFlipped);
     const audioState = isVisibleFace ? getAudioStateForFace(state.currentCard, face) : null;
-    const isAvailable = Boolean(audioState?.path);
+    const isAvailable = Boolean(audioState && (localSpeech.voice(audioState.language) || audioState.path));
 
     audioButton.hidden = !isVisibleFace;
     audioButton.disabled = !isAvailable;
@@ -9611,14 +9656,62 @@ function getAudioStateForFace(card, face) {
     return null;
   }
 
-  // Intentional app rule: each visible side plays its own side's static recording.
+  // Each visible side speaks only its own text in the active direction.
   const isBackFace = face === "back";
 
   return {
     face,
-    text: isBackFace ? card.targetText : card.sourceText,
+    language: getLearningSideLanguage(face),
+    text: (window.LerndeckIrregularVerbs.parseForms(isBackFace ? card.targetText : card.sourceText)
+      || [isBackFace ? card.targetText : card.sourceText]).join(", "),
     path: isBackFace ? resolveSetAssetPath(card.audioTarget) : resolveSetAssetPath(card.audioSource),
   };
+}
+
+function getLearningSideLanguage(face) {
+  const labels = getLearningDirectionLabels();
+  const reversed = state.activeLearningDirection === LEARNING_DIRECTIONS.TARGET_SOURCE;
+  return String((face === "back") !== reversed ? labels.targetLanguage : labels.sourceLanguage).toLowerCase();
+}
+
+function getInputAudioState() {
+  const card = getCurrentInputSessionCard();
+  if (!card || state.inputSession.isComplete) return null;
+  const englishAnswer = getLearningSideLanguage("back").split("-")[0] === "en";
+  if (englishAnswer && state.inputSession.evaluation?.status !== "correct") return null;
+  return getAudioStateForFace(card, englishAnswer ? "back" : "front");
+}
+
+function updateInputAudioButton() {
+  const audio = getInputAudioState();
+  const available = Boolean(audio && (localSpeech.voice(audio.language) || audio.path));
+  elements.inputAudioButton.hidden = !audio;
+  elements.inputAudioButton.disabled = !available;
+  elements.inputAudioButton.setAttribute("aria-label", audio ? `${audio.text} anhören` : "Aussprache anhören");
+  elements.inputAudioButton.title = available ? "Aussprache anhören" : "Keine passende lokale Stimme verfügbar";
+  elements.inputAudioFeedback.textContent = audio && !available ? "Keine passende Gerätestimme verfügbar." : "";
+}
+
+async function playInputPronunciation() {
+  const audio = getInputAudioState();
+  if (!audio) return;
+  clearInputAdvanceTimeout();
+  const evaluation = state.inputSession.evaluation;
+  const card = getCurrentInputSessionCard();
+  const playback = playPronunciation(audio);
+  const playbackId = inputSpeechPlaybackId;
+  const success = await playback;
+  if (playbackId !== inputSpeechPlaybackId || state.appMode !== APP_MODES.INPUT
+    || card !== getCurrentInputSessionCard() || evaluation !== state.inputSession.evaluation) return;
+  if (!success) elements.inputAudioFeedback.textContent = "Aussprache nicht verfügbar. Prüfe Lautstärke und Gerätestimmen.";
+  if (evaluation) scheduleInputAdvance(evaluation);
+}
+
+function playPronunciation(audio) {
+  stopCurrentAudio();
+  if (localSpeech.voice(audio.language)) return localSpeech.speak(audio.text, audio.language);
+  if (!audio.path) return Promise.resolve(false);
+  return playAudio(audio.path);
 }
 
 function getAudioButtonLabel(face, isAvailable, audioState = null) {
@@ -9642,35 +9735,36 @@ function getAudioPlayer() {
 
   const audioPlayer = new Audio();
   audioPlayer.preload = "none";
-  audioPlayer.addEventListener("error", () => {
-    stopCurrentAudio();
-  });
   state.audioPlayer = audioPlayer;
   return audioPlayer;
 }
 
 function playAudio(audioPath) {
-  const audioPlayer = getAudioPlayer();
-
-  stopCurrentAudio();
-
-  if (audioPlayer.src !== audioPath) {
-    audioPlayer.src = audioPath;
-  }
-
-  audioPlayer.currentTime = 0;
-
-  const playPromise = audioPlayer.play();
-
-  if (playPromise && typeof playPromise.catch === "function") {
-    playPromise.catch((error) => {
-      console.error("Unable to play audio:", error);
-      stopCurrentAudio();
-    });
-  }
+  const player = getAudioPlayer();
+  return new Promise((resolve) => {
+    const finish = (success) => {
+      window.clearTimeout(timer);
+      player.removeEventListener("ended", ended);
+      player.removeEventListener("error", failed);
+      if (recordingCompletion === finish) recordingCompletion = null;
+      resolve(success);
+    };
+    const ended = () => finish(true);
+    const failed = () => finish(false);
+    const timer = window.setTimeout(() => { finish(false); player.pause(); }, 20000);
+    recordingCompletion = finish;
+    player.addEventListener("ended", ended);
+    player.addEventListener("error", failed);
+    player.src = audioPath;
+    player.currentTime = 0;
+    player.play()?.catch(failed);
+  });
 }
 
 function stopCurrentAudio() {
+  inputSpeechPlaybackId += 1;
+  localSpeech.stop();
+  recordingCompletion?.(false);
   if (!state.audioPlayer) {
     return;
   }

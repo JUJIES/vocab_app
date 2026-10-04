@@ -1510,6 +1510,7 @@ const PUBLIC_ROOT_FILES = new Map([
   ["/index.html", "index.html"],
   ["/styles.css", "styles.css"],
   ["/app.js", "app.js"],
+  ["/local-speech.js", "local-speech.js"],
   ["/answer-rules.js", "answer-rules.js"],
   ["/grading-rules.js", "grading-rules.js"],
   ["/sentence-options.js", "sentence-options.js"],

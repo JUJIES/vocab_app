@@ -2,6 +2,16 @@
 
 Lerndeck ist eine ruhige Web-App zum Lernen im Unterricht: mit Tablet-Oberfläche für Schüler und einem Desktop-Arbeitsbereich für Lehrkräfte. Schüler arbeiten ohne persönliche Registrierung über feste Gerätenamen. Lehrkräfte erstellen private Lernsets, teilen sie per sechsstelligen Code oder QR-Link und Änderungen bleiben unter derselben Set-Adresse verfügbar.
 
+## Lokale Vokabelaussprache
+
+`Üben` liest die sichtbare Kartenseite in ihrer Sprache vor, auch nach Richtungswechsel. `Eingabe` erlaubt das Anhören des englischen Ausgangsbegriffs; bei Deutsch → Englisch ist die englische Antwort erst nach vollständig richtiger Eingabe hörbar, einschließlich erfolgreicher Korrektur. Unregelmäßige Verbformen werden mit Pausen gesprochen. `Testen` und Translation erhalten keine Audiohilfen.
+
+Die gemeinsame Wiedergabe in `app.js` nutzt `local-speech.js`: ausschließlich passende Stimmen mit `localService === true`, erkennbare Premium/Enhanced/Natural-Stimmen zuerst, danach bevorzugt `en-GB` bzw. `de-DE` und moderates Tempo 0,9. Die Browser-API garantiert keine Qualitätsmetadaten; die Namensauswahl ist eine Heuristik. Stimmen werden bei jedem Start neu geprüft und bei `voiceschanged` aktualisiert. Ohne lokale Stimme bleiben vorhandene MP3-Dateien verwendbar; ohne beides ist der Button deaktiviert. Keine OpenAI-Aufrufe, erzeugten Dateien oder neuen Set-Felder.
+
+Im Eingabe-Zahnrad aktiviert „Englische Aussprache nach richtiger Antwort abspielen“ die automatische Wiedergabe (Standard aus). Die Auswahl liegt browser-/app-lokal unter `lerndeck-input-speech-v1`, getrennt vom Lernstand; bei gesperrtem Speicher gilt sie für den aktuellen Besuch. Wiedergabe startet direkt im Klick-/Abgabeereignis. Automatisches Weitergehen wartet auf Ende/Fehler und anschließend die gewählte Anzeigezeit; nach spätestens 20 Sekunden endet eine hängende Wiedergabe. Karten-/Richtungswechsel, Verlassen und Hintergrundwechsel stoppen die Stimme. Schüler- und Lehrervorschau nutzen dieselbe Logik.
+
+**Gerätetest:** Installiertes Lerndeck vollständig schließen/neu öffnen, bei Bedarf einmal zusätzlich neu laden (PWA-Shell v208). In `Üben` beide Seiten anhören; in `Eingabe` beide Richtungen, falsche → korrigierte Antwort, Abschalten und Wiederholen prüfen. Verfügbare lokale Stimmen und Qualität müssen im tatsächlichen Relution-Webclip getestet werden; der Browserflow prüft mit simulierter Sprachausgabe nur die Produktlogik.
+
 ## Montag-MVP
 
 Einsatzbereit sind:
