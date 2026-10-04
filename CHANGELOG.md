@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Lernmodus-Auswahl reserviert bei jeder Fensterbreite den Platz des höchsten Detailinhalts aller vier Modi. Translation, kürzere Beschreibungen und Durchgangsstatus verändern beim Wechsel weder Modalhöhe noch Position. Natürliche Messung über denselben Renderer, Neuberechnung beim Öffnen/Zurückkehren, Fensteränderungen und geladenen Fonts; kein Abschneiden oder feste Desktophöhe auf Mobilgeräten.
+
 - Set-Löschen im Editor als dezentes rotes Papierkorb-Icon aus dem bestehenden SVG-Set. Zugänglicher Name/Tooltip, Bestätigungsdialog und Eigentumsrechte bleiben erhalten; Theme-Filter und PWA-Assets aktualisiert.
 
 - Tablet-SVG auf die gemeinsame 24-px-Zeichenfläche und Strichstärke der Aktionsicons angepasst, mit sicherem Abstand der Kontur zum Rand. Der Editor-Kopf bleibt ohne bisherigen 1-px-Versatz beim Scrollen ausgerichtet; gemeinsames Asset und PWA-Cache werden aktualisiert. Keine Änderung an Gerätezugriffen oder Tablet-Info-Abläufen.

@@ -552,6 +552,8 @@ function bindEvents() {
   elements.launchModeStart.addEventListener("click", handleLaunchModeStart);
   elements.launchModeClose.addEventListener("click", dismissLaunchModeModal);
   elements.launchModeModal.addEventListener("click", handleLaunchModeOverlayClick);
+  window.addEventListener("resize", reserveLaunchModeDetailHeight);
+  document.fonts?.ready.then(reserveLaunchModeDetailHeight);
   elements.launchSettingsBack.addEventListener("click", returnToLaunchModeModal);
   elements.launchSettingsClose.addEventListener("click", dismissLaunchModeModal);
   elements.launchSettingsStart.addEventListener("click", startPendingLaunchMode);
@@ -6934,6 +6936,21 @@ function measureLaunchModeDetailContentHeight(content) {
   return height;
 }
 
+// Reserve the tallest mode at this width, including its actual round status.
+// Hidden measurement uses the existing content renderer, without duplicate copy.
+function reserveLaunchModeDetailHeight() {
+  const stage = elements.launchModeDetailStage;
+  const subscription = getPendingLaunchSubscription();
+  if (!subscription || elements.launchModeModal.hidden || !stage.clientWidth) return;
+  const height = Math.ceil(Math.max(...LEARNING_MODES.map((mode) =>
+    measureLaunchModeDetailContentHeight(createLaunchModeDetailContent(
+      mode, getSubscriptionLearningModeProgress(subscription, mode.key), subscription,
+    )),
+  )));
+  const minimum = `max(6rem, ${height}px)`;
+  if (stage.style.minHeight !== minimum) stage.style.minHeight = minimum;
+}
+
 function renderLaunchModeDetail(subscription, { previousModeKey = "", forceInstant = false } = {}) {
   const selectedMode = getLearningModeDefinition(state.pendingLaunchModeKey);
   const progress = getSubscriptionLearningModeProgress(subscription, selectedMode.key);
@@ -6945,6 +6962,7 @@ function renderLaunchModeDetail(subscription, { previousModeKey = "", forceInsta
   }
 
   finishLaunchModeDetailTransition();
+  reserveLaunchModeDetailHeight();
 
   const currentContent = stage.querySelector(".launch-mode-modal__detail-content.is-current");
   const currentModeKey = currentContent?.dataset.modeKey || state.launchModeDetailRenderedModeKey || "";
@@ -7039,6 +7057,7 @@ function openLaunchModeModal(setPath) {
   window.scrollTo(0, 0);
   elements.launchModeModal.scrollTop = 0;
   window.LerndeckUiMotion.show(elements.launchModeModal, { focus: elements.launchModePanel });
+  reserveLaunchModeDetailHeight();
 }
 
 function getLaunchSettingsTitle(modeKey) {
@@ -7124,6 +7143,7 @@ function returnToLaunchModeModal() {
   window.LerndeckUiMotion.swap(elements.launchSettingsModal, elements.launchModeModal, {
     focus: elements.launchModePanel,
   });
+  reserveLaunchModeDetailHeight();
 }
 
 function clearLaunchModeModalContent() {
@@ -7132,6 +7152,7 @@ function clearLaunchModeModalContent() {
   elements.launchModeModes.replaceChildren();
   delete elements.launchModeModes.dataset.setPath;
   elements.launchModeDetailStage.replaceChildren();
+  elements.launchModeDetailStage.style.minHeight = "";
   elements.launchModeStartStage.replaceChildren();
   elements.launchSettingsAdditional.replaceChildren();
 }

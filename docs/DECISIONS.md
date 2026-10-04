@@ -1,5 +1,11 @@
 # Produkt- und Architekturentscheidungen
 
+## 2026-10-04 – Stabile Höhe der Lernmodus-Auswahl
+
+- Der Detailbereich reserviert den höchsten natürlichen Inhalt aller vier Modi bei seiner aktuellen Breite, inklusive deren Durchgangsstatus. Dieselbe `createLaunchModeDetailContent`-Funktion liefert sichtbaren und unsichtbaren Messinhalt; keine zweite Textquelle und keine Kopplung an Zeichenanzahlen oder feste Zeilenzahlen.
+- Messinhalte enden vertikal automatisch statt auf die vorherige Stagehöhe gestreckt zu werden. Die gemeinsame Mindesthöhe bleibt über die bestehende horizontale Auswahl-Animation hinweg erhalten. Öffnen, Zurück aus Einstellungen, Fenster-/Orientierungswechsel und geladene Fonts berechnen neu; Schließen räumt die Reservation auf. Anzahl/Richtung/Schwierigkeit im nachfolgenden Einstellungsdialog bleiben inhaltsabhängig. Lernstände, Bewertung und Serverdaten unverändert.
+- Browserchecks: `scripts/launch-mode-layout.spec.js`, mit isoliertem `WORKSPACE_TEST_DATA` und Loopback-`BASE_URL`. Alle vier Modi, beide Themes/Engines, Breiten 320–1440 px, Zwischen-/Endzustände, rasches Umschalten, Reduced Motion und Rückkehr aus Einstellungen. Screenshots sind Testartefakte.
+
 ## 2026-10-03 – Lerndeck-Optionen per Kontextmenü
 
 - Rechtsklick ersetzt die sichtbaren Drei-Punkte-Schaltflächen in der Bibliothek; dieselben bestehenden Umbenennen-/Entfernen-Pfade, Eigentumsrechte und Bestätigung bleiben erhalten. Ein einziges fensterbegrenztes Theme-Popover außerhalb der Scrollpanels verhindert abgeschnittene Menüs. Tastatur (Umschalt+F10/Menütaste, Pfeile, Escape) und langes Drücken außerhalb des Drag-Griffs erhalten den Zugang ohne zusätzliche sichtbare Bedienfläche.

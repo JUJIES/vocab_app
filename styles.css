@@ -5588,6 +5588,7 @@ button.student-screen__device-card {
 }
 
 .launch-mode-modal__detail-content.is-measuring {
+  bottom: auto; /* Measure natural content, not the previous stage height. */
   visibility: hidden;
   pointer-events: none;
 }
