@@ -500,6 +500,34 @@ test("save acknowledgements never replace focused inputs; newer edits queue behi
   expect(writes).toBe(2);
 });
 
+test("vocabulary pictures survive queued text edits and reload", async ({ page }) => {
+  const service = new SetService({ dataDir: DATA_DIR });
+  await service.assignCardVisuals("aksana", rooms.id, [{ cardId: rooms.cards[0].id,
+    visual: { assetId: "vis_editor_preserve", alt: "Shelf", width: 512, height: 512 } }]);
+  await page.route("**/media/visuals/vis_editor_preserve.webp", route => route.fulfill({
+    contentType: "image/svg+xml", body: '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"><rect width="32" height="32" fill="blue"/></svg>',
+  }));
+  await login(page); await open(page, rooms);
+  let release; const gate = new Promise(resolve => { release = resolve; });
+  let writes = 0;
+  await page.route(`**/api/teacher/sets/${rooms.id}`, async route => {
+    if (route.request().method() === "PUT" && ++writes === 1) await gate;
+    await route.continue();
+  });
+  const field = page.locator(".set-card-editor-row .set-editor-field--card input").nth(1);
+  await field.fill("ein Regal korrigiert");
+  await expect.poll(() => writes).toBe(1);
+  await field.fill("ein Regal final");
+  release();
+  await expect(page.locator("#workspace-save-status")).toHaveText("Gespeichert");
+  const saved = (await (await page.request.get(`/api/teacher/sets/${rooms.id}`)).json()).set;
+  expect(saved.cards[0].id).toBe(rooms.cards[0].id);
+  expect(saved.cards[0].visual.assetId).toBe("vis_editor_preserve");
+  await expect(page.getByRole("button", { name: "Bild zu Vokabel 1 ansehen" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Bild zu Vokabel 1 ansehen" })).toBeVisible();
+});
+
 test("an expired session keeps unsaved text available and retries successfully after login", async ({ page }) => {
   await login(page); await open(page, rooms);
   await page.route(`**/api/teacher/sets/${rooms.id}`, async route => {

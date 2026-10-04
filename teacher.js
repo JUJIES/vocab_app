@@ -3406,7 +3406,7 @@ async function refreshEditorVisualWorkspace() {
     const serverCards = new Map((setResponse.data?.set?.cards || []).map((card) => [card.id, card]));
     for (const card of state.editorCards) {
       const serverCard = serverCards.get(card.id);
-      card.visual = serverCard?.front === card.front.trim() && serverCard?.back === card.back.trim() ? normalizeEditorVisual(serverCard.visual) : null;
+      if (serverCard) card.visual = normalizeEditorVisual(serverCard.visual);
     }
     refreshEditorVisualControls();
     scheduleVisualJobPolling();
@@ -3889,9 +3889,7 @@ async function persistEditorChanges({ immediate = false } = {}) {
         const serverCard = saved.cards[index];
         if (!serverCard) return;
         card.id = serverCard.id;
-        if (card.front.trim() === payload.cards[index].front && card.back.trim() === payload.cards[index].back) {
-          card.visual = normalizeEditorVisual(serverCard.visual);
-        } else card.visual = null;
+        card.visual = normalizeEditorVisual(serverCard.visual);
       });
       state.editorSavedVersion = saveVersion;
       state.editorSaveError = false;

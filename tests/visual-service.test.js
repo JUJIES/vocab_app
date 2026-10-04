@@ -528,9 +528,14 @@ test("sheet jobs persist reusable assets, attach them, regenerate one and retain
   ]);
   assert.equal(planningPrompts.length, 5);
 
+  await setService.updateSet("julius", createdSet.id, {
+    cards: regeneratedSet.cards.map(entry => entry.id === card.id ? { ...entry, back: "edited term" } : entry),
+  });
   await visualService.selectAsset("julius", createdSet.id, card.id, originalAssetId);
   const restoredSet = await setService.getOwnedSet("julius", createdSet.id);
   assert.equal(restoredSet.cards[0].visual.assetId, originalAssetId);
+  assert.equal(restoredSet.cards[0].back, "edited term");
+  assert.equal((await visualService.listAssets("julius", createdSet.id)).filter(asset => asset.cardId === card.id).length, 3);
 });
 
 function createBrief(cardId, intendedMeaning, visualConcept) {

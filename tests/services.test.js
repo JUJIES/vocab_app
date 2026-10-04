@@ -156,7 +156,7 @@ test("private sets keep their path and share code while revisions update", async
     assert.equal(updated.path, created.path);
     assert.equal(updated.shareCode, created.shareCode);
     assert.equal(updated.cards[0].id, firstCardId);
-    assert.notEqual(updated.cards[1].id, secondCardId);
+    assert.equal(updated.cards[1].id, secondCardId);
 
     const publicEntry = await service.resolveShareCode(created.shareCode);
     assert.equal(publicEntry.path, created.path);
@@ -605,4 +605,28 @@ test("provider errors never expose API-key details to the client", async () => {
       && error.status === 503
     ),
   );
+});
+
+test("text edits preserve image identity while stale image jobs are rejected", async () => {
+  await withTempDirectory(async directory => {
+    const { createCardContentHash } = require("../lib/set-service");
+    const service = new SetService({ dataDir: directory });
+    const initial = await service.createSet("julius", { ...germanEnglishSides, title: "Images", cards: [{ front: "Konkurrent / Konkurrenz", back: "rival" }] });
+    const original = initial.cards[0];
+    const visual = { assetId: "vis_original", width: 512, height: 512, alt: "Rival" };
+    await service.assignCardVisuals("julius", initial.id, [{ cardId: original.id, contentHash: createCardContentHash(original), visual }]);
+    const edited = await service.updateSet("julius", initial.id, { cards: [{ ...original, front: "Konkurrent", back: "a rival", acceptedAnswers: ["competitor"], visual: { assetId: "vis_forged" } }] });
+    assert.equal(edited.cards[0].id, original.id);
+    assert.equal(edited.cards[0].visual.assetId, visual.assetId);
+    const stale = await service.assignCardVisuals("julius", initial.id, [{ cardId: original.id, contentHash: createCardContentHash(original), visual: { assetId: "vis_stale_job" } }]);
+    assert.deepEqual(stale.skippedCardIds, [original.id]);
+    assert.equal(stale.set.cards[0].visual.assetId, visual.assetId);
+    const incomplete = await service.updateSet("julius", initial.id, { cards: [{ ...edited.cards[0], back: "" }] });
+    assert.equal(incomplete.cards[0].id, original.id);
+    assert.equal(incomplete.cards[0].visual.assetId, visual.assetId);
+    await service.updateSet("julius", initial.id, { cards: [] });
+    const replacement = await service.updateSet("julius", initial.id, { cards: [{ front: "Konkurrent", back: "a rival" }] });
+    assert.notEqual(replacement.cards[0].id, original.id);
+    assert.equal(replacement.cards[0].visual, null);
+  });
 });

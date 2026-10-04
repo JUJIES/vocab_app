@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Vokabelkorrekturen erhalten Karten-ID, Lernstandzuordnung, Bilder und Bildhistorie. Autosave und Bild-Polling entfernen bei laufenden Texteingaben keine Bildreferenzen mehr; historische Varianten bleiben bewusst auswählbar. Veraltete Bildjobs werden weiterhin über ihren Inhalts-Hash abgefangen. PWA-Shell v214.
+
 - Bibliothek zeigt nach erfolgreicher Reihenfolge-/Zuordnungsänderung keine zusätzliche Speicherbestätigung. Die Statusanzeige am Set bleibt bestehen; Organisationsfehler werden weiterhin angezeigt. PWA-Shell v213.
 
 - Translation endet mit einem minimalistischen Geschafft-Dialog: gelöste Sätze, angenommene Übersetzungen und bewertete Versuche; Neustart, Hauptmenü/Lehreransicht und optionales API-Feedback. Rückschau mit ehrlichem Lob, bis zu drei Lernzielen und belegten echten Fehler/Korrektur-Paaren. Angeforderte Zusammenfassungen und bestätigte Geräte-ID werden privat pro Lauf dauerhaft gespeichert; keine automatische Profilbewertung oder Export-UI. Native Dialogbedienung, scrollbare Liste, beide Themes und Schüler-/Vorschauwege geprüft; PWA-Shell v212.

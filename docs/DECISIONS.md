@@ -241,3 +241,9 @@
 - Tauri-Lehrer-App
 - vollständiger Offlinebetrieb dynamischer Sets
 - komplexere Lernalgorithmen
+
+## 2026-10-04: Kartenidentität und Lernbilder bei Textkorrekturen erhalten
+
+- Bestehende Zeilen behalten ihre Karten-ID, Lernstandzuordnung, aktive Bildreferenz und Bildhistorie bei Text-/Antwortänderungen. Neue bzw. nach Löschung neu angelegte Zeilen erhalten neue IDs. Dies ersetzt die bisherige Regel, Inhaltsänderungen als neue Karte ohne Bild zu behandeln.
+- Autosave-Antworten und Bild-Polling übernehmen Bildreferenzen anhand der Kartenidentität, auch wenn lokale Texte bereits weiterbearbeitet wurden; sie ersetzen keine Eingaben. Veraltete textgebundene Präsentationsdaten werden bei Inhaltsänderungen weiterhin verworfen.
+- Automatische Bildjobs behalten ihren Inhalts-Hash-Schutz. Bewusste Auswahl einer historischen Variante prüft Eigentümer/Set/Karte und verwendet den aktuellen Inhalts-Hash als Schutz gegen parallele Änderungen.
