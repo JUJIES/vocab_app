@@ -236,9 +236,8 @@ window.LerndeckTeacherWorkspace = (() => {
       const editorOwner = config.editorOwner() || config.data().teacher?.id;
       const editorUnits = config.data().units.filter((unit) => unit.ownerTeacherId === editorOwner);
       const selected = config.editorUnit();
-      const owner = config.data().accounts.find((account) => account.id === editorOwner);
       const unit = editorUnits.find((unit) => unit.id === selected);
-      el.breadcrumb.textContent = `${owner?.displayName || "Meine Lernsets"} / ${unit?.name || "Nicht eingeordnet"}`;
+      el.breadcrumb.textContent = unit?.name || "Nicht eingeordnet";
     }
     function showUnitForm(id = "") {
       state.editUnit = id;
