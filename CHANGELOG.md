@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Tablet-SVG auf die gemeinsame 24-px-Zeichenfläche und Strichstärke der Aktionsicons angepasst, mit sicherem Abstand der Kontur zum Rand. Der Editor-Kopf bleibt ohne bisherigen 1-px-Versatz beim Scrollen ausgerichtet; gemeinsames Asset und PWA-Cache werden aktualisiert. Keine Änderung an Gerätezugriffen oder Tablet-Info-Abläufen.
+
 - Desktop-Bibliothek und Set-Liste unabhängig skalierbar: dezente Ziehkanten, Einrasten beim Einklappen, Aufziehen/Pfeiltaste zum Öffnen sowie Tastaturbedienung. Breiten und Einklappzustände werden mit der bestehenden Navigation pro Konto und Browser gespeichert. Editor-Mindestbreite, kompakte Ansichten, Fokus und Drag-Abbruch bleiben abgesichert; kein neues Server-Datenmodell oder UI-Framework.
 
 - Editor-Kontextzeile reduziert: nur Lerndeck-Name oder `Nicht eingeordnet`, ohne Lehrkraftnamen. Eigentums-/Leserechte und Bibliothekszuordnung bleiben unverändert.
