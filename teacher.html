@@ -20,7 +20,7 @@
     </script>
     <link rel="stylesheet" href="./pwa-splash.css?v=2026-09-30-splash-contrast-v2" />
     <script src="./appearance.js?v=2026-09-30-appearance-v4" data-appearance-scope="teacher"></script>
-    <link rel="stylesheet" href="./teacher.css?v=2026-10-04-no-search-v1" />
+    <link rel="stylesheet" href="./teacher.css?v=2026-10-04-profile-header-v1" />
     <link rel="stylesheet" href="./appearance.css?v=2026-09-30-appearance-v4" />
     <link rel="stylesheet" href="./ui-motion.css?v=2026-08-30-ui-motion-v1" />
     <script src="./pwa.js?v=2026-08-30-pwa-splash-v3" defer></script>
@@ -111,6 +111,7 @@
               </div>
             </div>
           </div>
+          <label id="workspace-owner-field" class="workspace-owner-field" hidden><span>Angezeigtes Profil:</span><select id="workspace-owner" aria-label="Angezeigtes Profil"></select></label>
           <div class="teacher-header__actions">
             <div id="teacher-account-status" class="teacher-account-status">
               <span class="teacher-account-status__label">Angemeldet als</span>
@@ -165,7 +166,6 @@
               <label for="workspace-unit-name">Lerndeck-Name</label><input id="workspace-unit-name" maxlength="80" required />
               <div class="workspace-inline-actions"><button class="teacher-button" type="submit">Speichern</button><button id="workspace-unit-cancel" class="teacher-button teacher-button--secondary" type="button">Abbrechen</button></div>
             </form>
-            <label id="workspace-owner-field" class="workspace-owner-field" hidden><span>Lehrkraft</span><select id="workspace-owner" aria-label="Bibliothek der Lehrkraft"></select></label>
             <nav id="workspace-navigation" aria-label="Set-Bibliothek"></nav>
             <p id="workspace-library-feedback" class="teacher-auth__feedback" role="status" aria-live="polite"></p>
           </aside>

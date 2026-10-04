@@ -58,6 +58,7 @@ test("tablet connections require admin rights while device sessions keep their o
   await expect(page.getByRole("tablist")).toBeHidden();
   await expect(page.locator('[data-teacher-section="tablets"]')).toBeHidden();
   await expect(page.locator("#workspace-tablet-usage")).toBeHidden();
+  await expect(page.getByLabel("Angezeigtes Profil")).toBeHidden();
   expect(directoryRequests).toBe(0);
   const admin = await playwright.request.newContext({ baseURL: BASE_URL });
   const pupil = await playwright.request.newContext({ baseURL: BASE_URL });
@@ -608,7 +609,9 @@ test("failed library moves retain the assignment and show their error in the mob
 
 test("admin chooses an owner's library without gaining organization or deletion rights", async ({ page }) => {
   await login(page, "julius");
-  await page.getByLabel("Bibliothek der Lehrkraft").selectOption("aksana");
+  await expect(page.locator(".teacher-header #workspace-owner-field")).toBeVisible();
+  await expect(page.locator("#workspace-units #workspace-owner-field")).toHaveCount(0);
+  await page.getByLabel("Angezeigtes Profil").selectOption("aksana");
   await open(page, shops);
   await expect(page.locator("#set-unit-input")).toHaveCount(0);
   await expect(page.locator(`[data-open-set="${shops.id}"]`)).not.toHaveAttribute("draggable", "true");
@@ -616,8 +619,6 @@ test("admin chooses an owner's library without gaining organization or deletion 
   await expect(page.locator("#workspace-delete")).toBeHidden();
   const foreignDeck = page.locator(`[data-library-view="${unit.id}"]`);
   await expect(foreignDeck).not.toHaveAttribute("aria-haspopup", "menu");
-  await foreignDeck.click({ button: "right" });
-  await expect(page.locator(".workspace-unit-menu")).toBeHidden();
   const move = await page.request.put(`/api/teacher/sets/${shops.id}/unit`, { data: { unitId: "" } });
   expect(move.status()).toBe(404);
   const order = await page.request.put("/api/teacher/library/order", { data: { kind: "sets", id: shops.id, beforeId: null } });
@@ -627,6 +628,24 @@ test("admin chooses an owner's library without gaining organization or deletion 
   const remove = await page.request.delete(`/api/teacher/units/${unit.id}`);
   expect(remove.status()).toBe(404);
   await page.screenshot({ path: "artifacts/teacher-workspace/admin.png" });
+  for (const width of [700, 390]) {
+    await page.setViewportSize({ width, height: 800 });
+    if (width === 390) await page.evaluate(() => window.LerndeckAppearance.setMode("light"));
+    await expect(page.getByLabel("Angezeigtes Profil")).toBeVisible();
+    const bounds = await page.locator("#workspace-owner-field").boundingBox();
+    expect(bounds.x).toBeGreaterThanOrEqual(0); expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: `artifacts/teacher-workspace/admin-profile-${width}.png` });
+  }
+  await page.locator("#teacher-section-toggle").click();
+  await page.getByRole("menuitemradio", { name: "Tablets", exact: true }).click();
+  await expect(page.getByLabel("Angezeigtes Profil")).toBeHidden();
+  await page.locator("#teacher-section-toggle").click();
+  await page.getByRole("menuitemradio", { name: "Lernsets", exact: true }).click();
+  await page.locator("#set-editor-close").click();
+  // Check the native read-only context menu last; it consumes subsequent browser clicks in WebKit.
+  await foreignDeck.click({ button: "right" });
+  await expect(page.locator(".workspace-unit-menu")).toBeHidden();
 });
 
 test("learning opens the familiar student mode selection in another tab and keeps the editor", async ({ page, context }) => {

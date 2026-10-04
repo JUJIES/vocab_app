@@ -3129,7 +3129,7 @@ body.teacher-workspace-visible { overflow: hidden; background: var(--surface); }
   width: 100%; min-width: 0; padding: 0.65rem 0.7rem; border: 1px solid var(--line); border-radius: 0.6rem;
   background: var(--surface); color: var(--text); font: inherit; font-size: 0.84rem;
 }
-.workspace-owner-field { display: grid; gap: 0.35rem; margin: 1rem 0; color: var(--text-muted); font-size: 0.75rem; }
+.workspace-owner-field { display: flex; align-items: center; gap: 0.6rem; margin: 0; color: var(--text-muted); font-size: 0.72rem; white-space: nowrap; }
 .workspace-nav-caption { margin: 1rem 0 0.25rem; font-size: 0.7rem; line-height: 1.4; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
 .workspace-nav-caption:first-child { margin-top: 0; }
 .workspace-nav-caption-label { display: block; padding: 0.65rem 0.5rem; }
@@ -3189,7 +3189,7 @@ body.teacher-workspace-visible { overflow: hidden; background: var(--surface); }
 .teacher-editor .set-editor-field > span { font-size: 0.75rem; }
 .teacher-editor .set-card-editor-heading__actions { gap: 0.25rem; flex-wrap: wrap; }
 .teacher-editor .set-card-editor-heading__actions .teacher-button { width: auto; height: 2.25rem; font-size: 0.74rem; }
-.workspace-owner-field select { min-height: 2.6rem; }
+.workspace-owner-field select { min-height: 2.15rem; width: 9.5rem; font-size: 0.82rem; padding: 0.35rem 0.65rem; }
 .teacher-editor .set-card-editor-columns, .teacher-editor .set-card-editor-row { grid-template-columns: 1.8rem minmax(0, 1fr) minmax(0, 1fr) 2.7rem 2.2rem; }
 /* The vocabulary list is an open editor surface, not a nested modal card. */
 .teacher-editor .set-card-editor-list { border: 0; border-radius: 0; background: transparent; gap: 0; }
@@ -3342,3 +3342,14 @@ body.teacher-workspace-visible { overflow: hidden; background: var(--surface); }
 @media (max-width: 480px) { .teacher-whats-new { padding: 1.5rem; } .teacher-whats-new__footer { align-items: stretch; flex-direction: column; } }
 
 body.teacher-whats-new-open { overflow: hidden; }
+
+/* The admin's displayed library belongs in the global header. */
+.teacher-workspace-visible .teacher-header:has([data-section-icon="sets"]):has(.workspace-owner-field:not([hidden])) { grid-template-columns: minmax(0, 1fr) auto auto; }
+.teacher-workspace-visible .teacher-header:has([data-section-icon="sets"]) .workspace-owner-field { grid-column: 2; grid-row: 1; }
+.teacher-workspace-visible .teacher-header:has([data-section-icon="sets"]):has(.workspace-owner-field:not([hidden])) .teacher-header__actions { grid-column: 3; }
+.teacher-header:has([data-section-icon="tablets"]) .workspace-owner-field { display: none; }
+@media (max-width: 720px) {
+  .teacher-workspace-visible .teacher-header:has([data-section-icon="sets"]):has(.workspace-owner-field:not([hidden])) { grid-template-columns: minmax(0, 1fr) auto; }
+  .teacher-workspace-visible .teacher-header:has([data-section-icon="sets"]) .workspace-owner-field { grid-column: 1 / -1; grid-row: 2; justify-content: space-between; }
+  .teacher-workspace-visible .teacher-header:has([data-section-icon="sets"]):has(.workspace-owner-field:not([hidden])) .teacher-header__actions { grid-column: 2; }
+}

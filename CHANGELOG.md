@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Admin-Profilumschalter aus der Bibliothek in die Topbar verschoben („Angezeigtes Profil“). Auf schmalen Fenstern eigene Kopfzeile; im Tabletbereich verborgen. Bibliothekswechsel und Rechte unverändert. PWA-Shell v217.
+
 - Set-Suche aus der Lehrer-Bibliothek entfernt, einschließlich Filterlogik und gespeicherter Suchpräferenz. Alte Suchbegriffe blenden keine Sets mehr aus. PWA-Shell v216.
 
 - Nur Lehrkräfte sehen beim Start ein kompaktes „Was ist neu?“-Modal mit vier Highlights. Konto-/browserlokale Bestätigung „Diese Meldung nicht mehr anzeigen“, getrennte Meldungs-ID für künftige Neuigkeiten; Anmeldung, Passwortwechsel und PWA-Splash haben Vorrang. Native Dialogbedienung, beide Themes und kurze/schmale Fenster. PWA-Shell v215.
