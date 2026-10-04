@@ -9678,8 +9678,18 @@ function getInputAudioState() {
   const card = getCurrentInputSessionCard();
   if (!card || state.inputSession.isComplete) return null;
   const englishAnswer = getLearningSideLanguage("back").split("-")[0] === "en";
-  if (englishAnswer && state.inputSession.evaluation?.status !== "correct") return null;
-  return getAudioStateForFace(card, englishAnswer ? "back" : "front");
+  const evaluation = state.inputSession.evaluation;
+  if (englishAnswer && evaluation?.status !== "correct") return null;
+  const audio = getAudioStateForFace(card, englishAnswer ? "back" : "front");
+  if (!englishAnswer) return audio;
+
+  // Speak the accepted submission, including optional infinitives and verb variants.
+  const text = Array.isArray(evaluation.rawInputs)
+    ? evaluation.rawInputs.map((value) => value.trim()).join(", ")
+    : evaluation.rawInput.trim();
+  const matchesRecording = window.LerndeckAnswerRules.normalizeForComparison(text)
+    === window.LerndeckAnswerRules.normalizeForComparison(audio.text);
+  return { ...audio, text, path: matchesRecording ? audio.path : "" };
 }
 
 function updateInputAudioButton() {

@@ -1,4 +1,4 @@
-const CACHE_NAME = "lerndeck-shell-v209-feedback-tablet-swipe";
+const CACHE_NAME = "lerndeck-shell-v210-accepted-speech";
 const APP_SHELL_URLS = [
   "/",
   "/index.html",
@@ -10,7 +10,7 @@ const APP_SHELL_URLS = [
   "/answer-rules.js?v=2026-10-03-optional-infinitive-v3",
   "/grading-rules.js?v=2026-09-10-ihk-v1",
   "/local-speech.js?v=2026-10-04-local-speech-v1",
-  "/app.js?v=2026-10-04-feedback-tablet-swipe-v1",
+  "/app.js?v=2026-10-04-accepted-speech-v1",
   "/appearance.js?v=2026-09-30-appearance-v4",
   "/appearance.css?v=2026-09-30-appearance-v4",
   "/teacher.css?v=2026-10-04-delete-icon-v1",

@@ -2,9 +2,14 @@ const { test, expect } = require("playwright/test");
 const BASE_URL = process.env.BASE_URL || "http://127.0.0.1:4012";
 test.use({ baseURL: BASE_URL, viewport: { width: 1024, height: 768 }, serviceWorkers: "block" });
 
-async function prepare(page, mode, direction) {
+async function prepare(page, mode, direction, suppliedCards = null) {
   await page.addInitScript(() => {
     window.spoken = [];
+    window.recordings = [];
+    window.Audio = class extends EventTarget {
+      pause() {}
+      play() { window.recordings.push(this.src); return Promise.resolve(); }
+    };
     const voices = [
       { name: "Daniel enhanced", lang: "en-GB", localService: true },
       { name: "Anna", lang: "de-DE", localService: true },
@@ -18,10 +23,10 @@ async function prepare(page, mode, direction) {
     } });
     window.SpeechSynthesisUtterance = class { constructor(text) { this.text = text; } };
   });
-  const cards = [
+  const cards = (suppliedCards || [
     { id: "a", source: { text: "Hund" }, target: { text: "dog" } },
     { id: "b", source: { text: "Katze" }, target: { text: "cat" } },
-  ].map(card => ({ ...card, examples: [{ id: "answer", source: card.source.text, target: card.target.text }], hintData: { flashcard: { exampleId: "answer" } } }));
+  ]).map(card => ({ ...card, examples: [{ id: "answer", source: card.source.text, target: card.target.text }], hintData: { flashcard: { exampleId: "answer" } } }));
   await page.route("**/api/runtime-info", route => route.fulfill({ json: { publicOrigin: BASE_URL } }));
   await page.route("**/api/teacher/session", route => route.fulfill({ json: { teacher: { id: "julius" }, session: { teacherId: "julius" } } }));
   await page.route("**/api/teacher/sets/speech-test", route => route.fulfill({ json: { set: { id: "speech-test", status: "published", path: "sets/user/speech-test.json", title: "Aussprache", sourceLanguage: "de", targetLanguage: "en", sourceLabel: "Deutsch", targetLabel: "Englisch", cards } } }));
@@ -117,4 +122,44 @@ test("portrait light tablet handles missing local voices without blocking progre
   expect(bounds.x).toBeGreaterThanOrEqual(0);
   expect(bounds.x + bounds.width).toBeLessThanOrEqual(820);
   await page.screenshot({ path: "artifacts/local-speech-light-portrait.png", fullPage: true });
+});
+
+for (const answer of ["eco-friendly", "environmentally friendly", "expect"]) {
+  test(`accepted variant ${answer} is spoken automatically and on manual replay`, async ({ page }) => {
+    const primary = answer === "expect" ? "to expect" : "environmentally friendly";
+    await prepare(page, "write", "source-target", [{
+      id: "variant", source: { text: answer === "expect" ? "erwarten" : "umweltfreundlich" },
+      target: { text: primary }, acceptedAnswers: answer === "expect" ? [] : ["eco-friendly"],
+      audio: { target: "/audio/canonical.mp3" },
+    }]);
+    await enable(page);
+    await page.locator("#input-answer-field").fill("wrong");
+    await page.locator("#input-check-button").click();
+    expect(await page.evaluate(() => spoken.length)).toBe(0);
+    await page.locator("#input-answer-field").fill(answer);
+    await page.locator("#input-check-button").click();
+    expect(await page.evaluate(() => spoken[0].text)).toBe(answer);
+    await expect(page.locator("#input-audio-button")).toHaveAttribute("aria-label", `${answer} anhören`);
+    await page.locator("#input-audio-button").click();
+    expect(await page.evaluate(() => spoken[1].text)).toBe(answer);
+    // A stored primary-answer recording must not substitute a different variant.
+    await page.evaluate(() => { speechSynthesis.getVoices = () => []; });
+    await page.locator("#input-audio-button").click();
+    expect(await page.evaluate(() => recordings.map(value => new URL(value, location.href).pathname))).toEqual(answer === primary ? ["/audio/canonical.mp3"] : []);
+  });
+}
+
+test("accepted irregular verb forms are spoken with the submitted variants and pauses", async ({ page }) => {
+  await prepare(page, "write", "source-target", [{
+    id: "verb", source: { text: "lernen" }, target: { text: "to learn - learnt - learnt" },
+    acceptedAnswers: ["to learn - learned - learned"],
+  }]);
+  await enable(page);
+  const fields = page.locator("#input-verb-answer-fields input");
+  await expect(fields).toHaveCount(3);
+  for (const [index, value] of ["learn", "learned", "learnt"].entries()) await fields.nth(index).fill(value);
+  await page.locator("#input-check-button").click();
+  expect(await page.evaluate(() => spoken[0].text)).toBe("learn, learned, learnt");
+  await page.locator("#input-audio-button").click();
+  expect(await page.evaluate(() => spoken[1].text)).toBe("learn, learned, learnt");
 });

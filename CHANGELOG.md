@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Eingabe spricht nach richtiger Antwort die tatsächlich akzeptierte Variante statt der Hauptlösung, sowohl automatisch als auch beim manuellen Wiederholen. Synonyme, ausgelassenes optionales `to` und einzeln akzeptierte Verbformen bleiben erhalten. Eine MP3 der Hauptlösung dient nur bei passender Eingabe als Ersatz; Antwortprüfung und Lernstand bleiben unverändert. PWA-Shell v210.
+
 - Tablet-Wischen im Translation-Feedback bleibt bei Höhenänderungen durch Browserleiste/Tastatur aktiv. Horizontal begonnene Gesten wechseln auch mit leicht diagonalem Ende zuverlässig; vertikales Scrollen, Abbruch und Rückfederung bleiben erhalten. Regressionen mit nativen Touch-Ereignissen geprüft; PWA-Shell v209.
 
 - Lokale Vokabelaussprache in Üben und Eingabe: passende lokale Gerätestimmen, Qualitäts-/Sprachwahl und vorhandene MP3-Dateien als Ersatz. Englische Antworten erst nach vollständig richtiger Eingabe hörbar; automatisches Abspielen im Zahnrad freiwillig und browserlokal gespeichert. Weitergehen wartet auf die Aussprache; Wechsel/Verlassen stoppt sie, Fehler blockieren die Übung nicht. Keine API-Kosten oder Änderungen am Set-/Lernstandmodell; Testen bleibt ohne Audio. PWA-Shell v208.
