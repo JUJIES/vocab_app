@@ -642,3 +642,105 @@ for (const mode of ["light", "dark"]) {
     }
   });
 }
+
+async function resizePanel(page, index, delta) {
+  const box = await page.locator('.workspace-resizer').nth(index).boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + delta, box.y + box.height / 2, { steps: 12 });
+  await page.mouse.up();
+}
+const panelWidth = (page, id) => page.locator(id).evaluate((node) => node.getBoundingClientRect().width);
+
+test('desktop panels resize, snap, reopen and persist separately for each account', async ({ page }) => {
+  await login(page);
+  const initial = await panelWidth(page, '#workspace-units');
+  await resizePanel(page, 0, 70);
+  await expect.poll(() => panelWidth(page, '#workspace-units')).toBeCloseTo(initial + 70, 0);
+  const libraryInitial = await panelWidth(page, '#workspace-library');
+  await resizePanel(page, 1, -50);
+  await expect.poll(() => panelWidth(page, '#workspace-library')).toBeCloseTo(libraryInitial - 50, 0);
+  const saved = await panelWidth(page, '#workspace-library');
+  await resizePanel(page, 0, -300);
+  await expect(page.locator('#workspace-units')).toHaveAttribute('aria-hidden', 'true');
+  await page.reload();
+  await expect(page.locator('#workspace-units')).toHaveAttribute('aria-hidden', 'true');
+  await expect.poll(() => panelWidth(page, '#workspace-library')).toBeCloseTo(saved, 0);
+  await resizePanel(page, 0, 210);
+  await expect(page.locator('#workspace-units')).not.toHaveAttribute('aria-hidden', 'true');
+  await expect.poll(() => panelWidth(page, '#workspace-units')).toBeCloseTo(210, 0);
+  await login(page, 'julius');
+  await expect.poll(() => panelWidth(page, '#workspace-units')).toBeCloseTo(initial, 0);
+  await resizePanel(page, 0, 100);
+  await login(page);
+  await expect.poll(() => panelWidth(page, '#workspace-units')).toBeCloseTo(210, 0);
+});
+
+test('splitter keyboard, cancellation and compact layout preserve desktop choices', async ({ page }) => {
+  await login(page);
+  const handle = page.getByRole('separator', { name: 'Lernsets', exact: true });
+  await handle.focus();
+  await handle.press('End');
+  const preferred = await panelWidth(page, '#workspace-library');
+  await expect.poll(() => panelWidth(page, '#workspace-editor')).toBeGreaterThanOrEqual(479);
+  await handle.press('Enter');
+  await expect(page.locator('#workspace-library')).toHaveAttribute('inert', '');
+  await page.getByRole('button', { name: 'Lernsets aufklappen', exact: true }).click();
+  await expect.poll(() => panelWidth(page, '#workspace-library')).toBeCloseTo(preferred, 0);
+  const box = await handle.boundingBox();
+  await page.mouse.move(box.x + 5, box.y + 100); await page.mouse.down();
+  await page.mouse.move(box.x - 150, box.y + 100);
+  await page.keyboard.press('Escape'); await page.mouse.up();
+  await expect.poll(() => panelWidth(page, '#workspace-library')).toBeCloseTo(preferred, 0);
+  await handle.press('Home');
+  await page.setViewportSize({ width: 900, height: 900 });
+  await expect(page.locator('#workspace-library')).not.toHaveAttribute('inert', '');
+  await expect(handle).toBeHidden();
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.locator('#workspace-library')).toHaveAttribute('inert', '');
+  await handle.press('Enter');
+  await page.setViewportSize({ width: 1024, height: 900 });
+  await expect.poll(() => panelWidth(page, '#workspace-editor')).toBeGreaterThanOrEqual(479);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect.poll(() => panelWidth(page, '#workspace-library')).toBeCloseTo(preferred, 0);
+});
+
+test('invalid layout preferences recover without changing navigation or set content', async ({ page }) => {
+  await login(page);
+  const current = (await (await page.request.get(`/api/teacher/sets/${rooms.id}`)).json()).set;
+  await page.addInitScript(() => localStorage.setItem('lerndeck-teacher-workspace-v1:aksana', JSON.stringify({ layout: [{width:-200}, {width:'bad', collapsed:'yes'}] })));
+  await page.reload();
+  await expect.poll(() => panelWidth(page, '#workspace-units')).toBeCloseTo(160, 0);
+  await expect(page.locator('#workspace-library')).not.toHaveAttribute('inert', '');
+  const view = current.unitId || 'unfiled';
+  await page.locator(`[data-library-view="${view}"]`).click();
+  await open(page, current);
+  await page.getByRole('separator', { name: 'Bibliothek', exact: true }).press('Enter');
+  await expect(page.locator('#set-title-input')).toHaveValue(current.title);
+  await page.getByRole('separator', { name: 'Bibliothek', exact: true }).press('Enter');
+  await expect(page.locator(`[data-library-view="${view}"]`)).toHaveAttribute('aria-pressed', 'true');
+});
+
+// Browsers can deny storage in managed/private environments; sizing must still work.
+test('blocked storage and lost pointer capture keep the workspace usable', async ({ page }) => {
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.addInitScript(() => {
+    Storage.prototype.setItem = () => { throw new DOMException('Blocked', 'SecurityError'); };
+    Storage.prototype.getItem = () => { throw new DOMException('Blocked', 'SecurityError'); };
+  });
+  await login(page);
+  const before = await panelWidth(page, '#workspace-units');
+  const handle = page.getByRole('separator', { name: 'Bibliothek', exact: true });
+  const box = await handle.boundingBox();
+  await page.mouse.move(box.x + 5, box.y + 100); await page.mouse.down();
+  await page.mouse.move(box.x + 80, box.y + 100);
+  await handle.evaluate(node => node.dispatchEvent(new Event('lostpointercapture')));
+  await page.mouse.up();
+  await expect.poll(() => panelWidth(page, '#workspace-units')).toBeCloseTo(before, 0);
+  await handle.press('Enter');
+  await expect(page.locator('#workspace-units')).toHaveAttribute('inert', '');
+  await handle.press('ArrowRight');
+  await expect(page.locator('#workspace-units')).not.toHaveAttribute('inert', '');
+  expect(errors).toEqual([]);
+});

@@ -3221,6 +3221,24 @@ body.teacher-workspace-visible { overflow: hidden; background: var(--surface); }
 
 .workspace-mobile-back { display: none; }
 .editor-leave-panel { width: min(100%, 34rem); }
+/* Desktop splitters share the flat surface; only the edge reacts. */
+.workspace-divider { display: none; }
+@media (min-width: 981px) {
+  .teacher-workspace { grid-template-columns: var(--workspace-pane-0, clamp(11rem, 15vw, 14rem)) var(--workspace-edge-0, 10px) var(--workspace-pane-1, clamp(15rem, 22vw, 20rem)) var(--workspace-edge-1, 10px) minmax(0, 1fr); }
+  .workspace-units, .workspace-library { border-right: 0; }
+  .workspace-units.is-collapsed, .workspace-library.is-collapsed { padding: 0; visibility: hidden; overflow: hidden; }
+  .workspace-divider { display: block; position: relative; min-height: 0; background: var(--bg-top); border-right: 1px solid var(--line); }
+  .workspace-resizer { position: absolute; inset: 0; cursor: col-resize; touch-action: none; }
+  .workspace-resizer::after { content: ""; position: absolute; top: 50%; left: 50%; width: 2px; height: 32px; border-radius: 2px; background: var(--text-muted); opacity: 0.25; transform: translate(-50%, -50%); }
+  .workspace-resizer:hover::after, .workspace-resizer:focus-visible::after, .is-resizing .workspace-resizer::after { background: var(--accent); opacity: 1; }
+  .workspace-resizer:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .workspace-panel-toggle { position: absolute; z-index: 9; bottom: 12px; left: 50%; transform: translateX(-50%); display: grid; place-items: center; width: 26px; height: 28px; padding: 4px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg-top); color: var(--text-muted); cursor: pointer; opacity: 0; }
+  .workspace-panel-toggle svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6; }
+  .workspace-divider:hover .workspace-panel-toggle, .workspace-divider:focus-within .workspace-panel-toggle, .workspace-divider.is-collapsed .workspace-panel-toggle { opacity: 1; }
+  .workspace-panel-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .workspace-divider.is-collapsed .workspace-panel-toggle svg { transform: rotate(180deg); }
+  .teacher-workspace.is-resizing, .teacher-workspace.is-resizing * { cursor: col-resize !important; user-select: none; }
+}
 @media (max-width: 980px) and (min-width: 721px) {
   .teacher-workspace { grid-template-columns: 14rem minmax(0, 1fr); grid-template-rows: minmax(10rem, 0.42fr) minmax(10rem, 0.58fr); }
   .workspace-units { grid-column: 1; grid-row: 1; border-bottom: 1px solid var(--line); }

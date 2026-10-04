@@ -20,7 +20,7 @@
     </script>
     <link rel="stylesheet" href="./pwa-splash.css?v=2026-09-30-splash-contrast-v2" />
     <script src="./appearance.js?v=2026-09-30-appearance-v4" data-appearance-scope="teacher"></script>
-    <link rel="stylesheet" href="./teacher.css?v=2026-10-03-library-categories-v1" />
+    <link rel="stylesheet" href="./teacher.css?v=2026-10-04-resizable-panels-v1" />
     <link rel="stylesheet" href="./appearance.css?v=2026-09-30-appearance-v4" />
     <link rel="stylesheet" href="./ui-motion.css?v=2026-08-30-ui-motion-v1" />
     <script src="./pwa.js?v=2026-08-30-pwa-splash-v3" defer></script>
@@ -28,7 +28,8 @@
     <script src="./tafelraum-embed.js?v=2026-09-08-content-zoom-layout-v2" defer></script>
     <script src="./set-side-options.js?v=2026-09-13-side-selection-v1" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js" defer></script>
-    <script src="./teacher-workspace.js?v=2026-10-04-editor-deck-label-v1" defer></script>
+    <script src="./teacher-workspace-layout.js?v=2026-10-04-resizable-panels-v1" defer></script>
+    <script src="./teacher-workspace.js?v=2026-10-04-resizable-panels-v1" defer></script>
     <script src="./teacher.js?v=2026-10-03-library-count-v1" defer></script>
   </head>
   <body>
@@ -167,6 +168,10 @@
             <nav id="workspace-navigation" aria-label="Set-Bibliothek"></nav>
             <p id="workspace-library-feedback" class="teacher-auth__feedback" role="status" aria-live="polite"></p>
           </aside>
+          <div class="workspace-divider" data-panel-index="0">
+            <div class="workspace-resizer" role="separator" tabindex="0" aria-orientation="vertical" aria-label="Bibliothek" aria-controls="workspace-units" aria-valuemin="0" aria-valuemax="360" aria-valuenow="0"></div>
+            <button class="workspace-panel-toggle" type="button" aria-controls="workspace-units" aria-expanded="true" aria-label="Bibliothek einklappen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6" /></svg></button>
+          </div>
           <section id="workspace-library" class="workspace-library" aria-label="Lernsets">
             <div class="workspace-library-controls">
             <div class="workspace-panel-header"><h2 id="sets-title" class="workspace-heading">Nicht eingeordnet</h2><button id="create-set-button" class="workspace-create-action" type="button" aria-label="Lernset anlegen"><img src="./assets/icons/plus.svg" alt="" decoding="async" /><span>Lernset</span></button></div>
@@ -176,6 +181,10 @@
             <div id="teacher-error-state" class="teacher-empty-state teacher-empty-state--error" hidden><p class="teacher-empty-state__title">Sets konnten nicht geladen werden</p><p id="teacher-error-message" class="teacher-empty-state__message"></p></div>
             <div id="teacher-set-list" class="teacher-set-list"></div>
           </section>
+          <div class="workspace-divider" data-panel-index="1">
+            <div class="workspace-resizer" role="separator" tabindex="0" aria-orientation="vertical" aria-label="Lernsets" aria-controls="workspace-library" aria-valuemin="0" aria-valuemax="520" aria-valuenow="0"></div>
+            <button class="workspace-panel-toggle" type="button" aria-controls="workspace-library" aria-expanded="true" aria-label="Lernsets einklappen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6" /></svg></button>
+          </div>
           <section id="workspace-editor" class="workspace-editor" aria-label="Set-Arbeitsbereich">
             <div id="workspace-editor-empty" class="workspace-editor-empty"><h2>Set auswählen</h2></div>
             <p id="workspace-editor-loading" class="workspace-editor-loading" role="status" hidden>Set wird geladen …</p>

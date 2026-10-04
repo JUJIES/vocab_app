@@ -2,6 +2,8 @@
 
 > Status: Diese Datei beschreibt die visuelle Zielrichtung, kein vollständig umgesetztes Komponentenregelwerk. Seit 2026-09-30 gibt es genau zwei Designs: Hell (Leinen) und Dunkel (ursprüngliches Nachtblau). Der direkte Schalter liegt im Lehrer-Zahnradmenü bzw. oben in der Schüler-Setübersicht. Auswahl und getrennte lokale Speicherung liegen in `appearance.js`, die gemeinsame Palette in `appearance.css`; die Schülerwahl gilt für alle Lernmodi, die Lehrervorschau übernimmt die Lehrerwahl. Helle Flächen sind getönt, Deckfarben bleiben als sanfte Farbakzente sichtbar, Das Lerndeck-Logo behält seine drei Originalfarben; Druckblätter bleiben schwarz-weiß. Die allgemeinen Empfehlungen unten sind bei neuen Komponenten gegen die aktuellen Patterns zu prüfen.
 
+> Aktueller Lehrer-Arbeitsbereich: zusammenhängende, flache Fläche mit feinen Theme-Linien zwischen Panels, ohne äußere Kartenrundungen/Schatten. Die älteren No-Line-/Schichten-Empfehlungen unten sind dafür ausdrücklich überholt. Desktop-Ziehkanten bleiben ruhig, reagieren auf Hover/Fokus und bieten schmale wieder aufziehbare Einklappkanten; Details in `docs/TEACHER_WORKSPACE_PLAN.md`.
+
 ## 1. Overview & Creative North Star
 The Creative North Star for this design system is **"The Stoic Atelier."** 
 

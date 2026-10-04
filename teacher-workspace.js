@@ -15,6 +15,7 @@ window.LerndeckTeacherWorkspace = (() => {
       breadcrumb: byId("workspace-breadcrumb"),
     };
     const state = { owner: "", view: "", selected: "", search: "", mobile: "library", editUnit: "", loaded: false, intent: 0, restored: null, organizing: false, organizationPromise: null, drag: null, renderPending: false, suppressClickUntil: 0, suppressClickTarget: "", navMarkup: "" };
+    const layout = window.LerndeckWorkspaceLayout.create({ root: el.root, onChange: remember });
     const unitMenu = document.createElement("div");
     unitMenu.className = "workspace-unit-menu"; unitMenu.hidden = true;
     unitMenu.setAttribute("role", "menu");
@@ -114,7 +115,7 @@ window.LerndeckTeacherWorkspace = (() => {
       if (!state.loaded) return;
       try { localStorage.setItem(key(), JSON.stringify({ owner: state.owner, view: state.view, selected: state.selected,
         search: state.search, mobile: state.mobile, libraryScroll: el.list.scrollTop,
-        unitsScroll: el.units.scrollTop, editorScroll: el.editor.scrollTop })); } catch (_) { /* Navigation works with blocked storage. */ }
+        unitsScroll: el.units.scrollTop, editorScroll: el.editor.scrollTop, layout: layout.snapshot() })); } catch (_) { /* Navigation works with blocked storage. */ }
     }
     function writeUrl() {
       const url = new URL(location.href);
@@ -172,6 +173,7 @@ window.LerndeckTeacherWorkspace = (() => {
       if (!data.teacher) return;
       if (!state.loaded) {
         const saved = read(), params = new URLSearchParams(location.search);
+        layout.restore(saved.layout);
         state.restored = saved;
         state.owner = params.get("owner") || saved.owner || data.teacher.id;
         state.view = params.get("unit") || saved.view || "";
@@ -448,7 +450,7 @@ window.LerndeckTeacherWorkspace = (() => {
     document.addEventListener("visibilitychange", remember);
     return {
       render, remember, refreshEditorUnit, currentUnit, owner: () => state.owner,
-      reset() { closeUnitMenu(); cancelUnitHold(); touch?.preview?.remove(); touch = null; finishDrag(); state.loaded = false; state.selected = ""; state.intent += 1; },
+      reset() { layout.cancel(); closeUnitMenu(); cancelUnitHold(); touch?.preview?.remove(); touch = null; finishDrag(); state.loaded = false; state.selected = ""; state.intent += 1; },
       async restore() {
         const selected = config.data().sets.find((set) => set.id === state.selected && set.ownerTeacherId === state.owner);
         if (selected) {

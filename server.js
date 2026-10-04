@@ -1519,6 +1519,7 @@ const PUBLIC_ROOT_FILES = new Map([
   ["/set-side-options.js", "set-side-options.js"],
   ["/teacher.js", "teacher.js"],
   ["/teacher-workspace.js", "teacher-workspace.js"],
+  ["/teacher-workspace-layout.js", "teacher-workspace-layout.js"],
   ["/tafelraum-embed.js", "tafelraum-embed.js"],
   ["/pwa-splash.css", "pwa-splash.css"],
   ["/ui-motion.css", "ui-motion.css"],
