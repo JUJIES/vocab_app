@@ -29,7 +29,7 @@ Einsatzbereit sind:
 - sechs vorbereitete Lehrkraftkonten: Julius, Jessi S., Jessi B., Jörg, Aksana und Matti
 - direkt nutzbare Lehrkraftkonten mit einmaligem Startpasswort und eigenem Passwortwechsel im Zahnrad-Menü
 - private Sets pro Lehrkraft mit Erstellen, Bearbeiten, Löschen und stabilem Set-Code; Julius hat als Admin zusätzlich eine explizite Bibliotheksauswahl für andere Lehrkräfte und darf sie prüfen, bearbeiten sowie ihre Bilder verwalten, ohne Eigentümerschaft oder Löschrecht zu übernehmen
-- Desktop-Arbeitsbereich mit Lerndecks, suchbarer Set-Bibliothek und direktem Editor; Klicks öffnen Sets ohne Modal, Änderungen speichern automatisch
+- Desktop-Arbeitsbereich mit Lerndecks, Set-Bibliothek und direktem Editor; Klicks öffnen Sets ohne Modal, Änderungen speichern automatisch
 - direkte Set-Anlage und Autosave: neue Sets erscheinen sofort in ihrem Lerndeck, auch halbfertige Vokabeln bleiben erhalten; oben rechts bestätigt eine ruhige Statusanzeige die Speicherung, ohne Toasts
 - Schnellimport aus klaren Textlisten sowie KI-Entwürfe aus Freitext, TXT, MD, CSV, Bildern, PDF, DOCX und PPTX; Titel, Fach und Beschreibung können vorgeschlagen werden, die Zuordnung von Vorder- und Rückseite wird zum Lernen bewusst im Tabellenkopf gewählt
 - KI-Lernbilder für vollständige Vokabelpaare: sechs Motive pro Sheet, sichtbarer Hintergrundfortschritt, kompakte Vorschau im Karteneditor, einzelne Neugenerierung mit erhaltener Variantenhistorie und didaktisch gestufte Anzeige als Feedback nach Aufdecken beziehungsweise Antwort; `Testen` bleibt bildfrei

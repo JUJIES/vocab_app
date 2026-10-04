@@ -8,13 +8,13 @@ window.LerndeckTeacherWorkspace = (() => {
     const el = {
       root: byId("teacher-workspace"), nav: byId("workspace-navigation"), owner: byId("workspace-owner"),
       ownerField: byId("workspace-owner-field"), units: byId("workspace-units"), library: byId("workspace-library"),
-      search: byId("workspace-search"), list: byId("teacher-set-list"), title: byId("sets-title"),
+      list: byId("teacher-set-list"), title: byId("sets-title"),
       empty: byId("teacher-empty-state"), feedback: byId("workspace-library-feedback"), newSet: byId("create-set-button"),
       newUnit: byId("workspace-create-unit"), unitForm: byId("workspace-unit-form"), unitName: byId("workspace-unit-name"),
       unitCancel: byId("workspace-unit-cancel"), editor: byId("workspace-editor"),
       breadcrumb: byId("workspace-breadcrumb"),
     };
-    const state = { owner: "", view: "", selected: "", search: "", mobile: "library", editUnit: "", loaded: false, intent: 0, restored: null, organizing: false, organizationPromise: null, drag: null, renderPending: false, suppressClickUntil: 0, suppressClickTarget: "", navMarkup: "" };
+    const state = { owner: "", view: "", selected: "", mobile: "library", editUnit: "", loaded: false, intent: 0, restored: null, organizing: false, organizationPromise: null, drag: null, renderPending: false, suppressClickUntil: 0, suppressClickTarget: "", navMarkup: "" };
     const layout = window.LerndeckWorkspaceLayout.create({ root: el.root, onChange: remember });
     const unitMenu = document.createElement("div");
     unitMenu.className = "workspace-unit-menu"; unitMenu.hidden = true;
@@ -114,7 +114,7 @@ window.LerndeckTeacherWorkspace = (() => {
     function remember() {
       if (!state.loaded) return;
       try { localStorage.setItem(key(), JSON.stringify({ owner: state.owner, view: state.view, selected: state.selected,
-        search: state.search, mobile: state.mobile, libraryScroll: el.list.scrollTop,
+        mobile: state.mobile, libraryScroll: el.list.scrollTop,
         unitsScroll: el.units.scrollTop, editorScroll: el.editor.scrollTop, layout: layout.snapshot() })); } catch (_) { /* Navigation works with blocked storage. */ }
     }
     function writeUrl() {
@@ -178,7 +178,6 @@ window.LerndeckTeacherWorkspace = (() => {
         state.owner = params.get("owner") || saved.owner || data.teacher.id;
         state.view = params.get("unit") || saved.view || "";
         state.selected = params.get("set") || saved.selected || "";
-        state.search = typeof saved.search === "string" ? saved.search : "";
         state.mobile = saved.mobile === "editor" ? "editor" : "library";
         state.loaded = true;
       }
@@ -193,7 +192,6 @@ window.LerndeckTeacherWorkspace = (() => {
       el.owner.replaceChildren(...owners.map((owner) => new Option(owner.displayName, owner.id)));
       el.owner.value = state.owner;
       el.newSet.hidden = !ownLibrary(); el.newUnit.hidden = !ownLibrary();
-      el.search.value = state.search;
       const navScroll = el.units.scrollTop, listScroll = el.list.scrollTop;
       const handle = '<img class="workspace-drag-handle" src="./assets/icons/grip-vertical.svg" alt="" draggable="false" />';
       const navButton = (view, text) => `<button type="button" class="workspace-nav-button${labels[view] ? ' workspace-nav-category' : ''}" data-library-view="${escape(view)}" ${ownLibrary() && !labels[view] ? 'draggable="true" aria-haspopup="menu" aria-expanded="false" aria-keyshortcuts="Shift+F10 Alt+ArrowUp Alt+ArrowDown" aria-description="Rechtsklick, langes Drücken oder Umschalt und F10 für Optionen. Zum Sortieren ziehen oder Alt und Pfeil hoch oder runter verwenden."' : ''} aria-pressed="${state.view === view}">${ownLibrary() && !labels[view] ? handle : ''}<span>${escape(text)}</span><span class="workspace-count">${count(view)}</span></button>`;
@@ -205,9 +203,7 @@ window.LerndeckTeacherWorkspace = (() => {
         el.nav.innerHTML = navMarkup;
         state.navMarkup = navMarkup;
       }
-      const needle = state.search.trim().toLocaleLowerCase("de");
-      const filtered = sets().filter((set) => matches(set) && (!needle || [set.title, set.subject, set.description,
-        units().find((unit) => unit.id === set.unitId)?.name || ""].join(" ").toLocaleLowerCase("de").includes(needle)));
+      const filtered = sets().filter((set) => matches(set));
       el.list.replaceChildren();
       for (const set of filtered) {
         const row = document.createElement("button");
@@ -230,7 +226,7 @@ window.LerndeckTeacherWorkspace = (() => {
       }
       el.title.textContent = name();
       el.empty.hidden = filtered.length > 0;
-      el.empty.querySelector("p").textContent = needle ? "Keine Treffer" : "Keine Sets";
+      el.empty.querySelector("p").textContent = "Keine Sets";
       el.units.scrollTop = navScroll; el.list.scrollTop = listScroll;
       applyMobile(); refreshEditorUnit();
     }
@@ -278,10 +274,9 @@ window.LerndeckTeacherWorkspace = (() => {
     el.list.addEventListener("click", (event) => {
       const row = event.target.closest("[data-open-set]"); if (row && !(Date.now() < state.suppressClickUntil && state.suppressClickTarget === `sets:${row.dataset.openSet}`)) void selectSet(row.dataset.openSet);
     });
-    el.search.addEventListener("input", () => { state.search = el.search.value; render(); remember(); });
     el.owner.addEventListener("change", () => {
       const owner = el.owner.value;
-      void navigate(async () => { state.owner = owner; state.view = ""; state.selected = ""; state.search = "";
+      void navigate(async () => { state.owner = owner; state.view = ""; state.selected = "";
         state.mobile = "library"; config.hideEditor(); el.unitForm.hidden = true; render(); }).finally(() => { el.owner.value = state.owner; });
     });
     el.newUnit.addEventListener("click", () => showUnitForm());

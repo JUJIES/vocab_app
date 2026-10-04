@@ -249,8 +249,15 @@ test("organizes units, keeps content identities and flushes autosave before swit
   await page.reload(); await expect(page.locator("#set-title-input")).toHaveValue(saved.title);
   await expect(page.locator("#set-unit-input")).toHaveCount(0);
   await expect(page.locator("#workspace-breadcrumb")).toContainText("Unit 2");
-  await page.locator("#workspace-search").fill("Room things");
-  await expect(page.locator(".workspace-set-row")).toHaveCount(1);
+  await expect(page.locator("#workspace-search")).toHaveCount(0);
+  await page.evaluate(() => {
+    const key = "lerndeck-teacher-workspace-v1:aksana";
+    const saved = JSON.parse(localStorage.getItem(key));
+    localStorage.setItem(key, JSON.stringify({ ...saved, search: "no matching set" }));
+  });
+  await page.reload();
+  await expect(page.locator("#set-title-input")).toHaveValue(saved.title);
+  await expect(page.locator(".workspace-set-row")).toHaveCount(29);
   await page.screenshot({ path: "artifacts/teacher-workspace/desktop-light.png" });
 });
 
