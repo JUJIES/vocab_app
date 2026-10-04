@@ -1,4 +1,4 @@
-const CACHE_NAME = "lerndeck-shell-v202";
+const CACHE_NAME = "lerndeck-shell-v202-delete-icon";
 const APP_SHELL_URLS = [
   "/",
   "/index.html",
@@ -11,7 +11,7 @@ const APP_SHELL_URLS = [
   "/app.js?v=2026-10-03-feedback-bubbles-v1",
   "/appearance.js?v=2026-09-30-appearance-v4",
   "/appearance.css?v=2026-09-30-appearance-v4",
-  "/teacher.css?v=2026-10-04-tablet-icon-scroll-v1",
+  "/teacher.css?v=2026-10-04-delete-icon-v1",
   "/set-side-options.js?v=2026-09-13-side-selection-v1",
   "/teacher.js?v=2026-10-03-library-count-v1",
   "/teacher-workspace-layout.js?v=2026-10-04-resizable-panels-v1",
@@ -36,6 +36,7 @@ const APP_SHELL_URLS = [
   "/assets/icons/learning-modes-open.svg",
   "/assets/icons/print.svg",
   "/assets/icons/tablet-device.svg",
+  "/assets/icons/trash-2.svg",
   "/assets/icons/share-2.svg",
   "/assets/icons/print-vocabulary-list.png",
   "/assets/icons/print-vocabulary-test.png",

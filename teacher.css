@@ -3181,7 +3181,8 @@ body.teacher-workspace-visible { overflow: hidden; background: var(--surface); }
 .workspace-editor-actions #set-editor-feedback { grid-column: 1 / -1; margin: 0; }
 .workspace-editor-actions #set-editor-feedback:empty { display: none; }
 .workspace-save-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 0.4rem; margin-left: auto; }
-.teacher-editor .workspace-delete { color: var(--danger); }
+.teacher-editor .workspace-delete { color: var(--danger); width: 2.3rem; padding: 0; }
+.teacher-editor .workspace-delete .teacher-button__icon { width: 1rem; height: 1rem; filter: var(--danger-icon-filter); }
 .workspace-metadata > summary { cursor: pointer; color: var(--text-muted); font-size: 0.78rem; }
 .workspace-metadata > .set-editor-grid { margin-top: 0.75rem; }
 .teacher-editor .set-editor-field input { background: var(--surface); border: 1px solid var(--line); border-radius: 0.6rem; font-size: 0.84rem; }
