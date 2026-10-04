@@ -60,3 +60,14 @@ test("missing local voices, browser errors and stalled playback cannot block the
   assert.equal(await stalled, false);
   assert.equal(f.player.isSpeaking(), false);
 });
+
+
+test("an explicit English accent outranks quality and never falls back to another accent", () => {
+  const american = { name: "Samantha enhanced", lang: "en-US", localService: true };
+  const remote = { name: "British premium", lang: "en-GB", localService: false };
+  assert.equal(selectVoice([american, british], "en-GB"), british);
+  assert.equal(selectVoice([british, american], "en-US"), american);
+  assert.equal(selectVoice([british, remote], "en-US"), null);
+  assert.equal(selectVoice([american, remote], "en-GB"), null);
+  assert.equal(selectVoice([{ ...american, lang: "en_US" }], "en-US").name, american.name);
+});

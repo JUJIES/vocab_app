@@ -1,5 +1,10 @@
 const localSpeech = window.LerndeckLocalSpeech.createPlayer(window);
 const INPUT_SPEECH_STORAGE_KEY = "lerndeck-input-speech-v1";
+const SPEECH_ACCENT_STORAGE_KEY = "lerndeck-speech-accent-v1";
+function readSpeechAccentPreference() {
+  try { return window.localStorage.getItem(SPEECH_ACCENT_STORAGE_KEY) === "en-US" ? "en-US" : "en-GB"; }
+  catch { return "en-GB"; }
+}
 function readInputSpeechPreference() {
   try { return window.localStorage.getItem(INPUT_SPEECH_STORAGE_KEY) === "true"; }
   catch { return false; }
@@ -125,6 +130,7 @@ const state = {
   inputAdvanceTimeoutId: null,
   inputSettingsOpen: false,
   inputSpeechEnabled: readInputSpeechPreference(),
+  speechAccent: readSpeechAccentPreference(),
   inputCorrectionModeEnabled: true,
   inputDelayEditorType: "correct",
   inputCorrectAdvanceDelayMs: DEFAULT_INPUT_CORRECT_ADVANCE_DELAY_MS,
@@ -570,6 +576,9 @@ function bindEvents() {
   elements.testMenuLogout.addEventListener("click", handleInputMenuLogout);
   elements.inputSettingsButton.addEventListener("click", handleInputSettingsToggle);
   elements.inputAudioButton.addEventListener("click", () => { void playInputPronunciation(); });
+  for (const choice of document.querySelectorAll("[data-speech-accent]")) {
+    choice.addEventListener("change", handleSpeechAccentChange);
+  }
   elements.inputSpeechToggle.addEventListener("change", () => {
     state.inputSpeechEnabled = elements.inputSpeechToggle.checked;
     try { window.localStorage.setItem(INPUT_SPEECH_STORAGE_KEY, String(state.inputSpeechEnabled)); }
@@ -582,6 +591,7 @@ function bindEvents() {
   window.speechSynthesis?.addEventListener("voiceschanged", () => {
     updateAudioButtons();
     updateInputAudioButton();
+    syncSpeechAccentControls();
   });
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
@@ -1332,6 +1342,7 @@ function syncLearningDirectionGroup(groupName, selectedDirection, labels) {
 }
 
 function syncFlashcardSettingsControls() {
+  syncSpeechAccentControls();
   const isOpen = state.flashcardSettingsOpen;
   const isReady = state.baseCards.length > 0;
   elements.flashcardSettingsShell?.setAttribute("data-open", String(isOpen));
@@ -1675,6 +1686,7 @@ function syncInputSettingsControls() {
     return;
   }
 
+  syncSpeechAccentControls();
   elements.inputSpeechToggle.checked = state.inputSpeechEnabled;
   const isOpen = state.inputSettingsOpen;
   elements.inputSettingsShell?.setAttribute("data-open", String(isOpen));
@@ -9658,20 +9670,58 @@ function getAudioStateForFace(card, face) {
 
   // Each visible side speaks only its own text in the active direction.
   const isBackFace = face === "back";
+  const language = getLearningSideLanguage(face);
 
   return {
     face,
-    language: getLearningSideLanguage(face),
+    language,
     text: (window.LerndeckIrregularVerbs.parseForms(isBackFace ? card.targetText : card.sourceText)
       || [isBackFace ? card.targetText : card.sourceText]).join(", "),
-    path: isBackFace ? resolveSetAssetPath(card.audioTarget) : resolveSetAssetPath(card.audioSource),
+    // Historical recordings have no accent metadata, so cannot honor an English accent choice.
+    path: language.startsWith("en-") ? "" : resolveSetAssetPath(isBackFace ? card.audioTarget : card.audioSource),
   };
 }
 
 function getLearningSideLanguage(face) {
   const labels = getLearningDirectionLabels();
   const reversed = state.activeLearningDirection === LEARNING_DIRECTIONS.TARGET_SOURCE;
-  return String((face === "back") !== reversed ? labels.targetLanguage : labels.sourceLanguage).toLowerCase();
+  const language = String((face === "back") !== reversed ? labels.targetLanguage : labels.sourceLanguage).toLowerCase();
+  return language.split("-")[0] === "en" ? state.speechAccent : language;
+}
+
+function getMissingPronunciationMessage(language) {
+  if (language === "en-GB") return "Für britische Aussprache ist keine lokale Stimme verfügbar.";
+  if (language === "en-US") return "Für amerikanische Aussprache ist keine lokale Stimme verfügbar.";
+  return "Keine passende Gerätestimme verfügbar.";
+}
+
+function syncSpeechAccentControls() {
+  const labels = getLearningDirectionLabels();
+  const hasEnglish = [labels.sourceLanguage, labels.targetLanguage]
+    .some((language) => String(language).toLowerCase().split("-")[0] === "en");
+  for (const group of document.querySelectorAll("[data-speech-accent-group]")) {
+    group.hidden = !hasEnglish;
+    for (const choice of group.querySelectorAll("[data-speech-accent]")) {
+      choice.checked = choice.value === state.speechAccent;
+    }
+    group.querySelector("[data-speech-accent-feedback]").textContent = hasEnglish && !localSpeech.voice(state.speechAccent)
+      ? getMissingPronunciationMessage(state.speechAccent) : "";
+  }
+}
+
+function handleSpeechAccentChange(event) {
+  const choice = event.currentTarget;
+  if (!choice.checked || !["en-GB", "en-US"].includes(choice.value)) return;
+  stopCurrentAudio();
+  state.speechAccent = choice.value;
+  try { window.localStorage.setItem(SPEECH_ACCENT_STORAGE_KEY, state.speechAccent); }
+  catch { /* Selection still applies when browser storage is unavailable. */ }
+  syncSpeechAccentControls();
+  updateAudioButtons();
+  updateInputAudioButton();
+  if (state.appMode === APP_MODES.INPUT && state.inputSession.evaluation) {
+    scheduleInputAdvance(state.inputSession.evaluation);
+  }
 }
 
 function getInputAudioState() {
@@ -9698,8 +9748,8 @@ function updateInputAudioButton() {
   elements.inputAudioButton.hidden = !audio;
   elements.inputAudioButton.disabled = !available;
   elements.inputAudioButton.setAttribute("aria-label", audio ? `${audio.text} anhören` : "Aussprache anhören");
-  elements.inputAudioButton.title = available ? "Aussprache anhören" : "Keine passende lokale Stimme verfügbar";
-  elements.inputAudioFeedback.textContent = audio && !available ? "Keine passende Gerätestimme verfügbar." : "";
+  elements.inputAudioButton.title = available ? "Aussprache anhören" : getMissingPronunciationMessage(audio?.language);
+  elements.inputAudioFeedback.textContent = audio && !available ? getMissingPronunciationMessage(audio.language) : "";
 }
 
 async function playInputPronunciation() {

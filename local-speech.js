@@ -11,8 +11,10 @@
     const base = requested.split("-")[0];
     const preferred = requested.includes("-") ? requested : ({ en: "en-gb", de: "de-de" }[base] || requested);
     // Never use a remote voice or silently pronounce English with a German voice.
+    const exactEnglishLocale = base === "en" && requested.includes("-");
     return voices.filter((voice) => voice.localService === true
-      && String(voice.lang).toLowerCase().split(/[-_]/)[0] === base)
+      && String(voice.lang).toLowerCase().split(/[-_]/)[0] === base
+      && (!exactEnglishLocale || String(voice.lang).toLowerCase().replace(/_/g, "-") === requested))
       .map((voice, index) => {
         const name = String(voice.name || "");
         const quality = /premium|enhanced|natural|neural|siri/i.test(name) ? 100 : 0;

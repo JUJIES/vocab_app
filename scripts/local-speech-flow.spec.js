@@ -13,11 +13,13 @@ async function prepare(page, mode, direction, suppliedCards = null) {
     const voices = [
       { name: "Daniel enhanced", lang: "en-GB", localService: true },
       { name: "Anna", lang: "de-DE", localService: true },
+      { name: "Samantha enhanced", lang: "en-US", localService: true },
       { name: "Remote premium", lang: "en-GB", localService: false },
     ];
+    window.voiceListeners = [];
     Object.defineProperty(window, "speechSynthesis", { value: {
       getVoices: () => voices,
-      addEventListener() {},
+      addEventListener(_event, callback) { window.voiceListeners.push(callback); },
       speak(value) { window.lastUtterance = value; window.spoken.push({ text: value.text, lang: value.lang, voice: value.voice.name }); },
       cancel() { window.speechCancelled = (window.speechCancelled || 0) + 1; },
     } });
@@ -142,10 +144,10 @@ for (const answer of ["eco-friendly", "environmentally friendly", "expect"]) {
     await expect(page.locator("#input-audio-button")).toHaveAttribute("aria-label", `${answer} anhören`);
     await page.locator("#input-audio-button").click();
     expect(await page.evaluate(() => spoken[1].text)).toBe(answer);
-    // A stored primary-answer recording must not substitute a different variant.
+    // Recordings without accent metadata cannot substitute a selected English accent.
     await page.evaluate(() => { speechSynthesis.getVoices = () => []; });
     await page.locator("#input-audio-button").click();
-    expect(await page.evaluate(() => recordings.map(value => new URL(value, location.href).pathname))).toEqual(answer === primary ? ["/audio/canonical.mp3"] : []);
+    expect(await page.evaluate(() => recordings)).toEqual([]);
   });
 }
 
@@ -163,3 +165,78 @@ test("accepted irregular verb forms are spoken with the submitted variants and p
   await page.locator("#input-audio-button").click();
   expect(await page.evaluate(() => spoken[1].text)).toBe("learn, learned, learnt");
 });
+
+
+async function chooseAccent(page, group, accent) {
+  const button = group === "input" ? "#input-settings-button" : "#flashcard-settings-button";
+  await page.locator(button).click();
+  await page.locator(`[data-speech-accent-group="${group}"] input[value="${accent}"]`).check();
+  await page.locator(button).click();
+}
+
+test("accent switches preserve the accepted variant, cancel playback and persist on reload", async ({ page }) => {
+  await prepare(page, "write", "source-target", [{
+    id: "accent", source: { text: "umweltfreundlich" }, target: { text: "environmentally friendly" }, acceptedAnswers: ["eco-friendly"],
+  }]);
+  await enable(page);
+  await page.locator("#input-answer-field").fill("eco-friendly");
+  await page.locator("#input-check-button").click();
+  expect(await page.evaluate(() => spoken[0])).toMatchObject({ text: "eco-friendly", lang: "en-GB" });
+  await chooseAccent(page, "input", "en-US");
+  expect(await page.evaluate(() => speechCancelled)).toBeGreaterThan(0);
+  await page.locator("#input-audio-button").click();
+  expect(await page.evaluate(() => spoken[1])).toMatchObject({ text: "eco-friendly", lang: "en-US", voice: "Samantha enhanced" });
+  expect(await page.evaluate(() => localStorage.getItem("lerndeck-speech-accent-v1"))).toBe("en-US");
+  await page.reload();
+  await expect(page.locator('[data-speech-accent-group="input"] input[value="en-US"]')).toBeChecked();
+  await expect(page.locator('[data-speech-accent-group="flashcard"] input[value="en-US"]')).toBeChecked();
+});
+
+test("practice switches English accent while German pronunciation stays German", async ({ page }) => {
+  await prepare(page, "practice", "target-source");
+  await chooseAccent(page, "flashcard", "en-US");
+  await page.locator('[data-audio-face="front"]').click();
+  expect(await page.evaluate(() => spoken[0].lang)).toBe("en-US");
+  await page.waitForTimeout(350);
+  await page.locator("#front-word").click();
+  await page.locator('[data-audio-face="back"]').click();
+  expect(await page.evaluate(() => spoken[1].lang)).toBe("de-DE");
+});
+
+test("a missing accent is explained and remote or other-accent voices are not substituted", async ({ page }) => {
+  await prepare(page, "write", "target-source");
+  await page.evaluate(() => { speechSynthesis.getVoices = () => [
+    { name: "British", lang: "en-GB", localService: true },
+    { name: "Remote American", lang: "en-US", localService: false },
+  ]; });
+  await chooseAccent(page, "input", "en-US");
+  await expect(page.locator("#input-audio-button")).toBeDisabled();
+  await expect(page.locator('[data-speech-accent-group="input"] [data-speech-accent-feedback]')).toContainText("amerikanische Aussprache");
+  expect(await page.evaluate(() => spoken.length)).toBe(0);
+  await page.evaluate(() => {
+    speechSynthesis.getVoices = () => [{ name: "New American", lang: "en-US", localService: true }];
+    voiceListeners.forEach(callback => callback());
+  });
+  await expect(page.locator("#input-audio-button")).toBeEnabled();
+  await expect(page.locator('[data-speech-accent-group="input"] [data-speech-accent-feedback]')).toBeEmpty();
+  await page.locator("#input-audio-button").click();
+  expect(await page.evaluate(() => spoken[0].lang)).toBe("en-US");
+});
+
+for (const [width, height, appearance] of [[1024, 768, "dark"], [390, 844, "light"]]) {
+  test(`accent controls fit ${width}px in ${appearance} appearance`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    await page.addInitScript(mode => localStorage.setItem("lerndeck-teacher-appearance-v1", JSON.stringify({ mode })), appearance);
+    await prepare(page, "write", "target-source");
+    await page.locator("#input-settings-button").click();
+    const choice = page.locator('[data-speech-accent-group="input"] input[value="en-US"]');
+    await choice.check();
+    await expect(choice).toBeChecked();
+    await expect(page.locator("#input-settings-popover")).toHaveCSS("opacity", "1");
+    const bounds = await page.locator("#input-settings-popover").boundingBox();
+    expect(bounds.x).toBeGreaterThanOrEqual(0);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
+    expect(bounds.y + bounds.height).toBeLessThanOrEqual(height);
+    await page.screenshot({ path: `artifacts/speech-accent-${width}-${appearance}.png`, fullPage: true });
+  });
+}

@@ -7784,6 +7784,19 @@ button.sentence-stage__problem { display: inline-block; min-width: .6em; padding
 .input-audio-feedback:empty { display: none; }
 .input-speech-setting { display: flex; align-items: center; gap: .75rem; cursor: pointer; font-size: .85rem; }
 .input-speech-setting input { width: 1.2rem; height: 1.2rem; flex: none; accent-color: var(--accent); }
+/* Shared accent choice uses native radios, labels and the learner theme. */
+.speech-accent-settings { min-width: 0; margin: 0; padding: .85rem 0 0; border: 0; border-top: 1px solid var(--outline-soft); }
+.speech-accent-settings[hidden] { display: none; }
+.speech-accent-settings legend { padding: 0; font-size: .85rem; font-weight: 700; }
+.speech-accent-settings__choices { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; margin-top: .6rem; }
+.speech-accent-choice { position: relative; display: grid; justify-items: center; gap: .25rem; min-height: 64px; padding: .5rem; border: 1px solid var(--outline-soft); border-radius: .7rem; font-size: .8rem; cursor: pointer; background: var(--surface-glass); }
+.speech-accent-choice:has(input:checked) { border-color: var(--text-muted); background: var(--surface-glass-strong); }
+.speech-accent-choice:focus-within { outline: 2px solid var(--text); outline-offset: 2px; }
+.speech-accent-choice input { position: absolute; top: .6rem; left: .6rem; width: 1rem; height: 1rem; accent-color: var(--accent); }
+.speech-accent-choice__flag { font-size: 1.5rem; line-height: 1.2; }
+.speech-accent-settings__note, .speech-accent-settings__feedback { margin: .6rem 0 0; font-size: .78rem; line-height: 1.4; color: var(--text-muted); }
+.speech-accent-settings__feedback:empty { display: none; }
+.input-stage__settings-popover { max-height: calc(100dvh - 6rem); overflow-y: auto; overscroll-behavior: contain; }
 /* Teacher previews omit the logout control; keep their menus inside the viewport. */
 .app-shell[data-teacher-practice="true"] .input-stage__menu-context .input-stage__settings-popover,
 .app-shell[data-teacher-practice="true"] .card-stage__topbar-context .input-stage__settings-popover { right: 0; }

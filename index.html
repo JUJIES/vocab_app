@@ -33,7 +33,7 @@
     </script>
     <script src="./appearance.js?v=2026-09-30-appearance-v4" data-appearance-scope="student"></script>
     <link rel="stylesheet" href="./pwa-splash.css?v=2026-09-30-splash-contrast-v2" />
-    <link rel="stylesheet" href="./styles.css?v=2026-10-04-local-speech-v1" />
+    <link rel="stylesheet" href="./styles.css?v=2026-10-04-speech-accent-v1" />
     <link rel="stylesheet" href="./appearance.css?v=2026-09-30-appearance-v4" />
     <link rel="stylesheet" href="./ui-motion.css?v=2026-08-30-ui-motion-v1" />
     <script src="./pwa.js?v=2026-08-30-pwa-splash-v3" defer></script>
@@ -46,8 +46,8 @@
     <script src="./irregular-verbs.js?v=2026-09-06-optional-to-v2" defer></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js" defer></script>
-    <script src="./local-speech.js?v=2026-10-04-local-speech-v1" defer></script>
-    <script src="./app.js?v=2026-10-04-accepted-speech-v1" defer></script>
+    <script src="./local-speech.js?v=2026-10-04-speech-accent-v1" defer></script>
+    <script src="./app.js?v=2026-10-04-speech-accent-v1" defer></script>
   </head>
   <body>
     <div class="pwa-splash" role="status" aria-label="Lerndeck wird geladen">
@@ -190,7 +190,7 @@
               <section
                 id="flashcard-settings-popover"
                 class="input-stage__settings-popover learning-direction-popover"
-                aria-label="Abfragerichtung"
+                aria-label="Lerneinstellungen"
                 aria-hidden="true"
               >
                 <div class="learning-direction-control">
@@ -204,6 +204,21 @@
                     <button class="learning-direction-control__choice" type="button" data-learning-direction="target-source"></button>
                   </div>
                 </div>
+                <fieldset class="speech-accent-settings" data-speech-accent-group="flashcard" hidden>
+                  <legend>Englische Aussprache</legend>
+                  <div class="speech-accent-settings__choices">
+                    <label class="speech-accent-choice">
+                      <input type="radio" name="speech-accent-flashcard" value="en-GB" data-speech-accent />
+                      <span class="speech-accent-choice__flag" aria-hidden="true">🇬🇧</span><span>Britisch</span>
+                    </label>
+                    <label class="speech-accent-choice">
+                      <input type="radio" name="speech-accent-flashcard" value="en-US" data-speech-accent />
+                      <span class="speech-accent-choice__flag" aria-hidden="true">🇺🇸</span><span>Amerikanisch</span>
+                    </label>
+                  </div>
+                  <p class="speech-accent-settings__note">Manche Wörter werden unterschiedlich ausgesprochen.</p>
+                  <p class="speech-accent-settings__feedback" data-speech-accent-feedback role="status"></p>
+                </fieldset>
               </section>
             </div>
 
@@ -529,6 +544,21 @@
                   <input id="input-speech-toggle" type="checkbox" />
                   <span>Englische Aussprache nach richtiger Antwort abspielen</span>
                 </label>
+                <fieldset class="speech-accent-settings" data-speech-accent-group="input" hidden>
+                  <legend>Englische Aussprache</legend>
+                  <div class="speech-accent-settings__choices">
+                    <label class="speech-accent-choice">
+                      <input type="radio" name="speech-accent-input" value="en-GB" data-speech-accent />
+                      <span class="speech-accent-choice__flag" aria-hidden="true">🇬🇧</span><span>Britisch</span>
+                    </label>
+                    <label class="speech-accent-choice">
+                      <input type="radio" name="speech-accent-input" value="en-US" data-speech-accent />
+                      <span class="speech-accent-choice__flag" aria-hidden="true">🇺🇸</span><span>Amerikanisch</span>
+                    </label>
+                  </div>
+                  <p class="speech-accent-settings__note">Manche Wörter werden unterschiedlich ausgesprochen.</p>
+                  <p class="speech-accent-settings__feedback" data-speech-accent-feedback role="status"></p>
+                </fieldset>
               </section>
             </div>
 
