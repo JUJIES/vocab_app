@@ -1,4 +1,4 @@
-const { test, expect } = require("playwright/test");
+const { test, expect } = require("./teacher-release-fixture.cjs");
 const path = require("node:path");
 const fs = require("node:fs/promises");
 const { TeacherService } = require("../lib/teacher-service");
@@ -760,6 +760,9 @@ test('blocked storage and lost pointer capture keep the workspace usable', async
     Storage.prototype.getItem = () => { throw new DOMException('Blocked', 'SecurityError'); };
   });
   await login(page);
+  const news = page.getByRole("dialog", { name: "Was ist neu?" });
+  await expect(news).toBeVisible();
+  await news.getByRole("button", { name: "Weiter", exact: true }).click();
   const before = await panelWidth(page, '#workspace-units');
   const handle = page.getByRole('separator', { name: 'Bibliothek', exact: true });
   const box = await handle.boundingBox();

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Nur Lehrkräfte sehen beim Start ein kompaktes „Was ist neu?“-Modal mit vier Highlights. Konto-/browserlokale Bestätigung „Diese Meldung nicht mehr anzeigen“, getrennte Meldungs-ID für künftige Neuigkeiten; Anmeldung, Passwortwechsel und PWA-Splash haben Vorrang. Native Dialogbedienung, beide Themes und kurze/schmale Fenster. PWA-Shell v215.
+
 - Vokabelkorrekturen erhalten Karten-ID, Lernstandzuordnung, Bilder und Bildhistorie. Autosave und Bild-Polling entfernen bei laufenden Texteingaben keine Bildreferenzen mehr; historische Varianten bleiben bewusst auswählbar. Veraltete Bildjobs werden weiterhin über ihren Inhalts-Hash abgefangen. PWA-Shell v214.
 
 - Bibliothek zeigt nach erfolgreicher Reihenfolge-/Zuordnungsänderung keine zusätzliche Speicherbestätigung. Die Statusanzeige am Set bleibt bestehen; Organisationsfehler werden weiterhin angezeigt. PWA-Shell v213.

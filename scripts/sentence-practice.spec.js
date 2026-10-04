@@ -1,4 +1,4 @@
-const { test, expect } = require("playwright/test");
+const { test, expect } = require("./teacher-release-fixture.cjs");
 const BASE_URL = process.env.BASE_URL || "http://127.0.0.1:4030";
 test.use({ baseURL: BASE_URL, viewport: { width: 1280, height: 850 }, locale: "de-DE", serviceWorkers: "block" });
 // Mirror the API's canonical, validated history rather than inventing it in the UI.

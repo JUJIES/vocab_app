@@ -1,4 +1,4 @@
-const { test, expect } = require("playwright/test");
+const { test, expect } = require("./teacher-release-fixture.cjs");
 const path = require("node:path");
 const fs = require("node:fs/promises");
 const { createVocabularyPrintPdf } = require("../lib/print-service");

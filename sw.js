@@ -1,4 +1,4 @@
-const CACHE_NAME = "lerndeck-shell-v214-preserve-pictures";
+const CACHE_NAME = "lerndeck-shell-v215-whats-new";
 const APP_SHELL_URLS = [
   "/",
   "/index.html",
@@ -13,9 +13,10 @@ const APP_SHELL_URLS = [
   "/app.js?v=2026-10-04-translation-completion-v1",
   "/appearance.js?v=2026-09-30-appearance-v4",
   "/appearance.css?v=2026-09-30-appearance-v4",
-  "/teacher.css?v=2026-10-04-delete-icon-v1",
+  "/teacher.css?v=2026-10-04-whats-new-v1",
   "/set-side-options.js?v=2026-09-13-side-selection-v1",
-  "/teacher.js?v=2026-10-04-preserve-pictures-v1",
+  "/teacher-whats-new.js?v=2026-10-04-whats-new-v1",
+  "/teacher.js?v=2026-10-04-whats-new-v1",
   "/teacher-workspace-layout.js?v=2026-10-04-resizable-panels-v1",
   "/teacher-workspace.js?v=2026-10-04-library-feedback-v1",
   "/tafelraum-embed.js?v=2026-09-08-content-zoom-layout-v2",

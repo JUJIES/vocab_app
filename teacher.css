@@ -3327,3 +3327,19 @@ body.teacher-workspace-visible { overflow: hidden; background: var(--surface); }
 .teacher-editor .set-card-visual.is-open .set-card-visual__trigger:not(.has-image) { background: var(--surface-soft); border-color: var(--line); transform: none; }
 .teacher-editor .set-card-visual__trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .teacher-editor .set-card-visual__trigger:not(.has-image):disabled { opacity: .28; }
+
+/* Release highlights use the existing palette and native modal focus handling. */
+.teacher-whats-new { position: fixed; box-sizing: border-box; width: min(34rem, calc(100% - 2rem)); max-height: calc(100dvh - 2rem); margin: auto; padding: 2rem; overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--line); border-radius: 1.25rem; background: rgb(var(--menu-rgb)); color: var(--text); box-shadow: var(--shadow); }
+.teacher-whats-new::backdrop { background: rgba(2, 8, 20, 0.56); backdrop-filter: blur(5px); }
+.teacher-whats-new__date { margin: 0 2rem 0.5rem 0; color: var(--text-muted); font-size: 0.78rem; }
+.teacher-whats-new h2 { margin: 0 0 1.5rem; color: var(--heading-text); font-size: 1.65rem; letter-spacing: -0.04em; outline: none; }
+.teacher-whats-new__highlights { display: grid; gap: 1.1rem; }
+.teacher-whats-new h3 { margin: 0 0 0.3rem; font-size: 0.95rem; color: var(--heading-text); }
+.teacher-whats-new section p { margin: 0; color: var(--text-muted); font-size: 0.88rem; line-height: 1.6; }
+.teacher-whats-new__footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--line); }
+.teacher-whats-new__footer label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; cursor: pointer; }
+.teacher-whats-new__footer input { width: 1rem; height: 1rem; margin: 0; accent-color: var(--accent); flex: 0 0 auto; }
+.teacher-whats-new :is(button, input):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (max-width: 480px) { .teacher-whats-new { padding: 1.5rem; } .teacher-whats-new__footer { align-items: stretch; flex-direction: column; } }
+
+body.teacher-whats-new-open { overflow: hidden; }

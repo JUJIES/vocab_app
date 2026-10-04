@@ -1,4 +1,4 @@
-const { test, expect } = require('playwright/test');
+const { test, expect } = require('./teacher-release-fixture.cjs');
 const path = require('node:path');
 const { TeacherService } = require('../lib/teacher-service');
 const { SetService } = require('../lib/set-service');

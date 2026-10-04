@@ -1,4 +1,4 @@
-const { test, expect } = require("playwright/test");
+const { test, expect } = require("./teacher-release-fixture.cjs");
 const BASE_URL = process.env.BASE_URL || "http://127.0.0.1:4030";
 test.use({ baseURL: BASE_URL, viewport: { width: 1024, height: 768 }, serviceWorkers: "block" });
 for (const reverse of [false, true]) for (const mode of ["write", "test"]) {

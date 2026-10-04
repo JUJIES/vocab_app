@@ -1,4 +1,4 @@
-const { test, expect } = require("playwright/test");
+const { test, expect } = require("./teacher-release-fixture.cjs");
 
 const BASE_URL = process.env.BASE_URL || "http://127.0.0.1:4012";
 const TEACHER_ID = process.env.TEACHER_ID || "julius";

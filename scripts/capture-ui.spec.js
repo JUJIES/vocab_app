@@ -1,6 +1,6 @@
 const fs = require("fs/promises");
 const path = require("path");
-const { test, expect } = require("playwright/test");
+const { test, expect } = require("./teacher-release-fixture.cjs");
 
 const BASE_URL = process.env.BASE_URL || "http://127.0.0.1:4012";
 const OUTPUT_DIR = process.env.SCREENSHOT_DIR

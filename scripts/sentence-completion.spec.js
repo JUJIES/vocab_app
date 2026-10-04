@@ -1,4 +1,4 @@
-const { test, expect } = require("playwright/test");
+const { test, expect } = require("./teacher-release-fixture.cjs");
 test.use({ baseURL: process.env.BASE_URL || "http://127.0.0.1:4043", viewport: { width: 1280, height: 950 }, locale: "de-DE", serviceWorkers: "block" });
 
 async function exercise(page, mode, { long = false } = {}) {

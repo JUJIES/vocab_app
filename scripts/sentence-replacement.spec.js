@@ -1,4 +1,4 @@
-const {test,expect}=require('playwright/test');
+const {test,expect}=require('./teacher-release-fixture.cjs');
 const BASE_URL=process.env.BASE_URL||'http://127.0.0.1:4043';
 test.use({baseURL:BASE_URL,viewport:{width:1280,height:900},locale:'de-DE',serviceWorkers:'block'});
 for(const mode of ['light','dark']) test(`new sentence preserves draft on failure and resets only the current task (${mode})`,async({page},info)=>{

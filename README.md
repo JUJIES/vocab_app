@@ -14,6 +14,12 @@ Im Eingabe-Zahnrad aktiviert „Englische Aussprache nach richtiger Antwort absp
 
 **Gerätetest:** Installiertes Lerndeck vollständig schließen/neu öffnen, bei Bedarf einmal zusätzlich neu laden (PWA-Shell v211). In `Üben` beide Seiten anhören; in `Eingabe` beide Richtungen, falsche → korrigierte Antwort, Abschalten und Wiederholen prüfen. Verfügbare lokale Stimmen und Qualität müssen im tatsächlichen Relution-Webclip getestet werden; der Browserflow prüft mit simulierter Sprachausgabe nur die Produktlogik.
 
+## Neuigkeiten beim Start
+
+Nur Lehrkräfte sehen nach erfolgreicher Anmeldung die kompakte Meldung „Was ist neu?“. Ein nötiger Passwortwechsel und der PWA-Ladebildschirm haben Vorrang. „Diese Meldung nicht mehr anzeigen“ plus „Weiter“ bestätigt die aktuelle Meldung browserlokal pro Konto (`lerndeck-whats-new-v1:<teacherId>`); Schließen/Escape bestätigt sie nicht. Ohne Bestätigung erscheint sie beim nächsten Seitenstart erneut, innerhalb eines Besuchs höchstens einmal pro Konto. Bei gesperrtem Speicher bleibt der Arbeitsbereich nutzbar. Schüler und Lehrervorschauen in der Schüler-App erhalten keine Meldung.
+
+Inhalte stehen in `teacher.html`, die zugehörige `RELEASE_ID` in `teacher-whats-new.js`. Nur bei neuen Highlights gemeinsam aktualisieren und Assets/PWA versionieren; technische Deployments sollen die bestätigte Meldung nicht erneut öffnen. Die bestehenden Browserflows verwenden `scripts/teacher-release-fixture.cjs` als bereits bestätigte Lehrkräfte; der eigene Neuigkeitenflow prüft Erstbesuche und Bestätigung.
+
 ## Montag-MVP
 
 Einsatzbereit sind:

@@ -20,7 +20,7 @@
     </script>
     <link rel="stylesheet" href="./pwa-splash.css?v=2026-09-30-splash-contrast-v2" />
     <script src="./appearance.js?v=2026-09-30-appearance-v4" data-appearance-scope="teacher"></script>
-    <link rel="stylesheet" href="./teacher.css?v=2026-10-04-delete-icon-v1" />
+    <link rel="stylesheet" href="./teacher.css?v=2026-10-04-whats-new-v1" />
     <link rel="stylesheet" href="./appearance.css?v=2026-09-30-appearance-v4" />
     <link rel="stylesheet" href="./ui-motion.css?v=2026-08-30-ui-motion-v1" />
     <script src="./pwa.js?v=2026-08-30-pwa-splash-v3" defer></script>
@@ -30,7 +30,8 @@
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js" defer></script>
     <script src="./teacher-workspace-layout.js?v=2026-10-04-resizable-panels-v1" defer></script>
     <script src="./teacher-workspace.js?v=2026-10-04-library-feedback-v1" defer></script>
-    <script src="./teacher.js?v=2026-10-04-preserve-pictures-v1" defer></script>
+    <script src="./teacher-whats-new.js?v=2026-10-04-whats-new-v1" defer></script>
+    <script src="./teacher.js?v=2026-10-04-whats-new-v1" defer></script>
   </head>
   <body>
     <div class="pwa-splash" role="status" aria-label="Lerndeck wird geladen">
@@ -317,6 +318,24 @@
         <div id="teacher-tablet-list" class="teacher-tablet-list" role="list"></div>
       </section>
     </main>
+
+    <dialog id="teacher-whats-new" class="teacher-whats-new" aria-labelledby="teacher-whats-new-title">
+      <button class="share-panel__close" type="button" aria-label="Neuigkeiten schließen" data-whats-new-close>
+        <img class="share-panel__close-icon" src="./assets/icons/x-mark.svg" alt="" />
+      </button>
+      <p class="teacher-whats-new__date">Lerndeck · Oktober 2026</p>
+      <h2 id="teacher-whats-new-title" tabindex="-1">Was ist neu?</h2>
+      <div class="teacher-whats-new__highlights">
+        <section><h3>Translation</h3><p>Vokabeln im Satz üben – mit drei Schwierigkeiten, konkretem Feedback und einer Lernrückschau.</p></section>
+        <section><h3>Vokabeln anhören</h3><p>Aussprache in Üben und Eingabe, wahlweise britisch oder amerikanisch. Vorlesen nach richtiger Antwort ist optional.</p></section>
+        <section><h3>Bibliothek organisieren</h3><p>Lernsets und Lerndecks per Ziehen ordnen. Die Seitenbereiche lassen sich vergrößern oder einklappen.</p></section>
+        <section><h3>Einfach weiterarbeiten</h3><p>Änderungen speichern automatisch. Vorhandene Bilder bleiben auch bei Vokabelkorrekturen erhalten.</p></section>
+      </div>
+      <footer class="teacher-whats-new__footer">
+        <label><input type="checkbox" data-whats-new-hide /> <span>Diese Meldung nicht mehr anzeigen</span></label>
+        <button class="teacher-button" type="button" data-whats-new-confirm>Weiter</button>
+      </footer>
+    </dialog>
 
     <div id="share-overlay" class="share-overlay" data-ui-motion="dialog" hidden>
       <div class="share-overlay__backdrop" data-close-share></div>

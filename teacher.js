@@ -685,6 +685,8 @@ async function loadProtectedTeacherData() {
     await workspace.restore();
     if (state.currentTeacher?.mustChangePassword) {
       openPasswordDialog();
+    } else {
+      window.LerndeckWhatsNew?.show(state.currentTeacher?.id);
     }
   } catch (error) {
     if (error?.requiresAuth) {
@@ -1290,6 +1292,7 @@ function createTeacherRequestError(response, fallbackMessage) {
 }
 
 function showTeacherAuth(feedback = "") {
+  window.LerndeckWhatsNew?.dismiss();
   document.body.classList.remove("teacher-workspace-visible");
   closeShareOverlay();
   closePrintOverlay();
@@ -4040,6 +4043,7 @@ async function handlePasswordChange(event) {
 
     state.currentTeacher = response.data?.teacher || state.currentTeacher;
     closePasswordDialog();
+    window.LerndeckWhatsNew?.show(state.currentTeacher?.id);
   } catch (error) {
     if (error?.requiresAuth && error?.code !== "INVALID_CURRENT_PASSWORD") {
       showTeacherAuth(error.message);

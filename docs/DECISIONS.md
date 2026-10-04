@@ -247,3 +247,9 @@
 - Bestehende Zeilen behalten ihre Karten-ID, Lernstandzuordnung, aktive Bildreferenz und Bildhistorie bei Text-/Antwortänderungen. Neue bzw. nach Löschung neu angelegte Zeilen erhalten neue IDs. Dies ersetzt die bisherige Regel, Inhaltsänderungen als neue Karte ohne Bild zu behandeln.
 - Autosave-Antworten und Bild-Polling übernehmen Bildreferenzen anhand der Kartenidentität, auch wenn lokale Texte bereits weiterbearbeitet wurden; sie ersetzen keine Eingaben. Veraltete textgebundene Präsentationsdaten werden bei Inhaltsänderungen weiterhin verworfen.
 - Automatische Bildjobs behalten ihren Inhalts-Hash-Schutz. Bewusste Auswahl einer historischen Variante prüft Eigentümer/Set/Karte und verwendet den aktuellen Inhalts-Hash als Schutz gegen parallele Änderungen.
+
+## 2026-10-04: Reduzierte Neuigkeiten nur für Lehrkräfte
+
+- Ein natives, themenabhängiges „Was ist neu?“-Modal zeigt vier aktuelle Highlights nach erfolgreicher Anmeldung/Passwortwechsel und nach dem PWA-Splash. Es ersetzt keinen Arbeitsablauf und erscheint nicht bei Schülern oder in der Lernvorschau.
+- Die explizite Checkbox-Bestätigung speichert die Meldungs-ID lokal pro Lehrkraftkonto. Schließen/Escape ist nur ein Verlassen für den Besuch. Neue Meldungen erhalten eine neue ID, technische Releases behalten die bestehende. Kein Server-Datenmodell und keine neue Dependency.
+- Native Fokusbegrenzung, Escape, scrollbare kurze Fenster und die vorhandenen Theme-/Bewegungsvariablen. Abmelden entfernt auch eine noch auf den Splash wartende Meldung. Speicherfehler verhindern weder Schließen noch Weiterarbeiten.
