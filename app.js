@@ -10173,7 +10173,12 @@ function bindSentenceFeedbackNavigation() {
     cancelSentenceFeedbackMotion();
     if (target) updateSentenceFeedbackSelection(target);
   });
+  let viewportWidth = window.innerWidth;
   window.addEventListener("resize", () => {
+    // Tablet browser chrome and the software keyboard resize the height mid-swipe.
+    // Only a width/orientation change invalidates the horizontal interaction.
+    if (window.innerWidth === viewportWidth) return;
+    viewportWidth = window.innerWidth;
     const target = state.sentenceFeedbackMotion?.targetAttemptId;
     cancelSentenceFeedbackMotion();
     if (target) updateSentenceFeedbackSelection(target);
@@ -10233,8 +10238,8 @@ function bindSentenceFeedbackNavigation() {
     const gesture = state.sentenceFeedbackGesture;
     if (!gesture || gesture.id !== event.pointerId) return;
     const dx = event.clientX - gesture.x;
-    const dy = event.clientY - gesture.y;
-    if (Math.abs(dx) >= 48 && Math.abs(dx) > Math.abs(dy) * 1.4) moveSentenceFeedback(dx < 0 ? 1 : -1);
+    // Once horizontal intent is locked, a natural diagonal finish stays horizontal.
+    if (gesture.dragging && Math.abs(dx) >= 48) moveSentenceFeedback(dx < 0 ? 1 : -1);
     else animateSentenceFeedbackBack();
   });
   const cancelGesture = () => { if (state.sentenceFeedbackGesture) animateSentenceFeedbackBack(); };

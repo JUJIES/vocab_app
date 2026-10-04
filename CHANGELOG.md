@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Tablet-Wischen im Translation-Feedback bleibt bei Höhenänderungen durch Browserleiste/Tastatur aktiv. Horizontal begonnene Gesten wechseln auch mit leicht diagonalem Ende zuverlässig; vertikales Scrollen, Abbruch und Rückfederung bleiben erhalten. Regressionen mit nativen Touch-Ereignissen geprüft; PWA-Shell v209.
+
 - Lokale Vokabelaussprache in Üben und Eingabe: passende lokale Gerätestimmen, Qualitäts-/Sprachwahl und vorhandene MP3-Dateien als Ersatz. Englische Antworten erst nach vollständig richtiger Eingabe hörbar; automatisches Abspielen im Zahnrad freiwillig und browserlokal gespeichert. Weitergehen wartet auf die Aussprache; Wechsel/Verlassen stoppt sie, Fehler blockieren die Übung nicht. Keine API-Kosten oder Änderungen am Set-/Lernstandmodell; Testen bleibt ohne Audio. PWA-Shell v208.
 
 - Translation-Feedback hebt besprochene Sprachformen wie I, he oder to have in kräftiger Kursivschrift hervor, einschließlich Fehlerpunkten und zusätzlicher Hilfe. Ältere Rückmeldungen mit Anführungszeichen bleiben lesbar; sichtbare Formatierungszeichen entfallen. Bewertung, Lösungs- und HTML-Schutz bleiben bestehen.

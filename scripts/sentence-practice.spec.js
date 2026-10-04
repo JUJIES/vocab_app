@@ -387,7 +387,7 @@ for (const light of [false, true]) test(`revision history survives edits, retrie
   // with real capture, without stubbing the navigation handler.
   const touch = browserName === 'chromium' ? await page.context().newCDPSession(page) : null;
   if (touch) await touch.send('Emulation.setTouchEmulationEnabled', { enabled: true });
-  async function swipe(dx, dy = 0, cancel = false) {
+  async function swipe(dx, dy = 0, cancel = false, duringGesture = null, horizontalStart = false) {
     await expect.poll(() => page.locator('#sentence-feedback-list').evaluate(list => list.getAnimations({ subtree: true }).filter(animation => animation.playState === 'running').length)).toBe(0);
     const area = await active.locator('.sentence-stage__submission-header').boundingBox();
     const x = area.x + area.width / 2, y = area.y + area.height / 2;
@@ -400,9 +400,10 @@ for (const light of [false, true]) test(`revision history survives edits, retrie
     if (touch) {
       await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
       for (let step = 1; step <= 4; step++) {
-        await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x + dx * step / 4, y: y + dy * step / 4 }] });
+        await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x + dx * step / 4, y: y + (horizontalStart && step === 1 ? 0 : dy * step / 4) }] });
       }
       await checkFingerFollow();
+      if (duringGesture) { await duringGesture(); await checkFingerFollow(); }
       await touch.send('Input.dispatchTouchEvent', { type: cancel ? 'touchCancel' : 'touchEnd', touchPoints: [] });
       return;
     }
@@ -415,16 +416,27 @@ for (const light of [false, true]) test(`revision history survives edits, retrie
     const pointerId = await page.evaluate(() => window.feedbackPointerId);
     const options = { pointerId, pointerType: 'touch', isPrimary: true, clientX: x, clientY: y };
     await page.locator('#sentence-feedback-list').dispatchEvent('pointerdown', options);
+    if (horizontalStart) await page.locator('#sentence-feedback-list').dispatchEvent('pointermove', { ...options, clientX: x + dx / 4 });
     await page.locator('#sentence-feedback-list').dispatchEvent('pointermove', { ...options, clientX: x + dx, clientY: y + dy });
     await checkFingerFollow();
+    if (duringGesture) { await duringGesture(); await checkFingerFollow(); }
     await page.locator('#sentence-feedback-list').dispatchEvent(cancel ? 'pointercancel' : 'pointerup', { ...options, clientX: x + dx, clientY: y + dy });
     await page.mouse.up();
   }
   await page.locator('#sentence-answer').focus();
   await page.locator('#sentence-answer').evaluate(input => input.setSelectionRange(0, 7));
-  await swipe(90);
+  // Tablet browser chrome/keyboard can resize the height while a finger is down.
+  await swipe(90, 0, false, async () => {
+    const width = await page.locator('#sentence-feedback-list').evaluate(list => list.clientWidth);
+    // Changing Playwright's device metrics cancels the native touch itself.
+    // Deliver the resize notification directly, keeping the real finger down.
+    await page.evaluate(() => window.dispatchEvent(new Event('resize')));
+    expect(await page.locator('#sentence-feedback-list').evaluate(list => list.clientWidth)).toBe(width);
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  });
   await expect(position).toHaveText('Feedback 2 von 3');
-  await swipe(-90);
+  // Direction is locked at the beginning, not decided again at release.
+  await swipe(-90, 70, false, null, true);
   await expect(position).toHaveText('Feedback 3 von 3');
   await swipe(10);
   await swipe(70, 120);
