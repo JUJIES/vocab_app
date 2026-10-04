@@ -170,7 +170,8 @@ test("tablet session gates paid calls and completed student run counts once with
     expect(route.request().postDataJSON().tabletId).toBe("rot-1");
     const action = route.request().url().split("/").pop();
     if (action === "check") checked(base, route.request().postDataJSON().answer, "🌟 Die Aussage stimmt.", true);
-    if (action === "next") base.complete = true;
+    if (action === "next") { base.complete = true; base.completion = { sentences: [{ promptId: base.prompt.id, sourceSentence: "Die Zutat ist frisch.", answer: "The ingredient is fresh.", attemptCount: 1 }], summary: null }; }
+    if (action === "summary") base.completion.summary = { praise: "Du hast den Satz gleich passend übersetzt 👍", points: [] };
     return route.fulfill({ json: { run: base } });
   });
   await page.goto("/");
@@ -184,6 +185,11 @@ test("tablet session gates paid calls and completed student run counts once with
   await page.locator("#sentence-submit").click();
   await expect(page.locator("#sentence-prompt")).toHaveText("Geschafft!");
   await expect(page.locator('.sentence-stage__feedback-excerpt')).toHaveText('The ingredient is fresh.');
+  expect(progressWrites).toBe(1);
+  await expect(page.locator('#sentence-completion-home')).toHaveText('Hauptmenü');
+  await expect(page.locator('.sentence-completion__count')).toHaveText('1 Versuch');
+  await page.locator('#sentence-summary-request').click();
+  await expect(page.locator('#sentence-summary-praise')).toContainText('gleich passend übersetzt');
   expect(progressWrites).toBe(1);
   await page.reload();
   await expect(page.locator("#sentence-prompt")).toHaveText("Geschafft!");

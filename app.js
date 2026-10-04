@@ -102,6 +102,8 @@ const state = {
   sentenceRequestId: 0,
   sentenceBusy: false,
   sentenceReplacing: false,
+  sentenceSummaryBusy: false,
+  sentenceSummaryError: "",
   sentenceShownPromise: null,
   sentenceFeedbackMotion: null,
   sentenceFeedbackGesture: null,
@@ -420,6 +422,16 @@ const elements = {
   sentenceLabel: document.getElementById("sentence-label"),
   sentenceSubmit: document.getElementById("sentence-submit"),
   sentenceReplace: document.getElementById("sentence-replace"),
+  sentenceCompletion: document.getElementById("sentence-completion"),
+  sentenceCompletionTitle: document.getElementById("sentence-completion-title"),
+  sentenceCompletionList: document.getElementById("sentence-completion-list"),
+  sentenceCompletionRestart: document.getElementById("sentence-completion-restart"),
+  sentenceCompletionHome: document.getElementById("sentence-completion-home"),
+  sentenceSummary: document.getElementById("sentence-summary"),
+  sentenceSummaryPraise: document.getElementById("sentence-summary-praise"),
+  sentenceSummaryPoints: document.getElementById("sentence-summary-points"),
+  sentenceSummaryNotice: document.getElementById("sentence-summary-notice"),
+  sentenceSummaryRequest: document.getElementById("sentence-summary-request"),
   sentenceFeedback: document.getElementById("sentence-feedback"),
   sentenceFeedbackText: document.getElementById("sentence-feedback-text"),
   sentenceFeedbackList: document.getElementById("sentence-feedback-list"),
@@ -553,6 +565,11 @@ function bindEvents() {
   elements.sentenceLogout.addEventListener("click", () => elements.inputMenuLogout.click());
   elements.sentenceForm.addEventListener("submit", handleSentenceSubmit);
   elements.sentenceReplace.addEventListener("click", () => sendSentenceAction("replace"));
+  elements.sentenceCompletionRestart.addEventListener("click", () => startSentenceSet(state.currentSetPath, state.activeLearningDirection, state.activeTestCardCount, { difficulty: state.activeSentenceDifficulty }));
+  const leaveCompletion = () => { elements.sentenceCompletion.close(); void handleReturnToStudentHome(); };
+  elements.sentenceCompletionHome.addEventListener("click", leaveCompletion);
+  elements.sentenceCompletion.addEventListener("cancel", event => { event.preventDefault(); leaveCompletion(); });
+  elements.sentenceSummaryRequest.addEventListener("click", requestSentenceSummary);
   bindSentenceFeedbackNavigation();
   document.addEventListener("visibilitychange", () => { if (!document.hidden) acknowledgeSentencePrompt(); });
   elements.sentenceAnswer.addEventListener("input", () => {
@@ -2532,7 +2549,11 @@ function getAppBaseUrl() {
 function setStudentAppMode(mode) {
   if (mode !== APP_MODES.SENTENCE) cancelSentenceFeedbackMotion();
   const previousMode = state.appMode;
-  if (mode !== APP_MODES.SENTENCE) { state.sentenceRequestId += 1; state.sentenceBusy = false; state.sentenceReplacing = false; }
+  if (mode !== APP_MODES.SENTENCE) {
+    state.sentenceRequestId += 1; state.sentenceBusy = false; state.sentenceReplacing = false;
+    state.sentenceSummaryBusy = false; state.sentenceSummaryError = "";
+    elements.sentenceCompletion.close();
+  }
   if (mode !== APP_MODES.INPUT) {
     clearInputAdvanceTimeout();
     closeInputSettingsMenu();
@@ -8923,6 +8944,7 @@ function shouldHandleInputEnterShortcut(event) {
 }
 
 function handleWindowKeydown(event) {
+  if (elements.sentenceCompletion.open) return;
   if (state.flashcardSettingsOpen && event.key === "Escape") {
     event.preventDefault();
     closeFlashcardSettingsMenu();
@@ -10466,6 +10488,7 @@ function renderSentenceRun() {
     answer.hidden = true;
     elements.sentenceLabel.hidden = true;
     button.textContent = "Zur Übersicht";
+    renderSentenceCompletion(run);
     return;
   }
   const focus = document.createElement("strong");
@@ -10478,6 +10501,9 @@ function renderSentenceRun() {
 }
 
 async function startSentenceSet(setPath, direction, count, { resume = false, difficulty = "easy" } = {}) {
+  elements.sentenceCompletion.close();
+  state.sentenceSummaryBusy = false;
+  state.sentenceSummaryError = "";
   state.currentSetPath = setPath;
   state.activeLearningModeKey = "sentence";
   state.activeSentenceDifficulty = difficulty;
@@ -10523,6 +10549,80 @@ async function startSentenceSet(setPath, direction, count, { resume = false, dif
       state.sentenceBusy = false;
       renderSentenceRun();
       acknowledgeSentencePrompt();
+    }
+  }
+}
+
+function renderSentenceCompletion(run) {
+  const dialog = elements.sentenceCompletion;
+  const list = elements.sentenceCompletionList;
+  if (list.dataset.runId !== run.id) {
+    list.replaceChildren(); list.dataset.runId = run.id;
+    for (const sentence of run.completion?.sentences || []) {
+      const item = document.createElement("li");
+      const copy = document.createElement("div");
+      const source = document.createElement("p"); source.textContent = sentence.sourceSentence;
+      const answer = document.createElement("p"); answer.className = "sentence-completion__answer"; answer.textContent = sentence.answer;
+      const count = document.createElement("span"); count.className = "sentence-completion__count";
+      count.textContent = `${sentence.attemptCount} ${sentence.attemptCount === 1 ? "Versuch" : "Versuche"}`;
+      copy.append(source, answer); item.append(copy, count); list.append(item);
+    }
+  }
+  const summary = run.completion?.summary;
+  elements.sentenceSummary.hidden = !summary;
+  if (summary && elements.sentenceSummary.dataset.runId !== run.id) {
+    elements.sentenceSummary.dataset.runId = run.id;
+    elements.sentenceSummaryPraise.replaceChildren();
+    LerndeckFeedbackText.append(elements.sentenceSummaryPraise, summary.praise);
+    elements.sentenceSummaryPoints.replaceChildren();
+    for (const point of summary.points) {
+      const item = document.createElement("li");
+      const title = document.createElement("strong"); title.textContent = point.title;
+      const tip = document.createElement("p"); LerndeckFeedbackText.append(tip, point.tip);
+      item.append(title, tip);
+      for (const example of point.examples) {
+        const pair = document.createElement("div"); pair.className = "sentence-completion__example";
+        for (const [label, value, kind] of [["Vorher", example.wrong, "wrong"], ["Jetzt", example.right, "right"]]) {
+          const line = document.createElement("p");
+          const caption = document.createElement("span"); caption.textContent = label;
+          const form = document.createElement("i"); form.className = `sentence-stage__language-form sentence-completion__${kind}`;
+          form.textContent = value; line.append(caption, form); pair.append(line);
+        }
+        item.append(pair);
+      }
+      elements.sentenceSummaryPoints.append(item);
+    }
+  }
+  const notice = state.sentenceSummaryBusy ? "Dein Feedback wird zusammengefasst …" : state.sentenceSummaryError;
+  elements.sentenceCompletionHome.textContent = state.isTeacherPractice ? "Lehreransicht" : "Hauptmenü";
+  elements.sentenceSummaryNotice.textContent = notice;
+  elements.sentenceSummaryNotice.hidden = !notice;
+  elements.sentenceSummary.setAttribute("aria-busy", String(state.sentenceSummaryBusy));
+  elements.sentenceSummaryRequest.hidden = Boolean(summary);
+  elements.sentenceSummaryRequest.disabled = state.sentenceSummaryBusy;
+  elements.sentenceCompletionRestart.disabled = state.sentenceSummaryBusy;
+  elements.sentenceSummaryRequest.textContent = state.sentenceSummaryError ? "Zusammenfassung erneut versuchen" : "Feedback zusammenfassen";
+  if (!dialog.open) { dialog.showModal(); elements.sentenceCompletionTitle.focus({ preventScroll: true }); }
+}
+
+async function requestSentenceSummary() {
+  const current = state.sentenceSession;
+  if (!current?.complete || current.completion?.summary || state.sentenceSummaryBusy) return;
+  const requestId = ++state.sentenceRequestId;
+  state.sentenceSummaryBusy = true; state.sentenceSummaryError = "";
+  renderSentenceCompletion(current);
+  try {
+    const run = await sentenceRequest("summary", { id: current.id });
+    if (requestId !== state.sentenceRequestId || state.appMode !== APP_MODES.SENTENCE) return;
+    state.sentenceSession = { ...run, counted: current.counted };
+    saveSentenceRun();
+  } catch (error) {
+    if (requestId === state.sentenceRequestId) state.sentenceSummaryError = error.message || "Zusammenfassung nicht verfügbar. Bitte erneut versuchen.";
+  } finally {
+    if (requestId === state.sentenceRequestId && state.appMode === APP_MODES.SENTENCE) {
+      state.sentenceSummaryBusy = false;
+      renderSentenceCompletion(state.sentenceSession);
+      if (state.sentenceSession.completion?.summary) elements.sentenceSummary.scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     }
   }
 }

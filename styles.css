@@ -7776,6 +7776,41 @@ button.sentence-stage__problem { display: inline-block; min-width: .6em; padding
 .sentence-stage__help summary { width: fit-content; cursor: pointer; font-size: .9rem; font-weight: 600; }
 .sentence-stage__help summary:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
 .sentence-stage__example { margin-top: .7rem; padding: .6rem .8rem; border-radius: .5rem; background: rgba(var(--learner-ui-rgb, 214, 224, 246), .07); }
+
+.sentence-completion { width: min(48rem, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); padding: clamp(1.25rem, 3vw, 2rem); border: 1px solid rgba(var(--learner-ui-rgb, 214, 224, 246), .16); border-radius: 1.5rem; background: rgb(var(--learner-card-rgb, 32, 41, 58)); color: rgb(var(--learner-text-rgb, 244, 247, 255)); line-height: 1.6; overflow: auto; overscroll-behavior: contain; }
+.sentence-completion::backdrop { background: rgba(10, 15, 23, .55); backdrop-filter: blur(4px); }
+.sentence-completion[open] { display: flex; flex-direction: column; animation: sentence-feedback-enter 220ms ease-out; }
+.sentence-completion__body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.sentence-completion__body:focus-visible { outline: 2px solid rgba(var(--learner-ui-rgb, 214, 224, 246), .5); outline-offset: -2px; }
+.sentence-completion > header, .sentence-completion__actions { flex-shrink: 0; }
+.sentence-completion h2 { margin: 0 0 1.25rem; font-size: clamp(2rem, 4vw, 2.6rem); letter-spacing: -.04em; line-height: 1.2; }
+.sentence-completion h2:focus { outline: none; }
+.sentence-completion p { margin: 0; }
+.sentence-completion .input-stage__prompt-kicker { margin-bottom: .35rem; }
+.sentence-completion__list { list-style: none; margin: 0; padding: 0; }
+.sentence-completion__list > li { display: flex; align-items: center; justify-content: space-between; gap: 1.25rem; padding: .9rem 0; border-top: 1px solid rgba(var(--learner-ui-rgb, 214, 224, 246), .14); }
+.sentence-completion__list > li > div { min-width: 0; overflow-wrap: anywhere; }
+.sentence-completion__list p:first-child, .sentence-completion__count { font-size: .9rem; color: rgba(var(--learner-text-rgb, 244, 247, 255), .7); }
+.sentence-completion__answer { font-weight: 600; }
+.sentence-completion__count { flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.sentence-completion__summary { border-top: 1px solid rgba(var(--learner-ui-rgb, 214, 224, 246), .2); margin-top: 1rem; padding-top: 1.25rem; overflow-wrap: anywhere; }
+.sentence-completion__summary h3 { font-size: 1.1rem; margin: 0 0 .75rem; }
+.sentence-completion__summary ul { list-style: none; margin: 1.25rem 0 0; padding: 0; display: grid; gap: 1.25rem; }
+.sentence-completion__summary li > p { margin-top: .2rem; }
+.sentence-completion__example { margin-top: .55rem; border-left: 2px solid rgba(var(--learner-ui-rgb, 214, 224, 246), .18); padding-left: .75rem; }
+.sentence-completion__example p { display: flex; align-items: baseline; gap: .7rem; }
+.sentence-completion__example span { flex: 0 0 3.5rem; font-size: .8rem; color: rgba(var(--learner-text-rgb, 244, 247, 255), .6); }
+.sentence-completion__wrong { color: rgb(var(--learner-danger-rgb, 225, 146, 136)); text-decoration: line-through; }
+.sentence-completion__right { color: rgb(var(--learner-success-rgb, 166, 244, 195)); }
+.sentence-completion__actions { display: flex; flex-wrap: wrap; gap: .6rem; padding-top: 1.25rem; margin-top: 1rem; border-top: 1px solid rgba(var(--learner-ui-rgb, 214, 224, 246), .14); }
+.sentence-completion__actions button { border: 0; border-radius: .65rem; min-height: 2.75rem; padding: .65rem .85rem; color: inherit; background: rgba(var(--learner-ui-rgb, 214, 224, 246), .08); font: inherit; font-size: .9rem; font-weight: 600; cursor: pointer; }
+.sentence-completion__actions .sentence-completion__primary { background: rgba(var(--learner-ui-rgb, 214, 224, 246), .2); }
+.sentence-completion__actions button:hover:not(:disabled) { background: rgba(var(--learner-ui-rgb, 214, 224, 246), .27); }
+.sentence-completion__actions button:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.sentence-completion__actions button:disabled { opacity: .5; cursor: wait; }
+#sentence-summary-notice { margin-top: 1rem; font-size: .9rem; }
+@media (max-width: 480px) { .sentence-completion__list > li { gap: .6rem; align-items: flex-start; } .sentence-completion__count { font-size: .8rem; } .sentence-completion__actions button { flex-grow: 1; } }
+@media (prefers-reduced-motion: reduce) { .sentence-completion[open] { animation: none; } }
 .sentence-stage__example > strong { font-size: .8rem; }
 
 /* Pronunciation shares the learner palette and existing audio control. */

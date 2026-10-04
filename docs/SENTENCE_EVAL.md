@@ -1,5 +1,16 @@
 # Satzübung: gezielte Modell-Evaluation (2026-10-03)
 
+## 2026-10-04: Abschlussübersicht und angeforderte Rückschau
+
+Zwei echte Modellrunden mit je zwei synthetischen Durchgängen: Musik/Hausaufgaben, she have und deutsches ist werden jeweils überarbeitet und abgeschlossen; ein fehlerfreier Krank/Heute-Satz dient als Kontrolle. Feste Quellsätze isolieren Prüfer und Rückschau, kein erneuter Generierungstest. Erste Runde: 11 bezahlte Anfragen einschließlich begrenzter Reparaturen. Zweite Runde: 9 Anfragen (7 Prüfungen, 2 Zusammenfassungen). Beide Runden: alle fehlerhaften Antworten abgewiesen, korrekte Revisionen angenommen; erneutes Summary holt den Cache ohne weiteren Modellaufruf.
+
+Texte zusätzlich gelesen: Die erste Rückschau erklärte die Grundform pauschal als Folge von often. Prompt und Few-shot präzisieren jetzt personabhängige Simple-Present-Formen und vermeiden pauschale Aussagen über -ing. Die zweite Rückschau erklärt Grundform bei I und have → has bei she, do homework/kein Plural-s sowie music/I-Schreibung korrekt. Beispiele stammen aus den tatsächlichen revise-Quotes und angenommenen Antworten derselben Aufgaben. Der fehlerfreie Kontrolllauf bekommt konkretes Lob und keine erfundenen Schwächen. Keine Grade oder dauerhafte Personendiagnose; Zusammenfassung darf nach Abschluss konkrete Korrekturen zeigen.
+
+Alle vier Durchgänge samt angeforderter Rückschau/Quellversuch-IDs sind dauerhaft im isolierten Beelink-Preflight `_runtime/Lerndeck/preflight/translation-completion-20261004/data/translation-logs` gespeichert; synthetische Geräte-IDs, keine Schülerdaten verändert. Backend-/HTTP-Tests sichern Zählregeln, Rechte, Speicherung vor Ausgabe, Idempotenz, Reparaturgrenzen und Retry ohne neue Kosten bei reinem Speicherfehler. Chromium/WebKit prüfen beide Themes, Studenten-/Lehrervorschau, Neustart/Reload, fehlgeschlagene Summary-Anfrage und lange Listen mit erreichbaren Aktionen. Echte Modelltexte zusätzlich im UI auf Desktop/schmal dargestellt und visuell gelesen.
+
+Grenze: Belegprüfungen verhindern erfundene Fehlerzitate/Korrekturstellen, beweisen aber nicht jede grammatische Erklärung. Umfang ist begrenzt und gewichtet; vollständige Rohdaten bleiben für spätere manuelle Geräteauswertung erhalten. Geräte-ID bezeichnet eine logische Gerätezuteilung, nicht sicher eine einzelne Person.
+
+
 ## 2026-10-04: Sprachreferenzen im Feedback
 
 Drei synthetische Überarbeitungsschleifen mit festen Quellsätzen und echten Modellprüfungen (insgesamt sechs Prüfungen): mehrere Fehler bei Musik/Hausaufgaben, she have bei Katzen, deutsches ist im englischen Satz. Alle drei fehlerhaften Antworten abgewiesen, alle drei vollständigen Korrekturen angenommen. Texte gelesen: besprochene Formen often, I, -ing, she, have, not und tired werden über die neuen Marker kenntlich gemacht; keine korrigierten Aufgabensätze oder neuen Annahmeregeln. Die korrigierten Schritte würdigen die konkrete Verbesserung. Die feste synthetische Vorlage isoliert den Prüfprompt; dies ist kein neuer Generierungstest.

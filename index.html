@@ -33,7 +33,7 @@
     </script>
     <script src="./appearance.js?v=2026-09-30-appearance-v4" data-appearance-scope="student"></script>
     <link rel="stylesheet" href="./pwa-splash.css?v=2026-09-30-splash-contrast-v2" />
-    <link rel="stylesheet" href="./styles.css?v=2026-10-04-speech-accent-v1" />
+    <link rel="stylesheet" href="./styles.css?v=2026-10-04-translation-completion-v1" />
     <link rel="stylesheet" href="./appearance.css?v=2026-09-30-appearance-v4" />
     <link rel="stylesheet" href="./ui-motion.css?v=2026-08-30-ui-motion-v1" />
     <script src="./pwa.js?v=2026-08-30-pwa-splash-v3" defer></script>
@@ -47,7 +47,7 @@
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js" defer></script>
     <script src="./local-speech.js?v=2026-10-04-speech-accent-v1" defer></script>
-    <script src="./app.js?v=2026-10-04-speech-accent-v1" defer></script>
+    <script src="./app.js?v=2026-10-04-translation-completion-v1" defer></script>
   </head>
   <body>
     <div class="pwa-splash" role="status" aria-label="Lerndeck wird geladen">
@@ -717,6 +717,27 @@
           </article>
         </div>
       </section>
+
+      <dialog id="sentence-completion" class="sentence-completion" aria-labelledby="sentence-completion-title">
+        <header>
+          <p class="input-stage__prompt-kicker">Translation</p>
+          <h2 id="sentence-completion-title" tabindex="-1">Geschafft!</h2>
+        </header>
+        <div class="sentence-completion__body" tabindex="0" aria-label="Sätze und Zusammenfassung">
+          <ul id="sentence-completion-list" class="sentence-completion__list" aria-label="Deine übersetzten Sätze"></ul>
+          <section id="sentence-summary" class="sentence-completion__summary" aria-labelledby="sentence-summary-title" hidden>
+            <h3 id="sentence-summary-title">Dein Feedback</h3>
+            <p id="sentence-summary-praise"></p>
+            <ul id="sentence-summary-points"></ul>
+          </section>
+          <p id="sentence-summary-notice" role="status" hidden></p>
+        </div>
+        <footer class="sentence-completion__actions">
+          <button id="sentence-completion-restart" class="sentence-completion__primary" type="button">Nochmal starten</button>
+          <button id="sentence-completion-home" type="button">Hauptmenü</button>
+          <button id="sentence-summary-request" type="button">Feedback zusammenfassen</button>
+        </footer>
+      </dialog>
 
       <section id="test-stage" class="test-stage" aria-label="Testmodus" hidden>
         <header class="test-stage__menu">
