@@ -87,6 +87,7 @@ const state = {
   sentenceSession: null,
   sentenceRequestId: 0,
   sentenceBusy: false,
+  sentenceReplacing: false,
   sentenceShownPromise: null,
   sentenceFeedbackMotion: null,
   sentenceFeedbackGesture: null,
@@ -402,6 +403,7 @@ const elements = {
   sentenceAnswer: document.getElementById("sentence-answer"),
   sentenceLabel: document.getElementById("sentence-label"),
   sentenceSubmit: document.getElementById("sentence-submit"),
+  sentenceReplace: document.getElementById("sentence-replace"),
   sentenceFeedback: document.getElementById("sentence-feedback"),
   sentenceFeedbackText: document.getElementById("sentence-feedback-text"),
   sentenceFeedbackList: document.getElementById("sentence-feedback-list"),
@@ -531,6 +533,7 @@ function bindEvents() {
   elements.sentenceHome.addEventListener("click", handleReturnToStudentHome);
   elements.sentenceLogout.addEventListener("click", () => elements.inputMenuLogout.click());
   elements.sentenceForm.addEventListener("submit", handleSentenceSubmit);
+  elements.sentenceReplace.addEventListener("click", () => sendSentenceAction("replace"));
   bindSentenceFeedbackNavigation();
   document.addEventListener("visibilitychange", () => { if (!document.hidden) acknowledgeSentencePrompt(); });
   elements.sentenceAnswer.addEventListener("input", () => {
@@ -2480,7 +2483,7 @@ function getAppBaseUrl() {
 function setStudentAppMode(mode) {
   if (mode !== APP_MODES.SENTENCE) cancelSentenceFeedbackMotion();
   const previousMode = state.appMode;
-  if (mode !== APP_MODES.SENTENCE) { state.sentenceRequestId += 1; state.sentenceBusy = false; }
+  if (mode !== APP_MODES.SENTENCE) { state.sentenceRequestId += 1; state.sentenceBusy = false; state.sentenceReplacing = false; }
   if (mode !== APP_MODES.INPUT) {
     clearInputAdvanceTimeout();
     closeInputSettingsMenu();
@@ -10278,6 +10281,8 @@ function renderSentenceRun() {
   const button = elements.sentenceSubmit;
   const progress = elements.sentenceProgress;
   button.disabled = state.sentenceBusy;
+  elements.sentenceReplace.hidden = !run || run.complete || run.accepted;
+  elements.sentenceReplace.disabled = state.sentenceBusy;
   answer.disabled = state.sentenceBusy || !run || run.complete;
   answer.readOnly = Boolean(run?.accepted);
   if (!run) {
@@ -10302,7 +10307,7 @@ function renderSentenceRun() {
   renderSentenceFeedback(run.feedback, run.error || run.status === "uncertain" ? "error" : run.accepted ? "accepted" : "revise", run);
   answer.dataset.status = run.accepted ? "accepted" : run.feedback && !run.error && run.status !== "uncertain" ? "revise" : "";
   answer.setAttribute("aria-invalid", String(Boolean(run.feedback) && !run.accepted && !run.error && run.status !== "uncertain"));
-  button.textContent = state.sentenceBusy ? "Prüft …" : run.accepted ? "Weiter" : "Prüfen";
+  button.textContent = state.sentenceBusy ? state.sentenceReplacing ? "Lädt …" : "Prüft …" : run.accepted ? "Weiter" : "Prüfen";
 }
 
 async function startSentenceSet(setPath, direction, count, { resume = false, difficulty = "easy" } = {}) {
@@ -10361,14 +10366,21 @@ async function handleSentenceSubmit(event) {
   const current = state.sentenceSession;
   if (!current) { await startSentenceSet(state.currentSetPath, state.activeLearningDirection, state.activeTestCardCount, { difficulty: state.activeSentenceDifficulty }); return; }
   if (current.complete) { await handleReturnToStudentHome(); return; }
+  await sendSentenceAction(current.accepted ? "next" : "check");
+}
+
+async function sendSentenceAction(action) {
+  if (state.sentenceBusy || !state.sentenceSession || state.sentenceSession.complete) return;
+  const current = state.sentenceSession;
   const answer = elements.sentenceAnswer;
   const requestId = ++state.sentenceRequestId;
   saveSentenceRun();
   state.sentenceBusy = true;
+  state.sentenceReplacing = action === "replace";
   renderSentenceRun();
   try {
     await state.sentenceShownPromise;
-    const run = await sentenceRequest(current.accepted ? "next" : "check", { id: current.id, promptId: current.prompt.id, answer: answer.value });
+    const run = await sentenceRequest(action, { id: current.id, promptId: current.prompt.id, ...(action === "check" ? { answer: answer.value } : {}) });
     if (requestId !== state.sentenceRequestId || state.appMode !== APP_MODES.SENTENCE) return;
     state.sentenceSession = { ...run, counted: current.counted };
     if (run.prompt.id !== current.prompt.id) answer.value = "";
@@ -10387,6 +10399,7 @@ async function handleSentenceSubmit(event) {
   } finally {
     if (requestId === state.sentenceRequestId) {
       state.sentenceBusy = false;
+      state.sentenceReplacing = false;
       renderSentenceRun();
       acknowledgeSentencePrompt();
       if (!state.sentenceSession) {

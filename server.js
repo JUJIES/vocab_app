@@ -625,6 +625,7 @@ app.post("/api/sentence-practice/:action", async (request, response) => {
       case "resume": run = sentenceService.view(sentenceService.get(actor, body.id, setPath)); break;
       case "check": run = await sentenceService.check(actor, body.id, setPath, body.promptId, body.answer); break;
       case "next": run = await sentenceService.next(actor, body.id, setPath, body.promptId); break;
+      case "replace": run = await sentenceService.replace(actor, body.id, setPath, body.promptId); break;
       default: response.status(404).json({ error: "Aktion nicht gefunden." }); return;
     }
     response.json({ run });

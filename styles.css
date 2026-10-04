@@ -7711,6 +7711,12 @@ html[data-tafelraum-embed="true"] .flashcard-shell {
 /* Context sentences share the Eingabe surface, with one quiet response field. */
 .sentence-stage .input-stage__menu { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .sentence-stage__progress { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.sentence-stage__replace { display: inline-flex; align-items: center; gap: .35rem; align-self: center; min-height: 2.75rem; margin-top: 1rem; padding: .35rem .55rem; border: 0; border-radius: .5rem; background: transparent; color: rgba(var(--learner-text-rgb, 244, 247, 255), .65); font: inherit; font-size: .85rem; cursor: pointer; }
+.sentence-stage__replace[hidden] { display: none; }
+.sentence-stage__replace:hover:not(:disabled) { color: rgb(var(--learner-text-rgb, 244, 247, 255)); background: rgba(var(--learner-ui-rgb, 214, 224, 246), .07); }
+.sentence-stage__replace:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.sentence-stage__replace:disabled { opacity: .5; cursor: wait; }
+.sentence-stage__replace .material-symbols-outlined { font-size: 1.1rem; }
 .sentence-stage .input-stage__prompt-pane { min-height: 8rem; padding: clamp(1.4rem, 3vw, 2rem); }
 .sentence-stage__prompt { max-width: 36ch; display: block; font-size: clamp(1.5rem, 3vw, 2.3rem); font-weight: 400; line-height: 1.5; }
 .sentence-stage__prompt strong { font-weight: 750; }

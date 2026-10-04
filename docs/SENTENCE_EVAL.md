@@ -1,5 +1,15 @@
 # Satzübung: gezielte Modell-Evaluation (2026-10-03)
 
+## 2026-10-04: Satzanfänge, vollständige Aufgaben und neuer Kontext
+
+- Produktives Rohdatenbeispiel bestätigt: Ausgangsvokabel `Ein Nachteil ist …`, generierter Satz `Ein Nachteil ist Ein Nachteil ist …`. Satzanfangs-Platzhalter und Wiederholung wurden bisher nicht fachlich abgefangen; `A disadvantage is` wurde zudem als grammatisch vollständige Aussage bewertet und A falsch kritisiert.
+- Generierung ergänzt Platzhalter, gibt den fixierten Fokus zuerst aus und bewertet den gesamten Satz mit einem zusätzlichen `complete`-Signal. Lokale Prüfungen sperren erkennbare Platzhalter, Wiederholungen/fehlende Fortsetzungen und identische Ersatzkontexte. Ein Reparaturversuch erhält den tatsächlich verworfenen Kandidaten und konkreten Grund. Keine automatische Textreparatur, erfundene Aufgabe oder Änderung der Set-Vokabel.
+- Iteration: Deutsche einfache/mittlere Satzanfänge lieferten vollständige Aufgaben und korrektes Fragment-Feedback. Ein schwerer Kandidat und danach der englische Satzanfang wurden zunächst geschlossen abgewiesen. Die englische Ausgabe wiederholte den Starter im prefix; nach Fokus-zuerst-Schema, englischem Beispiel und gezieltem Reparaturdatensatz funktionierte auch diese Richtung.
+- Abschließender echter Test mit `gpt-6-luna`: sechs synthetische Fälle bestanden – Einfach/Mittel/Schwer für `Ein Nachteil ist …`, englischer Satzanfang in Gegenrichtung, vollständige A/One-Artikelvariante und korrektes Krank/Heute-Kontrollbeispiel. Vier Starterfälle enthalten je ursprüngliche Aufgabe, Fragmentprüfung, neuen Kontext zur gleichen Vokabel und erneute Fragmentprüfung. Alle acht Fragmentprüfungen: grammar=false, meaning=false, target=true; keine falsche A-Markierung. Beide vollständigen Kontrollantworten angenommen.
+- Echte synthetische Rohdaten liegen getrennt vom Unterricht im Beelink-Preflight `sentence-replacement-20261004/data/translation-logs`; Modellantworten und Zusammenfassung dort in `results.json`, lokale Kopie unter `tmp/new-sentence-model-results.json`. Keine Schüler-/Produktionsdaten verändert. Dienst-/HTTP-Prüfungen testen durable Ersatzverknüpfung, Schüler/Lehrervorschau, gleiche Position/Anzahl, Idempotenz und Wiederaufnahme. Chromium/WebKit prüfen beide Themes, Fehler mit erhaltenem Entwurf/Verlauf, Touchgröße, Reload und Abschluss.
+- Grenze: Das zusätzliche Vollständigkeitssignal ist eine Modellentscheidung, kein unabhängiger Grammatikbeweis. Die deterministischen Prüfungen verhindern die beobachteten strukturellen Defekte; ein notwendiger Ersatz bleibt bewusst möglich. Aktueller Aufgabensatz wird neu bewertet, alte Kontexte bleiben nur im Rohdatenprotokoll.
+
+
 ## Durchführung
 
 `node scripts/eval-sentence-practice.cjs --output tmp/sentence-eval.json` ist eine ausdrücklich kostenpflichtige Prüfung mit dem konfigurierten Satzmodell/API-Key; **kein Bestandteil von `npm run verify`**. `SENTENCE_EVAL_IDS=id1,id2` begrenzt einen Nachtest. `SENTENCE_SERVICE_MODULE` erlaubt einen isolierten Kandidaten. Nur synthetische Daten aus `scripts/sentence-eval-cases.json`, keine echten Schülerantworten oder produktiven Sets.

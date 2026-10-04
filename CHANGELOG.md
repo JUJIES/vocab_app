@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Translation erzeugt vollständige Aufgaben auch aus Satzanfängen mit Auslassungspunkten; doppelte Fokus-Phrasen und erkennbare Fragmente werden vor Anzeige repariert oder abgewiesen. Dezentes `Neuer Satz` liefert einen anderen Kontext zur gleichen Vokabel ohne Zählfortschritt. Alte Feedbackschleifen bleiben verknüpft auf dem Server gespeichert; Fehler behalten Entwurf/Aufgabe, Wiederholungen sind idempotent. Satzanfang-Feedback benennt fehlende Fortsetzungen statt gültiger Artikelvarianten.
+
 - Translation-Schwierigkeiten mit zusammenpassenden, per Imagegen erstellten 3D-Icons: Pflänzchen, Berggipfel und Rakete, echte transparente Hintergründe, kompakte WebP-Assets und gleiche 48-px-Darstellung in beiden Themes. Bestehende Auswahl/Bewertung bleibt unverändert; Prompts und Herkunft bei den Assets dokumentiert, PWA-Cache aktualisiert.
 
 - Translation-Feedback folgt beim Wischen dem Finger und gleitet mit der Bremskurve der Lernkarten weiter. Pfeile/Tastatur animieren ebenso, unterschiedliche Rückmeldungshöhen gleichen sich sanft an, kurze/abgebrochene Gesten federn zurück. Randwiderstand, sichere Unterbrechung und sofortiger Wechsel bei Reduced Motion; keine Änderung am Verlauf oder an der Bewertung.

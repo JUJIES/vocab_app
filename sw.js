@@ -1,14 +1,14 @@
-const CACHE_NAME = "lerndeck-shell-v205-difficulty-icons";
+const CACHE_NAME = "lerndeck-shell-v206-sentence-replacement";
 const APP_SHELL_URLS = [
   "/",
   "/index.html",
   "/teacher",
   "/teacher.html",
   "/pwa-splash.css?v=2026-09-30-splash-contrast-v2",
-  "/styles.css?v=2026-10-04-feedback-motion-difficulty-icons-v1",
+  "/styles.css?v=2026-10-04-sentence-replacement-v1",
   "/answer-rules.js?v=2026-10-03-optional-infinitive-v3",
   "/grading-rules.js?v=2026-09-10-ihk-v1",
-  "/app.js?v=2026-10-04-feedback-motion-v1",
+  "/app.js?v=2026-10-04-sentence-replacement-v1",
   "/appearance.js?v=2026-09-30-appearance-v4",
   "/appearance.css?v=2026-09-30-appearance-v4",
   "/teacher.css?v=2026-10-04-delete-icon-v1",

@@ -36,7 +36,7 @@ test("the real API logs student loops from multiple teachers, preserves files ac
       const data = JSON.parse(body.input[0].content);
       if (data.learner_answer === "MODEL_FAIL") throw Error("private-provider-error");
       const result = body.text.format.name === "sentence_prompt"
-        ? { prefix: "Das Fahrrad braucht regelmäßige ", focus: data.source_expression, suffix: "." }
+        ? { complete: true, prefix: data.previous_source_sentences?.length ? "Das Auto braucht regelmäßige " : "Das Fahrrad braucht regelmäßige ", focus: data.source_expression, suffix: "." }
         : { grammar: true, meaning: data.learner_answer.includes("regular"), target: true, spelling: true,
           hint: data.learner_answer.includes("regular") ? "Jetzt ist die Häufigkeit auch dabei 🌟" : "Die Vokabel passt 👍",
           issues: data.learner_answer.includes("regular") ? [] : [{ quote: null, occurrence: 0, message: "In der Vorlage steht regelmäßige. Ergänze auch diese Häufigkeit." }], help: null };
@@ -95,11 +95,17 @@ test("the real API logs student loops from multiple teachers, preserves files ac
     const revised = await practice("check", { ...identifiers, answer: "My bike needs maintenance." }, studentHeaders);
     assert.equal(revised.accepted, false);
     await practice("check", { ...identifiers, answer: "My bike needs maintenance." }, studentHeaders);
+    if (set === owned[0]) {
+      const replacement = await practice("replace", identifiers, studentHeaders);
+      assert.equal(replacement.position, 1); assert.equal(replacement.total, 1);
+      identifiers.promptId = replacement.prompt.id;
+      await practice("shown", identifiers, studentHeaders);
+    }
     const failed = await post("/api/sentence-practice/check", { ...identifiers, answer: "MODEL_FAIL" }, studentHeaders);
     assert.equal(failed.status, 503);
-    run = await practice("check", { ...identifiers, answer: "My bike needs regular maintenance." }, studentHeaders);
+    run = await practice("check", { ...identifiers, answer: set === owned[0] ? "My car needs regular maintenance." : "My bike needs regular maintenance." }, studentHeaders);
     assert.equal(run.accepted, true);
-    assert.equal(run.history.length, 2);
+    assert.equal(run.history.length, set === owned[0] ? 1 : 2);
     assert.equal((await practice("next", identifiers, studentHeaders)).complete, true);
     runs.push({ run, revised });
   }
@@ -108,7 +114,15 @@ test("the real API logs student loops from multiple teachers, preserves files ac
   assert.equal(login.status, 200);
   const teacherHeaders = { Cookie: login.headers.get("set-cookie").split(";")[0] };
   const preview = await practice("start", { setPath: owned[1].path, count: 1 }, teacherHeaders);
-  const previewResult = await practice("check", { setPath: owned[1].path, id: preview.id, promptId: preview.prompt.id, answer: "My bike needs regular maintenance." }, teacherHeaders);
+  const originalPreview = { setPath: owned[1].path, id: preview.id, promptId: preview.prompt.id };
+  const previewRevision = await practice("check", { ...originalPreview, answer: "My bike needs maintenance." }, teacherHeaders);
+  assert.equal((await post("/api/sentence-practice/replace", originalPreview)).status, 401);
+  const replacement = await practice("replace", originalPreview, teacherHeaders);
+  assert.equal(replacement.position, 1); assert.equal(replacement.total, 1);
+  assert.deepEqual(replacement.history, []); assert.equal(replacement.shown, false);
+  assert.equal((await practice("replace", originalPreview, teacherHeaders)).prompt.id, replacement.prompt.id);
+  assert.equal((await post("/api/sentence-practice/check", { ...originalPreview, answer: "Old answer" }, teacherHeaders)).status, 409);
+  const previewResult = await practice("check", { ...originalPreview, promptId: replacement.prompt.id, answer: "My car needs regular maintenance." }, teacherHeaders);
 
   const files = await logFiles();
   assert.equal(files.length, 3);
@@ -120,11 +134,12 @@ test("the real API logs student loops from multiple teachers, preserves files ac
     assert.equal(record.set.id, owned[index].id);
     assert.equal(record.actorKind, "student");
     assert.ok(record.completedAt);
-    assert.deepEqual(record.tasks[0].attempts.map(attempt => attempt.status), ["revise", "error", "accepted"]);
-    assert.deepEqual(record.tasks[0].attempts.map(attempt => attempt.attemptNumber), [1, 2, 3]);
-    assert.equal(record.tasks[0].attempts[0].feedback, runs[index].revised.feedback);
-    assert.equal(record.tasks[0].attempts[2].feedback, runs[index].run.feedback);
-    assert.deepEqual(record.tasks[0].attempts[2].previousAttemptIds, [record.tasks[0].attempts[0].id]);
+    const attempts = record.tasks.flatMap(task => task.attempts);
+    assert.deepEqual(attempts.map(attempt => attempt.status), ["revise", "error", "accepted"]);
+    assert.deepEqual(attempts.map(attempt => attempt.attemptNumber), index === 0 ? [1, 1, 2] : [1, 2, 3]);
+    assert.equal(attempts[0].feedback, runs[index].revised.feedback);
+    assert.equal(attempts[2].feedback, runs[index].run.feedback);
+    assert.deepEqual(attempts[2].previousAttemptIds, index === 0 ? [] : [attempts[0].id]);
     assert.match(record.processorCodeSha256, /^[a-f0-9]{64}$/);
     assert.equal(JSON.stringify(record).includes("blau-1"), false);
     assert.equal(JSON.stringify(record).includes(token), false);
@@ -134,7 +149,13 @@ test("the real API logs student loops from multiple teachers, preserves files ac
   assert.equal(previewRecord.actorKind, "teacherPreview");
   assert.equal(previewRecord.previewTeacherId, "aksana");
   assert.equal(previewRecord.completedAt, null);
-  assert.equal(previewRecord.tasks[0].attempts[0].feedback, previewResult.feedback);
+  assert.equal(previewRecord.tasks.length, 2);
+  assert.equal(previewRecord.tasks[0].attempts[0].feedback, previewRevision.feedback);
+  assert.equal(previewRecord.tasks[0].replacedByPromptId, replacement.prompt.id);
+  assert.equal(previewRecord.tasks[0].acceptedAt, null);
+  assert.equal(previewRecord.tasks[1].attempts[0].feedback, previewResult.feedback);
+  assert.deepEqual(previewRecord.tasks[1].attempts[0].previousAttemptIds, []);
+  assert.ok(previewRecord.tasks[1].shownAt);
   const relative = path.relative(dataDir, files[0]).split(path.sep).join("/");
   for (const headers of [{}, teacherHeaders, studentHeaders]) {
     assert.equal((await fetch(`${origin}/data/${relative}`, { headers })).status, 404);

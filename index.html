@@ -33,7 +33,7 @@
     </script>
     <script src="./appearance.js?v=2026-09-30-appearance-v4" data-appearance-scope="student"></script>
     <link rel="stylesheet" href="./pwa-splash.css?v=2026-09-30-splash-contrast-v2" />
-    <link rel="stylesheet" href="./styles.css?v=2026-10-04-feedback-motion-difficulty-icons-v1" />
+    <link rel="stylesheet" href="./styles.css?v=2026-10-04-sentence-replacement-v1" />
     <link rel="stylesheet" href="./appearance.css?v=2026-09-30-appearance-v4" />
     <link rel="stylesheet" href="./ui-motion.css?v=2026-08-30-ui-motion-v1" />
     <script src="./pwa.js?v=2026-08-30-pwa-splash-v3" defer></script>
@@ -45,7 +45,7 @@
     <script src="./irregular-verbs.js?v=2026-09-06-optional-to-v2" defer></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js" defer></script>
-    <script src="./app.js?v=2026-10-04-feedback-motion-v1" defer></script>
+    <script src="./app.js?v=2026-10-04-sentence-replacement-v1" defer></script>
   </head>
   <body>
     <div class="pwa-splash" role="status" aria-label="Lerndeck wird geladen">
@@ -655,6 +655,7 @@
             <section class="input-stage__prompt-pane">
               <p class="input-stage__prompt-kicker">Translation</p>
               <h2 id="sentence-prompt" class="input-stage__prompt-word sentence-stage__prompt" aria-live="polite">Satz wird vorbereitet …</h2>
+              <button id="sentence-replace" class="sentence-stage__replace" type="button" aria-label="Neuer Satz zur gleichen Vokabel" hidden><span class="material-symbols-outlined" aria-hidden="true">refresh</span><span>Neuer Satz</span></button>
             </section>
             <section class="input-stage__response-pane">
               <form id="sentence-form" class="input-stage__form">

@@ -23,7 +23,7 @@ async function fixture(context, results = [accepted], logStore) {
     calls.push(body);
     const input = JSON.parse(body.input[0].content);
     const result = body.text.format.name === "sentence_prompt"
-      ? { prefix: "Der Zoo ist ", focus: input.source_expression, suffix: " geschlossen." } : results.shift();
+      ? { complete: true, prefix: "Der Zoo ist ", focus: input.source_expression, suffix: " geschlossen." } : results.shift();
     clock += 1000;
     if (result instanceof Error) throw result;
     return { status: "completed", output_text: JSON.stringify(result) };

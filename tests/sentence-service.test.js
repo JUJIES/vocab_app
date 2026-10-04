@@ -2,18 +2,86 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { SentenceService, locateProblem } = require("../lib/sentence-service");
 const document = { set: { title: "Context", languages: { source: "de", target: "en" } }, cards: [{ source: { text: "vorübergehend" }, target: { text: "temporarily" }, acceptedAnswers: ["for a while"] }] };
-const prompt = { prefix: "Der Zoo ist ", focus: "vorübergehend", suffix: " geschlossen." };
+const prompt = { complete: true, prefix: "Der Zoo ist ", focus: "vorübergehend", suffix: " geschlossen." };
 const accepted = { grammar: true, meaning: true, target: true, spelling: true, hint: "Gut.", help: null, issues: [] };
 function service(results) {
   const calls = [];
   return { calls, service: new SentenceService({ client: { responses: { create: async body => {
     calls.push(body);
     let value = results.shift();
-    if (body.text.format.name === "sentence_prompt" && value?.focus && !value.focus.includes("<")) value = { ...value, focus: JSON.parse(body.input[0].content).source_expression };
+    if (body.text.format.name === "sentence_prompt" && value?.focus && !value.focus.includes("<")) value = { complete: true, ...value, focus: JSON.parse(body.input[0].content).source_expression };
     if (value instanceof Error) throw value;
     return { status: "completed", output_text: JSON.stringify(value) };
   } } } }) };
 }
+test("sentence starters omit only placeholder ellipses and reject incomplete/repeated generation before display", async () => {
+  const doc = { ...document, cards: [{ source: { text: "Ein Nachteil ist …" }, target: { text: "One disadvantage is" } }] };
+  const good = { complete: true, prefix: "", focus: "Ein Nachteil ist", suffix: " der hohe Preis." };
+  for (const bad of [
+    { ...good, prefix: "Ein Nachteil ist ", suffix: "" },
+    { ...good, suffix: "" },
+    { ...good, suffix: " …" },
+    { ...good, complete: false },
+  ]) {
+    const { service: s, calls } = service([bad, good]);
+    const run = await s.start("a", "sets/a.json", doc, "source-target", 1);
+    assert.equal(run.prompt.prefix + run.prompt.focus + run.prompt.suffix, "Ein Nachteil ist der hohe Preis.");
+    assert.equal(run.prompt.focus, "Ein Nachteil ist");
+    assert.equal(doc.cards[0].source.text, "Ein Nachteil ist …", "set vocabulary remains unchanged");
+    assert.equal(calls.length, 2);
+    assert.match(calls[1].instructions, /REPAIR:/);
+  }
+  const { service: s } = service([{ ...good, suffix: "" }, { ...good, suffix: "" }]);
+  await assert.rejects(s.start("a", "sets/a.json", doc, "source-target", 1), error => error.status === 503);
+  assert.equal(s.runs.size, 0, "do not offer a broken fallback task");
+});
+
+test("new sentence retains vocabulary, count and order while logging the abandoned feedback loop", async () => {
+  const revision = { ...accepted, grammar: false, hint: "Passe die Verbform an 👍", issues: [{ quote: "are", occurrence: 0, message: "Verbform: Das Subjekt ist Einzahl." }] };
+  const different = { ...prompt, prefix: "Die Schule ist " };
+  const { service: s, calls } = service([prompt, revision, prompt, different, accepted]);
+  let commits = 0; const commit = s.orderStore.commit.bind(s.orderStore);
+  s.orderStore.commit = async prepared => { commits++; return commit(prepared); };
+  const run = await s.start("tablet:a", "sets/a.json", document, "source-target", 1);
+  await s.check("tablet:a", run.id, "sets/a.json", run.prompt.id, "The zoo are temporarily closed.");
+  const replacement = await s.replace("tablet:a", run.id, "sets/a.json", run.prompt.id);
+  assert.equal(replacement.position, 1); assert.equal(replacement.total, 1); assert.equal(replacement.complete, false);
+  assert.equal(replacement.accepted, false); assert.equal(replacement.shown, false);
+  assert.deepEqual(replacement.history, []); assert.equal(replacement.feedback, "");
+  assert.equal(replacement.prompt.focus, run.prompt.focus); assert.notEqual(replacement.prompt.id, run.prompt.id);
+  assert.equal(s.get("tablet:a", run.id, "sets/a.json").cards.length, 1);
+  assert.equal((await s.replace("tablet:a", run.id, "sets/a.json", run.prompt.id)).prompt.id, replacement.prompt.id);
+  assert.equal(calls.length, 4, "an old retry does not regenerate or duplicate the task");
+  await assert.rejects(s.check("tablet:a", run.id, "sets/a.json", run.prompt.id, "Old answer"), /aktuell/);
+  await assert.rejects(s.next("tablet:a", run.id, "sets/a.json", replacement.prompt.id), /Prüfe/);
+  await s.shown("tablet:a", run.id, "sets/a.json", replacement.prompt.id);
+  assert.equal(commits, 1, "replacement display does not consume another vocabulary");
+  const record = s.logStore.memory.get(run.id);
+  assert.equal(record.tasks.length, 2);
+  assert.equal(record.tasks[0].attempts[0].answer, "The zoo are temporarily closed.");
+  assert.equal(record.tasks[0].replacedByPromptId, replacement.prompt.id);
+  assert.equal(record.tasks[0].acceptedAt, null); assert.equal(record.tasks[0].advancedAt, null);
+  assert.equal(record.tasks[1].replacesPromptId, run.prompt.id);
+  assert.equal(record.tasks[1].position, 1); assert.ok(record.tasks[1].shownAt);
+  await s.check("tablet:a", run.id, "sets/a.json", replacement.prompt.id, "The school is temporarily closed.");
+  assert.deepEqual(JSON.parse(calls.at(-1).input[0].content).previous_attempts, [], "old context must not assess a different sentence");
+  assert.equal((await s.next("tablet:a", run.id, "sets/a.json", replacement.prompt.id)).complete, true);
+});
+
+test("replacement persistence retries reuse the prepared sentence and generation failure keeps the old task", async () => {
+  const different = { ...prompt, prefix: "Die Schule ist " };
+  const { service: s, calls } = service([prompt, new Error("provider-timeout"), different]);
+  const run = await s.start("a", "sets/a.json", document, "source-target", 1);
+  await assert.rejects(s.replace("a", run.id, "sets/a.json", run.prompt.id), error => error.status === 503);
+  assert.equal(s.view(s.get("a", run.id, "sets/a.json")).prompt.id, run.prompt.id);
+  const replace = s.logStore.replace.bind(s.logStore); let failures = 1;
+  s.logStore.replace = async (...args) => { if (failures--) throw Error("disk"); return replace(...args); };
+  await assert.rejects(s.replace("a", run.id, "sets/a.json", run.prompt.id), /gespeichert/);
+  assert.equal(s.view(s.get("a", run.id, "sets/a.json")).prompt.id, run.prompt.id);
+  const replacement = await s.replace("a", run.id, "sets/a.json", run.prompt.id);
+  assert.equal(calls.length, 3); assert.notEqual(replacement.prompt.id, run.prompt.id);
+  assert.equal(s.logStore.memory.get(run.id).tasks.length, 2);
+});
 test("context prompt hides target and unrelated actor cannot resume/check a run", async () => {
   const { service: s, calls } = service([prompt, accepted]);
   const run = await s.start("tablet:a", "sets/a.json", document, "source-target", 1);
@@ -84,7 +152,7 @@ test("source focus is fixed by schema and wrong-language focus is rejected", asy
   const calls = [];
   const s = new SentenceService({ client: { responses: { create: async body => {
     calls.push(body);
-    return { status: "completed", output_text: JSON.stringify({ prefix: "The zoo is ", focus: "temporarily", suffix: " closed." }) };
+    return { status: "completed", output_text: JSON.stringify({ complete: true, prefix: "The zoo is ", focus: "temporarily", suffix: " closed." }) };
   } } } });
   await assert.rejects(s.start("a", "sets/a.json", document, "source-target", 1), error => error.status === 503);
   assert.deepEqual(calls[0].text.format.schema.properties.focus.enum, ["vorübergehend"]);
