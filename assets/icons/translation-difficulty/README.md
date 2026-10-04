@@ -4,6 +4,12 @@ Pflänzchen (`easy.webp`), Berggipfel (`medium.webp`) und Rakete (`hard.webp`) e
 
 Erstellt am 04.10.2026 mit dem eingebauten Imagegen-Tool im Codex-Imagegen-Skill, jeweils mit `transparent_background: true`. Die Freistellung stammt direkt aus der Generierung. WebP-Ableitungen sind auf 192 × 192 Pixel verkleinert; der Alpha-Kanal bleibt erhalten. Darstellung im Dialog: 48 × 48 Pixel, ohne Farbfilter oder zusätzliche Hintergrundplakette. Die Textlabels benennen die Optionen; die Bilder bleiben dekorativ (`alt=""`).
 
+## Abnahme
+
+- Chromium und WebKit, Hell/Dunkel, 320 / 390 / 768 / 1440 px: alle drei Assets geladen, gleiche 48-px-Größe, kein Farbfilter und kein horizontaler Überlauf. Alle drei Stufen sowie native Tastaturauswahl geprüft.
+- Echte Transparenz am Quellbild und WebP-Alpha geprüft. Service-Worker-Vorladen und anschließendes Offline-Decodieren aller drei WebP-Assets erfolgreich.
+- Bestehende Syntax-/Service-Prüfungen: 106 Tests erfolgreich. Sichtprüfung des vollständigen Einstellungsdialogs und der Auswahlkarten in beiden Themes; Screenshots unter `artifacts/difficulty-icons/` sind lokale Testartefakte.
+
 ## Finale Prompts
 
 ### easy
