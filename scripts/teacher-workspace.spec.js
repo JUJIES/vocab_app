@@ -313,7 +313,8 @@ test("library drag and drop moves sets, sorts sets and decks, and preserves the 
     await expect(page.locator("#workspace-breadcrumb")).toContainText(unit.name);
     await page.locator(`[data-library-view="${unit.id}"]`).click();
     await page.locator(`[data-open-set="${rooms.id}"]`).dragTo(page.locator(`[data-open-set="${shops.id}"]`), { targetPosition: { x: 35, y: 5 } });
-    await expect(page.locator("#workspace-library-feedback")).toHaveText("Reihenfolge gespeichert");
+    await expect(page.locator("#teacher-workspace")).not.toHaveAttribute("aria-busy", "true");
+    await expect(page.locator("#workspace-library-feedback")).toBeEmpty();
     let ids = await page.locator("[data-open-set]").evaluateAll(rows => rows.map(row => row.dataset.openSet));
     expect(ids.indexOf(rooms.id)).toBeLessThan(ids.indexOf(shops.id));
     await page.locator(`[data-open-set="${shops.id}"]`).press("Alt+ArrowUp");
@@ -549,7 +550,8 @@ test("a library refresh failure after confirmation retains the saved content and
   await expect(page.locator("#workspace-library-feedback")).toHaveText("Lerndeck gespeichert. Die Bibliothek konnte gerade nicht aktualisiert werden.");
   const createdUnitId = await page.locator("[data-library-view]", { hasText: "BL3 · Gesichert" }).getAttribute("data-library-view");
   await dragToFolder(page, rooms.id, createdUnitId);
-  await expect(page.locator("#workspace-library-feedback")).toHaveText("Zuordnung gespeichert");
+  await expect(page.locator("#teacher-workspace")).not.toHaveAttribute("aria-busy", "true");
+  await expect(page.locator("#workspace-library-feedback")).toBeEmpty();
   await expect(page.locator("#workspace-breadcrumb")).toContainText("BL3 · Gesichert");
   await page.request.delete(`/api/teacher/units/${createdUnitId}`);
   await page.unroute("**/api/sets");

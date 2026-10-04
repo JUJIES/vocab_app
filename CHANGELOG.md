@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Bibliothek zeigt nach erfolgreicher Reihenfolge-/Zuordnungsänderung keine zusätzliche Speicherbestätigung. Die Statusanzeige am Set bleibt bestehen; Organisationsfehler werden weiterhin angezeigt. PWA-Shell v213.
+
 - Translation endet mit einem minimalistischen Geschafft-Dialog: gelöste Sätze, angenommene Übersetzungen und bewertete Versuche; Neustart, Hauptmenü/Lehreransicht und optionales API-Feedback. Rückschau mit ehrlichem Lob, bis zu drei Lernzielen und belegten echten Fehler/Korrektur-Paaren. Angeforderte Zusammenfassungen und bestätigte Geräte-ID werden privat pro Lauf dauerhaft gespeichert; keine automatische Profilbewertung oder Export-UI. Native Dialogbedienung, scrollbare Liste, beide Themes und Schüler-/Vorschauwege geprüft; PWA-Shell v212.
 
 - Schüler wählen im Zahnrad von Üben und Eingabe mit 🇬🇧/🇺🇸 zwischen britischer und amerikanischer Aussprache. Die gemeinsame lokale Auswahl gilt für alle englischen Vokabeln und akzeptierten Eingabevarianten, Standard Britisch. Exakte lokale Sprachvariante vor Stimmqualität; fehlende Stimmen werden angezeigt, ohne stillen Akzentwechsel oder nicht zuordenbare MP3-Ersatzaufnahme. Native Radios, beide Themes und begrenzte scrollbare Menüs; PWA-Shell v211.

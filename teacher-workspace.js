@@ -310,7 +310,6 @@ window.LerndeckTeacherWorkspace = (() => {
           render(); remember(); writeUrl();
           if (focusId) (el.list.querySelector(`[data-open-set="${CSS.escape(focusId)}"]`)
             || el.nav.querySelector(`[data-library-view="${CSS.escape(focusId)}"]`))?.focus({ preventScroll: true });
-          feedback(change.kind === "assignment" ? "Zuordnung gespeichert" : "Reihenfolge gespeichert");
         } catch (error) {
           if (state.owner === owner) showError(error.name === "TypeError" ? new Error("Änderung konnte nicht gespeichert werden. Bitte erneut versuchen.") : error);
         } finally { state.organizing = false; el.root.removeAttribute("aria-busy"); }
