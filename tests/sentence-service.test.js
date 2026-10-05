@@ -173,6 +173,30 @@ test("semantic vocabulary rejection replaces a synonym without changing the orig
   assert.equal(calls.length, 4);
 });
 
+test("the required word must be used, not omitted, merely mentioned or replaced by a derivation", async () => {
+  const correct = { complete: true, sentence: "She expects a reply.", focus: "expects" };
+  for (const unsuitable of [
+    { complete: true, sentence: "The parcel will arrive tomorrow.", focus: "parcel" },
+    { complete: true, sentence: "The phrase to expect is in my book.", focus: "to expect" },
+    { complete: true, sentence: "His expectation is a quick reply.", focus: "expectation" },
+  ]) {
+    const generated = [unsuitable, correct], calls = [];
+    const doc = { set: { languages: { source: "en", target: "de" } }, cards: [{ id: "required-word", source: { text: "to expect" }, target: { text: "erwarten" } }] };
+    const s = new SentenceService({ client: { responses: { create: async body => {
+      calls.push(body);
+      const data = JSON.parse(body.input[0].content);
+      const result = body.text.format.name === "sentence_prompt" ? generated.shift() : { grammar: true, natural: true, vocabulary: data.focus === "expects", level: true, reason: data.focus === "expects" ? "" : "The required lexical word is not used in context." };
+      return { status: "completed", output_text: JSON.stringify(result) };
+    } } } });
+    const run = await s.start("a", "sets/a.json", doc, "source-target", 1);
+    assert.equal(run.prompt.focus, "expects");
+    assert.equal(JSON.parse(calls[1].input[0].content).source_expression, "to expect");
+    assert.equal(s.logStore.memory.get(run.id).tasks.length, 1);
+    assert.equal(s.logStore.memory.get(run.id).tasks[0].vocabulary.cardId, "required-word");
+    assert.equal(calls.length, 4, "only a context that uses the word passes the vocabulary gate");
+  }
+});
+
 test("replacement may change the surface form while retaining the card and task position", async () => {
   const doc = { set: { title: "Expect", languages: { source: "en", target: "de" } }, cards: [{ id: "same-word", source: { text: "to expect" }, target: { text: "erwarten" } }] };
   const generated = [{ complete: true, sentence: "She expects a reply.", focus: "expects" }, { complete: true, sentence: "Yesterday we expected a reply.", focus: "expected" }];

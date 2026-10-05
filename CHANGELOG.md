@@ -2,6 +2,8 @@
 
 ## 2026-10-05
 
+- Translation priorisiert ausdrücklich die Anwendung der vorgegebenen Vokabel: Grundform als verbindliche Referenz, natürliche Formen und Kontexte im Satz. Auslassung, bloße Erwähnung, Umschreibung und andere abgeleitete Wörter werden durch den Vokabel-Review abgewiesen; zusätzliche echte Modellkontrollen prüfen diese Grenzen.
+
 - Translation bindet die Vokabel an Karte und Bedeutung statt an eine starre Wörterbuchform. Natürliche Flexionen und getrennte Wendungen sind möglich; der Generator schreibt den vollständigen Satz und markiert die echte Wortspanne. Wortbezogene Sondervorgaben entfernt. Die bestehende Lernansicht und die ursprünglichen Karten/Verläufe bleiben kompatibel; semantische Quellwortprüfung schützt weiter vor anderen Wörtern und falscher Sprache.
 
 - Translation-Satzgenerierung mit mittlerem Reasoning, zentralem Vokabelkontext-Prompt und separater Qualitätsprüfung vor Anzeige: sinnvolle Situationen, passende Kasus-/Verbformen und Grammatik der erwarteten Übersetzung. Einfach orientiert sich an Klasse 6–7, Mittel an 8–9, Schwer ab Klasse 10; Wortgrenzen und Annahmeregeln bleiben erhalten. Neue Generierungsprobe prüft echte synthetische Sätze in beiden Richtungen; Rohdaten halten die tatsächliche Reasoning-/Budgetkonfiguration fest. PWA-Shell v218.

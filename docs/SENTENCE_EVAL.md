@@ -1,5 +1,15 @@
 # Satzübung: gezielte Modell-Evaluation
 
+## 2026-10-05: Pflichtvokabel als Hauptlernziel
+
+Die zentrale Anweisung priorisiert ausdrücklich die Verwendung der serverseitig vorgegebenen Vokabel. Grundform als verbindliche lexikalische Referenz, natürliche grammatische Form und Anwendung im Satz. Die Wortform darf variieren, die Vokabel darf nicht entfallen oder durch bloße Umschreibung, Erwähnung/Definition oder ein anderes abgeleitetes Wort ersetzt werden. Das Grammatikprofil unterstützt dieses Ziel. Keine wortbezogene Ausnahme und keine Rückkehr zur starren Enum.
+
+- Letzte echte Reviewrunde: **20/20** passende Entscheidungen. Die bisherigen 17 Kontrollen bleiben, drei neue Fälle prüfen eine fehlende Vokabel, bloße Erwähnung von to expect und den anderen abgeleiteten Begriff expectation. Alle drei trotz grammatisch möglicher Sätze mit vocabulary=false abgewiesen. Passende Flexionen, getrennte Wendungen und unregelmäßiger Plural bleiben zugelassen.
+- Echte Generierungsprobe: **18/18** Aufgaben für erwarten/to expect, ankommen/to arrive und Kind/child, je drei Stufen/beide Richtungen. Alle ausgegebenen Sätze/Markierungen gelesen; erwartbare Varianten wie erwarte/erwartet/erwarteten, expect/expected, kommt … an/ankommt/angekommen und arrive/arrives/arrived enthalten weiterhin die vorgegebene Vokabel. Keine allgemeine Aussage, dass jeder künftige Satz korrekt sein wird.
+- **131/131** Produkttests plus Syntaxchecks. Neuer Diensttest sichert, dass ein negativer Vokabel-Review auch bei physisch vorhandener, aber nur erwähnter Grundform eine Neugenerierung verlangt und nur die passende Anwendung als Aufgabe gespeichert wird. Browservertrag/Rendering/Datenmodell bleiben unverändert; keine erneute Browserrunde erforderlich für diese Promptpräzisierung.
+
+Isolierte Beelink-Preflights `sentence-vocabulary-core[-controls]-20261005`; lokale ignorierte Berichte `tmp/vocabulary-core-*-results.log`. Keine Unterrichtsdaten verändert. Semantische Wortverwendung bleibt eine Modellentscheidung; lokale Prüfung sichert weiterhin die tatsächliche Wortspanne.
+
 ## 2026-10-05: Allgemeine Wortformbindung ohne Vokabel-Sonderregeln
 
 Die exakte Fokus-Enum hatte eine grammatische Form und zusammenhängende Wortfolge erzwungen. Das erschwerte z.B. Kasuswechsel und normale finite/trennbare Verben. Diese Regel wird durch die Bindung an Karte, Lexem und gepaarte Bedeutung ersetzt: Der Generator schreibt den vollständigen Satz und gibt dessen tatsächliche wörtliche Fokusspanne zurück. Der Server prüft die Wortspanne lokal und leitet das kompatible Browserformat ab; der Review prüft die semantische Vokabelidentität. Wortbezogene Anweisungen im Generator/Reviewer entfallen, keine Formlisten oder Stemming-Heuristiken.

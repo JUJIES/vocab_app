@@ -97,6 +97,9 @@ const output = outputAt >= 0 ? process.argv[outputAt + 1] : "tmp/sentence-genera
       ["invalid-missing-component", "de", "Der Zug kommt pünktlich.", "ankommen", "to arrive", "easy", false, "kommt"],
       ["invalid-source-language", "de", "We expect a reply.", "erwarten", "to expect", "easy", false, "expect"],
       ["invalid-focus", "de", "Wir erwarten heute Besuch.", "erwarten", "to expect", "easy", false, "Besuch"],
+      ["invalid-omitted-word", "en", "The parcel will arrive tomorrow.", "to expect", "erwarten", "medium", false, "parcel"],
+      ["invalid-mere-mention", "en", "The phrase to expect is in my book.", "to expect", "erwarten", "easy", false, "to expect"],
+      ["invalid-derived-word", "en", "His expectation is a quick reply.", "to expect", "erwarten", "easy", false, "expectation"],
     ];
     for (const [id, sourceLanguage, sourceSentence, expression, target, level, expected, focus = expression] of controls) {
       const review = await service.ask("sentence_prompt_review", generationReviewSchema, buildSentenceGenerationReviewPrompt(level), {
