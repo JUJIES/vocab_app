@@ -1,4 +1,4 @@
-const CACHE_NAME = "lerndeck-shell-v217-profile-header";
+const CACHE_NAME = "lerndeck-shell-v218-sentence-generation";
 const APP_SHELL_URLS = [
   "/",
   "/index.html",
@@ -32,7 +32,7 @@ const APP_SHELL_URLS = [
   "/assets/icons/translation-difficulty/easy.webp",
   "/assets/icons/translation-difficulty/medium.webp",
   "/assets/icons/translation-difficulty/hard.webp",
-  "/sentence-options.js?v=2026-10-04-difficulty-icons-v1",
+  "/sentence-options.js?v=2026-10-05-grammar-levels-v1",
   "/assets/icons/grip-vertical.svg",
   "/assets/icons/plus.svg",
   "/assets/icons/learn-mode.svg",

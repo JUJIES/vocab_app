@@ -35,7 +35,9 @@ test("the real API logs student loops from multiple teachers, preserves files ac
     constructor() { this.responses = { create: async body => {
       const data = JSON.parse(body.input[0].content);
       if (data.learner_answer === "MODEL_FAIL") throw Error("private-provider-error");
-      const result = body.text.format.name === "sentence_summary"
+      const result = body.text.format.name === "sentence_prompt_review"
+        ? { grammar: true, natural: true, vocabulary: true, level: true, reason: "" }
+        : body.text.format.name === "sentence_summary"
         ? { praise: "Du hast alle Sätze passend übersetzt 👍", points: [] }
         : body.text.format.name === "sentence_prompt"
         ? { complete: true, prefix: data.previous_source_sentences?.length ? "Das Auto braucht regelmäßige " : "Das Fahrrad braucht regelmäßige ", focus: data.source_expression, suffix: "." }

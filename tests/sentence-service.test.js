@@ -6,8 +6,14 @@ const prompt = { complete: true, prefix: "Der Zoo ist ", focus: "vorübergehend"
 const accepted = { grammar: true, meaning: true, target: true, spelling: true, hint: "Gut.", help: null, issues: [] };
 const summaryResult = (attemptId) => ({ praise: "Du hast die Aussage passend übersetzt und den Tippfehler verbessert 👍", points: [{ title: "Rechtschreibung", tip: "Prüfe die Schreibweise sorgfältig.", examples: [{ attemptId, wrong: "temprarily", right: "temporarily" }] }] });
 function service(results) {
-  const calls = [];
-  return { calls, service: new SentenceService({ client: { responses: { create: async body => {
+  const calls = [], reviewCalls = [];
+  return { calls, reviewCalls, service: new SentenceService({ client: { responses: { create: async body => {
+    if (body.text.format.name === "sentence_prompt_review") {
+      reviewCalls.push(body);
+      return { status: "completed", output_text: JSON.stringify({ grammar: true, natural: true, vocabulary: true, level: true, reason: "" }) };
+    }
+    // These existing assertions track generation/learner feedback; review calls
+    // are tracked separately and exercised below without consuming fixtures.
     calls.push(body);
     let value = results.shift();
     if (body.text.format.name === "sentence_prompt" && value?.focus && !value.focus.includes("<")) value = { complete: true, ...value, focus: JSON.parse(body.input[0].content).source_expression };
@@ -35,6 +41,59 @@ test("sentence starters omit only placeholder ellipses and reject incomplete/rep
   const { service: s } = service([{ ...good, suffix: "" }, { ...good, suffix: "" }]);
   await assert.rejects(s.start("a", "sets/a.json", doc, "source-target", 1), error => error.status === 503);
   assert.equal(s.runs.size, 0, "do not offer a broken fallback task");
+});
+
+test("separate source quality review repairs unsuitable tasks once before exposure or coverage", async () => {
+  const approved = { grammar: true, natural: true, vocabulary: true, level: true, reason: "" };
+  for (const field of ["grammar", "natural", "vocabulary", "level"]) {
+    const calls = [], reviews = [{ ...approved, [field]: false, reason: "The proposed context is unsuitable." }, approved];
+    const s = new SentenceService({ client: { responses: { create: async body => {
+      calls.push(body);
+      return { status: "completed", output_text: JSON.stringify(body.text.format.name === "sentence_prompt_review" ? reviews.shift() : prompt) };
+    } } } });
+    let commits = 0; const commit = s.orderStore.commit.bind(s.orderStore);
+    s.orderStore.commit = async prepared => { commits++; return commit(prepared); };
+    const run = await s.start("a", "sets/a.json", document, "source-target", 1);
+    assert.deepEqual(calls.map(call => call.text.format.name), ["sentence_prompt", "sentence_prompt_review", "sentence_prompt", "sentence_prompt_review"]);
+    assert.equal(JSON.parse(calls[1].input[0].content).source_sentence, "Der Zoo ist vorübergehend geschlossen.");
+    assert.equal(JSON.parse(calls[2].input[0].content).repair_reason.includes("unsuitable"), true);
+    assert.equal(commits, 0, "rejected preparation never consumes vocabulary");
+    assert.equal(s.logStore.memory.get(run.id).tasks.length, 1, "only the reviewed task enters the exercise log");
+    await s.shown("a", run.id, "sets/a.json", run.prompt.id);
+    assert.equal(commits, 1);
+  }
+});
+
+test("failed or malformed source review never exposes a fallback and preserves a running context", async () => {
+  const approved = { grammar: true, natural: true, vocabulary: true, level: true, reason: "" };
+  for (const rejected of [{ ...approved, grammar: false, reason: "Missing complement." }, { ...approved, grammar: "true" }, new Error("provider-secret")]) {
+    const calls = []; let rejectReview = false;
+    const s = new SentenceService({ client: { responses: { create: async body => {
+      calls.push(body);
+      const value = body.text.format.name === "sentence_prompt_review" ? rejectReview ? rejected : approved : rejectReview ? { ...prompt, prefix: "Die Schule ist " } : prompt;
+      if (value instanceof Error) throw value;
+      return { status: "completed", output_text: JSON.stringify(value) };
+    } } } });
+    const run = await s.start("a", "sets/a.json", document, "source-target", 1);
+    rejectReview = true;
+    await assert.rejects(s.replace("a", run.id, "sets/a.json", run.prompt.id), error => error.status === 503 && !error.message.includes("provider-secret"));
+    assert.equal(s.get("a", run.id, "sets/a.json").prompt.id, run.prompt.id);
+    assert.equal(s.logStore.memory.get(run.id).tasks.length, 1);
+    assert.ok(calls.length <= 6, "at most two generation/review pairs, with no endless retry");
+  }
+});
+
+test("lowercase fixed vocabulary requires a capitalised frame without changing the set expression", async () => {
+  const doc = { ...document, set: { ...document.set, languages: { source: "en", target: "de" } }, cards: [{ source: { text: "wicker" }, target: { text: "geflochtenes Material" } }] };
+  const { service: s, calls, reviewCalls } = service([
+    { prefix: "", focus: "wicker", suffix: " is strong." },
+    { prefix: "We use ", focus: "wicker", suffix: " for baskets." },
+  ]);
+  const run = await s.start("a", "sets/a.json", doc, "source-target", 1);
+  assert.equal(run.prompt.focus, "wicker");
+  assert.equal(run.prompt.prefix, "We use ");
+  assert.equal(JSON.parse(calls[1].input[0].content).repair_reason.includes("capital"), true);
+  assert.equal(reviewCalls.length, 1, "structurally broken candidates do not cost a quality review");
 });
 
 test("new sentence retains vocabulary, count and order while logging the abandoned feedback loop", async () => {
@@ -84,7 +143,7 @@ test("replacement persistence retries reuse the prepared sentence and generation
   assert.equal(s.logStore.memory.get(run.id).tasks.length, 2);
 });
 test("context prompt hides target and unrelated actor cannot resume/check a run", async () => {
-  const { service: s, calls } = service([prompt, accepted]);
+  const { service: s, calls, reviewCalls } = service([prompt, accepted]);
   const run = await s.start("tablet:a", "sets/a.json", document, "source-target", 1);
   assert.equal(JSON.stringify(run).includes("temporarily"), false);
   assert.equal(run.prompt.focus, "vorübergehend");
@@ -95,12 +154,19 @@ test("context prompt hides target and unrelated actor cannot resume/check a run"
   assert.equal(result.accepted, true);
   assert.deepEqual(JSON.parse(calls[1].input[0].content).accepted_variants, ["for a while"]);
   assert.equal(calls[0].model, "gpt-6-luna");
-  assert.equal(calls[0].reasoning.effort, "none");
-  assert.equal(calls[1].reasoning.effort, "low", "revision assessment gets a small consistency check; generation stays immediate");
+  assert.equal(calls[0].reasoning.effort, "medium");
+  assert.equal(calls[0].max_output_tokens, 3000, "generation budget includes reasoning and structured output");
+  assert.equal(s.logStore.memory.get(run.id).generation.reasoningEffort, "medium");
+  assert.equal(s.logStore.memory.get(run.id).generation.maxOutputTokens, 3000);
+  assert.equal(calls[1].reasoning.effort, "low", "revision assessment keeps its existing reasoning setting");
   assert.equal(calls[1].model, calls[0].model);
   assert.equal(calls[0].store, false);
   await s.check("tablet:a", run.id, "sets/a.json", run.prompt.id, "The zoo is temporarily closed.");
   assert.equal(calls.length, 2);
+  assert.equal(reviewCalls.length, 1, "cached checks do not repeat source quality review");
+  assert.equal(reviewCalls[0].reasoning.effort, "low");
+  assert.equal(reviewCalls[0].max_output_tokens, 1200);
+  assert.equal(s.logStore.memory.get(run.id).generation.reviewMaxOutputTokens, 1200);
   assert.equal((await s.next("tablet:a", run.id, "sets/a.json", run.prompt.id)).complete, true);
 });
 test("brief feedback permits revision, uncertainty never accepts, provider error preserves retry", async () => {
@@ -162,7 +228,7 @@ test("source focus is fixed by schema and wrong-language focus is rejected", asy
 test("parallel requests are bounded per identity and expired runs cannot be used", async () => {
   let clock = 0;
   let resolve;
-  const s = new SentenceService({ now: () => clock, client: { responses: { create: () => new Promise(done => { resolve = done; }) } } });
+  const s = new SentenceService({ now: () => clock, client: { responses: { create: body => body.text.format.name === "sentence_prompt_review" ? Promise.resolve({ status: "completed", output_text: JSON.stringify({ grammar: true, natural: true, vocabulary: true, level: true, reason: "" }) }) : new Promise(done => { resolve = done; }) } } });
   const first = s.start("a", "sets/a.json", document, "source-target", 1);
   await assert.rejects(s.start("a", "sets/a.json", document, "source-target", 1), error => error.status === 429);
   resolve({ status: "completed", output_text: JSON.stringify(prompt) });

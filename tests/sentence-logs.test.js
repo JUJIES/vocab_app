@@ -20,6 +20,8 @@ async function fixture(context, results = [accepted], logStore) {
   let clock = Date.parse("2026-10-03T21:59:00Z");
   const calls = [];
   const service = new SentenceService({ logStore: logs, now: () => clock, client: { responses: { create: async body => {
+    if (body.text.format.name === "sentence_prompt_review") return { status: "completed", output_text: JSON.stringify({ grammar: true, natural: true, vocabulary: true, level: true, reason: "" }) };
+    // Existing clock/call assertions describe learner feedback and generation.
     calls.push(body);
     const input = JSON.parse(body.input[0].content);
     const result = body.text.format.name === "sentence_prompt"

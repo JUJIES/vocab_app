@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-05
+
+- Translation-Satzgenerierung mit mittlerem Reasoning, zentralem Vokabelkontext-Prompt und separater Qualitätsprüfung vor Anzeige: sinnvolle Situationen, passende Kasus-/Verbformen und Grammatik der erwarteten Übersetzung. Einfach orientiert sich an Klasse 6–7, Mittel an 8–9, Schwer ab Klasse 10; Wortgrenzen und Annahmeregeln bleiben erhalten. Neue Generierungsprobe prüft echte synthetische Sätze in beiden Richtungen; Rohdaten halten die tatsächliche Reasoning-/Budgetkonfiguration fest. PWA-Shell v218.
+
 ## Unreleased
 
 - Admin-Profilumschalter aus der Bibliothek in die Topbar verschoben („Angezeigtes Profil“). Auf schmalen Fenstern eigene Kopfzeile; im Tabletbereich verborgen. Bibliothekswechsel und Rechte unverändert. PWA-Shell v217.
