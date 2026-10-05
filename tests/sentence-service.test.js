@@ -361,6 +361,86 @@ test("parallel requests are bounded per identity and expired runs cannot be used
   assert.equal(s.runs.size, 0);
 });
 
+test("classroom requests wait in FIFO order and retain the identity lock", async () => {
+  const s = new SentenceService({ client: {} });
+  let release;
+  const held = new Promise(resolve => { release = resolve; });
+  const blockers = Array.from({ length: 8 }, (_, i) => s.guarded(`active:${i}`, "check", () => held));
+  let concurrent = 0, peak = 0;
+  const entered = [];
+  const queued = Array.from({ length: 24 }, (_, i) => s.guarded(`waiting:${i}`, "check", async () => {
+    entered.push(i); peak = Math.max(peak, ++concurrent);
+    await new Promise(resolve => setImmediate(resolve));
+    concurrent--; return i;
+  }));
+  assert.equal(s.waitingRequests.length, 24);
+  await assert.rejects(s.guarded("waiting:0", "check", async () => {}), error => error.status === 429);
+  release(); await Promise.all(blockers);
+  assert.deepEqual(await Promise.all(queued), Array.from({ length: 24 }, (_, i) => i));
+  assert.deepEqual(entered, Array.from({ length: 24 }, (_, i) => i));
+  assert.equal(peak, 8);
+  assert.equal(s.activeRequests, 0); assert.equal(s.pending.size, 0);
+});
+
+test("queue bounds and timeout release waiting identities without running their actions", async () => {
+  const s = new SentenceService({ client: {}, queueWaitMs: 20 });
+  let release;
+  const held = new Promise(resolve => { release = resolve; });
+  const blockers = Array.from({ length: 8 }, (_, i) => s.guarded(`active:${i}`, "check", () => held));
+  let executed = 0;
+  const queued = Array.from({ length: 32 }, (_, i) => s.guarded(`waiting:${i}`, "check", async () => { executed++; })
+    .then(() => null, error => error.status));
+  await assert.rejects(s.guarded("overflow", "check", async () => { executed++; }), error => error.status === 429);
+  assert.equal(s.pending.has("overflow"), false);
+  assert.deepEqual(await Promise.all(queued), Array(32).fill(429));
+  assert.equal(executed, 0); assert.equal(s.waitingRequests.length, 0); assert.equal(s.pending.size, 8);
+  release(); await Promise.all(blockers);
+  assert.equal(await s.guarded("waiting:0", "check", async () => "retry"), "retry");
+  assert.equal(s.activeRequests, 0); assert.equal(s.pending.size, 0);
+});
+
+test("a failed active action frees its slot for the next request", async () => {
+  const s = new SentenceService({ client: {} });
+  let release;
+  const held = new Promise(resolve => { release = resolve; });
+  const first = s.guarded("failed", "check", async () => { await held; throw new Error("synthetic failure"); });
+  const rejected = assert.rejects(first, /synthetic failure/);
+  const blockers = Array.from({ length: 7 }, (_, i) => s.guarded(`active:${i}`, "check", () => held));
+  const queued = s.guarded("next", "check", async () => "completed");
+  release(); await rejected; await Promise.all(blockers);
+  assert.equal(await queued, "completed"); assert.equal(s.activeRequests, 0); assert.equal(s.pending.size, 0);
+});
+
+test("reset cancels admitted starts before execution, both with and without queue delay", async () => {
+  for (const queuedBeforeReset of [false, true]) {
+    const { service: s, calls } = service([prompt]);
+    let release;
+    const held = new Promise(resolve => { release = resolve; });
+    const blockers = Array.from({ length: queuedBeforeReset ? 8 : 0 }, (_, i) => s.guarded(`active:${i}`, "check", () => held));
+    const queued = s.start("learner", "sets/a.json", document, "source-target", 1);
+    const rejected = assert.rejects(queued, error => error.status === 410);
+    await s.clear("learner", "sets/a.json");
+    release(); await Promise.all(blockers); await rejected;
+    assert.equal(calls.length, 0); assert.equal(s.runs.size, 0); assert.equal(s.logStore.memory.size, 0);
+    assert.equal(s.activeRequests, 0); assert.equal(s.pending.size, 0);
+  }
+});
+
+test("a queued answer is revalidated after expiry before any provider call or log submission", async () => {
+  const { service: s, calls } = service([prompt]);
+  let clock = 0; s.now = () => clock;
+  const run = await s.start("learner", "sets/a.json", document, "source-target", 1);
+  let release;
+  const held = new Promise(resolve => { release = resolve; });
+  const blockers = Array.from({ length: 8 }, (_, i) => s.guarded(`active:${i}`, "check", () => held));
+  const queued = s.check("learner", run.id, "sets/a.json", run.prompt.id, "The zoo is temporarily closed.");
+  const rejected = assert.rejects(queued, error => error.status === 410);
+  clock = 12 * 60 * 60 * 1000 + 1;
+  release(); await Promise.all(blockers); await rejected;
+  assert.equal(calls.length, 1); assert.equal(s.logStore.memory.get(run.id).tasks[0].attempts.length, 0);
+  assert.equal(s.activeRequests, 0); assert.equal(s.pending.size, 0);
+});
+
 test("problem quotes locate exact whole words and reject broad or invented markings", () => {
   assert.deepEqual(locateProblem("a a a xxx yyy", { quote: "a a", occurrence: 1 }), { start: 2, end: 5 }, "overlapping whole-word occurrences retain their historical indexing");
   const answer = "Breakfast ist included. ist";
@@ -427,6 +507,23 @@ test("unsafe transfer examples and invented translated quotes get one bounded re
   await assert.rejects(rejected.check("b", second.id, "sets/a.json", second.prompt.id, "The zoo is temporarily closed."), error => error.status === 503);
   assert.equal(rejected.get("b", second.id, "sets/a.json").lastAnswer, undefined);
   assert.equal(rejected.get("b", second.id, "sets/a.json").accepted, false);
+});
+
+test("unrelated shared prefixes retain transfer help while exact practice terms and variants remain protected", async () => {
+  const good = { ...accepted, grammar: false, hint: "Die Vokabel passt 👍 Prüfe die Verbform.",
+    issues: [{ quote: "are", occurrence: 0, message: "Verbform: Für einen einzelnen Gegenstand brauchst du die passende Form." }],
+    help: { explanation: "Richte die Verbform danach, ob du über einen oder mehrere Gegenstände sprichst.", example: "She is careful." } };
+  const doc = { ...document, cards: [{ source: { text: "Auto" }, target: { text: "car" }, acceptedAnswers: ["automobile"] }] };
+  for (const example of ["She is careful.", "She carries a bag.", "The car is blue.", "The automobile is blue."]) {
+    const safe = example === "She is careful." || example === "She carries a bag.";
+    const response = { ...good, help: { ...good.help, example } };
+    const { service: s, calls } = service([{ prefix: "Das ", focus: "Auto", suffix: " ist blau." }, response, { ...good, help: null }]);
+    const run = await s.start("learner", "sets/a.json", doc, "source-target", 1);
+    const result = await s.check("learner", run.id, "sets/a.json", run.prompt.id, "The car are blue.");
+    assert.equal(calls.length, safe ? 2 : 3);
+    assert.equal(result.help?.example || null, safe ? example : null);
+    assert.equal(result.accepted, false); assert.equal(result.history.length, 1);
+  }
 });
 test("malformed optional help never partially accepts or caches a response", async () => {
   const { service: s } = service([prompt, { ...accepted, help: { explanation: "", example: "" } }]);

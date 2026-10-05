@@ -10448,12 +10448,12 @@ function renderSentenceFeedback(message, status, run = null) {
     quote.append(document.createTextNode(checked.slice(end)));
   }
   updateSentenceFeedbackSelection(list.dataset.activeAttemptId);
-  const notice = run?.error || !history.length || run?.complete ? message || "" : "";
+  const notice = state.sentenceBusy ? "Bitte kurz warten – deine Anfrage wird bearbeitet." : run?.error || !history.length || run?.complete ? message || "" : "";
   elements.sentenceFeedbackNotice.textContent = notice;
   elements.sentenceFeedbackNotice.hidden = !notice;
   feedback.hidden = !history.length && !notice;
   feedback.dataset.status = status;
-  const spoken = message ? [message, ...(!run?.error && !run?.complete ? history.at(-1)?.issues || [] : []).map(issue => `${issue.quote || "Satz"}: ${issue.message}`)].join(" ") : "";
+  const spoken = state.sentenceBusy ? notice : message ? [message, ...(!run?.error && !run?.complete ? history.at(-1)?.issues || [] : []).map(issue => `${issue.quote || "Satz"}: ${issue.message}`)].join(" ") : "";
   const spokenText = LerndeckFeedbackText.plain(spoken);
   if (elements.sentenceFeedbackText.textContent !== spokenText) elements.sentenceFeedbackText.textContent = spokenText;
   if (added && !state.sentenceBusy) requestAnimationFrame(() => {
@@ -10475,7 +10475,7 @@ function renderSentenceRun() {
   answer.disabled = state.sentenceBusy || !run || run.complete;
   answer.readOnly = Boolean(run?.accepted);
   if (!run) {
-    prompt.textContent = state.sentenceBusy ? "Satz wird vorbereitet …" : "Translation";
+    prompt.textContent = state.sentenceBusy ? "Satz wird vorbereitet. Bitte kurz warten …" : "Translation";
     progress.textContent = "";
     button.textContent = state.sentenceBusy ? "Lädt …" : "Erneut versuchen";
     return;
@@ -10497,7 +10497,7 @@ function renderSentenceRun() {
   renderSentenceFeedback(run.feedback, run.error || run.status === "uncertain" ? "error" : run.accepted ? "accepted" : "revise", run);
   answer.dataset.status = run.accepted ? "accepted" : run.feedback && !run.error && run.status !== "uncertain" ? "revise" : "";
   answer.setAttribute("aria-invalid", String(Boolean(run.feedback) && !run.accepted && !run.error && run.status !== "uncertain"));
-  button.textContent = state.sentenceBusy ? state.sentenceReplacing ? "Lädt …" : "Prüft …" : run.accepted ? "Weiter" : "Prüfen";
+  button.textContent = state.sentenceBusy ? state.sentenceReplacing || run.accepted ? "Bereitet vor …" : "Prüft …" : run.accepted ? "Weiter" : "Prüfen";
 }
 
 async function startSentenceSet(setPath, direction, count, { resume = false, difficulty = "easy" } = {}) {
