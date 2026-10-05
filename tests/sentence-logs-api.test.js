@@ -40,7 +40,7 @@ test("the real API logs student loops from multiple teachers, preserves files ac
         : body.text.format.name === "sentence_summary"
         ? { praise: "Du hast alle Sätze passend übersetzt 👍", points: [] }
         : body.text.format.name === "sentence_prompt"
-        ? { complete: true, prefix: data.previous_source_sentences?.length ? "Das Auto braucht regelmäßige " : "Das Fahrrad braucht regelmäßige ", focus: data.source_expression, suffix: "." }
+        ? { complete: true, sentence: (data.previous_source_sentences?.length ? "Das Auto braucht regelmäßige " : "Das Fahrrad braucht regelmäßige ") + data.source_expression + ".", focus: data.source_expression }
         : { grammar: true, meaning: data.learner_answer.includes("regular"), target: true, spelling: true,
           hint: data.learner_answer.includes("regular") ? "Jetzt ist die Häufigkeit auch dabei 🌟" : "Die Vokabel passt 👍",
           issues: data.learner_answer.includes("regular") ? [] : [{ quote: null, occurrence: 0, message: "In der Vorlage steht regelmäßige. Ergänze auch diese Häufigkeit." }], help: null };

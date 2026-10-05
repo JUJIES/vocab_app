@@ -5,6 +5,7 @@ const document = { set: { title: "Context", languages: { source: "de", target: "
 const prompt = { complete: true, prefix: "Der Zoo ist ", focus: "vorübergehend", suffix: " geschlossen." };
 const accepted = { grammar: true, meaning: true, target: true, spelling: true, hint: "Gut.", help: null, issues: [] };
 const summaryResult = (attemptId) => ({ praise: "Du hast die Aussage passend übersetzt und den Tippfehler verbessert 👍", points: [{ title: "Rechtschreibung", tip: "Prüfe die Schreibweise sorgfältig.", examples: [{ attemptId, wrong: "temprarily", right: "temporarily" }] }] });
+const generationResult = value => ({ complete: value.complete !== false, sentence: value.prefix + value.focus + value.suffix, focus: value.focus });
 function service(results) {
   const calls = [], reviewCalls = [];
   return { calls, reviewCalls, service: new SentenceService({ client: { responses: { create: async body => {
@@ -18,6 +19,7 @@ function service(results) {
     let value = results.shift();
     if (body.text.format.name === "sentence_prompt" && value?.focus && !value.focus.includes("<")) value = { complete: true, ...value, focus: JSON.parse(body.input[0].content).source_expression };
     if (value instanceof Error) throw value;
+    if (body.text.format.name === "sentence_prompt" && value?.focus) value = generationResult(value);
     return { status: "completed", output_text: JSON.stringify(value) };
   } } } }) };
 }
@@ -49,7 +51,7 @@ test("separate source quality review repairs unsuitable tasks once before exposu
     const calls = [], reviews = [{ ...approved, [field]: false, reason: "The proposed context is unsuitable." }, approved];
     const s = new SentenceService({ client: { responses: { create: async body => {
       calls.push(body);
-      return { status: "completed", output_text: JSON.stringify(body.text.format.name === "sentence_prompt_review" ? reviews.shift() : prompt) };
+      return { status: "completed", output_text: JSON.stringify(body.text.format.name === "sentence_prompt_review" ? reviews.shift() : generationResult(prompt)) };
     } } } });
     let commits = 0; const commit = s.orderStore.commit.bind(s.orderStore);
     s.orderStore.commit = async prepared => { commits++; return commit(prepared); };
@@ -72,7 +74,7 @@ test("failed or malformed source review never exposes a fallback and preserves a
       calls.push(body);
       const value = body.text.format.name === "sentence_prompt_review" ? rejectReview ? rejected : approved : rejectReview ? { ...prompt, prefix: "Die Schule ist " } : prompt;
       if (value instanceof Error) throw value;
-      return { status: "completed", output_text: JSON.stringify(value) };
+      return { status: "completed", output_text: JSON.stringify(body.text.format.name === "sentence_prompt" ? generationResult(value) : value) };
     } } } });
     const run = await s.start("a", "sets/a.json", document, "source-target", 1);
     rejectReview = true;
@@ -96,6 +98,97 @@ test("lowercase fixed vocabulary requires a capitalised frame without changing t
   assert.equal(reviewCalls.length, 1, "structurally broken candidates do not cost a quality review");
 });
 
+test("contextual forms retain the server card, literal marking, feedback source and durable history", async () => {
+  const cases = [
+    { source: "geflochtenes Material", target: "wicker", language: "de", sentence: "Der Korb ist aus geflochtenem Material.", focus: "geflochtenem Material", answer: "The basket is made of wicker." },
+    { source: "to expect", target: "erwarten", language: "en", sentence: "She expects a reply.", focus: "expects", answer: "Sie erwartet eine Antwort." },
+    { source: "ist enthalten", target: "is included", language: "de", sentence: "Das Frühstück ist im Preis enthalten.", focus: "enthalten", answer: "Breakfast is included in the price." },
+    { source: "ankommen", target: "to arrive", language: "de", sentence: "Der Zug kommt pünktlich an.", focus: "kommt", answer: "The train arrives on time." },
+    { source: "er", target: "he", language: "de", sentence: "Der Lehrer sagt, dass er krank ist.", focus: "er", answer: "The teacher says that he is sick." },
+    { source: "wicker", target: "geflochtenes Material", language: "en", sentence: "Wicker is used for baskets.", focus: "Wicker", answer: "Geflochtenes Material wird für Körbe verwendet." },
+  ];
+  for (const item of cases) {
+    const calls = [];
+    const doc = { set: { title: "Context", languages: { source: item.language, target: item.language === "de" ? "en" : "de" } },
+      cards: [{ id: "stable-card", source: { text: item.source }, target: { text: item.target } }] };
+    const before = structuredClone(doc);
+    const s = new SentenceService({ client: { responses: { create: async body => {
+      calls.push(body);
+      const result = body.text.format.name === "sentence_prompt" ? { complete: true, sentence: item.sentence, focus: item.focus }
+        : body.text.format.name === "sentence_prompt_review" ? { grammar: true, natural: true, vocabulary: true, level: true, reason: "" } : accepted;
+      return { status: "completed", output_text: JSON.stringify(result) };
+    } } } });
+    const run = await s.start("a", "sets/a.json", doc, "source-target", 1);
+    assert.equal(run.prompt.prefix + run.prompt.focus + run.prompt.suffix, item.sentence);
+    assert.equal(run.prompt.focus, item.focus);
+    assert.deepEqual(doc, before, "the source card is not inflected or replaced");
+    const review = JSON.parse(calls[1].input[0].content);
+    assert.equal(review.source_expression, item.source);
+    assert.equal(review.focus, item.focus);
+    assert.equal(review.source_sentence, item.sentence);
+    await s.check("a", run.id, "sets/a.json", run.prompt.id, item.answer);
+    const check = JSON.parse(calls[2].input[0].content);
+    assert.equal(check.target_vocabulary, item.target);
+    assert.equal(check.source_sentence, item.sentence);
+    const record = s.logStore.memory.get(run.id);
+    assert.equal(record.tasks[0].vocabulary.cardId, "stable-card");
+    assert.equal(record.tasks[0].vocabulary.source, item.source);
+    assert.equal(record.tasks[0].prompt.focus, item.focus);
+    assert.equal(record.tasks[0].attempts[0].answer, item.answer);
+    assert.equal(record.generation.focusPolicy, "contextual");
+  }
+});
+
+test("source focus must be a literal whole-word occurrence before semantic review", async () => {
+  const valid = { complete: true, sentence: "She expects a reply.", focus: "expects" };
+  for (const bad of [{ ...valid, focus: "expect" }, { ...valid, focus: "waits" }, { ...valid, sentence: "She expects what he expects." }]) {
+    const generated = [bad, valid], calls = [];
+    const doc = { set: { languages: { source: "en", target: "de" } }, cards: [{ source: { text: "to expect" }, target: { text: "erwarten" } }] };
+    const s = new SentenceService({ client: { responses: { create: async body => {
+      calls.push(body);
+      const result = body.text.format.name === "sentence_prompt" ? generated.shift() : { grammar: true, natural: true, vocabulary: true, level: true, reason: "" };
+      return { status: "completed", output_text: JSON.stringify(result) };
+    } } } });
+    const run = await s.start("a", "sets/a.json", doc, "source-target", 1);
+    assert.equal(run.prompt.focus, "expects");
+    assert.deepEqual(calls.map(call => call.text.format.name), ["sentence_prompt", "sentence_prompt", "sentence_prompt_review"]);
+    assert.match(JSON.parse(calls[1].input[0].content).repair_reason, /whole-word/);
+  }
+});
+
+test("semantic vocabulary rejection replaces a synonym without changing the original pair", async () => {
+  const calls = [], generated = [{ complete: true, sentence: "Wir hoffen auf gutes Wetter.", focus: "hoffen" }, { complete: true, sentence: "Wir erwarten gutes Wetter.", focus: "erwarten" }];
+  const doc = { ...document, cards: [{ id: "expect", source: { text: "erwarten" }, target: { text: "to expect" } }] };
+  const s = new SentenceService({ client: { responses: { create: async body => {
+    calls.push(body);
+    const data = JSON.parse(body.input[0].content);
+    const result = body.text.format.name === "sentence_prompt" ? generated.shift() : { grammar: true, natural: true, vocabulary: data.focus !== "hoffen", level: true, reason: data.focus === "hoffen" ? "This is a different lexical word." : "" };
+    return { status: "completed", output_text: JSON.stringify(result) };
+  } } } });
+  const run = await s.start("a", "sets/a.json", doc, "source-target", 1);
+  assert.equal(run.prompt.focus, "erwarten");
+  assert.equal(JSON.parse(calls[1].input[0].content).source_expression, "erwarten");
+  assert.equal(s.logStore.memory.get(run.id).tasks[0].vocabulary.cardId, "expect");
+  assert.equal(s.logStore.memory.get(run.id).tasks.length, 1);
+  assert.equal(calls.length, 4);
+});
+
+test("replacement may change the surface form while retaining the card and task position", async () => {
+  const doc = { set: { title: "Expect", languages: { source: "en", target: "de" } }, cards: [{ id: "same-word", source: { text: "to expect" }, target: { text: "erwarten" } }] };
+  const generated = [{ complete: true, sentence: "She expects a reply.", focus: "expects" }, { complete: true, sentence: "Yesterday we expected a reply.", focus: "expected" }];
+  const s = new SentenceService({ client: { responses: { create: async body => ({ status: "completed", output_text: JSON.stringify(body.text.format.name === "sentence_prompt" ? generated.shift() : { grammar: true, natural: true, vocabulary: true, level: true, reason: "" }) }) } } });
+  const run = await s.start("a", "sets/a.json", doc, "source-target", 1);
+  const replacement = await s.replace("a", run.id, "sets/a.json", run.prompt.id);
+  assert.equal(replacement.prompt.focus, "expected");
+  assert.equal(replacement.total, 1); assert.equal(replacement.position, 1);
+  assert.equal(s.get("a", run.id, "sets/a.json").cards.length, 1);
+  const tasks = s.logStore.memory.get(run.id).tasks;
+  assert.deepEqual(tasks.map(task => task.vocabulary.cardId), ["same-word", "same-word"]);
+  assert.deepEqual(tasks.map(task => task.vocabulary.source), ["to expect", "to expect"]);
+  assert.deepEqual(tasks.map(task => task.prompt.focus), ["expects", "expected"]);
+  assert.equal(tasks[0].replacedByPromptId, replacement.prompt.id);
+});
+
 test("new sentence retains vocabulary, count and order while logging the abandoned feedback loop", async () => {
   const revision = { ...accepted, grammar: false, hint: "Passe die Verbform an 👍", issues: [{ quote: "are", occurrence: 0, message: "Verbform: Das Subjekt ist Einzahl." }] };
   const different = { ...prompt, prefix: "Die Schule ist " };
@@ -108,7 +201,7 @@ test("new sentence retains vocabulary, count and order while logging the abandon
   assert.equal(replacement.position, 1); assert.equal(replacement.total, 1); assert.equal(replacement.complete, false);
   assert.equal(replacement.accepted, false); assert.equal(replacement.shown, false);
   assert.deepEqual(replacement.history, []); assert.equal(replacement.feedback, "");
-  assert.equal(replacement.prompt.focus, run.prompt.focus); assert.notEqual(replacement.prompt.id, run.prompt.id);
+  assert.equal(s.get("tablet:a", run.id, "sets/a.json").cards[0].source.text, document.cards[0].source.text); assert.notEqual(replacement.prompt.id, run.prompt.id);
   assert.equal(s.get("tablet:a", run.id, "sets/a.json").cards.length, 1);
   assert.equal((await s.replace("tablet:a", run.id, "sets/a.json", run.prompt.id)).prompt.id, replacement.prompt.id);
   assert.equal(calls.length, 4, "an old retry does not regenerate or duplicate the task");
@@ -215,14 +308,20 @@ test("reverse direction and API outage never leak answers or fabricate acceptanc
   assert.equal(JSON.stringify(run).includes("vorübergehend"), false);
   await assert.rejects(new SentenceService({ apiKey: "" }).start("a", "sets/a.json", document, "source-target", 1), error => error.status === 503);
 });
-test("source focus is fixed by schema and wrong-language focus is rejected", async () => {
+test("source vocabulary is checked semantically and a wrong-language focus is rejected", async () => {
   const calls = [];
   const s = new SentenceService({ client: { responses: { create: async body => {
     calls.push(body);
-    return { status: "completed", output_text: JSON.stringify({ complete: true, prefix: "The zoo is ", focus: "temporarily", suffix: " closed." }) };
+    const result = body.text.format.name === "sentence_prompt_review"
+      ? { grammar: false, natural: true, vocabulary: false, level: true, reason: "Wrong language and source vocabulary." }
+      : { complete: true, sentence: "The zoo is temporarily closed.", focus: "temporarily" };
+    return { status: "completed", output_text: JSON.stringify(result) };
   } } } });
   await assert.rejects(s.start("a", "sets/a.json", document, "source-target", 1), error => error.status === 503);
-  assert.deepEqual(calls[0].text.format.schema.properties.focus.enum, ["vorübergehend"]);
+  assert.equal(calls[0].text.format.schema.properties.focus.enum, undefined, "the dictionary form must not constrain grammar");
+  assert.equal(JSON.parse(calls[1].input[0].content).source_expression, "vorübergehend");
+  assert.equal(JSON.parse(calls[1].input[0].content).focus, "temporarily");
+  assert.equal(calls.length, 4, "semantic failure gets one bounded new context/review");
   assert.equal(s.runs.size, 0);
 });
 test("parallel requests are bounded per identity and expired runs cannot be used", async () => {
@@ -231,7 +330,7 @@ test("parallel requests are bounded per identity and expired runs cannot be used
   const s = new SentenceService({ now: () => clock, client: { responses: { create: body => body.text.format.name === "sentence_prompt_review" ? Promise.resolve({ status: "completed", output_text: JSON.stringify({ grammar: true, natural: true, vocabulary: true, level: true, reason: "" }) }) : new Promise(done => { resolve = done; }) } } });
   const first = s.start("a", "sets/a.json", document, "source-target", 1);
   await assert.rejects(s.start("a", "sets/a.json", document, "source-target", 1), error => error.status === 429);
-  resolve({ status: "completed", output_text: JSON.stringify(prompt) });
+  resolve({ status: "completed", output_text: JSON.stringify(generationResult(prompt)) });
   const run = await first;
   clock = 12 * 60 * 60 * 1000 + 1;
   assert.throws(() => s.get("a", run.id, "sets/a.json"), error => error.status === 410);
@@ -239,6 +338,7 @@ test("parallel requests are bounded per identity and expired runs cannot be used
 });
 
 test("problem quotes locate exact whole words and reject broad or invented markings", () => {
+  assert.deepEqual(locateProblem("a a a xxx yyy", { quote: "a a", occurrence: 1 }), { start: 2, end: 5 }, "overlapping whole-word occurrences retain their historical indexing");
   const answer = "Breakfast ist included. ist";
   assert.deepEqual(locateProblem(answer, { quote: "ist", occurrence: 0 }), { start: 10, end: 13 });
   assert.deepEqual(locateProblem(answer, { quote: "ist", occurrence: 1 }), { start: 24, end: 27 });
