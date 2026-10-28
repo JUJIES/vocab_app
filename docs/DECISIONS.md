@@ -313,3 +313,5 @@ gepinnten Recorderdatei, niemals ein node_modules-Verzeichnis. Lizenz unter
 Deploymentgate meldete vorhandene Advisories in Express/Body-Parser/Proxy-Addr,
 qs und Sharp. Kompatible gepatchte Versionen/Lockfile aktualisiert, qs-Override
 angepasst; Audit nicht abgeschaltet. Keine Datenmigration oder API-Neumodellierung.
+
+Room-Capture-Fehler melden ausschließlich feste Fehlerklassen (Laden/Aufnahme/Größe), nie freie Exceptiontexte oder Anbieterinhalte; native WK-Abnahme bleibt verbindlich.

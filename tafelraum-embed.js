@@ -187,21 +187,21 @@ function installTafelraumBridge() {
     if(event.source!==window.parent||m?.type!=='tafelraum:app-view-mode'||m.protocol!=='rrweb-2.2-v1'||m.appId!==APP_ID
       ||typeof m.token!=='string'||!/^[a-f0-9-]{36}$/.test(m.token))return;
     const request=++captureRequest;stopCapture();if(m.enabled!==true)return;
-    let sequence=0,batch=[],bytes=0,failed=false;
-    const send=error=>{
+    let sequence=0,batch=[],bytes=0,failed=false,phase="recorder-load";
+    const send=(error,reason)=>{
       if(request!==captureRequest)return;
       const events=error?[]:batch;batch=[];bytes=0;
-      window.parent.postMessage({type:'tafelraum:app-view',appId:APP_ID,protocol:'rrweb-2.2-v1',token:m.token,epoch,sequence:++sequence,events,...(error?{error:true}:{})},'*');
+      window.parent.postMessage({type:'tafelraum:app-view',appId:APP_ID,protocol:'rrweb-2.2-v1',token:m.token,epoch,sequence:++sequence,events,...(error?{error:true,reason}:{})},'*');
       if(error){failed=true;stopCapture();}
     };
     try{
       const record=await loadRecorder();if(request!==captureRequest)return;
-      epoch=Math.max(epoch+1,Date.now());
+      phase="recording";epoch=Math.max(epoch+1,Date.now());
       captureStop=record({
         emit:event=>{
           if(request!==captureRequest||failed)return;
           const size=new TextEncoder().encode(JSON.stringify(event)).byteLength;
-          if(size>2*1024*1024){send(true);return;}
+          if(size>2*1024*1024){send(true,"snapshot-too-large");return;}
           if(bytes+size>2*1024*1024||batch.length>=800)send(false);
           batch.push(event);bytes+=size;
         },
@@ -213,7 +213,7 @@ function installTafelraumBridge() {
         sampling:{mousemove:false,mouseInteraction:false,scroll:50,input:'all',mediaInteraction:false},
       });
       if(failed)stopCapture();else captureTimer=setInterval(()=>send(false),100);
-    }catch{send(true);}
+    }catch(error){send(true,phase+":"+(["TypeError","SecurityError","NotSupportedError"].includes(error?.name)?error.name:"unavailable"));}
   });
   window.addEventListener('pagehide',()=>{captureRequest++;stopCapture();});
 
