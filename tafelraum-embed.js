@@ -173,6 +173,50 @@ function installTafelraumBridge() {
 }
 
 
+  // Capture only while an explicitly joined local Room renderer needs this instance.
+  // No provider state, passwords, cookies or session credentials are transferred.
+  let captureStop=null,captureRequest=0,captureTimer=null,recorderPromise=null,epoch=0;
+  const loadRecorder=()=>recorderPromise??(recorderPromise=new Promise((resolve,reject)=>{
+    const script=document.createElement('script');script.src='/vendor/tafelraum-view-2.2.0.js';
+    script.onload=()=>resolve(window.rrweb.record);script.onerror=()=>{recorderPromise=null;script.remove();reject(new Error('Room-Ausgabe nicht verfügbar'));};
+    document.head.append(script);
+  }));
+  const stopCapture=()=>{captureStop?.();captureStop=null;clearInterval(captureTimer);captureTimer=null;};
+  if(active)window.addEventListener('message',async event=>{
+    const m=event.data;
+    if(event.source!==window.parent||m?.type!=='tafelraum:app-view-mode'||m.protocol!=='rrweb-2.2-v1'||m.appId!==APP_ID
+      ||typeof m.token!=='string'||!/^[a-f0-9-]{36}$/.test(m.token))return;
+    const request=++captureRequest;stopCapture();if(m.enabled!==true)return;
+    let sequence=0,batch=[],bytes=0,failed=false;
+    const send=error=>{
+      if(request!==captureRequest)return;
+      const events=error?[]:batch;batch=[];bytes=0;
+      window.parent.postMessage({type:'tafelraum:app-view',appId:APP_ID,protocol:'rrweb-2.2-v1',token:m.token,epoch,sequence:++sequence,events,...(error?{error:true}:{})},'*');
+      if(error){failed=true;stopCapture();}
+    };
+    try{
+      const record=await loadRecorder();if(request!==captureRequest)return;
+      epoch=Math.max(epoch+1,Date.now());
+      captureStop=record({
+        emit:event=>{
+          if(request!==captureRequest||failed)return;
+          const size=new TextEncoder().encode(JSON.stringify(event)).byteLength;
+          if(size>2*1024*1024){send(true);return;}
+          if(bytes+size>2*1024*1024||batch.length>=800)send(false);
+          batch.push(event);bytes+=size;
+        },
+        checkoutEveryNms:10000,inlineStylesheet:true,inlineImages:true,
+        maskInputOptions:{password:true,hidden:true},
+        blockSelector:"input[type='password'],input[type='hidden']",
+        recordCanvas:false,recordCrossOriginIframes:false,
+        slimDOMOptions:{script:true,comment:true,headMetaDescKeywords:true,headMetaSocial:true,headMetaRobots:true,headMetaHttpEquiv:true,headMetaAuthorship:true,headMetaVerification:true},
+        sampling:{mousemove:false,mouseInteraction:false,scroll:50,input:'all',mediaInteraction:false},
+      });
+      if(failed)stopCapture();else captureTimer=setInterval(()=>send(false),100);
+    }catch{send(true);}
+  });
+  window.addEventListener('pagehide',()=>{captureRequest++;stopCapture();});
+
   window.LerndeckTafelraumEmbed = Object.freeze({
     active,
     ready() {

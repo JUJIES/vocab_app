@@ -86,6 +86,13 @@ const visualService = new VisualService({ dataDir: DATA_DIR, setService });
 app.use("/api/teacher/import-draft", express.json({ limit: "18mb" }));
 app.use(express.json({ limit: "1mb" }));
 
+// Explicit pinned provider capability; never expose node_modules as a directory.
+app.get("/vendor/tafelraum-view-2.2.0.js", (_request,response) => {
+  response.type("application/javascript");
+  response.set("Cache-Control","public,max-age=31536000,immutable");
+  response.sendFile(path.join(path.dirname(require.resolve("rrweb")),"rrweb.umd.min.cjs"));
+});
+
 app.get("/health", (_request, response) => {
   response.json({
     status: "ok",

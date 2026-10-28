@@ -218,6 +218,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 function bindEvents() {
+  if(TAFELRAUM_EMBED)elements.workspacePractice.target="_self";
   workspace = window.LerndeckTeacherWorkspace.create({
     data: () => ({ teacher: state.currentTeacher, accounts: state.teacherAccounts, sets: state.sets, units: state.units, jobs: state.visualJobs }),
     request: requestJson, reload: reloadTeacherData, beforeLeave: confirmEditorLeave, authRequired: showTeacherAuth,
@@ -276,7 +277,7 @@ function bindEvents() {
     if (!hasUnsavedEditorChanges()) return;
     event.preventDefault();
     // Open within the click gesture so browser popup protection permits the student tab.
-    const practiceTab = window.open("about:blank", "_blank");
+    const practiceTab = TAFELRAUM_EMBED ? null : window.open("about:blank", "_blank");
     if (practiceTab) practiceTab.opener = null;
     void (async () => {
       if (await persistEditorChanges({ immediate: true })) {
@@ -790,7 +791,7 @@ function renderTabletList() {
 function buildTeacherPracticeUrl(setEntry) {
   const url = new URL("index.html", window.location.href);
   url.searchParams.set("teacherPractice", setEntry.id);
-  url.searchParams.set("teacherPracticeTab", "1");
+  if(!TAFELRAUM_EMBED)url.searchParams.set("teacherPracticeTab", "1");
   if (TAFELRAUM_EMBED) {
     url.searchParams.set("embed", "tafelraum");
   }

@@ -2,6 +2,8 @@
 
 ## 2026-10-28
 
+- Tafelraum Room: aktuelle Lehrerinstanz einschließlich Menü und Lernansicht lesend ausgeben. Lernen bleibt im Embed im selben Frame. Gepinnte lokale rrweb-Brücke ohne Cloud oder Speicherung; Passwortfelder vor Ausgabe geschützt. Quellen-/Instanzprüfung bleibt verbindlich. Abhängigkeitsupdates beheben die vom regulären Deploymentgate gefundenen Advisories.
+
 - Tafelraum: freie Appfläche im Auswahlwerkzeug auswählen und ziehen; Eingabefelder und Lernkarten behalten ihre eigene Bedienung. Gemeinsame Embed-Bridge für Lehrer-/Lernansicht, PWA-Shell v220. 138 Tests sowie beide Embed-Browserflows grün; aktueller Bibliotheksflow im älteren Test angepasst.
 
 - Tafelraum-Desktop-Ursprung `http://127.0.0.1:49317` in die enge Embed-Freigabe aufgenommen. Beelink-Betriebskonfiguration gesichert und aktiviert; öffentliche CSP und echte Browser-Einbettung geprüft. Code-Standard/Regressionstest ergänzt, normale Lehrerseiten und Loginvertrag unverändert. `npm run verify`: 138 Tests bestanden.

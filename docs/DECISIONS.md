@@ -290,3 +290,26 @@ Scrollbars, Karten-/Mediengesten bleiben bei Lerndeck. Pointerverlust,
 Werkzeugwechsel und Blur brechen ab. Keine Konto-/Sitzungsdaten in der Bridge.
 Die appseitige Quelle/Origin-Prüfung und Canvasgeometrie bleiben kanonisch.
 Der Room-Ausgabeweg ist eine getrennte Produktentscheidung, kein zweiter Loginframe.
+
+
+## Lokale Tafelraum-Room-Ausgabe der aktuellen Instanz (28.10.2026)
+
+Expliziter Auftrag: Menü, Setauswahl, Editor und Lernansicht vorne genauso zeigen
+wie im eingebetteten Lehrerframe. `Lernen` bleibt daher nur im Embed in demselben
+Frame, Zurück kehrt dort zum Set zurück. Eigenständiges Lerndeck behält seinen
+separaten Lern-Tab. Kein zweiter Login oder separat laufender Übungszustand.
+
+Die Erweiterung nutzt rrweb2.2.0 (MIT, exakt gepinnt) für eine lesende visuelle
+DOM-Rekonstruktion. Recorder wird ausschließlich durch den konkreten Parent mit
+`rrweb-2.2-v1` und flüchtiger Instanzcapability aktiviert; keine Cloud-/Replay-
+Aufzeichnung oder HTTP-Übertragung. Quelle bleibt alleinige Bedien-/Toninstanz.
+Passwort-/Hiddenfelder werden vor Ausgabe blockiert/maskiert; keine Cookies,
+Sessiontokens oder API-Credentials. Periodische vollständige Stände begrenzen
+Puffer und erleichtern Navigation/erneuten Beitritt. Tafelraum rendert skriptlos
+und quotiert ausschließlich lokal. Provider liefert nur die eine fest adressierte
+gepinnten Recorderdatei, niemals ein node_modules-Verzeichnis. Lizenz unter
+`assets/licenses/rrweb-2.2.0-MIT.txt`. Vertrag/Tests im Tafelraum-Projekt.
+
+Deploymentgate meldete vorhandene Advisories in Express/Body-Parser/Proxy-Addr,
+qs und Sharp. Kompatible gepatchte Versionen/Lockfile aktualisiert, qs-Override
+angepasst; Audit nicht abgeschaltet. Keine Datenmigration oder API-Neumodellierung.

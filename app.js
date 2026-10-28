@@ -799,7 +799,7 @@ function buildTeacherPracticeLearningUrl() {
 }
 
 function returnToTeacherApp() {
-  if (new URLSearchParams(window.location.search).get("teacherPracticeTab") === "1") {
+  if (!state.teacherPracticeEmbedded && new URLSearchParams(window.location.search).get("teacherPracticeTab") === "1") {
     window.close();
     window.setTimeout(() => window.location.assign(buildTeacherReturnUrl()), 100);
     return;
