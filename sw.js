@@ -1,4 +1,4 @@
-const CACHE_NAME = "lerndeck-shell-v219-translation-waiting";
+const CACHE_NAME = "lerndeck-shell-v220-tafelraum-selection";
 const APP_SHELL_URLS = [
   "/",
   "/index.html",
@@ -16,10 +16,10 @@ const APP_SHELL_URLS = [
   "/teacher.css?v=2026-10-04-profile-header-v1",
   "/set-side-options.js?v=2026-09-13-side-selection-v1",
   "/teacher-whats-new.js?v=2026-10-04-whats-new-v1",
-  "/teacher.js?v=2026-10-04-whats-new-v1",
+  "/teacher.js?v=2026-10-28-embed-bridge-v1",
   "/teacher-workspace-layout.js?v=2026-10-04-resizable-panels-v1",
   "/teacher-workspace.js?v=2026-10-04-no-search-v1",
-  "/tafelraum-embed.js?v=2026-09-08-content-zoom-layout-v2",
+  "/tafelraum-embed.js?v=2026-10-28-material-selection-v1",
   "/ui-motion.css?v=2026-08-30-ui-motion-v1",
   "/ui-motion.js?v=2026-08-30-ui-motion-v1",
   "/irregular-verbs.js?v=2026-09-06-optional-to-v2",

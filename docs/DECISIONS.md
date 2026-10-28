@@ -277,3 +277,16 @@
 - Ein natives, themenabhängiges „Was ist neu?“-Modal zeigt vier aktuelle Highlights nach erfolgreicher Anmeldung/Passwortwechsel und nach dem PWA-Splash. Es ersetzt keinen Arbeitsablauf und erscheint nicht bei Schülern oder in der Lernvorschau.
 - Die explizite Checkbox-Bestätigung speichert die Meldungs-ID lokal pro Lehrkraftkonto. Schließen/Escape ist nur ein Verlassen für den Besuch. Neue Meldungen erhalten eine neue ID, technische Releases behalten die bestehende. Kein Server-Datenmodell und keine neue Dependency.
 - Native Fokusbegrenzung, Escape, scrollbare kurze Fenster und die vorhandenen Theme-/Bewegungsvariablen. Abmelden entfernt auch eine noch auf den Splash wartende Meldung. Speicherfehler verhindern weder Schließen noch Weiterarbeiten.
+
+
+## Tafelraum-Embed: gemeinsamer Eingabeadapter (28.10.2026)
+
+`tafelraum-embed.js` hält den expliziten Anbieteradapter gemeinsam für Lehrer-
+und Lernansicht: Bereitschaft, Inhaltszoom, Radkette, Hintergrund-Pan und
+Auswahlgesten. Die frühere nur in teacher.js eingebaute Panlogik entfällt.
+Bei appseitigem Auswahlmodus meldet neutraler Hintergrund validierbare
+Materialgesten samt Bildschirmkoordinaten; Controls, echte Texttreffer,
+Scrollbars, Karten-/Mediengesten bleiben bei Lerndeck. Pointerverlust,
+Werkzeugwechsel und Blur brechen ab. Keine Konto-/Sitzungsdaten in der Bridge.
+Die appseitige Quelle/Origin-Prüfung und Canvasgeometrie bleiben kanonisch.
+Der Room-Ausgabeweg ist eine getrennte Produktentscheidung, kein zweiter Loginframe.

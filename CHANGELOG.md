@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-10-28
+
+- Tafelraum: freie Appfläche im Auswahlwerkzeug auswählen und ziehen; Eingabefelder und Lernkarten behalten ihre eigene Bedienung. Gemeinsame Embed-Bridge für Lehrer-/Lernansicht, PWA-Shell v220. 138 Tests sowie beide Embed-Browserflows grün; aktueller Bibliotheksflow im älteren Test angepasst.
+
+- Tafelraum-Desktop-Ursprung `http://127.0.0.1:49317` in die enge Embed-Freigabe aufgenommen. Beelink-Betriebskonfiguration gesichert und aktiviert; öffentliche CSP und echte Browser-Einbettung geprüft. Code-Standard/Regressionstest ergänzt, normale Lehrerseiten und Loginvertrag unverändert. `npm run verify`: 138 Tests bestanden.
+
 ## 2026-10-05
 
 - Translation verarbeitet Klassenzimmer-Anfragen mit acht aktiven Vorgängen und einer begrenzten FIFO-Warteschlange (32 Plätze, maximal 45 Sekunden). Reset/Ablauf verhindern veraltete Ausführung; verständlicher Wartehinweis erhält Eingabe und Feedback. Lösungsschutz blockiert keine unabhängigen Wörter allein wegen gleicher Wortanfänge, schützt exakte Zielbegriffe/Varianten weiterhin. Annahmeregeln unverändert; PWA-Shell v219.

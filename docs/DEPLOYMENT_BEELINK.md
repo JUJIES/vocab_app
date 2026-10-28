@@ -133,3 +133,14 @@ Safari unter der öffentlichen HTTPS-Adresse bleibt der vollständige, unabhäng
 4. Eingabemodus starten, eine falsche und danach die richtige Antwort eingeben.
 5. Set-Titel ändern und prüfen, dass Code und Pfad gleich bleiben und der neue Titel nach Neuladen erscheint.
 6. Testtablet danach als Admin über die Tabletverwaltung wieder entkoppeln; normale Lehrkräfte dürfen diese Verwaltung nicht sehen oder per API erreichen.
+
+
+## Tafelraum Desktop-Einbettung (28.10.2026)
+
+`TAFELRAUM_EMBED_ORIGINS` erlaubt exakt `http://127.0.0.1:49317`
+(native Desktop-App), `http://127.0.0.1:5173` und `http://localhost:5173`
+(Entwicklung). Dieselben Ursprünge sind der Code-Standard. Die Option ersetzt
+den Standard vollständig; bei expliziter Betriebskonfiguration muss der
+Desktop-Ursprung daher enthalten sein. Keine Wildcards oder Portfreigaben.
+Nur `?embed=tafelraum` erhält diese CSP; normale Lehrerseiten bleiben
+`frame-ancestors 'none'`. Cookie-/Loginvertrag unverändert.

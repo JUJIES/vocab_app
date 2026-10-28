@@ -132,7 +132,7 @@ test("embedded practice keeps its card size and scrolls when the frame becomes s
   await installApiFixtures(page);
 
   let frame = await openScaledFrame(page, "/teacher?embed=tafelraum", { expectEmbedMarker: false });
-  await expect(frame.locator(".teacher-set-row").first()).toBeVisible();
+  await expect(frame.getByRole("button", {name:"Set Means of transport öffnen",exact:true})).toBeVisible();
   await expect.poll(() => frame.locator("body").evaluate(
     () => window.LerndeckTafelraumEmbed?.active,
   )).toBe(true);

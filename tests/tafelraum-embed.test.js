@@ -72,3 +72,25 @@ test("Tafelraum embed has an explicit frame policy and isolated secure session c
   assert.match(cookie, /SameSite=None/i);
   assert.match(cookie, /Partitioned/i);
 });
+
+
+test("default frame policy admits the native desktop and development origins only", async (context) => {
+  const dataDir = await mkdtemp(path.join(os.tmpdir(), "lerndeck-desktop-embed-"));
+  const origin = `http://127.0.0.1:${6800 + Math.floor(Math.random() * 400)}`;
+  const child = spawn(process.execPath, ["server.js"], {
+    cwd: path.join(__dirname, ".."),
+    env: { ...process.env, DATA_DIR: dataDir, HOST: "127.0.0.1", PORT: new URL(origin).port,
+      HTTPS_PORT: "0", TAFELRAUM_EMBED_ORIGINS: "" },
+    stdio: "ignore",
+  });
+  context.after(async () => {
+    child.kill("SIGTERM");
+    await rm(dataDir, { recursive: true, force: true });
+  });
+  await waitForHealth(origin);
+  const embeddedPage = await fetch(`${origin}/teacher?embed=tafelraum`);
+  assert.equal(embeddedPage.headers.get("content-security-policy"),
+    "frame-ancestors http://127.0.0.1:49317 http://127.0.0.1:5173 http://localhost:5173");
+  const normalPage = await fetch(`${origin}/teacher`);
+  assert.equal(normalPage.headers.get("content-security-policy"), "frame-ancestors 'none'");
+});
