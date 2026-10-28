@@ -315,3 +315,5 @@ qs und Sharp. Kompatible gepatchte Versionen/Lockfile aktualisiert, qs-Override
 angepasst; Audit nicht abgeschaltet. Keine Datenmigration oder API-Neumodellierung.
 
 Room-Capture-Fehler melden ausschließlich feste Fehlerklassen (Laden/Aufnahme/Größe), nie freie Exceptiontexte oder Anbieterinhalte; native WK-Abnahme bleibt verbindlich.
+
+Native WK-Abnahme: `inlineImages` ist aus. Bestehende Anbieter-Bildadressen bleiben in der lokalen Rekonstruktion; keine zusätzlich eingebetteten Originalpixel von sichtbaren/versteckten Vorschaubildern. Dadurch bleibt der bestehende 2-MiB-Ereignisvertrag erhalten. Room lädt Bilder im selben lokalen Webview-Kontext, ohne zweiten Anbieter-Login. Kein Remoteexport.

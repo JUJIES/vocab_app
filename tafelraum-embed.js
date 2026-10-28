@@ -205,7 +205,8 @@ function installTafelraumBridge() {
           if(bytes+size>2*1024*1024||batch.length>=800)send(false);
           batch.push(event);bytes+=size;
         },
-        checkoutEveryNms:10000,inlineStylesheet:true,inlineImages:true,
+        // Keep provider image URLs: embedding all hidden/preloaded image pixels exceeds the local packet budget.
+        checkoutEveryNms:10000,inlineStylesheet:true,inlineImages:false,
         maskInputOptions:{password:true,hidden:true},
         blockSelector:"input[type='password'],input[type='hidden']",
         recordCanvas:false,recordCrossOriginIframes:false,
