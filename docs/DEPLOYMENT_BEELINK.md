@@ -40,6 +40,7 @@ DATA_DIR=C:\Users\Julius Herrmann\Coding Projects\_runtime\Lerndeck\data
 PUBLIC_BASE_URL=https://lerndeck.jujies.app
 OPENAI_API_KEY=<serverseitiger Key>
 OPENAI_IMPORT_MODEL=gpt-6.1-terra
+OPENAI_SENTENCE_MODEL=gpt-6.1-terra
 OPENAI_IMAGE_GENERATION_MODEL=gpt-image-2.5-flare
 OPENAI_IMAGE_EDIT_MODEL=gpt-image-2.5-flare
 PORT=6000

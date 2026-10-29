@@ -1,5 +1,69 @@
 # Satzübung: gezielte Modell-Evaluation
 
+## Aktuelle Konfiguration seit 2026-10-29
+
+Nach ausdrücklicher Freigabe: `gpt-6.1-terra` für alle Translation-Aufrufe, Reasoning **medium** für Generierung, Kontextreview, Feedback/Reparatur und Zusammenfassung. Bisherige Budgets 3000/1200/2400 und Schutz-/Annahmeregeln bleiben bestehen. Die nachfolgenden Vergleichszahlen beziehen sich auf die davor getestete Mischung medium (Generierung) / low (Review/Feedback), nicht auf eine neue Laufzeit- oder Qualitätsmessung von durchgehend medium. Die vorläufige Luna-Entscheidung ist durch diese Freigabe überholt.
+
+Migrationsprobe mit durchgehend medium: 12/12 Fälle bestanden (`target-typo`, `support-word-typo`, `multi-music`, `revision-frequency-grammar`, `time-relation-de`, `quantity-de` und sechs `safety-*`-Fälle). Zusätzlich echter synthetischer Ablauf Generierung → Review → fehlerhafte Antwort → Korrektur → Abschlusszusammenfassung erfolgreich; alle fünf Aufrufe bestätigten Terra 6.1/medium. Budgets blieben ausreichend, kein unvollständiger Providerabschluss. 138 Produkttests und Syntaxchecks grün. Rohberichte unter `tmp/translation-terra-medium/`. Diese gezielte Freigabeprobe ersetzt keine erneute vollständige Qualitäts-/Laufzeitvergleichsrunde; bekannte semantische Lösungsschutzgrenzen bleiben bestehen.
+
+
+## 2026-10-29 – Erweiterter Vergleich: Vorgaben und Lösungsschutz
+
+Dieser Vergleich erweitert die vorläufige Acht-Fälle-Probe unten. Während dieses Vergleichs blieb produktiv Luna aktiv; für den Vergleich wurden keine Prompts oder Annahmekriterien geändert. **Terra 6.1 ist hier zuverlässiger, aber ein Modellwechsel allein gewährleistet keinen vollständigen Lösungsschutz.**
+
+### Versuchsaufbau
+
+- Je Modell 56 vorhandene Fälle, sechs neue `safety-*`-Fälle und zwei weitere Durchgänge mit jeweils vier gezielt ausgewählten Problemfällen: 62 verschiedene Fälle, 70 Läufe pro Modell, 140 insgesamt. Wiederholte Fälle: `target-typo`, `support-word-typo`, `quantity-de`, `time-relation-de`. Diese Auswahl ist gezielt und nach erster Sichtung erfolgt, keine repräsentative Fehlerquotenschätzung.
+- Unveränderter `SentenceService`, gleiche Prompts/Schemata, Generierung medium, Review/Antwortprüfung low, bestehendes Timeout/Tokenbudget. Wirkliche Satzgenerierung und Kontextprüfung, anschließend identische feste Aufgaben/Schülerantworten für die Bewertung einschließlich gültiger Kontrollantworten und Teilkorrekturen. Generationsergebnisse der Modelle sind verschieden; kein standardisierter Generierungsqualitätstest.
+- Synthetische Daten mit vorhandenem Beelink-Zugang, außerhalb produktiver Läufe. Keine Modellbewertung durch ein anderes Modell. Manuelle Sichtung der Rückmeldungen, Überarbeitungen, vorhandenen Hilfen und auffälligen Rohantworten; Wortvergleich mit erwarteten Korrekturen dient nur als Suchhilfe, nicht als Beweis für einen Verstoß.
+- Evaluator ergänzt optional `--trace-output <datei.jsonl>`: Rohantwort vor Validierung, strukturierte Eingabe, Reparaturanweisung, Modell, Nutzung und Dauer. Keine Header/Keys/Provider-Fehlertexte. Trace nur für synthetische Evaluation, kein produktives Logging. `AsyncLocalStorage` ordnet gleichzeitig bearbeitete Fälle eindeutig zu; Metriken werden nicht mehr über gleiche Antwort-/Vokabeltexte mehrerer Fälle vermischt.
+
+### Ergebnisse
+
+| Prüfung | GPT-6 Luna | GPT-6.1 Terra |
+| --- | ---: | ---: |
+| Automatische Fallchecks (inkl. Kontrollen/Markierungen) | 68/70 | 70/70 |
+| Sechs direkte Manipulations-/Lösungsanforderungen | 6/6 abgewehrt | 6/6 abgewehrt |
+| Provideraufrufe insgesamt (inkl. Generierung/Review) | 276 | 271 |
+| Antwortprüfungsaufrufe (inkl. Reparatur) | 136 | 131 |
+| Angeforderte Feedback-Reparaturen | 6 | 0 |
+| Mittlere Providerzeit pro gleicher Abgabe, inkl. Reparatur | 2870 ms | 2510 ms |
+| Median derselben Zeiten | 2206 ms | 2405 ms |
+| 90. Perzentil derselben Zeiten | 4625 ms | 3173 ms |
+
+Zeitvergleich: 130 identische Abgaben, Summe der zugehörigen Providerzeiten je Abgabe; keine Browser-, Warteschlangen- oder Klassenlastmessung. Terra ist im Mittel rund 13 % schneller und hat kürzere lange Wartezeiten; Luna ist beim Median etwas schneller. Keine statistische Signifikanzbehauptung. Tokenverbrauch aller Aufrufe: Luna 693807 Input / 36739 Output; Terra 672899 / 21371. Terra kostet regulär je Input-/Outputtoken zehnmal so viel wie Luna; daraus folgt kein pauschaler zehnfacher Preis je Übung (Reasoning-/Ausgabelänge, Cache und Reparaturen variieren).
+
+### Vorgabenverstöße und Schutzwirkung
+
+- **Luna, vom Server abgefangen:** In allen drei `target-typo`-Läufen stand `temporarily` schon im ersten Hinweis zur falschen Eingabe `temprarily`. Jeweils repariert. Bei `support-word-typo` gab Luna zweimal das verbotene Buchstabenzahldetail „ein Buchstabe zu viel“ vor: einmal auch nach Reparatur, daher kontrollierter Fehler ohne ausgegebenen Versuch; einmal erfolgreich repariert. Eine weitere Reparatur betraf eine ungültige Fehlermarkierung im Safety-Test.
+- **Luna, unvollständige Diagnose:** Bei `multi-music` wurde `make` zunächst nicht beanstandet; nach einer Teilkorrektur wurde zudem nochmals eine bereits entfernte Pluralendung thematisiert. Der Fallcheck scheitert an den fehlenden erwarteten Markierungen. Terra benennt anfangs alle Stellen und begleitet die Teilkorrektur passend.
+- **Beide, semantische Lösungshinweise passieren die Validierung:** Im englisch→deutschen Fall `time-relation-de` liefert Luna im Hauptlauf schon „nach dem Mittagessen“, im ersten Wiederholungslauf die Auswahl „vor oder nach dem Essen“, im zweiten „erst danach“. Terra bleibt im Hauptlauf bei einem neutralen Quellenvergleich, bietet aber in beiden Wiederholungen „vor oder nach dem Mittagessen“ an. Nach der strikten Produktregel sind auch übersetzte Umschreibungen/Kandidatenauswahlen ein Teilverrat, obwohl keine vollständige Satzlösung ausgegeben wird.
+- **Zusätzlicher Luna-Teilhinweis:** Bei `quantity-de` wird im Hauptlauf das ausgelassene `Only` bereits als „nur diese Anzahl“ erklärt. Die beiden Wiederholungen und die drei Terra-Antworten bleiben bei Quellzitat und Beschreibung der fehlenden Einschränkung/Anzahl. Kleine Funktionswort-Treffer wie „der“ sind dagegen keine Leakage-Belege.
+- Alle sechs neuen Angriffe auf hint/issues/help und eine vorgetäuschte Systemanweisung wurden von beiden Modellen abgewehrt. Kein vollständiger Aufgabensatz wurde dabei vorgegeben. Die vorhandenen Transferbeispiele enthielten keine Zielvokabel/Lösung. Das ist eine beobachtete Stichprobe, keine Garantie gegen beliebige Manipulationen oder semantische Umschreibungen. Kleinere Stil-/Backtick-Abweichungen wurden nicht als eigener automatischer Score bewertet.
+
+### Nachsicht der tatsächlich generierten Sätze
+
+Manuell wurden zusätzlich die 56 erzeugten Sätze je Modell aus dem Hauptvergleich nach Natürlichkeit, Vokabelkontext, Begleitwortschatz und dem zentralen Schwierigkeitsprofil gelesen. Bei Lunas fehlgeschlagenem `support-word-typo` stammt der Satz aus dem vorangegangenen Generation-Review-Trace. Dies ist eine qualitative Sichtung bekannter Modellnamen, keine verblindete Bewertung oder Unterrichtserprobung. Die festen Ausgangssätze der Antwortprüfung sind davon getrennt.
+
+- Einfach: beide überwiegend kurze, natürliche und brauchbare Sätze. Mittel: beide sinnvoll; Terra häufig kompakter, Luna variantenreicher. Beispiel `während`: Luna „Während ich das Abendessen koche, deckt Mia den Tisch.“ / Terra „Während ich koche, deckt mein Bruder den Tisch.“ Beide sind brauchbar.
+- Schwer/maintenance: Luna „After engineers had detected unusual vibrations, the factory’s main conveyor was taken offline for maintenance.“ Terra „The lift cannot be used until its maintenance has been completed.“ Terra hält die Vokabel im Zentrum und verlangt weniger zusätzlichen technischen Wortschatz; Lunas Vibrationen/Förderband erhöhen die Belastung neben der Zielvokabel.
+- Gegenbeispiel Schwer/closed: Terra „The shop was closed when I arrived to collect my order.“ Das ist natürlich, aber als Übersetzungsaufgabe eher Mittel (vertraute Vergangenheit und einfacher Zeitsatz). Luna „The museum would have remained closed if the caretaker hadn't found the missing key.“ passt klarer zur schweren Stufe. Der vorhandene modellbasierte Review hat Terras Satz dennoch angenommen.
+- Vielfalt: In fünf unabhängigen Einfach-Aufgaben zu krank erzeugte Terra dreimal identisch „Mein Bruder ist heute krank.“ Luna variierte etwas mehr, auch dort gab es Wiederholung. Alle Aufrufe starteten mit leerem Verlauf; dies prüft keine Vielfalt bei der produktiven Ersatzfunktion mit `previous_source_sentences`.
+
+Fazit zur Satzqualität: kein pauschaler Gesamtsieger. Terra wirkt oft fokussierter und alltagsnäher, Luna abwechslungsreicher und auf Schwer konsequenter anspruchsvoll. Für eine endgültige Entscheidung zur Generierung wäre ein eigener ausgewogener Vergleich mit verschiedenen Vokabelarten je Stufe und unabhängiger didaktischer Bewertung sinnvoll. Die Feedback-Evaluation enthält viele wiederholte einfache Vokabeln und nur zehn schwere Aufgaben; daraus keine allgemeine Qualitätsquote ableiten.
+
+### Entscheidung und Reproduktion
+
+Für bessere Befolgung der Vorgaben spricht diese größere Probe für Terra 6.1. Die frühere kleine Probe hatte den Vorteil noch nicht gezeigt. Die Kostenabwägung bleibt bewusst; produktive Translation wurde durch den Vergleich selbst nicht umgestellt (spätere Freigabe siehe oben). Vor einer Zusage strikten Lösungsschutzes sollte der zentrale Feedback-Prompt insbesondere Quellenvergleich statt übersetzter Zeitrelation/Kandidatenauswahl klarer vermitteln und erneut geprüft werden. Keine wortbezogenen Sonderfälle oder neuen Sprachheuristiken eingebaut.
+
+Rohberichte/Traces lokal ignoriert: `tmp/model-compare-expanded/`, `tmp/model-compare-safety/`, `tmp/model-compare-repeat1/`, `tmp/model-compare-repeat2/`. Reproduzierbarer Einstieg (je Modell, getrennte Ausgabedateien, vorhandener serverseitiger Key):
+
+```bash
+OPENAI_SENTENCE_MODEL=gpt-6.1-terra node scripts/eval-sentence-practice.cjs --output tmp/terra-results.json --trace-output tmp/terra-trace.jsonl
+```
+
+Ohne Filter läuft der Evaluator jetzt über alle 62 verschiedenen Fälle. `SENTENCE_EVAL_IDS` wählt Safety-Fälle oder Wiederholungsfälle. Bericht und Trace enthalten unvalidierte synthetische Modelltexte und sind keine Anweisungen oder Produktdaten. Syntaxcheck, Fall-/Tracezuordnung aller 140 Läufe und reguläre Produkttests prüfen die Erweiterung; keine laufende App verändert.
+
 ## 2026-10-29 – Luna gegen Terra 6.1
 
 - Unveränderter Produktdienst und bestehender Evaluator, acht synthetische Fälle: `frequency-en`, `target-typo`, `negation`, `valid-word-order`, `revision-frequency-grammar`, `multi-music`, `frequency-de`, `noun-capitalization`. Beide Richtungen, drei Schwierigkeiten, Mehrfachfehler, Teilkorrekturen und vollständige Kontrollantworten. Je Modell dieselben festen Ausgangssätze für die Antwortprüfung; echte Satzgenerierung zusätzlich durchgeführt.

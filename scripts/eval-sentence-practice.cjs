@@ -1,6 +1,14 @@
 // Explicit paid evaluation, never part of npm verify. Synthetic cases only.
 // Service module can be injected to evaluate an uncommitted candidate remotely.
 const fs = require('node:fs');
+const { AsyncLocalStorage } = require('node:async_hooks');
+const caseContext = new AsyncLocalStorage();
+// Optional synthetic-only provider trace includes rejected output before validation.
+// Never record headers, credentials, or provider error messages.
+const traceAt = process.argv.indexOf('--trace-output');
+const tracePath = traceAt >= 0 ? process.argv[traceAt + 1] : null;
+if (traceAt >= 0 && !tracePath) throw new Error('--trace-output needs a file path');
+if (tracePath) fs.writeFileSync(tracePath, '');
 const { SentenceService } = require(process.env.SENTENCE_SERVICE_MODULE || '../lib/sentence-service');
 const cases = require('./sentence-eval-cases.json');
 const selected = process.env.SENTENCE_EVAL_IDS ? cases.filter(item => process.env.SENTENCE_EVAL_IDS.split(',').includes(item.id)) : cases;
@@ -10,6 +18,9 @@ if (process.env.SENTENCE_EVAL_IDS) {
 }
 for (const item of selected) {
   if (!item.source.includes(item.focus)) throw new Error('Fixture focus missing: ' + item.id);
+}
+function instructionsRepair(instructions = "") {
+  return instructions.split("REPAIR REQUIRED: ")[1] || instructions.split("REPAIR: ")[1] || "";
 }
 (async () => {
   const service = new SentenceService();
@@ -24,23 +35,25 @@ for (const item of selected) {
     const started = Date.now();
     try {
       const response = await create(body);
-      providerMetrics.push({ key: data.learner_answer || data.source_expression, kind: body.text.format.name, durationMs: Date.now() - started, outputTokens: response.usage?.output_tokens, reasoningTokens: response.usage?.output_tokens_details?.reasoning_tokens });
-      if (response.status !== 'completed') providerFailures.push({ key: data.learner_answer || data.source_expression, status: response.status, reason: response.incomplete_details?.reason });
+      if (tracePath) fs.appendFileSync(tracePath, JSON.stringify({ caseId: caseContext.getStore(), model: service.model, kind: body.text.format.name, repair: instructionsRepair(body.instructions), input: data, output: response.output_text, status: response.status, durationMs: Date.now() - started, usage: response.usage }) + "\n");
+      providerMetrics.push({ caseId: caseContext.getStore(), key: data.learner_answer || data.source_expression, kind: body.text.format.name, durationMs: Date.now() - started, outputTokens: response.usage?.output_tokens, reasoningTokens: response.usage?.output_tokens_details?.reasoning_tokens });
+      if (response.status !== 'completed') providerFailures.push({ caseId: caseContext.getStore(), key: data.learner_answer || data.source_expression, status: response.status, reason: response.incomplete_details?.reason });
       return response;
     } catch (error) {
       // Names/status only, never provider messages, headers or credentials.
-      providerFailures.push({ key: data.learner_answer || data.source_expression, name: error.name, status: error.status });
+      providerFailures.push({ caseId: caseContext.getStore(), key: data.learner_answer || data.source_expression, name: error.name, status: error.status });
       throw error;
     }
   };
   const originalAsk = service.ask.bind(service);
   service.ask = async (name, format, instructions, data) => {
     const result = await originalAsk(name, format, instructions, data);
-    traces.push({ name, repair: instructions.split("REPAIR REQUIRED: ")[1] || "", key: data.learner_answer || data.source_expression, difficulty: data.difficulty, source: data.source_sentence, focus: data.focus, result });
+    traces.push({ caseId: caseContext.getStore(), name, repair: instructions.split("REPAIR REQUIRED: ")[1] || "", key: data.learner_answer || data.source_expression, difficulty: data.difficulty, source: data.source_sentence, focus: data.focus, result });
     return result;
   };
   await Promise.all(['easy', 'medium', 'hard'].map(async level => {
     for (const item of selected.filter(item => item.level === level)) {
+      await caseContext.run(item.id, async () => {
       const actor = 'evaluation:' + item.id;
       const sourceLanguage = item.reverse ? 'en' : 'de';
       const targetLanguage = item.reverse ? 'de' : 'en';
@@ -76,10 +89,11 @@ for (const item of selected) {
           return (!fixture.expectedMarked || fixture.expectedMarked.every(word => marked.some(quote => quote.split(/\s+/).includes(word)))) && (!fixture.expectNoMarks || !marked.length);
         };
         const markingPass = marksMatch(item, first) && revisions.every(revision => marksMatch(revision, revision.result));
-        const record = { ...item, generated, modelChecks: traces.filter(trace => trace.name === "sentence_check" && trace.source === item.source && trace.focus === item.focus && trace.difficulty === item.level), providerMetrics: providerMetrics.filter(metric => [item.focus, item.answer, item.correct, ...(item.revisions || []).map(revision => revision.answer)].includes(metric.key)), markingPass, first, revisions, corrected, complete, pass: markingPass && first.accepted === item.expected && revisions.every(revision => revision.result.accepted === revision.expected) && corrected.accepted && complete && [first, ...revisions.map(revision => revision.result), corrected].every(result => /\p{Extended_Pictographic}/u.test(result.feedback)) };
+        const record = { ...item, generated, modelChecks: traces.filter(trace => trace.caseId === item.id && trace.name === "sentence_check"), providerMetrics: providerMetrics.filter(metric => metric.caseId === item.id), markingPass, first, revisions, corrected, complete, pass: markingPass && first.accepted === item.expected && revisions.every(revision => revision.result.accepted === revision.expected) && corrected.accepted && complete && [first, ...revisions.map(revision => revision.result), corrected].every(result => /\p{Extended_Pictographic}/u.test(result.feedback)) };
         records.push(record);
         console.log(JSON.stringify(record));
-      } catch (error) { const record = { ...item, pass: false, error: error.message, providerFailures: providerFailures.filter(failure => [item.focus, item.answer, item.correct].includes(failure.key)), trace: traces.filter(trace => trace.difficulty === item.level && [item.focus, item.answer, item.correct].includes(trace.key)) }; records.push(record); console.log(JSON.stringify(record)); }
+      } catch (error) { const record = { ...item, pass: false, error: error.message, providerFailures: providerFailures.filter(failure => failure.caseId === item.id), trace: traces.filter(trace => trace.caseId === item.id) }; records.push(record); console.log(JSON.stringify(record)); }
+      });
     }
   }));
   const outputAt = process.argv.indexOf('--output');

@@ -2,6 +2,10 @@
 
 ## 2026-10-29
 
+- Translation nach erweitertem Vergleich auf Terra 6.1 umgestellt: Generierung, Kontextreview, Feedback/Reparatur und Zusammenfassung durchgehend Reasoning medium. Deployment-Konfiguration, Tests und Logdokumentation synchronisiert; bekannte Grenzen indirekter Lösungshinweise bleiben dokumentiert.
+
+- Translation-Evaluation erweitert: 62 verschiedene Fälle plus gezielte Wiederholungen, insgesamt 140 Modellläufe. Terra erfüllt die geprüften Vorgaben zuverlässiger; beide Modelle geben vereinzelt indirekte Lösungshinweise. Synthetischer Rohtrace und eindeutige Fallzuordnung im Evaluator ergänzt, sechs Manipulationsfälle aufgenommen. Produktive Translation bleibt bei Luna; Details in `docs/SENTENCE_EVAL.md`.
+
 - KI-Import und fachliche Bildplanung auf Terra 6.1 mit mittlerem Reasoning umgestellt. Bestehende Ausgabevalidierung und Bildmodelle beibehalten. 138 Tests und echte synthetische Import-/Planungsproben bestanden. Translation-Vergleich: Luna und Terra je 8/8 Fälle; vorerst Luna wegen fehlendem klaren Mehrwert bei deutlich höheren Tokenpreisen. Details in `docs/SENTENCE_EVAL.md`.
 
 ## 2026-10-28

@@ -1,5 +1,11 @@
 # Produkt- und Architekturentscheidungen
 
+## 2026-10-29 – Translation auf Terra 6.1 mit durchgehend medium
+
+- Nach der erweiterten Vergleichsrunde und ausdrücklicher Freigabe laufen Generierung, separater Kontextreview, Feedback samt Reparatur und Abschlusszusammenfassung auf `gpt-6.1-terra`, jeweils Reasoning medium. Die zunächst geplante Beibehaltung von low wurde vom Nutzer ausdrücklich durch medium ersetzt. Code-Standard und `OPENAI_SENTENCE_MODEL` im Deployment sind synchronisiert.
+- Prompts, Annahmekriterien, Tokenbudgets (3000/1200/2400), Timeout, Retry-/Warteschlangenvertrag und Logschema bleiben erhalten. Logmetadaten spiegeln die neue Reasoning-Stufe wider; historische Einträge bleiben unverändert.
+- Die Vergleichsergebnisse aus `SENTENCE_EVAL.md` nutzten low für Feedback/Review und sind keine Messung der neuen Medium-Konfiguration. Terra befolgte Vorgaben zuverlässiger; indirekte Lösungshinweise bleiben ein bekanntes Risiko. Kein allgemeiner semantischer Lösungsschutz durch Modellwahl garantiert.
+
 ## 2026-10-29 – Terra 6.1 für Import und Bildplanung
 
 - KI-Import und fachliche Bildplanung verwenden `gpt-6.1-terra` mit Reasoning medium. Bestehende Responses-Aufrufe, strukturierte Schemata, Validierung, Schlüssel und Datenflüsse bleiben erhalten; Bildgenerierung/-bearbeitung bleiben bei Flare. Aktive Standards sowie Deployment-/Key-Helfer sind synchronisiert.

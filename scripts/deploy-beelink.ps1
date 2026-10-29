@@ -21,6 +21,7 @@ $ServiceName = 'BeelinkApp-Lerndeck'
 $ServiceConfig = 'C:\ProgramData\Beelink\Services\lerndeck\service-6000.xml'
 $PublicBaseUrl = 'https://lerndeck.jujies.app'
 $ImportModel = 'gpt-6.1-terra'
+$SentenceModel = 'gpt-6.1-terra'
 $ImageGenerationModel = 'gpt-image-2.5-flare'
 $ImageEditModel = 'gpt-image-2.5-flare'
 
@@ -169,6 +170,7 @@ $PreviousEnvironment = @{
   DATA_DIR = $env:DATA_DIR
   PUBLIC_BASE_URL = $env:PUBLIC_BASE_URL
   OPENAI_IMPORT_MODEL = $env:OPENAI_IMPORT_MODEL
+  OPENAI_SENTENCE_MODEL = $env:OPENAI_SENTENCE_MODEL
   OPENAI_IMAGE_GENERATION_MODEL = $env:OPENAI_IMAGE_GENERATION_MODEL
   OPENAI_IMAGE_EDIT_MODEL = $env:OPENAI_IMAGE_EDIT_MODEL
   TEACHER_PIN = $env:TEACHER_PIN
@@ -181,6 +183,7 @@ try {
   $env:DATA_DIR = $CandidateData
   $env:PUBLIC_BASE_URL = "http://127.0.0.1:$CandidatePort"
   $env:OPENAI_IMPORT_MODEL = $ImportModel
+  $env:OPENAI_SENTENCE_MODEL = $SentenceModel
   $env:OPENAI_IMAGE_GENERATION_MODEL = $ImageGenerationModel
   $env:OPENAI_IMAGE_EDIT_MODEL = $ImageEditModel
   $env:TEACHER_PIN = 'candidate-only'
@@ -225,6 +228,7 @@ $PreviousWorkingDirectory = [string]$ServiceXml.service.workingdirectory
 
 Set-ServiceEnvironmentValue -Document $ServiceXml -Name 'PUBLIC_BASE_URL' -Value $PublicBaseUrl
 Set-ServiceEnvironmentValue -Document $ServiceXml -Name 'OPENAI_IMPORT_MODEL' -Value $ImportModel
+Set-ServiceEnvironmentValue -Document $ServiceXml -Name 'OPENAI_SENTENCE_MODEL' -Value $SentenceModel
 Set-ServiceEnvironmentValue -Document $ServiceXml -Name 'OPENAI_IMAGE_GENERATION_MODEL' -Value $ImageGenerationModel
 Set-ServiceEnvironmentValue -Document $ServiceXml -Name 'OPENAI_IMAGE_EDIT_MODEL' -Value $ImageEditModel
 $WorkingDirectoryNode = $ServiceXml.SelectSingleNode('/service/workingdirectory')
