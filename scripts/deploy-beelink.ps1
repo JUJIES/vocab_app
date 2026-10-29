@@ -20,7 +20,7 @@ $DataPath = Join-Path $RuntimeRoot 'data'
 $ServiceName = 'BeelinkApp-Lerndeck'
 $ServiceConfig = 'C:\ProgramData\Beelink\Services\lerndeck\service-6000.xml'
 $PublicBaseUrl = 'https://lerndeck.jujies.app'
-$ImportModel = 'gpt-5.6-terra'
+$ImportModel = 'gpt-6.1-terra'
 $ImageGenerationModel = 'gpt-image-2.5-flare'
 $ImageEditModel = 'gpt-image-2.5-flare'
 

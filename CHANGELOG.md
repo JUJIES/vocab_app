@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-10-29
+
+- KI-Import und fachliche Bildplanung auf Terra 6.1 mit mittlerem Reasoning umgestellt. Bestehende Ausgabevalidierung und Bildmodelle beibehalten. 138 Tests und echte synthetische Import-/Planungsproben bestanden. Translation-Vergleich: Luna und Terra je 8/8 Fälle; vorerst Luna wegen fehlendem klaren Mehrwert bei deutlich höheren Tokenpreisen. Details in `docs/SENTENCE_EVAL.md`.
+
 ## 2026-10-28
 
 - Tafelraum Room: aktuelle Lehrerinstanz einschließlich Menü und Lernansicht lesend ausgeben. Lernen bleibt im Embed im selben Frame. Gepinnte lokale rrweb-Brücke ohne Cloud oder Speicherung; Passwortfelder vor Ausgabe geschützt. Quellen-/Instanzprüfung bleibt verbindlich. Abhängigkeitsupdates beheben die vom regulären Deploymentgate gefundenen Advisories.

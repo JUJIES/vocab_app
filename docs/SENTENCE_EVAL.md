@@ -1,5 +1,14 @@
 # Satzübung: gezielte Modell-Evaluation
 
+## 2026-10-29 – Luna gegen Terra 6.1
+
+- Unveränderter Produktdienst und bestehender Evaluator, acht synthetische Fälle: `frequency-en`, `target-typo`, `negation`, `valid-word-order`, `revision-frequency-grammar`, `multi-music`, `frequency-de`, `noun-capitalization`. Beide Richtungen, drei Schwierigkeiten, Mehrfachfehler, Teilkorrekturen und vollständige Kontrollantworten. Je Modell dieselben festen Ausgangssätze für die Antwortprüfung; echte Satzgenerierung zusätzlich durchgeführt.
+- `gpt-6-luna`: 8/8 bestanden, 38 Provideraufrufe, Antwortprüfung durchschnittlich 2596 ms. Eine Ausgabe-Reparatur: erste Tippfehler-Rückmeldung verriet die korrigierte Zielvokabel; bestehende Validierung fing sie ab.
+- `gpt-6.1-terra`: 8/8 bestanden, 39 Provideraufrufe, Antwortprüfung durchschnittlich 2674 ms, keine Feedback-Reparatur. Manuell gelesene Rückmeldungen beider Modelle benennen die relevanten Fehler; kein deutlicher Qualitäts-/Geschwindigkeitsgewinn. Zusätzliche Aufrufe können auch aus Generierungs-/Kontextprüfungen entstehen.
+- Entscheidung: Translation bleibt bei Luna; Terra 6.1 ist technisch kompatibel, aber regulär pro Eingabe-/Ausgabetoken zehnmal teurer. Kleine einmalige Stichprobe ohne Lasttest oder statistischen Qualitätsnachweis; keine automatische Bewertung durch ein anderes Modell. Reasoning bleibt medium für Generierung, low für Review/Bewertung. Keine Prompts oder Annahmekriterien geändert.
+- Rohberichte lokal ignoriert unter `tmp/model-compare/gpt-6-luna.json` und `gpt-6.1-terra.json`. Lokaler Zugang war zunächst ungültig (401); diese fehlgeschlagenen Versuche sind kein Modellvergleich. Erfolgreiche Proben nutzten den vorhandenen Beelink-Zugang, keine Unterrichtsdaten oder produktiven Lernläufe.
+- Quellen: [Terra 6.1](https://developers.openai.com/api/docs/models/gpt-6.1-terra), [API-Preise](https://developers.openai.com/api/docs/pricing).
+
 ## 2026-10-05: Pflichtvokabel als Hauptlernziel
 
 Die zentrale Anweisung priorisiert ausdrücklich die Verwendung der serverseitig vorgegebenen Vokabel. Grundform als verbindliche lexikalische Referenz, natürliche grammatische Form und Anwendung im Satz. Die Wortform darf variieren, die Vokabel darf nicht entfallen oder durch bloße Umschreibung, Erwähnung/Definition oder ein anderes abgeleitetes Wort ersetzt werden. Das Grammatikprofil unterstützt dieses Ziel. Keine wortbezogene Ausnahme und keine Rückkehr zur starren Enum.

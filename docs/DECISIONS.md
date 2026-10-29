@@ -1,5 +1,11 @@
 # Produkt- und Architekturentscheidungen
 
+## 2026-10-29 – Terra 6.1 für Import und Bildplanung
+
+- KI-Import und fachliche Bildplanung verwenden `gpt-6.1-terra` mit Reasoning medium. Bestehende Responses-Aufrufe, strukturierte Schemata, Validierung, Schlüssel und Datenflüsse bleiben erhalten; Bildgenerierung/-bearbeitung bleiben bei Flare. Aktive Standards sowie Deployment-/Key-Helfer sind synchronisiert.
+- Translation bleibt nach dem direkten Vergleich vorerst bei `gpt-6-luna`: beide 8/8 synthetischen Fälle bestanden, keine deutlich schnellere Antwortprüfung mit Terra. Details und Grenzen in `SENTENCE_EVAL.md`.
+- Prüfung: 138 Produkttests plus Syntaxchecks bestanden; echter synthetischer Import liefert beide vollständigen Paare, Bildplanung unterscheidet convenient von comfortable. Keine neuen Dependencies oder Datenfelder.
+
 ## 2026-10-05 – Translation wartet begrenzt und prüft keine erfundenen Wortfamilien
 
 - Die bestehende Actor-Sperre und Begrenzung auf acht aktive Vorgänge bleiben; weitere höchstens 32 Anfragen warten im selben Dienst in FIFO-Reihenfolge, maximal 45 Sekunden. Kein neuer Job-/Persistenzdienst, keine Dependency, kein neuer API-Endpunkt und keine automatischen Provider-Retries. Grenzen schützen Kosten/Speicher; nach Überlauf/Timeout verständliche Überlastmeldung ohne Ausführung der wartenden Aktion. Minutenlimits zählen zugelassene Anfragen weiterhin am Eingang.

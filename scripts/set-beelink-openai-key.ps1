@@ -4,7 +4,7 @@ param()
 $ErrorActionPreference = 'Stop'
 $ServiceConfig = 'C:\ProgramData\Beelink\Services\lerndeck\service-6000.xml'
 $PublicBaseUrl = 'https://lerndeck.jujies.app'
-$ImportModel = 'gpt-5.6-terra'
+$ImportModel = 'gpt-6.1-terra'
 
 if (-not (Test-Path -LiteralPath $ServiceConfig)) {
   throw "Service configuration not found: $ServiceConfig"

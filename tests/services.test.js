@@ -433,6 +433,8 @@ test("a new set enriches even a clear two-column list with AI metadata", async (
       targetLabel: "Englisch",
     },
   );
+  assert.equal(request.model, "gpt-6.1-terra");
+  assert.deepEqual(request.reasoning, { effort: "medium" });
   assert.match(request.input[0].content[0].text, /passende Set-Metadaten/);
   assert.match(request.input[0].content[0].text, /Vermeide generische Titel/);
   assert.deepEqual(result.draft.cards.map(({ front, back }) => ({ front, back })), [

@@ -92,7 +92,7 @@ Wichtige Umgebungsvariablen:
 
 - `DATA_DIR`: persistenter Runtime-Ordner, im Betrieb zwingend außerhalb des Releases
 - `OPENAI_API_KEY`: serverseitiger Key für KI-Import und Bildgenerierung; ohne ihn funktionieren manuelle Sets und klare Textlisten weiter
-- `OPENAI_IMPORT_MODEL`: optional, Standard `gpt-5.6-terra`
+- `OPENAI_IMPORT_MODEL`: optional, Standard `gpt-6.1-terra`, Reasoning `medium`
 - `OPENAI_IMAGE_GENERATION_MODEL`: optional, Standard `gpt-image-2.5-flare` für neue Bilder und 6er-Sheets
 - `OPENAI_IMAGE_EDIT_MODEL`: optional, Standard `gpt-image-2.5-flare` für gezielte Korrekturen vorhandener Varianten; die getrennte Konfiguration erlaubt später einen geprüften Modellwechsel
 - `PUBLIC_BASE_URL`: öffentliche HTTPS-Basis für erzeugte QR-Links
