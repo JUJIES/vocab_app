@@ -264,9 +264,9 @@ for (const light of [false,true]) test(`difficulty and optional transfer help ($
   await expect(page.getByRole('radio',{name:/Mittel/})).toBeChecked();
   await page.keyboard.press('ArrowRight');
   await page.locator('.launch-mode-modal__test-count-slider').fill('2');
-  await expect(page.getByText('Grundlagen · Klasse 6–7', { exact: true })).toBeVisible();
-  await expect(page.getByText('Aufbau · Klasse 8–9', { exact: true })).toBeVisible();
-  await expect(page.getByText('Vertiefung · ab Klasse 10', { exact: true })).toBeVisible();
+  await expect(page.getByText('Zügig ohne Hilfe', { exact: true })).toBeVisible();
+  await expect(page.getByText('Bekanntes üben · Klasse 8–9', { exact: true })).toBeVisible();
+  await expect(page.getByText('Mit Hilfe · Klasse 9–10', { exact: true })).toBeVisible();
   await page.screenshot({path:testInfo.outputPath('sentence-settings.png')});
   await page.setViewportSize({width:390,height:844});
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);

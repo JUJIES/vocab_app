@@ -21,6 +21,10 @@ Healthcheck: `http://127.0.0.1:6000/health`
 
 Öffentlicher Zugang: benannter Cloudflare-Tunnel mit eigenem HTTPS-Hostnamen
 
+## Rollout 2026-10-30
+
+Freigegeben: neue Translation-Stufen und persönlicheres, nicht redundantes Feedback mit flexibler Auswahl hilfreicher Beispiele. Modell/Reasoning unverändert Terra 6.1/medium. PWA v223 liefert die neuen Stufenbeschreibungen. Auswertung und verbleibende Grenzen stehen in `SENTENCE_EVAL.md`; die Originalsets werden nicht migriert oder korrigiert.
+
 ## Aktiver Stand
 
 - Öffentliche URL: `https://lerndeck.jujies.app`

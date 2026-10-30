@@ -1,5 +1,26 @@
 # Produkt- und Architekturentscheidungen
 
+## 2026-10-30 – Freigabe zum Beelink-Rollout
+
+- Nutzerfreigabe für die am 29.10. gemeinsam erarbeiteten Schwierigkeits-/Feedback-Prompts einschließlich flexibler Hilfe am erkennbaren Lernproblem. Terra 6.1 und durchgehend medium bleiben erhalten. UI-Beschreibungen/PWA-Shell v223 werden gemeinsam ausgeliefert. Die früheren Hinweise „noch nicht ausgerollt“ dokumentieren den damaligen Prüfstand.
+- Runtime/Servicekonfiguration vor Aktivierung sichern, übliche Release-Gates und Healthcheck mit Rollback verwenden. Abschließend getrennten synthetischen Translation-Smoke mit aktivem Release und Dienstkonfiguration sowie öffentliche Erreichbarkeit prüfen; Originalset und Schülerlernstände nicht verändern. Bekannte Grenzen aus der Ben-is-Back-Sichtung bleiben dokumentiert.
+
+## 2026-10-29 – Flexibles Feedback aus der konkreten Antwort ableiten
+
+- Lokaler Feedback-Promptkandidat: erst den erkennbaren Versuch verstehen, dann passende Hilfe wählen. Sichtbares Muster darf benannt, eine plausible Ursache vorsichtig vermutet werden; keine routinemäßige Gedankenlese-Formel. Ein schlichter Fehler braucht keine erfundene Ursache.
+- Eine passende Wortgruppe/Formenreihe kann im vorhandenen optionalen Beispielsfeld stehen. Beispiele nur bei tatsächlichem Übertragungsnutzen, nicht als Pflichtdekoration; keine feste Zuordnung eines Ausgabetyps zu jedem Fehler. Kurze Einleitung/konkrete Fehlerpunkte, Lösungsschutz und sachliche Annahmekriterien bleiben erhalten.
+- Sechs Ben-is-Back-Fälle mit 15 Abgaben geprüft, 138 Produkttests bestanden. Aktueller Stand weiterhin vor produktivem Rollout; Ergebnisse und Grenzen in SENTENCE_EVAL.md.
+
+## 2026-10-29 – Menschlich präzisierter Zielmaßstab für Translation
+
+**Inhaltliche Vorgabe aus der gemeinsamen Review-Runde; inzwischen in den lokalen Prompt-/UI-Quellen umgesetzt und mit neuem Datensatz geprüft, noch nicht produktiv ausgerollt.** Die bestehende Review-Matrix und ihre ursprünglichen Einstufungen bleiben historische Beobachtung. Der produktive Dienst läuft bis zur Freigabe weiterhin mit den vorigen Inhalten.
+
+- Hauptziel ist die Anwendung der gelernten Zielvokabel. Vertrauter Begleitwortschatz; zusätzliche unbekannte Inhaltswörter nicht als versteckte Nebenprüfung verwenden. Insgesamt höchstens eine geplante, überschaubare zusätzliche Hürde; bei Einfach keine.
+- **Einfach:** sehr einfache, kurze, natürliche Satzstrukturen mit vertrauter Grundgrammatik. Weder neue Begleitvokabeln noch zusätzliche Grammatik als Lernhürde. Die meisten sollen die Aufgabe nach Lernen der Zielvokabel ohne Hilfe zügig lösen können. Flüssiger Abruf und Erfolgserlebnis sind Qualitätskriterien; nicht künstlich verlängern oder erschweren. Unvermeidbare Schwierigkeit eines festen Vokabelausdrucks nicht durch weiteren Kontext erhöhen.
+- **Mittel:** eine grundlegende zusätzliche Anforderung, die in Klassen 8/9 bereits bekannt sein sollte, aber Übung benötigt: z.B. will-future, Verneinung, bekannte Vergangenheit oder comparative. Keine If-Sätze als geplante Mittel-Hürde, insbesondere kein Typ 2. Kurze sinnvolle Hauptsätze dürfen mittel sein; kein Nebensatz nur für eine Strukturquote.
+- **Schwer:** etwa Klasse 9/10 für starke, experimentierfreudige Lernende. Unterstützungsbedarf durch Feedback/Hilfe wird erwartet. Eine anspruchsvollere zusammenhängende Grammatikaufgabe, etwa ein passender Bedingungssatz, statt mehrerer gestapelter neuer Anforderungen. Kein automatisches Oberstufenniveau, keine obligatorische Kombination aus irrealer Vergangenheit, Passiv und unbekanntem Begleitwortschatz. Mit Unterstützung erreichbar bleiben.
+- Schwierigkeit und praktische Lösbarkeit getrennt prüfen: Einfach überwiegend selbstständig, Mittel Bekanntes anwenden/auffrischen, Schwer mit Unterstützung bearbeiten. Richtige Übersetzungskriterien bleiben für alle Stufen gleich; die Quelle soll passend gestaltet werden, nicht falsche Antworten großzügiger angenommen werden.
+
 ## 2026-10-29 – Translation auf Terra 6.1 mit durchgehend medium
 
 - Nach der erweiterten Vergleichsrunde und ausdrücklicher Freigabe laufen Generierung, separater Kontextreview, Feedback samt Reparatur und Abschlusszusammenfassung auf `gpt-6.1-terra`, jeweils Reasoning medium. Die zunächst geplante Beibehaltung von low wurde vom Nutzer ausdrücklich durch medium ersetzt. Code-Standard und `OPENAI_SENTENCE_MODEL` im Deployment sind synchronisiert.

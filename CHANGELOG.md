@@ -1,6 +1,15 @@
 # Changelog
 
+## 2026-10-30
+
+- Beelink-Rollout der freigegebenen Translation-Schwierigkeits- und Feedback-Prompts vorbereitet: erreichbare Stufen, kurze persönliche Rückmeldungen ohne doppelte Diagnose, passende optionale Wortgruppen/Formenreihen/Transferbeispiele. Modell und medium unverändert; PWA v223 mit synchronisierten Stufenbeschreibungen.
+
+
 ## 2026-10-29
+
+- Lokaler Feedback-Prompt: Hilfe flexibel am erkennbaren Lernproblem ausrichten, vorsichtige Ursachendeutung und passende Wortgruppen/Formenreihen/Transferbeispiele zulassen. Sechs Ben-is-Back-Problemfälle mit 15 Abgaben geprüft; Originalbewertung und Schutzregeln unverändert, noch kein Rollout.
+
+- Lokaler Translation-Promptkandidat nach menschlicher Review: erreichbare Stufen, Kontextausnahme für Verbindungswörter, knappes Feedback ohne doppelte Diagnose und persönlichere Ansprache mit gezielten Emojis. Neue Ben-is-Back-Vorher/Nachher-Runde: 123 Originalaufgaben und drei explizite Tippfehlerkontrollen abgeschlossen, 229 Abgaben. Set-Tippfehler und eine offene Wortform-Testannahme bleiben sichtbar. UI-Beschreibungen/PWA v223 vorbereitet; noch kein produktiver Rollout.
 
 - Translation nach erweitertem Vergleich auf Terra 6.1 umgestellt: Generierung, Kontextreview, Feedback/Reparatur und Zusammenfassung durchgehend Reasoning medium. Deployment-Konfiguration, Tests und Logdokumentation synchronisiert; bekannte Grenzen indirekter Lösungshinweise bleiben dokumentiert.
 

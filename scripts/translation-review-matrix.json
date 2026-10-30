@@ -1,0 +1,373 @@
+{
+  "schemaVersion": 1,
+  "matrixId": "ben-is-back-r1-20261029-v1",
+  "title": "Ben is Back I – Kalibrierungsrunde 1",
+  "sourceSetRevision": 52,
+  "model": "gpt-6.1-terra",
+  "reasoning": "medium",
+  "method": "Gezielte Auswahl von vier gut geeigneten und sechs diskussionswürdigen Beispielen. Keine repräsentative Qualitätsquote. Modellstufe und Assistentenkommentar werden erst nach eigener Einstufung angezeigt.",
+  "criteria": {
+    "difficulty": "Anforderungen der tatsächlich nötigen englischen Übersetzung, besonders Begleitgrammatik.",
+    "context": "Natürlicher, sinnvoller Gebrauch der Zielvokabel.",
+    "feedback": "Hilft die Rückmeldung beim nächsten eigenen Korrekturschritt, ohne unnötig vorzugeben oder zu frustrieren?"
+  },
+  "cases": [
+    {
+      "reviewId": "R01",
+      "caseId": "v36-easy",
+      "en": "equipment",
+      "de": "Ausrüstung",
+      "level": "easy",
+      "source": "Die Ausrüstung liegt im Schrank.",
+      "focus": "Ausrüstung",
+      "attempts": [
+        {
+          "kind": "initial",
+          "answer": "The equipments are in the cupboard.",
+          "accepted": false,
+          "feedback": "Den Ort hast du passend übersetzt 👍 Bei der Form von Ausrüstung und dem dazugehörigen Verb ist noch eine Änderung nötig.",
+          "issues": [
+            {
+              "quote": "equipments are",
+              "message": "Mehrzahl und Verbform: Das englische Wort für Ausrüstung ist nicht zählbar und bekommt kein Plural-s. Entferne die Mehrzahlendung und passe das Verb an die Einzahl an."
+            }
+          ],
+          "help": null
+        },
+        {
+          "kind": "partial-correction",
+          "answer": "The equipment are in the cupboard.",
+          "accepted": false,
+          "feedback": "Die Form von `equipment` hast du verbessert 👍 Jetzt fehlt noch die Anpassung des Verbs.",
+          "issues": [
+            {
+              "quote": "are",
+              "message": "Verbform: `equipment` ist nicht zählbar und wird wie Einzahl behandelt. Passe das Verb daran an."
+            }
+          ],
+          "help": null
+        },
+        {
+          "kind": "reference-correction",
+          "answer": "The equipment is in the cupboard.",
+          "accepted": true,
+          "feedback": "Jetzt hast du auch das Verb an `equipment` angepasst 👍 Der ganze Satz passt.",
+          "issues": [],
+          "help": null
+        }
+      ],
+      "assistantReview": {
+        "category": "Gutes Feedback",
+        "severity": "Positiv",
+        "note": "Mehrzahl und Verbkongruenz werden gemeinsam erkannt. Nach Entfernung des Plural-s würdigt das Feedback die Änderung und beanstandet nur noch are."
+      }
+    },
+    {
+      "reviewId": "R02",
+      "caseId": "v23-hard",
+      "en": "score",
+      "de": "Bewertungswert",
+      "level": "hard",
+      "source": "Der Bewertungswert, den das Hotel von den Gästen erhielt, lag deutlich über dem Durchschnitt.",
+      "focus": "Bewertungswert",
+      "attempts": [
+        {
+          "kind": "initial",
+          "answer": "The score that the hotel received from its guests was well below average.",
+          "accepted": false,
+          "feedback": "Den Bewertungswert und die Gäste hast du passend übersetzt 👍 Prüfe noch die Richtung des Vergleichs.",
+          "issues": [
+            {
+              "quote": "below",
+              "message": "Wortwahl: In der Quelle liegt der Wert deutlich über dem Durchschnitt. Deine Formulierung drückt das Gegenteil aus. Ändere die Richtung des Vergleichs."
+            }
+          ],
+          "help": null
+        },
+        {
+          "kind": "reference-correction",
+          "answer": "The score that the hotel received from its guests was well above average.",
+          "accepted": true,
+          "feedback": "Jetzt stimmt auch die Richtung des Vergleichs 👍 Dein Satz ist vollständig und passend übersetzt.",
+          "issues": [],
+          "help": null
+        }
+      ],
+      "assistantReview": {
+        "category": "Schwierigkeitsgrad",
+        "severity": "Nachsteuern",
+        "note": "Relativsatz mit vertrauter Vergangenheit; nach dem Produktprofil eher Mittel. Der Kontext ist sinnvoll, die zusätzliche Herausforderung für Schwer fehlt weitgehend."
+      }
+    },
+    {
+      "reviewId": "R03",
+      "caseId": "v01-medium",
+      "en": "treatment",
+      "de": "Behandlung",
+      "level": "medium",
+      "source": "Nach der Behandlung fühlte sie sich viel besser.",
+      "focus": "Behandlung",
+      "attempts": [
+        {
+          "kind": "initial",
+          "answer": "After the treatment, she felt better.",
+          "accepted": false,
+          "feedback": "`treatment` passt 👍 Eine Angabe dazu, wie viel besser sie sich fühlte, fehlt noch.",
+          "issues": [
+            {
+              "quote": null,
+              "message": "Fehlende Angabe: Im Ausgangssatz steht viel besser. Ergänze noch, wie stark sich ihr Befinden verbessert hat."
+            }
+          ],
+          "help": null
+        },
+        {
+          "kind": "reference-correction",
+          "answer": "After the treatment, she felt much better.",
+          "accepted": true,
+          "feedback": "Jetzt hast du auch übersetzt, wie viel besser sie sich fühlte 👍 Der Satz passt vollständig.",
+          "issues": [],
+          "help": null
+        }
+      ],
+      "assistantReview": null
+    },
+    {
+      "reviewId": "R04",
+      "caseId": "v33-easy",
+      "en": "therefore",
+      "de": "deshalb",
+      "level": "easy",
+      "source": "Deshalb gehe ich zu Fuß.",
+      "focus": "Deshalb",
+      "attempts": [
+        {
+          "kind": "initial",
+          "answer": "Therefore, I walk.",
+          "accepted": true,
+          "feedback": "Genau 👍 Du hast `Deshalb` passend übersetzt und der Satz ist vollständig.",
+          "issues": [],
+          "help": null
+        }
+      ],
+      "assistantReview": {
+        "category": "Kontext",
+        "severity": "Nachsteuern",
+        "note": "Der Satz beginnt mit Deshalb, ohne den Grund zu nennen. Formal vollständig, als alleinstehende Kontextaufgabe aber dünn. Bei verbindenden Wörtern gerät die strikte Ein-Hauptsatz-Regel in Spannung zum Lernziel."
+      }
+    },
+    {
+      "reviewId": "R05",
+      "caseId": "v01-hard",
+      "en": "treatment",
+      "de": "Behandlung",
+      "level": "hard",
+      "source": "Wenn die Behandlung früher begonnen hätte, hätte sich die Patientin vielleicht schneller erholt.",
+      "focus": "Behandlung",
+      "attempts": [
+        {
+          "kind": "initial",
+          "answer": "If the treatment would have started earlier, the patient might recover faster.",
+          "accepted": false,
+          "feedback": "`treatment` hast du passend übersetzt 👍 Achte noch darauf, dass Bedingung und mögliche Folge beide in der Vergangenheit liegen.",
+          "issues": [
+            {
+              "quote": "would have started",
+              "message": "Verbform: Im Bedingungssatz für eine nicht erfüllte Bedingung in der Vergangenheit verwendest du die Vorvergangenheit, nicht `would`. Bilde sie mit dem Hilfsverb in der Vergangenheitsform und dem Partizip des Vollverbs."
+            },
+            {
+              "quote": "might recover",
+              "message": "Zeitform: Die mögliche Erholung liegt laut Quelle ebenfalls in der Vergangenheit. Ergänze nach dem Modalverb das passende Hilfsverb und setze das Vollverb ins Partizip der Vergangenheit."
+            }
+          ],
+          "help": {
+            "explanation": "Die Quelle beschreibt eine nicht erfüllte Bedingung in der Vergangenheit und ihre mögliche Folge. Im Bedingungssatz steht dafür die Vorvergangenheit; der Hauptsatz drückt die mögliche vergangene Folge mit einem Modalverb und einer Vergangenheitsform aus.",
+            "example": "If he had studied, he might have passed."
+          }
+        },
+        {
+          "kind": "partial-correction",
+          "answer": "If the treatment had started earlier, the patient might recover faster.",
+          "accepted": false,
+          "feedback": "Den Bedingungssatz hast du verbessert 👍 Bei der möglichen Folge fehlt noch der Vergangenheitsbezug.",
+          "issues": [
+            {
+              "quote": "might recover",
+              "message": "Zeitbezug: Diese Form lässt die mögliche Erholung in Gegenwart oder Zukunft liegen. In der Quelle liegt auch die mögliche Folge in der Vergangenheit. Ergänze nach dem Modalverb das passende Hilfsverb und setze das Vollverb ins Partizip der Vergangenheit."
+            }
+          ],
+          "help": null
+        },
+        {
+          "kind": "reference-correction",
+          "answer": "If the treatment had started earlier, the patient might have recovered faster.",
+          "accepted": true,
+          "feedback": "Jetzt hast du auch die mögliche Folge in der Vergangenheit formuliert 👍 Der ganze Satz passt.",
+          "issues": [],
+          "help": null
+        }
+      ],
+      "assistantReview": {
+        "category": "Gutes Feedback",
+        "severity": "Positiv",
+        "note": "Zwei unabhängige Vergangenheitsfehler werden getrennt erklärt. Nach Teilkorrektur bleibt nur der wirklich verbleibende Fehler übrig; der Fortschritt wird konkret benannt."
+      }
+    },
+    {
+      "reviewId": "R06",
+      "caseId": "v42-medium",
+      "en": "perception",
+      "de": "Wahrnehmung",
+      "level": "medium",
+      "source": "Musik kann unsere Wahrnehmung der Zeit verändern.",
+      "focus": "Wahrnehmung",
+      "attempts": [
+        {
+          "kind": "initial",
+          "answer": "Music can change our perception of time.",
+          "accepted": true,
+          "feedback": "Deine Übersetzung ist vollständig und natürlich formuliert 🎵 Auch `perception` passt genau.",
+          "issues": [],
+          "help": null
+        }
+      ],
+      "assistantReview": {
+        "category": "Schwierigkeitsgrad",
+        "severity": "Nachsteuern",
+        "note": "Nur ein kurzer Hauptsatz mit can. Trotz abstrakter Zielvokabel bietet die Begleitgrammatik kaum einen Fortschritt gegenüber Einfach. Der Wortschatz selbst soll die Stufe nicht ersetzen."
+      }
+    },
+    {
+      "reviewId": "R07",
+      "caseId": "v15-easy",
+      "en": "overall",
+      "de": "insgesamt",
+      "level": "easy",
+      "source": "Wir haben insgesamt zehn Bücher.",
+      "focus": "insgesamt",
+      "attempts": [
+        {
+          "kind": "initial",
+          "answer": "We have ten books overall.",
+          "accepted": true,
+          "feedback": "Genau 👍 Du hast auch `insgesamt` passend mit `overall` übersetzt.",
+          "issues": [],
+          "help": null
+        }
+      ],
+      "assistantReview": {
+        "category": "Vokabelkontext",
+        "severity": "Nachsteuern",
+        "note": "We have ten books overall ist verständlich, aber in total wäre in diesem Zählkontext üblicher. Für overall besser eine zusammenfassende Einschätzung erzeugen, wie beim mittleren Satz. Keine falsche Bewertung der eingesandten Antwort behauptet."
+      }
+    },
+    {
+      "reviewId": "R08",
+      "caseId": "v38-hard",
+      "en": "long-term effects",
+      "de": "Langzeitfolgen",
+      "level": "hard",
+      "source": "Die Langzeitfolgen der Behandlung werden erst bekannt sein, wenn die Studie abgeschlossen ist.",
+      "focus": "Langzeitfolgen",
+      "attempts": [
+        {
+          "kind": "initial",
+          "answer": "The long-term effects of the treatment will only be known when the study completes.",
+          "accepted": false,
+          "feedback": "`long-term effects` hast du passend übersetzt 👍 Im Nebensatz braucht die Verbform noch eine Änderung.",
+          "issues": [
+            {
+              "quote": "completes",
+              "message": "Verbform: Die Studie schließt sich hier nicht selbst ab. Formuliere den Nebensatz im Passiv: Verwende eine Form von `be` und das Partizip des Verbs."
+            }
+          ],
+          "help": null
+        },
+        {
+          "kind": "reference-correction",
+          "answer": "The long-term effects of the treatment will only be known when the study is complete.",
+          "accepted": true,
+          "feedback": "Den Nebensatz hast du verbessert 👍 Jetzt ist der ganze Satz passend übersetzt.",
+          "issues": [],
+          "help": null
+        }
+      ],
+      "assistantReview": {
+        "category": "Didaktische Erklärung",
+        "severity": "Nachsteuern",
+        "note": "Der Hinweis verlangt ausdrücklich Passiv, nimmt danach aber auch die Adjektivkonstruktion when the study is complete an. Besser den beabsichtigten abgeschlossenen Zustand erklären und zulässige Formen offenlassen. Die Beurteilung des intransitiven study completes ist zudem kontextabhängig; dieser synthetische Fehlerfall ist kein unabhängiger Goldstandard."
+      }
+    },
+    {
+      "reviewId": "R09",
+      "caseId": "v01-easy",
+      "en": "treatment",
+      "de": "Behandlung",
+      "level": "easy",
+      "source": "Die Behandlung hilft dem kranken Kind.",
+      "focus": "Behandlung",
+      "attempts": [
+        {
+          "kind": "initial",
+          "answer": "The treatment help the sick child.",
+          "accepted": false,
+          "feedback": "Die Behandlung und das kranke Kind hast du passend übersetzt 👍 Schau noch einmal auf die Verbform.",
+          "issues": [
+            {
+              "quote": "help",
+              "message": "Verbform: Bei einem Subjekt in der Einzahl wie `the treatment` bekommt das Verb im Simple Present meist die Endung `-s`. Passe die Verbform an."
+            }
+          ],
+          "help": null
+        },
+        {
+          "kind": "reference-correction",
+          "answer": "The treatment helps the sick child.",
+          "accepted": true,
+          "feedback": "Jetzt stimmt auch die Verbform 👍 Dein Satz ist vollständig und passend übersetzt.",
+          "issues": [],
+          "help": null
+        }
+      ],
+      "assistantReview": null
+    },
+    {
+      "reviewId": "R10",
+      "caseId": "v26-hard",
+      "en": "increase",
+      "de": "erhöhen",
+      "level": "hard",
+      "source": "Wenn die Nachfrage weiter steigt, wird das Unternehmen die Preise erhöhen müssen.",
+      "focus": "erhöhen",
+      "attempts": [
+        {
+          "kind": "initial",
+          "answer": "If demand continues to rise, the company will have to increases its prices.",
+          "accepted": false,
+          "feedback": "Die Bedingung hast du passend übersetzt 👍 Bei der Verbform im Hauptsatz fehlt noch ein kleiner Schritt.",
+          "issues": [
+            {
+              "quote": "increases",
+              "message": "Verbform: Nach `have to` steht das folgende Verb in der Grundform. Entferne hier die Endung `-s`."
+            }
+          ],
+          "help": null
+        },
+        {
+          "kind": "reference-correction",
+          "answer": "If demand continues to rise, the company will have to increase its prices.",
+          "accepted": true,
+          "feedback": "Jetzt hast du die Verbform nach `have to` verbessert 👍 Der ganze Satz passt.",
+          "issues": [],
+          "help": null
+        }
+      ],
+      "assistantReview": {
+        "category": "Schwierigkeitsgrad",
+        "severity": "Nachsteuern",
+        "note": "Reale Bedingung mit Zukunft und have to. Für Schwer eher schwach abgegrenzt gegenüber Mittel; kein Vergangenheitskontrast, Passiv oder irreales Szenario. Grenzfall, kein Grammatikfehler."
+      }
+    }
+  ],
+  "sourceCodeCommit": "ba4568df26640ade4ab62253343b948870e208f5"
+}
