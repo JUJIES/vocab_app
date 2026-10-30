@@ -1,5 +1,9 @@
 # Satzübung: gezielte Modell-Evaluation
 
+## 2026-10-30 – Produktiver Rollout-Smoke
+
+Release `8899e71` auf Beelink aktiviert. Isolierter Backend-Smoke mit aktivem Release und geschützter Dienstkonfiguration: „Die Ausrüstung war im Auto.“ erzeugt; „The equipments were in the car.“ abgewiesen, Ort anerkannt und nicht zählbare Wortgruppe `homework · information · furniture` angeboten. Korrektur „The equipment was in the car.“ angenommen, Lauf abgeschlossen, belegte Zusammenfassung erstellt. Fünf echte Provideraufrufe, alle Terra 6.1/medium, alle abgeschlossen. Rohbeleg lokal `tmp/rollout-20261030-live.json`; keine produktiven Schüler-/Setdaten verändert. Dies prüft die integrierte Backend-Strecke und Provideranbindung, keinen angemeldeten HTTP-/Browserablauf oder allgemeine didaktische Wirksamkeit. Öffentliche Health-/Assets und 401-Authentifizierungsschutz separat erfolgreich geprüft.
+
 ## 2026-10-29 – Flexible Hilfe am erkennbaren Lernproblem
 
 - Feedback-Prompt ergänzt ein offenes didaktisches Prinzip, keine feste Fehlerarten-/Ausgabematrix: sichtbare Muster aufgreifen, vermutete Ursachen nur vorsichtig mit Anhaltspunkt, bei schlichten Fehlern direkt bleiben. Wortgruppe, Formenreihe, unabhängiger Beispielsatz oder Erklärung nach zusätzlichem Transfernutzen wählen; keine Pflicht zu Beispiel oder vermuteter Denkweise. Bewertung, Schema und serverseitiger Lösungsschutz unverändert.
@@ -25,7 +29,7 @@
 
 ## Präzisierter Zielmaßstab nach dem Review
 
-Die Lehrkraft legt anschließend fest: Einfach ohne Zusatzhürde zügig und überwiegend selbstständig lösbar; Mittel höchstens eine bekannte Grundgrammatikhürde (will, Verneinung, Vergangenheit, Steigerung), keine geplanten If-Sätze; Schwer für starke Klassen 9/10 mit erwarteter Hilfe, aber ohne Stapelung mehrerer neuer Anforderungen. Dies ersetzt als **inhaltliche Zielvorgabe** die frühere Assistentenorientierung an stärkerer Grammatikkomplexität; die technische Umsetzung ist noch offen. Vollständiger Maßstab und Abgrenzung zum aktuellen Betrieb in `DECISIONS.md`. Bestehende Beobachtungen und menschliche Ersteinstufungen unverändert lassen.
+Die Lehrkraft legt anschließend fest: Einfach ohne Zusatzhürde zügig und überwiegend selbstständig lösbar; Mittel höchstens eine bekannte Grundgrammatikhürde (will, Verneinung, Vergangenheit, Steigerung), keine geplanten If-Sätze; Schwer für starke Klassen 9/10 mit erwarteter Hilfe, aber ohne Stapelung mehrerer neuer Anforderungen. Dies ersetzt als **inhaltliche Zielvorgabe** die frühere Assistentenorientierung an stärkerer Grammatikkomplexität; die technische Umsetzung war zu diesem Review-Zeitpunkt noch offen und wurde anschließend umgesetzt und am 30.10. ausgerollt. Vollständiger Maßstab und aktueller Betriebsstand in `DECISIONS.md`. Bestehende Beobachtungen und menschliche Ersteinstufungen unverändert lassen.
 
 ## Erste menschliche Kalibrierung – 29.10.2026
 

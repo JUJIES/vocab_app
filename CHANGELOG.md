@@ -2,7 +2,7 @@
 
 ## 2026-10-30
 
-- Beelink-Rollout der freigegebenen Translation-Schwierigkeits- und Feedback-Prompts vorbereitet: erreichbare Stufen, kurze persönliche Rückmeldungen ohne doppelte Diagnose, passende optionale Wortgruppen/Formenreihen/Transferbeispiele. Modell und medium unverändert; PWA v223 mit synchronisierten Stufenbeschreibungen.
+- Beelink-Rollout der freigegebenen Translation-Schwierigkeits- und Feedback-Prompts abgeschlossen (Release `8899e71`): erreichbare Stufen, kurze persönliche Rückmeldungen ohne doppelte Diagnose, passende optionale Wortgruppen/Formenreihen/Transferbeispiele. Modell und medium unverändert; PWA v223 mit synchronisierten Stufenbeschreibungen. 138 Tests lokal/auf Beelink und isolierter Translation-Smoke mit realen Modellaufrufen erfolgreich; öffentliche Assets erreichbar.
 
 
 ## 2026-10-29

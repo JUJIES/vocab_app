@@ -1,9 +1,10 @@
 # Produkt- und Architekturentscheidungen
 
-## 2026-10-30 – Freigabe zum Beelink-Rollout
+## 2026-10-30 – Beelink-Rollout abgeschlossen
 
 - Nutzerfreigabe für die am 29.10. gemeinsam erarbeiteten Schwierigkeits-/Feedback-Prompts einschließlich flexibler Hilfe am erkennbaren Lernproblem. Terra 6.1 und durchgehend medium bleiben erhalten. UI-Beschreibungen/PWA-Shell v223 werden gemeinsam ausgeliefert. Die früheren Hinweise „noch nicht ausgerollt“ dokumentieren den damaligen Prüfstand.
-- Runtime/Servicekonfiguration vor Aktivierung sichern, übliche Release-Gates und Healthcheck mit Rollback verwenden. Abschließend getrennten synthetischen Translation-Smoke mit aktivem Release und Dienstkonfiguration sowie öffentliche Erreichbarkeit prüfen; Originalset und Schülerlernstände nicht verändern. Bekannte Grenzen aus der Ben-is-Back-Sichtung bleiben dokumentiert.
+- Release `8899e71` nach Runtime-/Dienstkonfigurationsbackup aktiviert. Lokal und auf Beelink jeweils 138 Tests plus Syntaxchecks bestanden, Deployment-Audit ohne bekannte Schwachstellen, Kandidaten-Healthcheck erfolgreich. Öffentliche Health-/PWA-/Stufen-Assets geprüft.
+- Getrennter synthetischer Translation-Smoke mit aktivem Release und Dienstkonfiguration erfolgreich: Generierung/Review, Fehlerfeedback, akzeptierte Korrektur, Abschluss und Zusammenfassung; fünf echte Provideraufrufe auf Terra 6.1/medium. Kein angemeldeter HTTP-/Browser-End-to-End-Test; öffentlicher API-Authentifizierungsschutz separat mit 401 bestätigt. Originalset und Schülerlernstände unverändert. Bekannte Grenzen aus der Ben-is-Back-Sichtung bleiben dokumentiert.
 
 ## 2026-10-29 – Flexibles Feedback aus der konkreten Antwort ableiten
 

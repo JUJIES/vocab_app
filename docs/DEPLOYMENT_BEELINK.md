@@ -23,7 +23,9 @@ Healthcheck: `http://127.0.0.1:6000/health`
 
 ## Rollout 2026-10-30
 
-Freigegeben: neue Translation-Stufen und persönlicheres, nicht redundantes Feedback mit flexibler Auswahl hilfreicher Beispiele. Modell/Reasoning unverändert Terra 6.1/medium. PWA v223 liefert die neuen Stufenbeschreibungen. Auswertung und verbleibende Grenzen stehen in `SENTENCE_EVAL.md`; die Originalsets werden nicht migriert oder korrigiert.
+Aktiviert mit Release `8899e71`: neue Translation-Stufen und persönlicheres, nicht redundantes Feedback mit flexibler Auswahl hilfreicher Beispiele. Modell/Reasoning unverändert Terra 6.1/medium. PWA v223 liefert die neuen Stufenbeschreibungen. Auswertung und verbleibende Grenzen stehen in `SENTENCE_EVAL.md`; die Originalsets werden nicht migriert oder korrigiert.
+
+138 Tests und Syntaxchecks lokal/auf Beelink erfolgreich, Deployment-Audit ohne bekannte Schwachstellen, Kandidaten-Healthcheck und öffentliche Assets geprüft. Runtime-/Konfigurationsbackup liegt mit Zeitstempel `20261030-093949` vor. Ein isolierter Smoke nutzt den aktiven Release und die Dienstumgebung für fünf echte Terra-6.1/medium-Aufrufe: Generierung, Review, fehlerhafte/richtige Abgabe und Zusammenfassung erfolgreich. Kein angemeldeter HTTP-/Browser-End-to-End-Test; öffentlicher Translation-Endpunkt weist nicht angemeldete Aufrufe mit 401 zurück. Keine produktiven Set-/Lernstandschreibvorgänge.
 
 ## Aktiver Stand
 
