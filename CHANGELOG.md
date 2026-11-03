@@ -2,6 +2,8 @@
 
 ## 2026-11-03
 
+- Room-Schreibcursor auf schmale, normal blinkende Linie in Textfarbe reduziert; zusätzlichen Mauszeigerring entfernt. Blinken funktioniert auch im angehaltenen Replayer. Ursprünglichen Eingabecursor bei Fokuswechsel/Room-Ende wiederherstellen. PWA v226.
+
 - Tafelraum-Room zeigt Translation-Feedback auch bei angehaltener Wiedergabe: abgeschlossene Einblendanimation wird im Quell-DOM beendet. Aktive Room-Einbettungen erhalten einen sichtbaren Zeigerring und eine übertragene Schreibmarke für Translation; keine zweite Eingabe oder Anbieteranfrage im Room. PWA v225.
 
 - Translation zeigt Fehler beim Start/Wiederaufnehmen nach Beenden des Ladezustands an. Zuvor wurde die Fehlermeldung durch den Wartehinweis überschrieben; erneuter Start bleibt möglich. PWA v224 aktualisiert die Lernansicht auch in Tafelraum. Bewertungs-/Modellregeln unverändert.

@@ -1,5 +1,11 @@
 # Produkt- und Architekturentscheidungen
 
+## 2026-11-03 – Nur ein normaler blinkender Schreibcursor im Room
+
+- Nutzerkorrektur ersetzt die vorige Zeiger-/Cursoroptik: kein zusätzlicher Mauszeiger, keine Pointer-Listener; Translation zeigt eine 1px-Linie in Textfarbe ohne Kontur/Leuchteffekt.
+- Üblicher Blinkrhythmus (500ms) durch lokale Opacity-Wechsel statt CSS-Animation, die der Replayer pausiert. Eingabe/Bewegen setzt die Blinkphase zurück. Native Caret-Farbe wird nur während aktiver Room-Spiegelung am betroffenen Feld vorübergehend transparent und bei Fokuswechsel/Stop vollständig restauriert; keine doppelten, gegeneinander blinkenden Cursor. Timer wird mit der Lease aufgeräumt.
+- Vorhandene Textpositionsmessung, Geheimnissperren und Feedback-Endzustandskorrektur bleiben. Browserregression prüft Blinken auch im angehaltenen Room, schlichte Optik, fehlenden Mausmarker und Wiederherstellung des nativen Cursors. Keine native Tafelraum-Änderung; PWA v226.
+
 ## 2026-11-03 – Sichtbarer Feedback-Endzustand und Room-Eingabemarkierungen
 
 - Ursache live bestätigt: Feedbacktext im Room-DOM vorhanden, aber unsichtbar. Der Replayer pausiert CSS-Animationen; die Quelle ließ die Einblendklasse nach Abschluss stehen. `animationend` räumt diesen vorübergehenden Zustand nun im Quelldokument auf. Kein dauerhaftes globales Abschalten von Animationen oder separates Feedbackmodell.

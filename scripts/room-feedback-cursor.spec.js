@@ -44,8 +44,11 @@ for(const theme of ['light','dark'])test(`Room shows feedback and a literal edit
  await expect.poll(()=>replay.locator('[data-room-caret]').evaluate(n=>n.style.top)).toBe(await provider.locator('[data-room-caret]').evaluate(n=>n.style.top));
  await provider.locator('#sentence-answer').fill('The car are blue.');
  await provider.locator('#sentence-submit').hover();
- await expect(replay.locator('[data-room-pointer]')).toBeVisible();
- expect(await replay.locator('[data-room-pointer]').evaluate(n=>getComputedStyle(n).pointerEvents)).toBe('none');
+ await expect(replay.locator('[data-room-pointer]')).toHaveCount(0);
+ expect(await replay.locator('[data-room-caret]').evaluate(n=>getComputedStyle(n).width)).toBe('1px');
+ expect(await replay.locator('[data-room-caret]').evaluate(n=>getComputedStyle(n).boxShadow)).toBe('none');
+ await expect.poll(()=>replay.locator('[data-room-caret]').evaluate(n=>n.style.opacity)).toBe('0');
+ await expect.poll(()=>replay.locator('[data-room-caret]').evaluate(n=>n.style.opacity)).toBe('1');
  await page.locator('#replica').screenshot({path:info.outputPath(`room-input-${theme}.png`)});
  await provider.locator('#sentence-submit').click();
  await expect(provider.locator('.sentence-stage__feedback-entry--new')).toHaveCount(0);
@@ -58,9 +61,12 @@ for(const theme of ['light','dark'])test(`Room shows feedback and a literal edit
  await page.locator('#replica').screenshot({path:info.outputPath(`room-feedback-${theme}.png`)});
  await provider.locator('body').evaluate(body=>{const input=document.createElement('input');input.type='password';input.id='secret-probe';body.append(input);});
  await provider.locator('#secret-probe').fill('SECRET_ROOM_3928');await provider.locator('#secret-probe').hover();
- await expect(provider.locator('[data-room-pointer]')).toBeHidden();await expect(provider.locator('[data-room-caret]')).toBeHidden();
+ await expect(provider.locator('[data-room-pointer]')).toHaveCount(0);await expect(provider.locator('[data-room-caret]')).toBeHidden();
  expect(await page.evaluate(()=>JSON.stringify(window.packets).includes('SECRET_ROOM_3928'))).toBe(false);
  expect(checks).toBe(1);
+ await provider.locator('#sentence-answer').click();
+ await expect.poll(()=>provider.locator('#sentence-answer').evaluate(n=>n.style.caretColor)).toBe('transparent');
  await page.evaluate(()=>document.querySelector('#provider').contentWindow.postMessage({type:'tafelraum:app-view-mode',protocol:'rrweb-2.2-v1',appId:'lerndeck',token:'12345678-1234-1234-1234-123456789012',enabled:false},location.origin));
  await expect(provider.locator('[data-room-pointer],[data-room-caret],[data-room-measure]')).toHaveCount(0);
+ expect(await provider.locator('#sentence-answer').evaluate(n=>n.style.caretColor)).toBe('');
 });

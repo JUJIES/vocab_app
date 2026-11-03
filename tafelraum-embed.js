@@ -175,28 +175,35 @@ function installTafelraumBridge() {
 
   // Capture only while an explicitly joined local Room renderer needs this instance.
   // No provider state, passwords, cookies or session credentials are transferred.
-  // The Room replica has no real focus or native mouse. These inert DOM marks
-  // travel through the existing bounded visual stream, never a second input path.
+  // The Room replica has no real input focus. This inert caret
+  // travels through the existing bounded visual stream, never a second input path.
   function installRoomCursor() {
-    const pointer=document.createElement('div'),caret=document.createElement('div'),measure=document.createElement('div');
-    for(const mark of [pointer,caret,measure]){mark.setAttribute('aria-hidden','true');mark.style.pointerEvents='none';}
-    pointer.style.cssText='position:fixed;z-index:2147483000;box-sizing:border-box;width:18px;height:18px;border:2px solid white;border-radius:50%;box-shadow:0 0 0 2px #16324f;background:#2876c955;pointer-events:none;display:none';
-    caret.style.cssText='position:fixed;z-index:2147483000;width:3px;background:#1864c0;box-shadow:0 0 0 1px white;pointer-events:none;display:none';
-    pointer.dataset.roomPointer='';caret.dataset.roomCaret='';measure.dataset.roomMeasure='';
+    const caret=document.createElement('div'),measure=document.createElement('div');
+    for(const mark of [caret,measure]){mark.setAttribute('aria-hidden','true');mark.style.pointerEvents='none';}
+    caret.style.cssText='position:fixed;z-index:2147483000;width:1px;pointer-events:none;display:none';
+    caret.dataset.roomCaret='';measure.dataset.roomMeasure='';
     measure.style.cssText='position:fixed;left:0;top:0;visibility:hidden;pointer-events:none;overflow:hidden';
-    document.body.append(pointer,caret,measure);
-    let frame=0,last=0,point=null,observed=null;
+    document.body.append(caret,measure);
+    let frame=0,last=0,observed=null,originalCaret="",originalPriority="",blinkTimer;
     const observer=new MutationObserver(()=>schedule());
     const properties=['boxSizing','width','fontFamily','fontSize','fontWeight','fontStyle','fontVariant','lineHeight','letterSpacing','wordSpacing','textTransform','textIndent','textAlign','direction','tabSize','paddingTop','paddingRight','paddingBottom','paddingLeft','borderTopWidth','borderRightWidth','borderBottomWidth','borderLeftWidth','borderStyle','wordBreak'];
+    function releaseInput() {
+      observer.disconnect();
+      if(observed){if(originalCaret)observed.style.setProperty('caret-color',originalCaret,originalPriority);else observed.style.removeProperty('caret-color');}
+      observed=null;
+    }
+    function restartBlink() {
+      clearInterval(blinkTimer);caret.style.opacity='1';
+      blinkTimer=setInterval(()=>{if(caret.style.display==='block')caret.style.opacity=caret.style.opacity==='0'?'1':'0';},500);
+    }
     function update() {
       const now=performance.now();
       if(now-last<50){frame=requestAnimationFrame(update);return;}
       frame=0;last=now;
-      if(point){pointer.style.left=`${point[0]-9}px`;pointer.style.top=`${point[1]-9}px`;pointer.style.display='block';}
       const input=document.activeElement;
       // Only the learner's Translation answer, never account/secret fields.
-      if(!(input instanceof HTMLTextAreaElement)||input.id!=='sentence-answer'||input.disabled||input.readOnly||!input.isConnected){caret.style.display='none';observer.disconnect();observed=null;return;}
-      if(observed!==input){observer.disconnect();observer.observe(input,{attributes:true,attributeFilter:['disabled','readonly','hidden']});observed=input;}
+      if(!(input instanceof HTMLTextAreaElement)||input.id!=='sentence-answer'||input.disabled||input.readOnly||!input.isConnected){caret.style.display='none';releaseInput();return;}
+      if(observed!==input){releaseInput();originalCaret=input.style.getPropertyValue('caret-color');originalPriority=input.style.getPropertyPriority('caret-color');observed=input;input.style.setProperty('caret-color','transparent');observer.observe(input,{attributes:true,attributeFilter:['disabled','readonly','hidden']});}
       const rect=input.getBoundingClientRect(),css=getComputedStyle(input);
       if(!rect.width||!rect.height||css.visibility==='hidden'){caret.style.display='none';return;}
       for(const property of properties)measure.style[property]=css[property];
@@ -208,20 +215,13 @@ function installTafelraumBridge() {
       const x=rect.left+at.left-base.left-input.scrollLeft,y=rect.top+at.top-base.top-input.scrollTop;
       const height=parseFloat(css.lineHeight)||parseFloat(css.fontSize)*1.2;
       const visible=x>=rect.left&&x<=rect.right&&y>=rect.top&&y+height<=rect.bottom;
-      Object.assign(caret.style,{left:`${x}px`,top:`${y}px`,height:`${height}px`,display:visible?'block':'none'});
+      Object.assign(caret.style,{left:`${x}px`,top:`${y}px`,height:`${height}px`,background:css.color,display:visible?'block':'none'});
     }
-    function schedule(){if(!frame)frame=requestAnimationFrame(update);}
-    function move(event){
-      if(event.target instanceof Element&&event.target.closest("input[type='password'],input[type='hidden']")){leave();return;}
-      point=[event.clientX,event.clientY];
-      schedule();
-    }
-    function leave(){point=null;pointer.style.display='none';}
+    function schedule(){restartBlink();if(!frame)frame=requestAnimationFrame(update);}
     const events=['selectionchange','focusin','focusout','input','keyup','click','scroll'];
     for(const name of events)document.addEventListener(name,schedule,true);
-    document.addEventListener('pointermove',move,true);document.documentElement.addEventListener('pointerleave',leave);
     window.addEventListener('resize',schedule);schedule();
-    return()=>{cancelAnimationFrame(frame);observer.disconnect();for(const name of events)document.removeEventListener(name,schedule,true);document.removeEventListener('pointermove',move,true);document.documentElement.removeEventListener('pointerleave',leave);window.removeEventListener('resize',schedule);pointer.remove();caret.remove();measure.remove();};
+    return()=>{cancelAnimationFrame(frame);clearInterval(blinkTimer);releaseInput();for(const name of events)document.removeEventListener(name,schedule,true);window.removeEventListener('resize',schedule);caret.remove();measure.remove();};
   }
   let captureStop=null,cursorStop=null,captureRequest=0,captureTimer=null,recorderPromise=null,epoch=0;
   const loadRecorder=()=>recorderPromise??(recorderPromise=new Promise((resolve,reject)=>{
