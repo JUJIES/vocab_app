@@ -52,3 +52,15 @@ Neue App-Versionen werden über dieselbe öffentliche Start-URL ausgeliefert; de
 Nach einem Rollout Lerndeck mit Internetverbindung vollständig schließen und erneut öffnen; falls noch eine alte geöffnete Ansicht erscheint, zusätzlich neu laden. Bereits im Speicher laufender JavaScript-Code wird nicht durch einen Server-Rollout ersetzt. Weder App-/Website-Daten löschen noch das Gerät neu koppeln: Die vorhandene Tablet-Sitzung soll erhalten bleiben.
 
 Die Serverdaten enthalten keine gemeldete Shell-Version je Tablet. Öffentliche Asset-/Cacheprüfungen belegen den Updateweg, aber keinen individuellen Empfang auf jedem iPad. Für eine Geräteabnahme nach dem Wiederöffnen das betroffene Verhalten direkt prüfen. Browserprüfungen mit iPad-WebKit ersetzen keinen Test im tatsächlich verwalteten Relution-Webclip.
+
+### Wiederholbare WebKit-Offline-Prüfung
+
+Für diese Prüfung Node.js ab Version 20 und mindestens Playwright 1.64.1 mit passendem WebKit-Binary verwenden (`npm ci`, danach `npx playwright install webkit`). Ältere Projektstände mit Playwright 1.59.1 liefern irreführende Ergebnisse: Der gepatchte Testbrowser verliert lesbare Cache-Einträge sogar auf einer leeren Seite ohne Service Worker. Das ist durch einen Kontrollversuch reproduziert und upstream als [CacheStorage-Persistenzfehler](https://github.com/microsoft/playwright/pull/41701) behoben; auch die [WebKit-Offline-Simulation](https://github.com/microsoft/playwright/pull/42894) wurde korrigiert.
+
+```bash
+BASE_URL=https://lerndeck.jujies.app/ npm run verify:pwa-offline
+```
+
+Das Skript verwendet ein wegwerfbares persistentes iPad-WebKit-Profil ohne Anmeldung und prüft die tatsächlich öffentlich gelieferte Script-Version anhand ihres SHA-256-Hashs: vollständiges Caching, Offline-Neuladen, Browser schließen/komplett offline neu starten und Rückkehr ins Netz. Ein lokaler Speichermarker muss erhalten bleiben; Offline-Dokumente müssen vom Service Worker mit Status 200 kommen. Der Bericht liegt unter `artifacts/pwa-offline-persistence/result.json` (optional `REPORT_PATH`). Bei Fehlern wird keine Phase übersprungen oder als bestanden markiert. Es werden keine Sets oder Lernstände geschrieben.
+
+Diese Prüfung bestätigt die Speicherung der App-Hülle einschließlich aktuellem Code. Sie führt kein Offline-Lernen ein: aktuelle Sets, Anmeldung und Server-Lernstände bleiben vom bestehenden Online-Datenfluss abhängig. iPad-WebKit ist eine Simulation; ein einzelner verwalteter Schul-Webclip ist damit nicht fernabgenommen.

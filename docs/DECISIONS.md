@@ -1,5 +1,11 @@
 # Produkt- und Architekturentscheidungen
 
+## 2026-11-03 – Belastbare WebKit-Offline-Abnahme
+
+- Playwright-Testabhängigkeit 1.64.1 ersetzt 1.59.1: Der alte gepatchte WebKit-Browser liefert auch ohne App/Service Worker leere Cache-Antworten; aktuelles WebKit und Chromium erhalten die Daten. Kein Anlass, die produktive Cachelogik an diesen Werkzeugfehler anzupassen. Upstream-Nachweise und Node-/Browser-Voraussetzungen stehen in `INSTALLATION.md`.
+- `npm run verify:pwa-offline` prüft lesend gegen die öffentliche HTTPS-App, mit wegwerfbarem persistenten iPad-WebKit-Profil: exakter App-Hash im Cache, kontrollierte Seite, Offline-Reload, kompletter Offline-Browserneustart und Rückkehr ins Netz; lokaler Marker bleibt erhalten. Kein Login, keine produktiven Set-/Lernstandschreibzugriffe. Fehler bleiben Fehler, Bericht unter `artifacts/pwa-offline-persistence/result.json`.
+- App-Code-Persistenz ist von Offline-Lernen und echter Geräteabnahme getrennt. API-/Set-Daten bleiben im bestehenden Online-Datenfluss; die Simulation bestätigt nicht den individuellen Empfang auf jedem Relution-iPad.
+
 ## 2026-11-03 – Translation-Feedback am Satz verfeinert
 
 - Vorhandene Verlaufskarte bleibt einzige Rückmeldung: keine zusätzliche Statusfläche und keine zweite Bewertung. Satz/Status/Hinweis kompakter, separate „Feedback“-Zwischenüberschrift entfernt. Frühere Versuche ausdrücklich beschriftet und mit neutralerem Badge; Wortmarkierungen bleiben bernsteinfarben und nur beim passenden aktuellen Entwurf bearbeitbar.

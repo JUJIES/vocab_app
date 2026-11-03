@@ -105,6 +105,8 @@ npm run verify
 npm audit --omit=dev
 ```
 
+Die lesende Offline-Abnahme der öffentlichen App ist mit `BASE_URL=https://lerndeck.jujies.app/ npm run verify:pwa-offline` wiederholbar. Sie nutzt einen wegwerfbaren persistenten iPad-WebKit-Browser und prüft Cache-Inhalt, Offline-Reload und Offline-Neustart. Entwicklung benötigt für Playwright 1.64.1 Node.js ab Version 20 und `npx playwright install chromium webkit`. Hintergrund und Grenzen: [Tablet-Updates](docs/INSTALLATION.md#updates-auf-bestehenden-tablets).
+
 Der isolierte Browser-Smoke-Test braucht eine laufende Testinstanz, einen aktivierten Testaccount und ein wegwerfbares `DATA_DIR`:
 
 ```bash

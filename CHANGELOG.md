@@ -2,9 +2,11 @@
 
 ## 2026-11-03
 
+- Offene Safari-/WebKit-Offline-Abnahme geklärt: leerer Cache durch alten Playwright-Testbrowser auch ohne App reproduziert. Testabhängigkeit auf 1.64.1 aktualisiert; öffentlicher iPad-WebKit-Test bestätigt aktuellen App-Code nach Offline-Reload und Offline-Browserneustart. Wiederholbare lesende Prüfung `verify:pwa-offline` sowie Abnahmegrenzen dokumentiert; kein Runtime-/Datenmodellumbau.
+
 - Translation-Rückmeldung kompakter: Status und konkreter Hinweis direkt am Satz, einmaliger Lichtimpuls, bernsteinfarbene Problemstellen, zurückgenommene frühere Versuche und besser lesbarer Feedbacktext in Tafelraum. Klarer Prüfstatus ohne zusätzlichen Warteblock, DOM-Übertragung/reduced-motion bleiben erhalten; PWA v231 als Release `8b70081` live. Native Room-Enddarstellung bestätigt; vollständiger manueller Bewegungsnachweis noch offen.
 
-- Eingabe verwendet jetzt ebenfalls die vorhandene Kartenmischung: Start, Richtungswechsel und neue Durchgänge fragen jede Karte einmal ab. Direkte Folgedurchgänge vermeiden die letzte Karte als erste (außer bei nur einer Karte). Korrekturpflicht und Wertung unverändert; PWA v230 vorbereitet, noch kein Rollout.
+- Eingabe verwendet jetzt ebenfalls die vorhandene Kartenmischung: Start, Richtungswechsel und neue Durchgänge fragen jede Karte einmal ab. Direkte Folgedurchgänge vermeiden die letzte Karte als erste (außer bei nur einer Karte). Korrekturpflicht und Wertung unverändert; PWA v230 als Release `703bad2` auf der Schulinstanz ausgerollt; auch im folgenden v231-Release enthalten.
 
 - Translation-Feedback mit ruhiger Farbkante und kurz gezeichnetem Erfolgs-/Überarbeitungssymbol. Dezente laufende Lichtlinie während Prüfung; reduzierte Bewegung, Tastaturfokus und sichtbarer Endzustand im Room berücksichtigt. Keine Änderung der Bewertung; PWA v229.
 
