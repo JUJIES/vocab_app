@@ -21,6 +21,12 @@ Healthcheck: `http://127.0.0.1:6000/health`
 
 Öffentlicher Zugang: benannter Cloudflare-Tunnel mit eigenem HTTPS-Hostnamen
 
+## Rollout 2026-11-03
+
+Release `97d36e8` aktiviert: Translation-Startfehler werden nach dem Busy-Zustand sichtbar, PWA v224. 138 Produkttests/Syntaxchecks lokal und auf Beelink, acht Browserregressionen (Chromium/WebKit, beide Themes, mit/ohne Tafelraum-Einstellung) bestanden. Aktiver Dienst und öffentliche app.js/index.html/sw.js per Inhaltshash geprüft.
+
+Direkte echte API-Proben: synthetischer Satz mit Antwortprüfung sowie jeweils eine Generierung/Review im aktuellen Ben-is-Back-I-Set auf allen drei Stufen erfolgreich. Anschließend native Lerndeck-Safari-WebApp auf dem Mac bedient: zunächst Fehleransicht mit verdeckter Meldung reproduziert, nach Reload erster Satz sichtbar, manuelle deutsche Kontrollantwort angenommen, Weiter zeigt Aufgabe 2/5. Das ist ein technischer Lehrervorschau-Test im echten Set, keine Schülerleistung. Die Ursache des ursprünglichen Generierungsabbruchs ist damit nicht nachgewiesen; kein pauschaler Modell-/Einbettungsausfall bestätigt. Die bestehende Tafelraum-Room-Ausgabe zeigte weiterhin die alte geladene Ansicht; erneuter Start im nativen Tafelraum wurde nicht erfolgreich verifiziert.
+
 ## Rollout 2026-10-30
 
 Aktiviert mit Release `8899e71`: neue Translation-Stufen und persönlicheres, nicht redundantes Feedback mit flexibler Auswahl hilfreicher Beispiele. Modell/Reasoning unverändert Terra 6.1/medium. PWA v223 liefert die neuen Stufenbeschreibungen. Auswertung und verbleibende Grenzen stehen in `SENTENCE_EVAL.md`; die Originalsets werden nicht migriert oder korrigiert.
