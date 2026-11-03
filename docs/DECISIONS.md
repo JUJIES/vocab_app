@@ -1,5 +1,11 @@
 # Produkt- und Architekturentscheidungen
 
+## 2026-11-03 – Translation mit Enter bestätigen
+
+- Enter im Antwortfeld nutzt `requestSubmit` und denselben Submit-/Prüfen-/Weiter-Pfad wie der Button, einschließlich Pflichtfeldvalidierung. Keine zweite Prüfung oder anderer Annahmemaßstab. Shift+Enter bleibt Zeilenumbruch; modifizierte Enter-Kombinationen/IME bleiben unangetastet. Wiederholte Keydowns und Busy-Zustand starten keine weitere Anfrage.
+- Tastaturbedienung darf durch vorübergehend deaktivierte Felder keinen Fokus verlieren: Nach Prüfung/Weiter Feld wieder fokussieren, wenn es vorher den Fokus hatte; auch readonly angenommene Antworten können Enter für Weiter empfangen. Abschlussdialog behält eigene Fokusführung. Desktop-Start nutzt vorhandene Fine-Pointer-Autofokusregel, Touch öffnet die Bildschirmtastatur nicht ungefragt. Tafelraum-Anbieterframe nutzt dieselbe Bedienung, Room bleibt lesend.
+- Browserregression in Chromium/WebKit, normal/eingebettet: Pflichtfeld, Shift+Enter, IME/Repeat, gehaltene Taste während Prüfung, Fehlerkorrektur, angenommene Antwort und nächster Satz ausschließlich per Tastatur. Backend-/Persistenz-/Annahmeregeln unverändert; PWA v228.
+
 ## 2026-11-03 – Room-Cursor nach dem Messprinzip der HTML-Arbeitsblätter
 
 - Vergleich mit Tafelraums `interactive-html-state-bridge.mjs`: Die vorige Lerndeck-Messung teilte den Text am Cursor in Textknoten/Span, kopierte nicht alle Schriftmetriken und schätzte die Cursorhöhe aus line-height. Das kann Kerning/Ligaturen und Endpositionen verändern. Keine fest codierte Pixelverschiebung als Korrektur.

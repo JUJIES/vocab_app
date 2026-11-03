@@ -2,6 +2,8 @@
 
 ## 2026-11-03
 
+- Translation per Tastatur: Enter prüft und lädt nach Annahme den nächsten Satz; Shift+Enter fügt einen Zeilenumbruch ein. Fokus bleibt nach Tastaturaktionen im Antwortfeld; Desktop fokussiert beim Start. Wiederholung/IME und doppelte Anfragen geschützt, bestehende Formularvalidierung erhalten. PWA v228.
+
 - Room-Schreibcursor übernimmt das bewährte Messprinzip der HTML-Arbeitsblätter: vollständige Textformung statt Aufteilung am Cursor, echte Textgrenzen und vollständige Schriftmetriken. Position/Höhe berücksichtigen Feldscrollen und Skalierung; Größen-/Schriftänderungen aktualisieren die Messung. Schlichte Blinkoptik unverändert, PWA v227.
 
 - Room-Schreibcursor auf schmale, normal blinkende Linie in Textfarbe reduziert; zusätzlichen Mauszeigerring entfernt. Blinken funktioniert auch im angehaltenen Replayer. Ursprünglichen Eingabecursor bei Fokuswechsel/Room-Ende wiederherstellen. PWA v226.

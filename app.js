@@ -564,6 +564,12 @@ function bindEvents() {
   elements.sentenceHome.addEventListener("click", handleReturnToStudentHome);
   elements.sentenceLogout.addEventListener("click", () => elements.inputMenuLogout.click());
   elements.sentenceForm.addEventListener("submit", handleSentenceSubmit);
+  elements.sentenceAnswer.addEventListener("keydown", event => {
+    if (event.key !== "Enter" || event.shiftKey || event.ctrlKey || event.altKey || event.metaKey || event.isComposing || event.keyCode === 229) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (!event.repeat && !state.sentenceBusy) elements.sentenceForm.requestSubmit(elements.sentenceSubmit);
+  });
   elements.sentenceReplace.addEventListener("click", () => sendSentenceAction("replace"));
   elements.sentenceCompletionRestart.addEventListener("click", () => startSentenceSet(state.currentSetPath, state.activeLearningDirection, state.activeTestCardCount, { difficulty: state.activeSentenceDifficulty }));
   const leaveCompletion = () => { elements.sentenceCompletion.close(); void handleReturnToStudentHome(); };
@@ -10556,6 +10562,7 @@ async function startSentenceSet(setPath, direction, count, { resume = false, dif
       renderSentenceRun();
       if (startError) renderSentenceFeedback(startError, "error");
       acknowledgeSentencePrompt();
+      if (!startError && state.sentenceSession && !state.sentenceSession.complete && shouldAutoFocusTestAnswer()) answer.focus({ preventScroll: true });
     }
   }
 }
@@ -10647,6 +10654,7 @@ async function sendSentenceAction(action) {
   if (state.sentenceBusy || !state.sentenceSession || state.sentenceSession.complete) return;
   const current = state.sentenceSession;
   const answer = elements.sentenceAnswer;
+  const restoreAnswerFocus = document.activeElement === answer;
   const requestId = ++state.sentenceRequestId;
   saveSentenceRun();
   state.sentenceBusy = true;
@@ -10676,6 +10684,8 @@ async function sendSentenceAction(action) {
       state.sentenceReplacing = false;
       renderSentenceRun();
       acknowledgeSentencePrompt();
+      if (restoreAnswerFocus && state.sentenceSession && !state.sentenceSession.complete
+        && [document.body, answer].includes(document.activeElement)) answer.focus({ preventScroll: true });
       if (!state.sentenceSession) {
         renderSentenceFeedback("Durchgang abgelaufen. Bitte neu starten.", "error");
       }
