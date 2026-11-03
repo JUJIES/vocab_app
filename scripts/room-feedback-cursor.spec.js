@@ -88,9 +88,13 @@ for(const theme of ['light','dark'])test(`Room shows feedback and a literal edit
  await expect.poll(()=>replay.locator('[data-room-caret]').evaluate(n=>n.style.opacity)).toBe('1');
  await page.locator('#replica').screenshot({path:info.outputPath(`room-input-${theme}.png`)});
  await provider.locator('#sentence-submit').click();
+ await expect(replay.locator('.sentence-stage__feedback-entry')).toContainText('Prüfe die Verbform.');
+ await expect.poll(()=>replay.locator('.sentence-stage__feedback-result path').evaluate(n=>{const value=parseFloat(getComputedStyle(n).strokeDashoffset);return value>0&&value<1;})).toBe(true);
  await expect(provider.locator('.sentence-stage__feedback-entry--new')).toHaveCount(0);
  await expect(replay.locator('.sentence-stage__feedback-entry')).toContainText('Prüfe die Verbform.');
  await expect.poll(()=>replay.locator('.sentence-stage__feedback-entry').evaluate(n=>getComputedStyle(n).opacity)).toBe('1');
+ await expect(replay.locator('.sentence-stage__feedback-entry')).not.toHaveClass(/feedback-entry--new/);
+ expect(await replay.locator('.sentence-stage__feedback-result path').evaluate(n=>parseFloat(getComputedStyle(n).strokeDashoffset))).toBe(0);
  await expect.poll(()=>replay.locator('html').evaluate(()=>document.scrollingElement.scrollTop)).toBe(await provider.locator('html').evaluate(()=>document.scrollingElement.scrollTop));
  // Verify actual visibility in a paused, scriptless replica, not just copied text.
  expect(await replay.locator('html').evaluate(n=>n.classList.contains('rrweb-paused'))).toBe(true);

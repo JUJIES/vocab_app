@@ -105,6 +105,7 @@ const state = {
   sentenceSummaryBusy: false,
   sentenceSummaryError: "",
   sentenceShownPromise: null,
+  sentencePendingFrameId: null,
   sentenceFeedbackMotion: null,
   sentenceFeedbackGesture: null,
   sentenceFeedbackFrameId: null,
@@ -10335,6 +10336,63 @@ function bindSentenceFeedbackNavigation() {
   list.addEventListener("lostpointercapture", cancelGesture);
 }
 
+// Animate DOM properties so the scriptless Room sees the same bounded visual
+// steps. CSS/WAAPI-only motion is paused by its replayer.
+function animateSentenceResultEntry(item) {
+  const motion = matchMedia("(prefers-reduced-motion: reduce)");
+  if (motion.matches) return;
+  const start = performance.now();
+  let frame = null, last = -Infinity;
+  const finish = () => {
+    cancelAnimationFrame(frame);
+    clearTimeout(deadline);
+    item.classList.remove("sentence-stage__feedback-entry--new");
+    for (const key of ["--sentence-mark-offset", "--sentence-result-scale", "--sentence-reveal"]) item.style.removeProperty(key);
+  };
+  const draw = now => {
+    if (!item.isConnected || item.hidden || !item.classList.contains("sentence-stage__feedback-entry--new")
+      || state.appMode !== APP_MODES.SENTENCE || motion.matches || now - start >= 520) { finish(); return; }
+    if (now - last >= 33) {
+      last = now;
+      const ease = duration => 1 - Math.pow(1 - Math.min((now - start) / duration, 1), 3);
+      item.style.setProperty("--sentence-mark-offset", (1 - ease(400)).toFixed(3));
+      item.style.setProperty("--sentence-result-scale", (.94 + .06 * ease(440)).toFixed(3));
+      item.style.setProperty("--sentence-reveal", (.08 + .37 * ease(520)).toFixed(3));
+    }
+    frame = requestAnimationFrame(draw);
+  };
+  item.classList.add("sentence-stage__feedback-entry--new");
+  // Also finish when a background view temporarily suspends animation frames.
+  const deadline = setTimeout(finish, 650);
+  draw(start);
+}
+
+function updateSentencePendingMotion() {
+  const button = elements.sentenceSubmit;
+  if (!state.sentenceBusy) {
+    cancelAnimationFrame(state.sentencePendingFrameId);
+    state.sentencePendingFrameId = null;
+    button.style.removeProperty("--sentence-check-position");
+    return;
+  }
+  if (state.sentencePendingFrameId !== null) return;
+  const motion = matchMedia("(prefers-reduced-motion: reduce)"), start = performance.now();
+  let last = -Infinity;
+  const draw = now => {
+    if (!state.sentenceBusy || state.appMode !== APP_MODES.SENTENCE || motion.matches) {
+      state.sentencePendingFrameId = null;
+      button.style.removeProperty("--sentence-check-position");
+      return;
+    }
+    if (now - last >= 33) {
+      last = now;
+      button.style.setProperty("--sentence-check-position", `${(-100 + 450 * ((now - start) % 1200) / 1200).toFixed(2)}%`);
+    }
+    state.sentencePendingFrameId = requestAnimationFrame(draw);
+  };
+  state.sentencePendingFrameId = requestAnimationFrame(draw);
+}
+
 function renderSentenceFeedback(message, status, run = null) {
   cancelSentenceFeedbackMotion();
   const feedback = elements.sentenceFeedback;
@@ -10351,11 +10409,6 @@ function renderSentenceFeedback(message, status, run = null) {
     if (!item) {
       item = document.createElement("li");
       item.className = "sentence-stage__feedback-entry";
-      // End transient presentation state in the DOM too: scriptless Room
-      // replicas may pause CSS animations, but still receive this final state.
-      item.addEventListener("animationend", event => {
-        if (event.target === item && event.animationName === "sentence-feedback-enter") item.classList.remove("sentence-stage__feedback-entry--new");
-      });
       item.dataset.attemptId = entry.id;
       item.dataset.status = entry.status;
       const quote = document.createElement("blockquote");
@@ -10368,7 +10421,17 @@ function renderSentenceFeedback(message, status, run = null) {
       ownLabel.textContent = "Dein Satz:";
       const result = document.createElement("span");
       result.className = "sentence-stage__feedback-result";
-      result.textContent = entry.status === "accepted" ? "Passt" : entry.status === "uncertain" ? "Nicht sicher" : "Überarbeiten";
+      const symbol = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      symbol.setAttribute("viewBox", "0 0 24 24");
+      symbol.setAttribute("aria-hidden", "true");
+      symbol.setAttribute("focusable", "false");
+      const mark = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      mark.setAttribute("pathLength", "1");
+      mark.setAttribute("d", entry.status === "accepted" ? "M5 12.5 9.5 17 19 7"
+        : entry.status === "uncertain" ? "M9 8a3 3 0 0 1 6 0c0 2-3 2-3 5M12 17v.2"
+        : "M5 19l3.5-.8L19 7.7 16.3 5 5.8 15.5 5 19ZM14.5 6.8l2.7 2.7");
+      symbol.append(mark);
+      result.append(symbol, document.createTextNode(entry.status === "accepted" ? "Passt" : entry.status === "uncertain" ? "Nicht sicher" : "Überarbeiten"));
       header.append(ownLabel, result);
       submission.append(header, quote);
       const text = document.createElement("p");
@@ -10421,7 +10484,10 @@ function renderSentenceFeedback(message, status, run = null) {
       }
       list.append(item);
       list.dataset.activeAttemptId = entry.id;
-      if (!changedPrompt) { item.classList.add("sentence-stage__feedback-entry--new"); added = item; }
+      if (!changedPrompt) {
+        animateSentenceResultEntry(item);
+        added = item;
+      }
     }
     const isLatest = entry === history.at(-1);
     const quote = item.querySelector("blockquote");
@@ -10481,6 +10547,9 @@ function renderSentenceRun() {
   const button = elements.sentenceSubmit;
   const progress = elements.sentenceProgress;
   button.disabled = state.sentenceBusy;
+  button.dataset.pending = String(state.sentenceBusy);
+  elements.sentenceForm.setAttribute("aria-busy", String(state.sentenceBusy));
+  updateSentencePendingMotion();
   elements.sentenceReplace.hidden = !run || run.complete || run.accepted;
   elements.sentenceReplace.disabled = state.sentenceBusy;
   answer.disabled = state.sentenceBusy || !run || run.complete;

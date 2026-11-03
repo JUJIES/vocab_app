@@ -1,5 +1,12 @@
 # Produkt- und Architekturentscheidungen
 
+## 2026-11-03 – Ruhige animierte Translation-Rückmeldung
+
+- Bestehende Feedbackkarte bleibt führend: neue validierte Versuche erhalten einen kurzen Statusakzent (ca. 0,5s), ein gezeichnetes SVG-Symbol und eine ruhige Farbkante. Erfolg/Überarbeiten bleiben explizite Textlabels; Unsicherheit wird nicht als Erfolg inszeniert. Keine Belohnungspunkte, Sounds oder zweite Bewertung. SVG ist dekorativ und nicht fokussierbar.
+- Während Bearbeitung unbestimmte Lichtlinie am bestehenden Button, `aria-busy` am Formular. Kein vorgetäuschter Prozentfortschritt. Nur aktuelle Busy-Zeit; Fehler beenden sie ebenfalls.
+- Kartenposition bleibt stabil: Ein anfänglicher Entwurf mit vertikaler Bewegung verschob das Scrollziel in der Room-Prüfung. Stattdessen nur Farbkante, Badge-Skalierung und Strichzeichnung animieren. Karten/Text bleiben auch am Start vollständig sichtbar. Ein begrenzter requestAnimationFrame-Pfad über DOM-CSS-Variablen (maximal 30 Schritte/s) macht auch die Bewegung im vorhandenen Room-Strom sichtbar. Kein zweiter Animations-/Bewertungsweg: Quelle und Replik verwenden dieselben Werte. Abschluss/Abbruch entfernt transiente Klassen/Variablen; eine Deadline beendet die Einblendung auch bei angehaltenen Frames. Der pausierte Room-Replayer erhält volle Symbole und einen ruhigen Endzustand. Bei reduced-motion keine Eingangsklasse/Bewegung, statische Warteanzeige. Alte Verlaufseinträge/Reload lösen keinen neuen Statusimpuls aus.
+- Bestehende UI-/Tastatur-/Persistenzpfade bleiben; keine Dependency oder weitere Anbieteranfrage. Prüfungen mit synthetischem Feedback in Chromium/WebKit, beide Themes und 390px: Busy-Zustand, Überarbeiten/Erfolg, Cleanup/Reload/reduced-motion sowie sichtbarer SVG-Endzustand und synchrones Scrollen im echten rrweb-Replayer. PWA v229 aktualisiert app.js und styles.css.
+
 ## 2026-11-03 – Translation mit Enter bestätigen
 
 - Enter im Antwortfeld nutzt `requestSubmit` und denselben Submit-/Prüfen-/Weiter-Pfad wie der Button, einschließlich Pflichtfeldvalidierung. Keine zweite Prüfung oder anderer Annahmemaßstab. Shift+Enter bleibt Zeilenumbruch; modifizierte Enter-Kombinationen/IME bleiben unangetastet. Wiederholte Keydowns und Busy-Zustand starten keine weitere Anfrage.
