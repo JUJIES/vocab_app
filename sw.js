@@ -1,4 +1,4 @@
-const CACHE_NAME = "lerndeck-shell-v229-feedback-motion";
+const CACHE_NAME = "lerndeck-shell-v230-input-shuffle";
 const APP_SHELL_URLS = [
   "/",
   "/index.html",
@@ -10,7 +10,7 @@ const APP_SHELL_URLS = [
   "/answer-rules.js?v=2026-10-03-optional-infinitive-v3",
   "/grading-rules.js?v=2026-09-10-ihk-v1",
   "/local-speech.js?v=2026-10-04-speech-accent-v1",
-  "/app.js?v=2026-11-03-feedback-motion-v1",
+  "/app.js?v=2026-11-03-input-shuffle-v1",
   "/appearance.js?v=2026-09-30-appearance-v4",
   "/appearance.css?v=2026-09-30-appearance-v4",
   "/teacher.css?v=2026-10-04-profile-header-v1",

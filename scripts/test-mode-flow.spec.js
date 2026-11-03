@@ -47,11 +47,11 @@ function buildTestSet() {
   };
 }
 
-async function prepareStudentHome(page) {
+async function prepareStudentHome(page, setData = buildTestSet()) {
   await page.route("**/sets/*.json", (route) => route.fulfill({
     status: 200,
     contentType: "application/json",
-    body: JSON.stringify(buildTestSet()),
+    body: JSON.stringify(setData),
   }));
 
   await page.goto(new URL("/index.html", BASE_URL).toString(), { waitUntil: "networkidle" });
@@ -303,3 +303,65 @@ test("practice starts with a shuffled card order", async ({ page }) => {
   await expect(page.locator("#flashcard")).toBeVisible();
   await expect(page.locator("#front-word")).toHaveText("Wort 2");
 });
+
+for (const cardCount of [1, 2, 8]) {
+  test(`input shuffles ${cardCount} cards without duplicates and restarts without an immediate repeat`, async ({ page }) => {
+    const setData = buildTestSet();
+    setData.cards = setData.cards.slice(0, cardCount);
+    await prepareStudentHome(page, setData);
+    await page.evaluate(() => { Math.random = () => 0; });
+    await page.locator(".student-screen__library-card").first().click();
+    await page.locator('.launch-mode-modal__mode-card[data-mode-key="write"]').click();
+    await page.locator("#launch-mode-start").click();
+    await page.locator('[data-learning-direction-group="launch"] [data-learning-direction="source-target"]').click();
+    await page.locator("#launch-settings-start").click();
+    const prompt = page.locator("#input-prompt-word");
+    await expect(prompt).toHaveText(cardCount > 1 ? "Wort 2" : "Wort 1");
+    await page.locator("#input-settings-button").click();
+    await page.locator("#input-delay-slider").evaluate(slider => {
+      slider.value = "0";
+      slider.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    await page.locator("#input-settings-button").click();
+    const seen = [];
+    for (let index = 0; index < cardCount; index += 1) {
+      const text = await prompt.innerText();
+      expect(seen).not.toContain(text);
+      seen.push(text);
+      const card = setData.cards.find(card => card.source.text === text);
+      if (index === 0) {
+        await page.locator("#input-answer-field").fill("absichtlich falsch");
+        await page.locator("#input-answer-form").press("Enter");
+        await expect(page.locator("#input-feedback-title")).toHaveText("Markierte Antwort verbessern.");
+        await expect(prompt).toHaveText(text);
+      }
+      await page.locator("#input-answer-field").fill(card.target.text);
+      await page.locator("#input-answer-form").press("Enter");
+      await expect(prompt).not.toHaveText(text);
+    }
+    expect([...seen].sort()).toEqual(setData.cards.map(card => card.source.text).sort());
+    await expect(prompt).toHaveText("Fertig");
+    // With eight cards this would start with the previous last card without the boundary guard.
+    await page.evaluate(() => { Math.random = () => 0.5; });
+    await page.keyboard.press("Enter");
+    if (cardCount > 1) await expect(prompt).not.toHaveText(seen.at(-1));
+    else await expect(prompt).toHaveText("Wort 1");
+    const round = await page.evaluate(() => ({
+      ids: state.inputSession.cards.map(card => card.id),
+      sourceIds: state.allCards.map(card => card.id),
+      points: state.inputSession.totalPoints,
+    }));
+    expect(round.ids.length).toBe(cardCount);
+    expect(new Set(round.ids).size).toBe(cardCount);
+    expect(round.sourceIds).toEqual(setData.cards.map(card => card.id));
+    expect(round.points).toBe(0);
+    if (cardCount === 8) {
+      await page.evaluate(() => { Math.random = () => 0; });
+      await page.locator("#input-settings-button").click();
+      await page.locator('[data-learning-direction-group="input"] [data-learning-direction="target-source"]').click();
+      await expect(prompt).toHaveText("answer 2?");
+      expect(await page.evaluate(() => state.inputSession.cards.map(card => card.id)))
+        .toEqual(["test-card-2", "test-card-3", "test-card-4", "test-card-5", "test-card-6", "test-card-7", "test-card-8", "test-card-1"]);
+    }
+  });
+}

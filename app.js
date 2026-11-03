@@ -1026,11 +1026,17 @@ function createInputSessionState(cards = []) {
   };
 }
 
-function resetInputLearningState(cards = []) {
+function resetInputLearningState(cards = [], previousCardId = "") {
   stopCurrentAudio();
   clearInputAdvanceTimeout();
   state.inputSolutionRevealed = false;
-  state.inputSession = createInputSessionState(cards);
+  const shuffledCards = shuffleCards(cards);
+  // Keep the round boundary free of immediate repeats, too.
+  if (shuffledCards.length > 1 && shuffledCards[0].id === previousCardId) {
+    const nextIndex = 1 + Math.floor(Math.random() * (shuffledCards.length - 1));
+    [shuffledCards[0], shuffledCards[nextIndex]] = [shuffledCards[nextIndex], shuffledCards[0]];
+  }
+  state.inputSession = createInputSessionState(shuffledCards);
 }
 
 function clearInputAdvanceTimeout() {
@@ -4940,7 +4946,7 @@ async function handleInputAdvance() {
   stopCurrentAudio();
 
   if (state.inputSession.isComplete) {
-    resetInputLearningState([...state.allCards]);
+    resetInputLearningState(state.allCards, state.inputSession.cards.at(-1)?.id);
     renderInputSession();
     return;
   }

@@ -1,5 +1,10 @@
 # Produkt- und Architekturentscheidungen
 
+## 2026-11-03 – Zufällige Reihenfolge im Eingabemodus
+
+- `resetInputLearningState` nutzt die vorhandene `shuffleCards`-Funktion für Start, Richtungswechsel und Neustart. Die Set-Reihenfolge bleibt unverändert; jede Karten-ID wird je Durchgang einmal abgefragt. Beim direkten Folgedurchgang wird die letzte ID als erste ausgeschlossen, sofern mindestens zwei Karten vorhanden sind. Bei einer Karte ist Wiederholung unvermeidbar.
+- Bisher wurde nur in `Üben` und `Testen` gemischt. Korrekturversuche bleiben absichtlich auf derselben Karte, Erstversuchswertung und Durchgangsspeicherung bleiben unverändert. Keine neue persistente Reihenfolge und kein Eingriff in Translation-Auswahlströme; ein erneutes Öffnen beginnt weiterhin einen neuen Lauf.
+
 ## 2026-11-03 – Ruhige animierte Translation-Rückmeldung
 
 - Bestehende Feedbackkarte bleibt führend: neue validierte Versuche erhalten einen kurzen Statusakzent (ca. 0,5s), ein gezeichnetes SVG-Symbol und eine ruhige Farbkante. Erfolg/Überarbeiten bleiben explizite Textlabels; Unsicherheit wird nicht als Erfolg inszeniert. Keine Belohnungspunkte, Sounds oder zweite Bewertung. SVG ist dekorativ und nicht fokussierbar.

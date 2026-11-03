@@ -219,7 +219,7 @@ test("tablet portrait keeps all verb inputs and correction help usable", async (
   await openMode(page, "write");
 
   const verbFields = page.locator("[data-irregular-verb-input]");
-  const responsePane = page.locator(".input-stage__response-pane");
+  const responsePane = page.locator("#input-stage .input-stage__response-pane");
   await expect(verbFields).toHaveCount(3);
 
   for (const field of await verbFields.all()) {

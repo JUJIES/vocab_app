@@ -12,6 +12,7 @@ Lerndeck ist ein schnelles, ruhiges Lernwerkzeug für Unterrichtstablets. Kinder
 - Set-Zuweisung per Link oder QR-Code
 - Set-Übernahme per sechsstelliger Code-Eingabe
 - Modi `Üben`, `Eingabe` und `Testen`
+- Eingabe mischt alle Karten pro Durchgang ohne Zurücklegen; beim direkten Neustart keine Wiederholung der letzten Karte als erste (außer bei nur einer Karte)
 - falsche Eingaben werden bis zur korrekten Eingabe wiederholt
 - Testumfang von mindestens fünf bis allen Karten; zufällige Auswahl, tabellarische Eingabe, strikte Korrekturschleife ohne Bilder oder Hilfen
 - Lernstand pro Tablet, Set und Modus

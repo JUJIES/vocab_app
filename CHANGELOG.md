@@ -2,6 +2,8 @@
 
 ## 2026-11-03
 
+- Eingabe verwendet jetzt ebenfalls die vorhandene Kartenmischung: Start, Richtungswechsel und neue Durchgänge fragen jede Karte einmal ab. Direkte Folgedurchgänge vermeiden die letzte Karte als erste (außer bei nur einer Karte). Korrekturpflicht und Wertung unverändert; PWA v230 vorbereitet, noch kein Rollout.
+
 - Translation-Feedback mit ruhiger Farbkante und kurz gezeichnetem Erfolgs-/Überarbeitungssymbol. Dezente laufende Lichtlinie während Prüfung; reduzierte Bewegung, Tastaturfokus und sichtbarer Endzustand im Room berücksichtigt. Keine Änderung der Bewertung; PWA v229.
 
 - Translation per Tastatur: Enter prüft und lädt nach Annahme den nächsten Satz; Shift+Enter fügt einen Zeilenumbruch ein. Fokus bleibt nach Tastaturaktionen im Antwortfeld; Desktop fokussiert beim Start. Wiederholung/IME und doppelte Anfragen geschützt, bestehende Formularvalidierung erhalten. PWA v228.
