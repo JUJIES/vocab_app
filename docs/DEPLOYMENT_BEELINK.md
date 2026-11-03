@@ -21,6 +21,12 @@ Healthcheck: `http://127.0.0.1:6000/health`
 
 Öffentlicher Zugang: benannter Cloudflare-Tunnel mit eigenem HTTPS-Hostnamen
 
+## Room-Korrektur 2026-11-03
+
+Release `6a936ac` aktiviert, PWA v225: Feedback-Einblendklasse wird nach Animation beendet; Room-Leases ergänzen Zeigerring und Translation-Schreibmarke. 138 Produkttests und Syntaxchecks lokal/auf Beelink, Audit ohne bekannte Schwachstellen, vier echte Recorder-/Replayer-Browserprüfungen in Chromium/WebKit und Hell/Dunkel erfolgreich. Öffentliche app.js, tafelraum-embed.js, index.html, teacher.html und sw.js stimmen mit dem aktivierten Release überein.
+
+Native Nachprüfung in der bestehenden Tafelraum-Installation ohne Desktopumbau: Lerndeck-Einbettung über Lehreransicht neu geöffnet, technische Kontrollantwort `She mind the children.` im Set Means of transport II geprüft. Fehlerfeedback ist danach im tatsächlichen Room Canvas sichtbar, einschließlich konkreter Verbformregel und mitgeführtem Scrollstand. Schreibmarke im Eingabefeld sichtbar; Übertragung/Bewegung von Schreibmarke und Zeiger zusätzlich in der skriptlosen Browserreplik verifiziert. Room am Ende wieder Vollbild, Werkzeugleiste verborgen. Keine Set-/Archivänderung; technischer Lehrervorschau-Versuch im regulären Protokoll, keine Schülernote.
+
 ## Rollout 2026-11-03
 
 Release `97d36e8` aktiviert: Translation-Startfehler werden nach dem Busy-Zustand sichtbar, PWA v224. 138 Produkttests/Syntaxchecks lokal und auf Beelink, acht Browserregressionen (Chromium/WebKit, beide Themes, mit/ohne Tafelraum-Einstellung) bestanden. Aktiver Dienst und öffentliche app.js/index.html/sw.js per Inhaltshash geprüft.
