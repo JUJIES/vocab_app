@@ -21,6 +21,14 @@ Healthcheck: `http://127.0.0.1:6000/health`
 
 Öffentlicher Zugang: benannter Cloudflare-Tunnel mit eigenem HTTPS-Hostnamen
 
+## Translation-Feedback verfeinert – Rollout 2026-11-03
+
+Release `8b70081` aktiviert, PWA v231: kompaktere Satz-/Statuskarte, Lichtimpuls am Satzzitat und bernsteinfarbene Problemstellen, ruhigere frühere Versuche, größerer Feedbacktext in der Tafelraum-Einbettung. Prüfstatus im bestehenden Button ohne zusätzlichen Warteblock; Screenreader-Livebereich bleibt auch bei der ersten Prüfung erreichbar. Bewertung, Modelle, Daten und Enter-Pfade unverändert.
+
+138 Produkttests, Syntaxprüfungen, Produktions-Audit ohne bekannte Schwachstellen und isolierter Kandidaten-Healthcheck auf 6101 bestanden. Backup `20261103-133408-before-8b70081`, vorheriger Release bleibt erhalten. Aktiver Dienst sowie öffentliche `app.js`, `styles.css`, `index.html`, `teacher.html`, `tafelraum-embed.js` und `sw.js` per normalisiertem Inhaltshash geprüft; öffentlicher Healthcheck erfolgreich. Vor dem Rollout 36 Browserfälle inklusive echter pausierter rrweb-Replik bestanden.
+
+Native Teilprüfung in der bestehenden Tafelraum-App, ohne Desktopumbau: Lerndeck über Lehreransicht neu geöffnet, Ben is Back I / Einfach / Deutsch→Englisch gestartet und als Material im separaten Room Canvas gezeigt. Echte Kontrollabgabe `She are suspicious.` zu `Sie ist misstrauisch.` liefert dort die neue kompakte Überarbeiten-Karte samt konkreter Verbformrückmeldung. Technischer Lehrervorschau-Versuch, keine Schülernote oder Setänderung. Lokale Bildfolge unter `artifacts/native-room-refinement/`: erste Aufnahme erst 5.690ms nach Absenden, während der Fensterwechsel selbst nach 51ms abgeschlossen war. Diese Folge belegt den sichtbaren Endzustand, nicht den vollständigen 700ms-Lichtimpuls. Der vollständige native Bewegungsnachweis bleibt offen; während der weiteren Aufnahmeprüfung lieferte die laufende App kein zugreifbares Fenster mehr. Nicht mit der automatisierten rrweb-Bewegungsprüfung gleichsetzen.
+
 ## Rollout Eingabe-Reihenfolge 2026-11-03
 
 Release `703bad2` aktiviert, PWA v230: Eingabe mischt jeden Durchgang und verhindert die letzte Karte als erste des direkten Folgedurchgangs (außer bei einer Karte). Korrekturpflicht, Wertung und gespeicherte Set-Reihenfolge bleiben erhalten. 138 Tests, Syntaxprüfungen, Produktions-Audit ohne bekannte Schwachstellen und Kandidaten-Healthcheck auf Port 6101 bestanden. Runtime-/Dienstbackup mit Zeitstempel `20261103-114223`; vorheriger Release bleibt erhalten. Dienstpfad und unverändertes produktives `DATA_DIR` geprüft.
