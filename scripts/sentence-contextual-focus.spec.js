@@ -74,7 +74,9 @@ for (const theme of ["light", "dark"]) test(`waiting for an answer check preserv
   await page.locator("#launch-settings-start").click();
   await page.locator("#sentence-answer").fill("The car is blue.");
   await page.locator("#sentence-submit").click();
-  await expect(page.locator("#sentence-feedback-notice")).toHaveText("Bitte kurz warten – deine Anfrage wird bearbeitet.");
+  await expect(page.locator("#sentence-feedback-notice")).toBeHidden();
+  await expect(page.locator("#sentence-submit")).toHaveText("Satz wird geprüft …");
+  await expect(page.locator("#sentence-feedback-text")).toHaveText("Bitte kurz warten – deine Anfrage wird bearbeitet.");
   await expect(page.locator("#sentence-answer")).toHaveValue("The car is blue.");
   await expect(page.locator("#sentence-answer")).toBeDisabled();
   await expect(page.locator("#sentence-submit")).toBeDisabled();

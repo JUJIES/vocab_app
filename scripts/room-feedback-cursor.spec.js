@@ -90,6 +90,7 @@ for(const theme of ['light','dark'])test(`Room shows feedback and a literal edit
  await provider.locator('#sentence-submit').click();
  await expect(replay.locator('.sentence-stage__feedback-entry')).toContainText('Prüfe die Verbform.');
  await expect.poll(()=>replay.locator('.sentence-stage__feedback-result path').evaluate(n=>{const value=parseFloat(getComputedStyle(n).strokeDashoffset);return value>0&&value<1;})).toBe(true);
+ await expect.poll(()=>replay.locator('.sentence-stage__feedback-entry').evaluate(n=>parseFloat(n.style.getPropertyValue('--sentence-pulse'))>0)).toBe(true);
  await expect(provider.locator('.sentence-stage__feedback-entry--new')).toHaveCount(0);
  await expect(replay.locator('.sentence-stage__feedback-entry')).toContainText('Prüfe die Verbform.');
  await expect.poll(()=>replay.locator('.sentence-stage__feedback-entry').evaluate(n=>getComputedStyle(n).opacity)).toBe('1');

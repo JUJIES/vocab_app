@@ -10353,23 +10353,24 @@ function animateSentenceResultEntry(item) {
     cancelAnimationFrame(frame);
     clearTimeout(deadline);
     item.classList.remove("sentence-stage__feedback-entry--new");
-    for (const key of ["--sentence-mark-offset", "--sentence-result-scale", "--sentence-reveal"]) item.style.removeProperty(key);
+    for (const key of ["--sentence-mark-offset", "--sentence-result-scale", "--sentence-reveal", "--sentence-pulse"]) item.style.removeProperty(key);
   };
   const draw = now => {
     if (!item.isConnected || item.hidden || !item.classList.contains("sentence-stage__feedback-entry--new")
-      || state.appMode !== APP_MODES.SENTENCE || motion.matches || now - start >= 520) { finish(); return; }
+      || state.appMode !== APP_MODES.SENTENCE || motion.matches || now - start >= 700) { finish(); return; }
     if (now - last >= 33) {
       last = now;
       const ease = duration => 1 - Math.pow(1 - Math.min((now - start) / duration, 1), 3);
       item.style.setProperty("--sentence-mark-offset", (1 - ease(400)).toFixed(3));
       item.style.setProperty("--sentence-result-scale", (.94 + .06 * ease(440)).toFixed(3));
-      item.style.setProperty("--sentence-reveal", (.08 + .37 * ease(520)).toFixed(3));
+      item.style.setProperty("--sentence-reveal", (.18 + .4 * Math.sin(Math.PI * Math.min((now - start) / 700, 1))).toFixed(3));
+      item.style.setProperty("--sentence-pulse", (.14 * Math.sin(Math.PI * Math.min((now - start) / 700, 1))).toFixed(3));
     }
     frame = requestAnimationFrame(draw);
   };
   item.classList.add("sentence-stage__feedback-entry--new");
   // Also finish when a background view temporarily suspends animation frames.
-  const deadline = setTimeout(finish, 650);
+  const deadline = setTimeout(finish, 850);
   draw(start);
 }
 
@@ -10444,10 +10445,7 @@ function renderSentenceFeedback(message, status, run = null) {
       LerndeckFeedbackText.append(text, entry.feedback);
       const body = document.createElement("div");
       body.className = "sentence-stage__feedback-body";
-      const feedbackLabel = document.createElement("strong");
-      feedbackLabel.className = "sentence-stage__feedback-label";
-      feedbackLabel.textContent = "Feedback";
-      body.append(feedbackLabel, text);
+      body.append(text);
       item.append(submission, body);
       if (entry.issues?.length) {
         const points = document.createElement("ul");
@@ -10496,6 +10494,8 @@ function renderSentenceFeedback(message, status, run = null) {
       }
     }
     const isLatest = entry === history.at(-1);
+    item.dataset.latest = String(isLatest);
+    item.querySelector(".sentence-stage__submission-header > strong").textContent = isLatest ? "Dein Satz:" : "Früherer Versuch";
     const quote = item.querySelector("blockquote");
     const checked = entry.answer;
     quote.replaceChildren();
@@ -10531,12 +10531,13 @@ function renderSentenceFeedback(message, status, run = null) {
     quote.append(document.createTextNode(checked.slice(end)));
   }
   updateSentenceFeedbackSelection(list.dataset.activeAttemptId);
-  const notice = state.sentenceBusy ? "Bitte kurz warten – deine Anfrage wird bearbeitet." : run?.error || !history.length || run?.complete ? message || "" : "";
+  const notice = state.sentenceBusy ? "" : run?.error || !history.length || run?.complete ? message || "" : "";
   elements.sentenceFeedbackNotice.textContent = notice;
   elements.sentenceFeedbackNotice.hidden = !notice;
-  feedback.hidden = !history.length && !notice;
+  // Keep the live region exposed during the first check, without a visible wait block.
+  feedback.hidden = !history.length && !notice && !state.sentenceBusy;
   feedback.dataset.status = status;
-  const spoken = state.sentenceBusy ? notice : message ? [message, ...(!run?.error && !run?.complete ? history.at(-1)?.issues || [] : []).map(issue => `${issue.quote || "Satz"}: ${issue.message}`)].join(" ") : "";
+  const spoken = state.sentenceBusy ? "Bitte kurz warten – deine Anfrage wird bearbeitet." : message ? [message, ...(!run?.error && !run?.complete ? history.at(-1)?.issues || [] : []).map(issue => `${issue.quote || "Satz"}: ${issue.message}`)].join(" ") : "";
   const spokenText = LerndeckFeedbackText.plain(spoken);
   if (elements.sentenceFeedbackText.textContent !== spokenText) elements.sentenceFeedbackText.textContent = spokenText;
   if (added && !state.sentenceBusy) requestAnimationFrame(() => {
@@ -10583,7 +10584,7 @@ function renderSentenceRun() {
   renderSentenceFeedback(run.feedback, run.error || run.status === "uncertain" ? "error" : run.accepted ? "accepted" : "revise", run);
   answer.dataset.status = run.accepted ? "accepted" : run.feedback && !run.error && run.status !== "uncertain" ? "revise" : "";
   answer.setAttribute("aria-invalid", String(Boolean(run.feedback) && !run.accepted && !run.error && run.status !== "uncertain"));
-  button.textContent = state.sentenceBusy ? state.sentenceReplacing || run.accepted ? "Bereitet vor …" : "Prüft …" : run.accepted ? "Weiter" : "Prüfen";
+  button.textContent = state.sentenceBusy ? state.sentenceReplacing || run.accepted ? "Bereitet vor …" : "Satz wird geprüft …" : run.accepted ? "Weiter" : "Prüfen";
 }
 
 async function startSentenceSet(setPath, direction, count, { resume = false, difficulty = "easy" } = {}) {

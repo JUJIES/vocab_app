@@ -1,5 +1,11 @@
 # Produkt- und Architekturentscheidungen
 
+## 2026-11-03 – Translation-Feedback am Satz verfeinert
+
+- Vorhandene Verlaufskarte bleibt einzige Rückmeldung: keine zusätzliche Statusfläche und keine zweite Bewertung. Satz/Status/Hinweis kompakter, separate „Feedback“-Zwischenüberschrift entfernt. Frühere Versuche ausdrücklich beschriftet und mit neutralerem Badge; Wortmarkierungen bleiben bernsteinfarben und nur beim passenden aktuellen Entwurf bearbeitbar.
+- Lichtimpuls am Satzzitat und Problemstellen über denselben begrenzten DOM-Animationspfad wie das SVG-Symbol (700ms, Cleanup spätestens 850ms). Keine geometrische Bewegung; reduzierte Bewegung bleibt statisch. Room erhält identische CSS-Variablen statt einer dort pausierten CSS-Animation. Prüfstatus direkt im vorhandenen Button; kein zusätzlicher, Layout verschiebender Warteblock, Screenreader-Ansage erhalten.
+- Keine Änderungen an Modell, Annahmekriterien, Persistenz oder Enter-Verhalten. PWA v231 vorbereitet. Automatischer Room-Test prüft Zwischenwerte im echten pausierten rrweb-Replayer; vollständiger manueller Animationsablauf im nativen Room-Fenster bleibt separat zu verifizieren. Validierung: 138 Produkttests sowie 36 Browserfälle in Chromium/WebKit (Bewegung/reduced-motion, Room-Replik, Problemstellen/Verlauf, Fehler-/Wartezustände und Enter). Hell/Dunkel und schmale Ansicht visuell geprüft.
+
 ## 2026-11-03 – Zufällige Reihenfolge im Eingabemodus
 
 - `resetInputLearningState` nutzt die vorhandene `shuffleCards`-Funktion für Start, Richtungswechsel und Neustart. Die Set-Reihenfolge bleibt unverändert; jede Karten-ID wird je Durchgang einmal abgefragt. Beim direkten Folgedurchgang wird die letzte ID als erste ausgeschlossen, sofern mindestens zwei Karten vorhanden sind. Bei einer Karte ist Wiederholung unvermeidbar.

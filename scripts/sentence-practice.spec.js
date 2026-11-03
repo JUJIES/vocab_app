@@ -216,7 +216,7 @@ for (const light of [false, true]) test(`specific feedback highlights only the p
   await page.locator("#sentence-answer").fill("  " + answer);
   await page.locator("#sentence-submit").click();
   await expect(page.locator("#sentence-feedback-text")).toContainText("‚ist‘ ist noch Deutsch");
-  await expect(page.locator(".sentence-stage__feedback-label")).toHaveText("Feedback");
+  await expect(page.locator(".sentence-stage__feedback-body > p")).toContainText("‚ist‘ ist noch Deutsch");
   const mark = page.locator("button.sentence-stage__problem");
   await expect(mark).toHaveText("ist");
   expect(await mark.evaluate(el => getComputedStyle(el).textDecorationStyle)).toBe("wavy");

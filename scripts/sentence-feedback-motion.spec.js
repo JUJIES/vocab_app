@@ -11,7 +11,7 @@ for(const theme of ['light','dark'])test(`Translation feedback is composed, anim
    const answer=r.request().postDataJSON().answer,accepted=answer==='She has a dog.';
    if(!accepted)await new Promise(resolve=>{release=resolve;});
    const feedback=accepted?'Die Verbform passt jetzt. Gut überarbeitet 👍':'Die Bedeutung passt. Prüfe noch die Verbform 🔎';
-   run={...run,accepted,status:accepted?'accepted':'revise',feedback,checkedAnswer:answer,history:[...run.history,{id:accepted?'correct':'revise',answer,status:accepted?'accepted':'revise',feedback,issues:[],help:null}]};
+   run={...run,accepted,status:accepted?'accepted':'revise',feedback,checkedAnswer:answer,history:[...run.history,{id:accepted?'correct':'revise',answer,status:accepted?'accepted':'revise',feedback,issues:accepted?[]:[{quote:"have",message:"Prüfe die Verbform.",problem:{start:4,end:8}}],help:null}]};
   }
   return r.fulfill({json:{run}});
  });
@@ -19,25 +19,42 @@ for(const theme of ['light','dark'])test(`Translation feedback is composed, anim
  await page.locator('button[data-mode-key="sentence"]').click();await page.locator('#launch-mode-start').click();await page.locator('#launch-settings-start').click();
  const answer=page.locator('#sentence-answer'),button=page.locator('#sentence-submit');
  await answer.fill('She have a dog.');await answer.press('Enter');
- await expect(button).toHaveAttribute('data-pending','true');await expect(page.locator('#sentence-form')).toHaveAttribute('aria-busy','true');
+ await expect(button).toHaveText('Satz wird geprüft …');await expect(button).toHaveAttribute('data-pending','true');await expect(page.locator('#sentence-form')).toHaveAttribute('aria-busy','true');
+ expect(await page.locator('#sentence-feedback-text').evaluate(n=>Boolean(n.closest('[hidden]')))).toBe(false);
  await expect.poll(()=>button.evaluate(n=>getComputedStyle(n,'::after').transform)).not.toBe('none');
  const scan=await button.evaluate(n=>getComputedStyle(n,'::after').transform);
  await expect.poll(()=>button.evaluate(n=>getComputedStyle(n,'::after').transform)).not.toBe(scan);
  await expect.poll(()=>typeof release).toBe('function');
  await page.locator('#sentence-stage .input-stage__card').screenshot({path:info.outputPath(`checking-${theme}.png`)});
+ await page.evaluate(()=>{
+  window.feedbackPulses=[];
+  new MutationObserver(()=>{
+   const item=document.querySelector('.sentence-stage__feedback-entry--new');
+   if(item)window.feedbackPulses.push(parseFloat(item.style.getPropertyValue('--sentence-pulse'))||0);
+  }).observe(document.querySelector('#sentence-feedback-list'),{subtree:true,attributes:true,attributeFilter:['style']});
+ });
  release();
  const active=page.locator('.sentence-stage__feedback-entry:not([hidden])');
  await expect(active.locator('.sentence-stage__feedback-result')).toHaveText('Überarbeiten');
  await expect(active).toHaveClass(/feedback-entry--new/);
  expect(await active.evaluate(n=>getComputedStyle(n).opacity)).toBe('1');
  await expect(active).not.toHaveClass(/feedback-entry--new/);
+ expect(await page.evaluate(()=>Math.max(...window.feedbackPulses))).toBeGreaterThan(.1);
+ expect(await active.evaluate(n=>n.style.getPropertyValue('--sentence-pulse'))).toBe('');
+ await expect(active.locator('button.sentence-stage__problem')).toHaveText('have');
  expect(await active.locator('path').evaluate(n=>parseFloat(getComputedStyle(n).strokeDashoffset))).toBe(0);
  for(const width of [1280,390]){await page.setViewportSize({width,height:1000});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await active.screenshot({path:info.outputPath(`revise-${theme}-${width}.png`)});}
  await answer.fill('She has a dog.');await answer.press('Enter');
  await expect(active.locator('.sentence-stage__feedback-result')).toHaveText('Passt');
  await expect(active).not.toHaveClass(/feedback-entry--new/);
  await active.screenshot({path:info.outputPath(`accepted-${theme}-390.png`)});
- await expect(answer).toBeFocused();await expect(button).toHaveAttribute('data-pending','false');
+ await expect(answer).toBeFocused();
+ await expect(active).toHaveAttribute('data-latest','true');
+ await page.locator('#sentence-feedback-previous').click();
+ await expect(active).toHaveAttribute('data-latest','false');
+ await expect(active.locator('.sentence-stage__submission-header')).toContainText('Früherer Versuch');
+ await page.locator('#sentence-feedback-next').click();
+ await expect(button).toHaveAttribute('data-pending','false');
  await page.reload();await expect(active.locator('.sentence-stage__feedback-result')).toHaveText('Passt');await expect(active).not.toHaveClass(/feedback-entry--new/);
  // A fresh attempt with reduced motion has the same visible outcome immediately.
  await page.emulateMedia({reducedMotion:'reduce'});
