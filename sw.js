@@ -1,4 +1,4 @@
-const CACHE_NAME = "lerndeck-shell-v224-translation-start-error";
+const CACHE_NAME = "lerndeck-shell-v225-room-feedback-cursor";
 const APP_SHELL_URLS = [
   "/",
   "/index.html",
@@ -10,7 +10,7 @@ const APP_SHELL_URLS = [
   "/answer-rules.js?v=2026-10-03-optional-infinitive-v3",
   "/grading-rules.js?v=2026-09-10-ihk-v1",
   "/local-speech.js?v=2026-10-04-speech-accent-v1",
-  "/app.js?v=2026-11-03-translation-start-error-v1",
+  "/app.js?v=2026-11-03-room-feedback-v1",
   "/appearance.js?v=2026-09-30-appearance-v4",
   "/appearance.css?v=2026-09-30-appearance-v4",
   "/teacher.css?v=2026-10-04-profile-header-v1",
@@ -19,7 +19,7 @@ const APP_SHELL_URLS = [
   "/teacher.js?v=2026-10-28-room-view-v1",
   "/teacher-workspace-layout.js?v=2026-10-04-resizable-panels-v1",
   "/teacher-workspace.js?v=2026-10-04-no-search-v1",
-  "/tafelraum-embed.js?v=2026-10-28-local-room-view-v3",
+  "/tafelraum-embed.js?v=2026-11-03-room-cursor-v1",
   "/ui-motion.css?v=2026-08-30-ui-motion-v1",
   "/ui-motion.js?v=2026-08-30-ui-motion-v1",
   "/irregular-verbs.js?v=2026-09-06-optional-to-v2",

@@ -10345,6 +10345,11 @@ function renderSentenceFeedback(message, status, run = null) {
     if (!item) {
       item = document.createElement("li");
       item.className = "sentence-stage__feedback-entry";
+      // End transient presentation state in the DOM too: scriptless Room
+      // replicas may pause CSS animations, but still receive this final state.
+      item.addEventListener("animationend", event => {
+        if (event.target === item && event.animationName === "sentence-feedback-enter") item.classList.remove("sentence-stage__feedback-entry--new");
+      });
       item.dataset.attemptId = entry.id;
       item.dataset.status = entry.status;
       const quote = document.createElement("blockquote");

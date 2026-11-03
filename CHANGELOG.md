@@ -2,6 +2,8 @@
 
 ## 2026-11-03
 
+- Tafelraum-Room zeigt Translation-Feedback auch bei angehaltener Wiedergabe: abgeschlossene Einblendanimation wird im Quell-DOM beendet. Aktive Room-Einbettungen erhalten einen sichtbaren Zeigerring und eine übertragene Schreibmarke für Translation; keine zweite Eingabe oder Anbieteranfrage im Room. PWA v225.
+
 - Translation zeigt Fehler beim Start/Wiederaufnehmen nach Beenden des Ladezustands an. Zuvor wurde die Fehlermeldung durch den Wartehinweis überschrieben; erneuter Start bleibt möglich. PWA v224 aktualisiert die Lernansicht auch in Tafelraum. Bewertungs-/Modellregeln unverändert.
 
 ## 2026-10-30

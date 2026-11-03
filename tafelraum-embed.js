@@ -175,13 +175,61 @@ function installTafelraumBridge() {
 
   // Capture only while an explicitly joined local Room renderer needs this instance.
   // No provider state, passwords, cookies or session credentials are transferred.
-  let captureStop=null,captureRequest=0,captureTimer=null,recorderPromise=null,epoch=0;
+  // The Room replica has no real focus or native mouse. These inert DOM marks
+  // travel through the existing bounded visual stream, never a second input path.
+  function installRoomCursor() {
+    const pointer=document.createElement('div'),caret=document.createElement('div'),measure=document.createElement('div');
+    for(const mark of [pointer,caret,measure]){mark.setAttribute('aria-hidden','true');mark.style.pointerEvents='none';}
+    pointer.style.cssText='position:fixed;z-index:2147483000;box-sizing:border-box;width:18px;height:18px;border:2px solid white;border-radius:50%;box-shadow:0 0 0 2px #16324f;background:#2876c955;pointer-events:none;display:none';
+    caret.style.cssText='position:fixed;z-index:2147483000;width:3px;background:#1864c0;box-shadow:0 0 0 1px white;pointer-events:none;display:none';
+    pointer.dataset.roomPointer='';caret.dataset.roomCaret='';measure.dataset.roomMeasure='';
+    measure.style.cssText='position:fixed;left:0;top:0;visibility:hidden;pointer-events:none;overflow:hidden';
+    document.body.append(pointer,caret,measure);
+    let frame=0,last=0,point=null,observed=null;
+    const observer=new MutationObserver(()=>schedule());
+    const properties=['boxSizing','width','fontFamily','fontSize','fontWeight','fontStyle','fontVariant','lineHeight','letterSpacing','wordSpacing','textTransform','textIndent','textAlign','direction','tabSize','paddingTop','paddingRight','paddingBottom','paddingLeft','borderTopWidth','borderRightWidth','borderBottomWidth','borderLeftWidth','borderStyle','wordBreak'];
+    function update() {
+      const now=performance.now();
+      if(now-last<50){frame=requestAnimationFrame(update);return;}
+      frame=0;last=now;
+      if(point){pointer.style.left=`${point[0]-9}px`;pointer.style.top=`${point[1]-9}px`;pointer.style.display='block';}
+      const input=document.activeElement;
+      // Only the learner's Translation answer, never account/secret fields.
+      if(!(input instanceof HTMLTextAreaElement)||input.id!=='sentence-answer'||input.disabled||input.readOnly||!input.isConnected){caret.style.display='none';observer.disconnect();observed=null;return;}
+      if(observed!==input){observer.disconnect();observer.observe(input,{attributes:true,attributeFilter:['disabled','readonly','hidden']});observed=input;}
+      const rect=input.getBoundingClientRect(),css=getComputedStyle(input);
+      if(!rect.width||!rect.height||css.visibility==='hidden'){caret.style.display='none';return;}
+      for(const property of properties)measure.style[property]=css[property];
+      measure.style.height='auto';measure.style.whiteSpace='pre-wrap';measure.style.overflowWrap='break-word';
+      const position=input.selectionEnd??input.value.length,span=document.createElement('span');
+      measure.replaceChildren(document.createTextNode(input.value.slice(0,position)));
+      span.textContent=input.value.slice(position)||'.';measure.append(span);
+      const at=span.getClientRects()[0]||span.getBoundingClientRect(),base=measure.getBoundingClientRect();
+      const x=rect.left+at.left-base.left-input.scrollLeft,y=rect.top+at.top-base.top-input.scrollTop;
+      const height=parseFloat(css.lineHeight)||parseFloat(css.fontSize)*1.2;
+      const visible=x>=rect.left&&x<=rect.right&&y>=rect.top&&y+height<=rect.bottom;
+      Object.assign(caret.style,{left:`${x}px`,top:`${y}px`,height:`${height}px`,display:visible?'block':'none'});
+    }
+    function schedule(){if(!frame)frame=requestAnimationFrame(update);}
+    function move(event){
+      if(event.target instanceof Element&&event.target.closest("input[type='password'],input[type='hidden']")){leave();return;}
+      point=[event.clientX,event.clientY];
+      schedule();
+    }
+    function leave(){point=null;pointer.style.display='none';}
+    const events=['selectionchange','focusin','focusout','input','keyup','click','scroll'];
+    for(const name of events)document.addEventListener(name,schedule,true);
+    document.addEventListener('pointermove',move,true);document.documentElement.addEventListener('pointerleave',leave);
+    window.addEventListener('resize',schedule);schedule();
+    return()=>{cancelAnimationFrame(frame);observer.disconnect();for(const name of events)document.removeEventListener(name,schedule,true);document.removeEventListener('pointermove',move,true);document.documentElement.removeEventListener('pointerleave',leave);window.removeEventListener('resize',schedule);pointer.remove();caret.remove();measure.remove();};
+  }
+  let captureStop=null,cursorStop=null,captureRequest=0,captureTimer=null,recorderPromise=null,epoch=0;
   const loadRecorder=()=>recorderPromise??(recorderPromise=new Promise((resolve,reject)=>{
     const script=document.createElement('script');script.src='/vendor/tafelraum-view-2.2.0.js';
     script.onload=()=>resolve(window.rrweb.record);script.onerror=()=>{recorderPromise=null;script.remove();reject(new Error('Room-Ausgabe nicht verfügbar'));};
     document.head.append(script);
   }));
-  const stopCapture=()=>{captureStop?.();captureStop=null;clearInterval(captureTimer);captureTimer=null;};
+  const stopCapture=()=>{captureStop?.();captureStop=null;cursorStop?.();cursorStop=null;clearInterval(captureTimer);captureTimer=null;};
   if(active)window.addEventListener('message',async event=>{
     const m=event.data;
     if(event.source!==window.parent||m?.type!=='tafelraum:app-view-mode'||m.protocol!=='rrweb-2.2-v1'||m.appId!==APP_ID
@@ -197,6 +245,7 @@ function installTafelraumBridge() {
     try{
       const record=await loadRecorder();if(request!==captureRequest)return;
       phase="recording";epoch=Math.max(epoch+1,Date.now());
+      cursorStop=installRoomCursor();
       captureStop=record({
         emit:event=>{
           if(request!==captureRequest||failed)return;
@@ -208,7 +257,7 @@ function installTafelraumBridge() {
         // Keep provider image URLs: embedding all hidden/preloaded image pixels exceeds the local packet budget.
         checkoutEveryNms:10000,inlineStylesheet:true,inlineImages:false,
         maskInputOptions:{password:true,hidden:true},
-        blockSelector:"input[type='password'],input[type='hidden']",
+        blockSelector:"input[type='password'],input[type='hidden'],[data-room-measure]",
         recordCanvas:false,recordCrossOriginIframes:false,
         slimDOMOptions:{script:true,comment:true,headMetaDescKeywords:true,headMetaSocial:true,headMetaRobots:true,headMetaHttpEquiv:true,headMetaAuthorship:true,headMetaVerification:true},
         sampling:{mousemove:false,mouseInteraction:false,scroll:50,input:'all',mediaInteraction:false},

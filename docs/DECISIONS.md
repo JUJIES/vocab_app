@@ -1,5 +1,12 @@
 # Produkt- und Architekturentscheidungen
 
+## 2026-11-03 – Sichtbarer Feedback-Endzustand und Room-Eingabemarkierungen
+
+- Ursache live bestätigt: Feedbacktext im Room-DOM vorhanden, aber unsichtbar. Der Replayer pausiert CSS-Animationen; die Quelle ließ die Einblendklasse nach Abschluss stehen. `animationend` räumt diesen vorübergehenden Zustand nun im Quelldokument auf. Kein dauerhaftes globales Abschalten von Animationen oder separates Feedbackmodell.
+- Der skriptlose Room besitzt keinen nativen Eingabefokus/Mauszeiger. Nur bei aktiver Room-Lease ergänzt die bestehende Lerndeck-Bridge inerte DOM-Markierungen: Zeigerring und Schreibmarke der Translation-Antwort. Gemessene Textposition berücksichtigt Auswahlende, Umbruch und Scrollen; 20 Aktualisierungen/s, keine blinkende CSS-Animation. Kein echtes Focus-/Input-Replay und keine zweite Bedienung im Room.
+- Keine neue Nachrichtengattung, Rechte, Dependency oder Archivfelder. Vorhandene Paket-/Lease-Grenzen und Passwort-/Hidden-Sperren bleiben; der Messcontainer wird ebenfalls blockiert. Stop/Navigation bereinigen Markierungen, RAF und Beobachter. Tafelraum-Quellen, Desktopinstallation, öffentliche Variante und Updatekanäle unverändert. PWA v225 aktualisiert Lehrer-/Lerneinbettung.
+- Prüfung: 138 Produkttests; echte rrweb-Recorder-/Replayer-Regression in Chromium/WebKit und beiden Themes mit angehaltenen Animationen, sichtbarem Feedback, Feld-/Scrollabgleich, beweglicher Schreibmarke, Zeiger, Geheimnissperre und Stop-Bereinigung. Testdaten künstlich, kein Modelltest.
+
 ## 2026-11-03 – Translation-Startfehler nach Ladezustand anzeigen
 
 - Start/Resume hält einen Fehler nur im aktuellen Request und rendert ihn nach `sentenceBusy=false` und dem finalen Rendern. Zuvor ersetzte der Busy-Renderer den echten Fehler durch den Wartehinweis, der danach stehen blieb. Keine zweite persistente Fehlerquelle; Request-ID-Schutz gegen veraltete Antworten bleibt bestehen. Erneut versuchen nutzt den vorhandenen Startablauf.
