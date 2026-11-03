@@ -1,5 +1,9 @@
 # Changelog
 
+## 2026-11-03
+
+- Translation zeigt Fehler beim Start/Wiederaufnehmen nach Beenden des Ladezustands an. Zuvor wurde die Fehlermeldung durch den Wartehinweis überschrieben; erneuter Start bleibt möglich. PWA v224 aktualisiert die Lernansicht auch in Tafelraum. Bewertungs-/Modellregeln unverändert.
+
 ## 2026-10-30
 
 - Beelink-Rollout der freigegebenen Translation-Schwierigkeits- und Feedback-Prompts abgeschlossen (Release `8899e71`): erreichbare Stufen, kurze persönliche Rückmeldungen ohne doppelte Diagnose, passende optionale Wortgruppen/Formenreihen/Transferbeispiele. Modell und medium unverändert; PWA v223 mit synchronisierten Stufenbeschreibungen. 138 Tests lokal/auf Beelink und isolierter Translation-Smoke mit realen Modellaufrufen erfolgreich; öffentliche Assets erreichbar.

@@ -1,6 +1,31 @@
 const { test, expect } = require("./teacher-release-fixture.cjs");
 test.use({ baseURL: process.env.BASE_URL || "http://127.0.0.1:4030", viewport: { width: 1280, height: 850 }, locale: "de-DE", serviceWorkers: "block" });
 
+for (const theme of ["light", "dark"]) for (const embedded of [false, true]) test(`failed sentence start shows the actual error and permits retry (${theme}, embedded=${embedded})`, async ({ page }) => {
+  await page.addInitScript(theme => localStorage.setItem("lerndeck-teacher-appearance-v1", JSON.stringify({ mode: theme })), theme);
+  const set = { id: "start-error", path: "sets/user/start-error.json", title: "Translation", status: "published", sourceLanguage: "de", targetLanguage: "en", sourceLabel: "Deutsch", targetLabel: "Englisch", learningCardCount: 1, cards: [] };
+  const run = { id: "retry-run", total: 1, position: 1, difficulty: "easy", targetLanguage: "en", prompt: { id: "retry-prompt", prefix: "Das ", focus: "Auto", suffix: " ist blau." }, accepted: false, shown: true, history: [] };
+  await page.route("**/api/teacher/session", route => route.fulfill({ json: { session: { teacherId: "julius" }, teacher: { id: "julius" } } }));
+  await page.route("**/api/teacher/sets/start-error", route => route.fulfill({ json: { set } }));
+  let starts = 0;
+  await page.route("**/api/sentence-practice/*", route => {
+    expect(route.request().headers()["x-lerndeck-embed"]).toBe(embedded ? "tafelraum" : undefined);
+    if (route.request().url().endsWith("/start") && ++starts === 1) return route.fulfill({ status: 503, json: { error: "Satz konnte nicht vorbereitet werden. Bitte erneut versuchen." } });
+    return route.fulfill({ json: { run } });
+  });
+  await page.goto("/?teacherPractice=start-error" + (embedded ? "&embed=tafelraum" : ""));
+  await page.locator('[data-mode-key="sentence"].launch-mode-modal__mode-card').click();
+  await page.locator("#launch-mode-start").click();
+  await page.locator("#launch-settings-start").click();
+  await expect(page.locator("#sentence-submit")).toHaveText("Erneut versuchen");
+  await expect(page.locator("#sentence-feedback-notice")).toHaveText("Satz konnte nicht vorbereitet werden. Bitte erneut versuchen.");
+  await expect(page.locator("#sentence-feedback-text")).not.toContainText("Bitte kurz warten");
+  await page.locator("#sentence-submit").click();
+  await expect(page.locator("#sentence-prompt")).toHaveText("Das Auto ist blau.");
+  await expect(page.locator("#sentence-feedback-notice")).toBeHidden();
+  expect(starts).toBe(2);
+});
+
 for (const theme of ["light", "dark"]) test(`contextual vocabulary is marked literally and retained on reload (${theme})`, async ({ page }, info) => {
   await page.addInitScript(theme => localStorage.setItem("lerndeck-teacher-appearance-v1", JSON.stringify({ mode: theme })), theme);
   const set = { id: "contextual-fixture", path: "sets/user/contextual-fixture.json", title: "Vokabeln im Kontext", status: "published", sourceLanguage: "de", targetLanguage: "en", sourceLabel: "Deutsch", targetLabel: "Englisch", learningCardCount: 1, cards: [] };

@@ -10520,6 +10520,7 @@ async function startSentenceSet(setPath, direction, count, { resume = false, dif
   elements.sentenceLabel.hidden = false;
   elements.sentenceFeedback.hidden = true;
   renderSentenceRun();
+  let startError = "";
   try {
     let saved;
     if (resume) {
@@ -10543,11 +10544,12 @@ async function startSentenceSet(setPath, direction, count, { resume = false, dif
     saveSentenceRun();
   } catch (error) {
     if (requestId !== state.sentenceRequestId) return;
-    renderSentenceFeedback(error.message || "Server nicht erreichbar. Bitte erneut versuchen.", "error");
+    startError = error.message || "Server nicht erreichbar. Bitte erneut versuchen.";
   } finally {
     if (requestId === state.sentenceRequestId) {
       state.sentenceBusy = false;
       renderSentenceRun();
+      if (startError) renderSentenceFeedback(startError, "error");
       acknowledgeSentencePrompt();
     }
   }

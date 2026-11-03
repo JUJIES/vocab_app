@@ -1,5 +1,11 @@
 # Produkt- und Architekturentscheidungen
 
+## 2026-11-03 – Translation-Startfehler nach Ladezustand anzeigen
+
+- Start/Resume hält einen Fehler nur im aktuellen Request und rendert ihn nach `sentenceBusy=false` und dem finalen Rendern. Zuvor ersetzte der Busy-Renderer den echten Fehler durch den Wartehinweis, der danach stehen blieb. Keine zweite persistente Fehlerquelle; Request-ID-Schutz gegen veraltete Antworten bleibt bestehen. Erneut versuchen nutzt den vorhandenen Startablauf.
+- API-/Annahmeregeln und Karten-/Schülerdaten unverändert. Native Browserregression prüft fehlgeschlagenen Start, sichtbaren Originalfehler, entfernten Wartehinweis und erfolgreichen Retry in beiden Themes und Chromium/WebKit. PWA v224 verteilt das aktualisierte app.js.
+- Diagnose: aktiver Terra-6.1/medium-Dienst beantwortete synthetische Generierung, Review und Prüfung erfolgreich. Das beweist keine allgemeine Erreichbarkeit im Tafelraum-Plugin; konkrete Startfehler sollen sichtbar statt als endloses Warten erscheinen.
+
 ## 2026-10-30 – Beelink-Rollout abgeschlossen
 
 - Nutzerfreigabe für die am 29.10. gemeinsam erarbeiteten Schwierigkeits-/Feedback-Prompts einschließlich flexibler Hilfe am erkennbaren Lernproblem. Terra 6.1 und durchgehend medium bleiben erhalten. UI-Beschreibungen/PWA-Shell v223 werden gemeinsam ausgeliefert. Die früheren Hinweise „noch nicht ausgerollt“ dokumentieren den damaligen Prüfstand.
