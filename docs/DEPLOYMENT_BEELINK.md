@@ -21,6 +21,14 @@ Healthcheck: `http://127.0.0.1:6000/health`
 
 Öffentlicher Zugang: benannter Cloudflare-Tunnel mit eigenem HTTPS-Hostnamen
 
+## Rollout Eingabe-Reihenfolge 2026-11-03
+
+Release `703bad2` aktiviert, PWA v230: Eingabe mischt jeden Durchgang und verhindert die letzte Karte als erste des direkten Folgedurchgangs (außer bei einer Karte). Korrekturpflicht, Wertung und gespeicherte Set-Reihenfolge bleiben erhalten. 138 Tests, Syntaxprüfungen, Produktions-Audit ohne bekannte Schwachstellen und Kandidaten-Healthcheck auf Port 6101 bestanden. Runtime-/Dienstbackup mit Zeitstempel `20261103-114223`; vorheriger Release bleibt erhalten. Dienstpfad und unverändertes produktives `DATA_DIR` geprüft.
+
+Öffentlicher Healthcheck erfolgreich; `app.js`, `index.html` und `sw.js` stimmen nach Normalisierung der Windows-Zeilenenden mit dem Release-Commit überein. Browserprofile wurden vor dem Rollout mit dem echten v229-Service-Worker vorbereitet. Chromium bestätigt danach v230, Entfernung des alten Shell-Caches, erhaltenen lokalen Speichermarker, die neue Mischlogik ohne direkte Wiederholung und erneutes Laden der korrigierten App aus dem Cache bei abgeschaltetem Netzwerk. iPad-WebKit lädt öffentlich die neue Script-URL und bestätigt dieselbe Mischlogik sowie den erhaltenen Speichermarker. Die Offline-/Cachepersistenz im wiedergeöffneten automatisierten WebKit-Profil konnte nicht bestätigt werden (aktiver Service Worker, aber leerer Shell-Cache); daher keine vollständige Safari-Offline-Abnahme.
+
+Kein physisches Schul-iPad oder verwalteter Relution-Webclip geprüft; die App meldet keine installierte Shell-Version pro Tablet zurück. Online schließen/neu öffnen, bei alter Ansicht erneut laden; keine Website-Daten löschen oder Geräte neu koppeln. Updateablauf und Abnahmegrenzen stehen in `INSTALLATION.md`. Es wurden keine produktiven Sets oder Lernstände für diese Prüfung verändert.
+
 ## Room-Korrektur 2026-11-03
 
 Release `6a936ac` aktiviert, PWA v225: Feedback-Einblendklasse wird nach Animation beendet; Room-Leases ergänzen Zeigerring und Translation-Schreibmarke. 138 Produkttests und Syntaxchecks lokal/auf Beelink, Audit ohne bekannte Schwachstellen, vier echte Recorder-/Replayer-Browserprüfungen in Chromium/WebKit und Hell/Dunkel erfolgreich. Öffentliche app.js, tafelraum-embed.js, index.html, teacher.html und sw.js stimmen mit dem aktivierten Release überein.

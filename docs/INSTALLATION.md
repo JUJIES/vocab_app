@@ -44,3 +44,11 @@ Offizielle Relution-Anleitung: [Relution – Weblinks bereitstellen und verwalte
 - Relution-Upload: `icons/relution-webclip-512.png` beziehungsweise öffentlich `https://lerndeck.jujies.app/icons/relution-webclip-512.png`
 
 Alle ausgelieferten Varianten werden aus demselben Master erzeugt, besitzen einen opaken Hintergrund und halten die Maskable-Safe-Zone ein.
+
+## Updates auf bestehenden Tablets
+
+Neue App-Versionen werden über dieselbe öffentliche Start-URL ausgeliefert; der Relution-Weblink muss dafür nicht erneut verteilt werden. Beim Laden prüft `pwa.js` den Service Worker ohne Zwischen-Cache. `sw.js` verwendet pro Release einen neuen Shell-Cache, übernimmt die Kontrolle und entfernt alte Shell-Caches. Versionierte Script-URLs sorgen dafür, dass die neue Oberfläche auch bei einer bestehenden Installation geladen wird.
+
+Nach einem Rollout Lerndeck mit Internetverbindung vollständig schließen und erneut öffnen; falls noch eine alte geöffnete Ansicht erscheint, zusätzlich neu laden. Bereits im Speicher laufender JavaScript-Code wird nicht durch einen Server-Rollout ersetzt. Weder App-/Website-Daten löschen noch das Gerät neu koppeln: Die vorhandene Tablet-Sitzung soll erhalten bleiben.
+
+Die Serverdaten enthalten keine gemeldete Shell-Version je Tablet. Öffentliche Asset-/Cacheprüfungen belegen den Updateweg, aber keinen individuellen Empfang auf jedem iPad. Für eine Geräteabnahme nach dem Wiederöffnen das betroffene Verhalten direkt prüfen. Browserprüfungen mit iPad-WebKit ersetzen keinen Test im tatsächlich verwalteten Relution-Webclip.
