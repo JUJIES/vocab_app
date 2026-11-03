@@ -182,13 +182,15 @@ function installTafelraumBridge() {
     for(const mark of [caret,measure]){mark.setAttribute('aria-hidden','true');mark.style.pointerEvents='none';}
     caret.style.cssText='position:fixed;z-index:2147483000;width:1px;pointer-events:none;display:none';
     caret.dataset.roomCaret='';measure.dataset.roomMeasure='';
-    measure.style.cssText='position:fixed;left:0;top:0;visibility:hidden;pointer-events:none;overflow:hidden';
+    measure.style.cssText='all:initial;position:fixed;left:0;top:0;visibility:hidden;pointer-events:none;display:block;overflow:hidden;margin:0;box-sizing:border-box';
     document.body.append(caret,measure);
-    let frame=0,last=0,observed=null,originalCaret="",originalPriority="",blinkTimer;
+    let frame=0,last=0,observed=null,originalCaret="",originalPriority="",blinkTimer,disposed=false;
     const observer=new MutationObserver(()=>schedule());
-    const properties=['boxSizing','width','fontFamily','fontSize','fontWeight','fontStyle','fontVariant','lineHeight','letterSpacing','wordSpacing','textTransform','textIndent','textAlign','direction','tabSize','paddingTop','paddingRight','paddingBottom','paddingLeft','borderTopWidth','borderRightWidth','borderBottomWidth','borderLeftWidth','borderStyle','wordBreak'];
+    const resizeObserver=new ResizeObserver(()=>schedule());
+    const properties=['boxSizing','width','fontFamily','fontSize','fontWeight','fontStyle','fontVariant','fontStretch','fontFeatureSettings','fontVariationSettings','fontKerning','textRendering','lineHeight','letterSpacing','wordSpacing','textTransform','textIndent','textAlign','direction','tabSize','paddingTop','paddingRight','paddingBottom','paddingLeft','borderTopWidth','borderRightWidth','borderBottomWidth','borderLeftWidth','borderStyle','wordBreak','hyphens'];
     function releaseInput() {
       observer.disconnect();
+      resizeObserver.disconnect();
       if(observed){if(originalCaret)observed.style.setProperty('caret-color',originalCaret,originalPriority);else observed.style.removeProperty('caret-color');}
       observed=null;
     }
@@ -203,25 +205,35 @@ function installTafelraumBridge() {
       const input=document.activeElement;
       // Only the learner's Translation answer, never account/secret fields.
       if(!(input instanceof HTMLTextAreaElement)||input.id!=='sentence-answer'||input.disabled||input.readOnly||!input.isConnected){caret.style.display='none';releaseInput();return;}
-      if(observed!==input){releaseInput();originalCaret=input.style.getPropertyValue('caret-color');originalPriority=input.style.getPropertyPriority('caret-color');observed=input;input.style.setProperty('caret-color','transparent');observer.observe(input,{attributes:true,attributeFilter:['disabled','readonly','hidden']});}
+      if(observed!==input){releaseInput();originalCaret=input.style.getPropertyValue('caret-color');originalPriority=input.style.getPropertyPriority('caret-color');observed=input;input.style.setProperty('caret-color','transparent');observer.observe(input,{attributes:true,attributeFilter:['disabled','readonly','hidden']});resizeObserver.observe(input);}
       const rect=input.getBoundingClientRect(),css=getComputedStyle(input);
       if(!rect.width||!rect.height||css.visibility==='hidden'){caret.style.display='none';return;}
       for(const property of properties)measure.style[property]=css[property];
-      measure.style.height='auto';measure.style.whiteSpace='pre-wrap';measure.style.overflowWrap='break-word';
-      const position=input.selectionEnd??input.value.length,span=document.createElement('span');
-      measure.replaceChildren(document.createTextNode(input.value.slice(0,position)));
-      span.textContent=input.value.slice(position)||'.';measure.append(span);
-      const at=span.getClientRects()[0]||span.getBoundingClientRect(),base=measure.getBoundingClientRect();
-      const x=rect.left+at.left-base.left-input.scrollLeft,y=rect.top+at.top-base.top-input.scrollTop;
-      const height=parseFloat(css.lineHeight)||parseFloat(css.fontSize)*1.2;
-      const visible=x>=rect.left&&x<=rect.right&&y>=rect.top&&y+height<=rect.bottom;
+      // Follow the worksheet bridge: one uninterrupted text node retains
+      // shaping/kerning. A separate zero-width end marker avoids WebKit's
+      // trailing-glyph offset. Match the actual text viewport, including scroll.
+      measure.style.width=`${input.clientWidth+parseFloat(css.borderLeftWidth)+parseFloat(css.borderRightWidth)}px`;
+      measure.style.height=`${input.clientHeight+parseFloat(css.borderTopWidth)+parseFloat(css.borderBottomWidth)}px`;
+      measure.style.whiteSpace=css.whiteSpace;measure.style.overflowWrap=css.overflowWrap;
+      const position=input.selectionEnd??input.value.length,text=document.createTextNode(input.value),end=document.createElement('span');
+      end.style.cssText='display:inline-block;width:0';end.textContent='\u200b';
+      measure.replaceChildren(text,end);measure.scrollLeft=input.scrollLeft;measure.scrollTop=input.scrollTop;
+      const range=document.createRange();range.setStart(text,position);range.collapse(true);
+      if(position===input.value.length)range.selectNodeContents(end);
+      else if(!range.getBoundingClientRect().height)range.setEnd(text,position+1);
+      const at=range.getClientRects()[0]||range.getBoundingClientRect(),base=measure.getBoundingClientRect();
+      const scaleX=rect.width/input.offsetWidth,scaleY=rect.height/input.offsetHeight;
+      const x=rect.left+(at.left-base.left)*scaleX,y=rect.top+(at.top-base.top)*scaleY;
+      const height=at.height*scaleY;
+      const visible=height>0&&x>=rect.left&&x<=rect.right&&y>=rect.top&&y+height<=rect.bottom+1;
       Object.assign(caret.style,{left:`${x}px`,top:`${y}px`,height:`${height}px`,background:css.color,display:visible?'block':'none'});
     }
-    function schedule(){restartBlink();if(!frame)frame=requestAnimationFrame(update);}
+    function schedule(){if(disposed)return;restartBlink();if(!frame)frame=requestAnimationFrame(update);}
     const events=['selectionchange','focusin','focusout','input','keyup','click','scroll'];
     for(const name of events)document.addEventListener(name,schedule,true);
     window.addEventListener('resize',schedule);schedule();
-    return()=>{cancelAnimationFrame(frame);clearInterval(blinkTimer);releaseInput();for(const name of events)document.removeEventListener(name,schedule,true);window.removeEventListener('resize',schedule);caret.remove();measure.remove();};
+    document.fonts.addEventListener('loadingdone',schedule);
+    return()=>{disposed=true;cancelAnimationFrame(frame);clearInterval(blinkTimer);releaseInput();for(const name of events)document.removeEventListener(name,schedule,true);window.removeEventListener('resize',schedule);document.fonts.removeEventListener('loadingdone',schedule);caret.remove();measure.remove();};
   }
   let captureStop=null,cursorStop=null,captureRequest=0,captureTimer=null,recorderPromise=null,epoch=0;
   const loadRecorder=()=>recorderPromise??(recorderPromise=new Promise((resolve,reject)=>{

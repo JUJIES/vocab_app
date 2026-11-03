@@ -34,14 +34,51 @@ for(const theme of ['light','dark'])test(`Room shows feedback and a literal edit
  });
  const replay=page.frameLocator('#replica iframe');
  await expect(replay.locator('#sentence-answer')).toBeVisible();
+ // Use a real contenteditable DOM Range as the browser's shaping reference,
+ // independent of the textarea's hidden measurement box. Trailing AV and
+ // in-word positions expose the former split-span/kerning displacement.
+ await provider.locator('#sentence-answer').evaluate(n=>{n.style.font='32px Georgia, serif';n.style.fontKerning='normal';n.style.fontFeatureSettings='"kern"';});
+ for(const scale of [1,1.25]) for(const [value,offset] of [['AV',2],['AVATAR',3],['office affinity',4]]) {
+  await provider.locator('#sentence-answer').evaluate((n,scale)=>{n.style.transform=`scale(${scale})`;n.style.transformOrigin='top left';},scale);
+  await provider.locator('#sentence-answer').fill(value);
+  await provider.locator('#sentence-answer').evaluate((n,offset)=>n.setSelectionRange(offset,offset),offset);
+  const expected=await provider.locator('#sentence-answer').evaluate((n,offset)=>{
+   const css=getComputedStyle(n),ref=document.createElement('div');
+   ref.contentEditable='true';ref.style.cssText='all:initial;position:fixed;left:0;top:0;visibility:hidden;white-space:pre';
+   ref.style.font='32px Georgia, serif';ref.style.fontKerning=css.fontKerning;ref.style.fontFeatureSettings=css.fontFeatureSettings;ref.style.textRendering=css.textRendering;
+   const text=document.createTextNode(n.value);ref.append(text);document.body.append(ref);
+   const range=document.createRange();range.setStart(text,offset);range.collapse(true);
+   const at=range.getBoundingClientRect(),box=ref.getBoundingClientRect(),field=n.getBoundingClientRect();
+   const sx=field.width/n.offsetWidth,sy=field.height/n.offsetHeight;
+   const result={x:field.left+(parseFloat(css.borderLeftWidth)+parseFloat(css.paddingLeft)+at.left-box.left)*sx,y:field.top+(parseFloat(css.borderTopWidth)+parseFloat(css.paddingTop)+at.top-box.top)*sy,height:at.height*sy};ref.remove();return result;
+  },offset);
+  // WebKit's end-of-run Range and inline end box can differ by one
+  // layout pixel. Bound that browser rounding before presentation scaling.
+  await expect.poll(()=>provider.locator('[data-room-caret]').evaluate((n,x)=>Math.abs(parseFloat(n.style.left)-x),expected.x)).toBeLessThan(scale);
+  await expect.poll(()=>replay.locator('[data-room-caret]').evaluate((n,x)=>Math.abs(parseFloat(n.style.left)-x),expected.x)).toBeLessThan(scale);
+  await expect.poll(()=>replay.locator('[data-room-caret]').evaluate((n,y)=>Math.abs(parseFloat(n.style.top)-y),expected.y)).toBeLessThan(scale);
+  await expect.poll(()=>replay.locator('[data-room-caret]').evaluate((n,h)=>Math.abs(parseFloat(n.style.height)-h),expected.height)).toBeLessThan(scale);
+ }
+ await provider.locator('#sentence-answer').evaluate(n=>{n.style.removeProperty('transform');n.style.removeProperty('transform-origin');n.style.removeProperty('font');n.style.removeProperty('font-kerning');n.style.removeProperty('font-feature-settings');});
  await provider.locator('#sentence-answer').fill('The car are blue.');await provider.locator('#sentence-answer').press('ArrowLeft');
  await expect(replay.locator('[data-room-caret]')).toBeVisible();
+ await expect.poll(()=>provider.locator('[data-room-measure]').textContent()).toBe('The car are blue.\u200b');
+ const sourceLeft=await provider.locator('#sentence-answer').evaluate(n=>{
+  const css=getComputedStyle(n),ref=document.createElement('div');ref.contentEditable='true';
+  ref.style.cssText='all:initial;position:fixed;left:0;top:0;visibility:hidden;white-space:pre';
+  for(const key of ['fontFamily','fontSize','fontWeight','fontStyle','fontVariant','fontStretch','lineHeight','letterSpacing','fontFeatureSettings','fontVariationSettings','fontKerning','textRendering'])ref.style[key]=css[key];
+  const text=document.createTextNode(n.value);ref.append(text);document.body.append(ref);
+  const range=document.createRange();range.setStart(text,n.selectionEnd);range.collapse(true);
+  const x=n.getBoundingClientRect().left+parseFloat(css.borderLeftWidth)+parseFloat(css.paddingLeft)+range.getBoundingClientRect().left-ref.getBoundingClientRect().left;ref.remove();return x;
+ });
+ await expect.poll(()=>replay.locator('[data-room-caret]').evaluate((n,x)=>Math.abs(parseFloat(n.style.left)-x),sourceLeft)).toBeLessThan(1);
  const first=await replay.locator('[data-room-caret]').boundingBox();
  await provider.locator('#sentence-answer').press('ArrowLeft');
  await expect.poll(async()=> (await replay.locator('[data-room-caret]').boundingBox())?.x).toBeLessThan(first.x);
  await provider.locator('#sentence-answer').fill('A long answer with several words that wraps onto another line. '.repeat(5));
  await expect.poll(()=>provider.locator('#sentence-answer').evaluate(n=>n.scrollHeight>n.clientHeight)).toBe(true);
- await expect.poll(()=>replay.locator('[data-room-caret]').evaluate(n=>n.style.top)).toBe(await provider.locator('[data-room-caret]').evaluate(n=>n.style.top));
+ await expect(replay.locator('#sentence-answer')).toHaveValue('A long answer with several words that wraps onto another line. '.repeat(5));
+ await expect.poll(async()=>{const source=await provider.locator('[data-room-caret]').evaluate(n=>n.style.top);return (await replay.locator('[data-room-caret]').evaluate(n=>n.style.top))===source;}).toBe(true);
  await provider.locator('#sentence-answer').fill('The car are blue.');
  await provider.locator('#sentence-submit').hover();
  await expect(replay.locator('[data-room-pointer]')).toHaveCount(0);

@@ -1,5 +1,11 @@
 # Produkt- und Architekturentscheidungen
 
+## 2026-11-03 – Room-Cursor nach dem Messprinzip der HTML-Arbeitsblätter
+
+- Vergleich mit Tafelraums `interactive-html-state-bridge.mjs`: Die vorige Lerndeck-Messung teilte den Text am Cursor in Textknoten/Span, kopierte nicht alle Schriftmetriken und schätzte die Cursorhöhe aus line-height. Das kann Kerning/Ligaturen und Endpositionen verändern. Keine fest codierte Pixelverschiebung als Korrektur.
+- Derselbe erprobte Ansatz für das bestehende Translation-Feld: vollständiger Textknoten, separater inline-block-Endmarker gegen WebKits Endglyphenproblem, DOM Range an der Auswahlposition. Font-Kerning/-Features/-Variationen, Textdarstellung, Innenmaße und echter Feldscroll werden übernommen; Textgrenzen liefern Position und Höhe. Skalierung wird erst auf diese lokalen Maße angewendet. Schriftlade-/Größenereignisse berechnen neu; Listener/Observer werden mit der Room-Lease entfernt. Keine Laufzeitabhängigkeit von Tafelraum oder Änderungen an dessen Desktop-/Distributionsständen.
+- Neue Browserregression nutzt eine echte contenteditable-Range als separate Typografie-Referenz: Wortende, Wortmitte, Glyphenpaare, 100/125 Prozent, beide Themes, Chromium/WebKit. WebKits Range-Ende und inline Endbox dürfen sich um weniger als einen Layoutpixel vor Vergrößerung unterscheiden. Die alte Fassung scheitert im Gegencheck; nicht nur Gleichheit zweier gleicher falscher Overlay-Koordinaten prüfen. Vorhandene Umbruch-/Scroll-/Blink-/Passwort-/Feedbackprüfungen bleiben. PWA v227.
+
 ## 2026-11-03 – Nur ein normaler blinkender Schreibcursor im Room
 
 - Nutzerkorrektur ersetzt die vorige Zeiger-/Cursoroptik: kein zusätzlicher Mauszeiger, keine Pointer-Listener; Translation zeigt eine 1px-Linie in Textfarbe ohne Kontur/Leuchteffekt.

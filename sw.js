@@ -1,4 +1,4 @@
-const CACHE_NAME = "lerndeck-shell-v226-room-caret";
+const CACHE_NAME = "lerndeck-shell-v227-room-caret-position";
 const APP_SHELL_URLS = [
   "/",
   "/index.html",
@@ -19,7 +19,7 @@ const APP_SHELL_URLS = [
   "/teacher.js?v=2026-10-28-room-view-v1",
   "/teacher-workspace-layout.js?v=2026-10-04-resizable-panels-v1",
   "/teacher-workspace.js?v=2026-10-04-no-search-v1",
-  "/tafelraum-embed.js?v=2026-11-03-room-caret-v2",
+  "/tafelraum-embed.js?v=2026-11-03-room-caret-position-v3",
   "/ui-motion.css?v=2026-08-30-ui-motion-v1",
   "/ui-motion.js?v=2026-08-30-ui-motion-v1",
   "/irregular-verbs.js?v=2026-09-06-optional-to-v2",
